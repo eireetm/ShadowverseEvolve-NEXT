@@ -14,6 +14,7 @@ import { CardTile, type CardMark } from "../card/CardTile";
 import { DecisionDialog } from "../decisions/DecisionDialog";
 import { actionsFor, answerFor, attackTargets, dragKind, openManual, openMenu, sendAnswer, toggleChosen, useInteraction } from "../interaction";
 import { ManualDialog } from "../manual/ManualDialog";
+import { LookedCards } from "./LookedCards";
 import { QuickAnnouncement } from "./QuickAnnouncement";
 import { playerLabel } from "../labels";
 import { AttackArrow } from "./AttackArrow";
@@ -424,6 +425,7 @@ export function Table({ update, onNewGame, onMenu, onReplays }: { update: GameUp
       <ManualDialog update={update} />
       <DecisionDialog key={update.inputCount} update={update} />
       <QuickAnnouncement update={update} />
+      <LookedCards update={update} />
       <ResultOverlay update={update} onNewGame={onNewGame} onMenu={onMenu} onReplays={onReplays} />
     </div>
   );

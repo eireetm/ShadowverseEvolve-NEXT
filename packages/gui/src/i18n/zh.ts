@@ -453,6 +453,9 @@ export const zh: Record<MessageKey, string> = {
   "announce.item": "【{name}】",
   "announce.separator": "、",
   "announce.ok": "确定",
+  "looked.title": "查看",
+  "looked.text": "你查看了{cards}（只有你能看到）",
+  "looked.ok": "确定",
 
   "replays.title": "录像",
   "replays.empty": "还没有保存的录像：对局结束后点“保存录像”。",

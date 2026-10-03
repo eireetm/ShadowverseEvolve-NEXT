@@ -36,6 +36,7 @@ import type {
   GameUpdate,
   HostSettings,
   LogEntry,
+  LookedCards,
   ManualInfo,
   QuickAnnouncement,
   RecordedInput,
@@ -161,6 +162,20 @@ export function stateHash(state: unknown): string {
 /** A quick window where passing is all its player can do (asked only with GameOptions.askEveryQuickWindow). */
 const onlyPass = (decision: Decision): boolean => decision.type === "quick" && decision.actions.every((a) => a.type === "pass");
 
+/** The cards a decision shows its player (a look at them needs no window of its own): a selection, an order, a question. */
+function shownBy(d: Decision): Set<CardId> {
+  switch (d.type) {
+    case "selectCards":
+      return new Set([...d.candidates, ...(d.peek ?? []).map((p) => p.id)]);
+    case "orderCards":
+      return new Set(d.cards.map((c) => c.id));
+    case "confirm":
+      return new Set(d.subject ? [d.subject.id] : []);
+    default:
+      return new Set();
+  }
+}
+
 /** The choices told in an announcement (how damage is divided or ordered shows on the table and in the log). */
 const CHOICES_TOLD = new Set<ChoiceMade["reason"]>(["mode", "playOption", "token", "deckPosition", "unionBurst", "dieReroll", "effect"]);
 
@@ -207,6 +222,13 @@ export class GameHost {
   private quick: QuickPlay | null = null;
   private announcement: QuickAnnouncement | null = null;
   private announcementSeq = 0;
+  /**
+   * Cards a person has just looked at (CR 5.11.1) that no decision of theirs shows: the game waits until they have seen them
+   * ("lookSeen"), as after an announcement. `seeing` gathers the looks of the inputs being played, `looked` is shown.
+   */
+  private looked: LookedCards | null = null;
+  private lookedSeq = 0;
+  private seeing: { player: PlayerId; cards: Map<CardId, CardInfo> } | null = null;
   /** Inputs played again (rewind, replays) are not announced. */
   private replaying = false;
   /** A quick window after an attack is being shown before the host passes it (HostSettings.attackPauseMs). */
@@ -284,11 +306,16 @@ export class GameHost {
         // Stepping on is also seeing the announcement; then a bot's answer, or the host's pass of a quick window.
         const decision = this.game?.decision;
         this.announcement = null;
+        this.looked = null;
         return decision && this.bots[decision.player] ? this.stepBot() : this.pump();
       }
       case "acknowledge":
         if (this.announcement?.seq !== message.seq) return;
         this.announcement = null;
+        return this.pump();
+      case "lookSeen":
+        if (this.looked?.seq !== message.seq) return;
+        this.looked = null;
         return this.pump();
       case "validateDeck":
         return this.send({
@@ -334,6 +361,8 @@ export class GameHost {
     this.lastPerspective = this.humans()[0] ?? 0;
     this.quick = null;
     this.announcement = null;
+    this.looked = null;
+    this.seeing = null;
     this.remoteQueue = new Map();
     this.desync = null;
     this.record(game.startupEvents);
@@ -365,6 +394,7 @@ export class GameHost {
     const problem = manual && answer.action.type === "manual" ? game.manualOpError(answer.action.op) : validateAnswer(decision, answer);
     if (problem) return this.error(`illegal answer: ${problem}`);
     this.announcement = null; // whoever answers has seen the table
+    this.looked = null;
     const sent = this.outgoing();
     try {
       this.apply(answer, seat);
@@ -444,6 +474,7 @@ export class GameHost {
     this.inputs.push({ input, by });
     this.record(events);
     this.followEvents(events);
+    this.followLooks(events);
   }
 
   /**
@@ -458,10 +489,11 @@ export class GameHost {
     if (this.watching) return this.pumpWatch();
     this.passing = false;
     this.settleQuick();
+    this.settleLook();
     if (game.isOver) this.announcement = null;
     for (;;) {
       const decision = game.decision;
-      if (this.announcement || this.desync || !decision) break;
+      if (this.announcement || this.looked || this.desync || !decision) break;
       if (onlyPass(decision)) {
         // After an attack is declared (CR 8.4.5-8.4.7), the table shows it a moment before its combat.
         if (decision.type === "quick" && decision.timing === "attack" && this.settings.attackPauseMs > 0) {
@@ -485,6 +517,7 @@ export class GameHost {
           return this.error(err);
         }
         this.settleQuick();
+        this.settleLook();
         continue;
       }
       // Online: the other program's answer for this decision, if it has come.
@@ -506,9 +539,10 @@ export class GameHost {
         break;
       }
       this.settleQuick();
+      this.settleLook();
     }
     const decision = game.decision;
-    const thinking = decision !== null && !this.announcement && this.bots[decision.player] !== null && !this.settings.paused;
+    const thinking = decision !== null && !this.announcement && !this.looked && this.bots[decision.player] !== null && !this.settings.paused;
     this.publish(thinking);
     // A bot answers a decision with a single answer (a main phase it can only end) without the pause.
     if (thinking) this.cancelTimer = this.scheduler.schedule(() => this.stepBot(), forcedAnswer(decision) ? 0 : this.settings.botDelayMs);
@@ -769,6 +803,32 @@ export class GameHost {
     };
   }
 
+  /** A person's looks at cards (CR 5.11.1) in a game being played, gathered to be shown (settleLook). */
+  private followLooks(events: readonly GameEvent[]): void {
+    if (this.replaying || this.watching) return;
+    for (const event of events) {
+      if (event.type !== "cardsLookedAt" || !this.humans().includes(event.player)) continue;
+      if (this.seeing?.player !== event.player) this.seeing = { player: event.player, cards: new Map() };
+      for (const card of event.cards) this.seeing.cards.set(card.id, this.cardInfo(card.id, card.def) ?? { def: card.def, printing: null });
+    }
+  }
+
+  /**
+   * The cards a person has just looked at become the window they are shown, unless the decision now asking them shows those
+   * cards itself (a selection among them, their order, a question about one of them). Only to that person: in hot seat, not
+   * while the other player is at the screen.
+   */
+  private settleLook(): void {
+    const seeing = this.seeing;
+    const game = this.game!;
+    this.seeing = null;
+    if (!seeing || game.isOver || this.perspective() !== seeing.player) return;
+    const decision = game.decision;
+    const shown = decision?.player === seeing.player ? shownBy(decision) : new Set<CardId>();
+    const cards = [...seeing.cards].filter(([id]) => !shown.has(id)).map(([id, card]) => ({ id, card }));
+    if (cards.length > 0) this.looked = { seq: ++this.lookedSeq, player: seeing.player, cards };
+  }
+
   /** The seats played by a person at this screen (not a bot, not the other program online). */
   private humans(): PlayerId[] {
     return ([0, 1] as const).filter((p) => this.bots[p] === null && (this.watching || this.options?.controllers[p] !== "remote"));
@@ -994,6 +1054,7 @@ export class GameHost {
       secondLeaders: options.secondLeaders ?? [null, null],
       manual: this.manualInfo(),
       announcement: this.announcement,
+      looked: this.looked,
       watch: this.watchState(),
       online: this.onlineState(),
       perspective,

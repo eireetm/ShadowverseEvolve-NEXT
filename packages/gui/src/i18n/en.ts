@@ -450,6 +450,9 @@ export const en = {
   "announce.item": "{name}",
   "announce.separator": ", ",
   "announce.ok": "OK",
+  "looked.title": "Look",
+  "looked.text": "You looked at {cards}. Only you can see it.",
+  "looked.ok": "OK",
 
   "replays.title": "Replays",
   "replays.empty": "No saved replays yet: save one at the end of a game (\"Save replay\").",

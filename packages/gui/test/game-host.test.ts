@@ -281,6 +281,56 @@ describe("GameHost (engine worker logic)", () => {
     expect(paused).toBeGreaterThan(0);
   });
 
+  it("shows a person the cards they looked at (CR 5.11.1) and waits until they have seen them; answering is seeing them too", () => {
+    // BP04-056 Starseer's Telescope (Runecraft amulet, 0): Fanfare, look at the top card of your deck — a look that no
+    // decision shows. Answered at random, so it is played often.
+    const telescopes = { leader: "SD03-LD01", main: Array<string>(40).fill("BP04-056"), evolve: [] };
+    let shown = 0;
+    let answeredOver = 0;
+    for (const seed of ["look-1", "look-2", "look-3"]) {
+      const h = harness(["human", "random"], seed);
+      h.host.handle({ kind: "settings", settings: { botDelayMs: 0 } });
+      h.host.handle({ kind: "start", options: { ...h.options, decks: [telescopes, deck("sd02")], deckRestrictions: false } });
+      const rng = seedRng(seed);
+      for (let step = 0; step < 3000 && !h.last().result; step++) {
+        const update = h.last();
+        const looked = update.looked;
+        if (looked) {
+          shown += 1;
+          // Seat 0's own look, at the cards of its deck, and nobody moves on meanwhile.
+          expect(looked.player).toBe(0);
+          expect(looked.cards.length).toBeGreaterThan(0);
+          for (const c of looked.cards) {
+            expect(c.card.def).toBe("BP04-056");
+            expect(h.host.session!.state.cards[c.id]?.zone).toBe("deck");
+          }
+          expect(update.thinking).toBe(false);
+          expect(h.scheduler.run()).toBe(0);
+          // A stale "seen" does nothing; the right one (or answering the next decision of one's own) lets the game go on.
+          h.host.handle({ kind: "lookSeen", seq: looked.seq - 1 });
+          expect(h.last().looked?.seq).toBe(looked.seq);
+          if (update.decision && update.decision.decision.player === 0 && shown % 2 === 0) {
+            answeredOver += 1;
+            h.host.handle({ kind: "answer", seat: 0, answer: randomAnswer(rng, update.decision.decision) });
+          } else h.host.handle({ kind: "lookSeen", seq: looked.seq });
+          expect(h.last().looked?.seq).not.toBe(looked.seq);
+          continue;
+        }
+        if (update.decision) h.host.handle({ kind: "answer", seat: 0, answer: randomAnswer(rng, update.decision.decision) });
+        else h.scheduler.run(1);
+      }
+      expect(h.errors()).toEqual([]);
+      // The look is the person's only (it was in their log), and a replay of the game shows nothing.
+      const replay = h.host.replay()!;
+      const again = harness(["human", "random"], "unused");
+      again.host.handle({ kind: "settings", settings: { paused: true } });
+      again.host.handle({ kind: "loadReplay", replay: JSON.parse(JSON.stringify(replay)) as Replay });
+      expect(again.last().looked).toBeNull();
+    }
+    expect(shown).toBeGreaterThan(2);
+    expect(answeredOver).toBeGreaterThan(0);
+  });
+
   it("announces nothing when the setting is off, and the game goes on by itself", () => {
     const h = harness(["human", "random"], "quick-1");
     h.host.handle({ kind: "settings", settings: { announceQuick: false, botDelayMs: 0 } });

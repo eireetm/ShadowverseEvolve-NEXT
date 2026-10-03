@@ -121,8 +121,11 @@ describe("BP09 Runecraft", () => {
   it("050 Tico — Ward; Last Words: the top card, if Academic, may be added to your hand", () => {
     const t = d({ me: { field: ["BP09-050"], hand: ["QUICK-SAC"], deck: ["BP02-046", "V1"] } }).play("QUICK-SAC").pick("BP02-046");
     expect(t.hand()).toEqual(["BP02-046"]);
+    // Looked at, then offered: told once (CR 5.11.1).
+    expect(t.events.filter((e) => e.type === "cardsLookedAt")).toMatchObject([{ player: 0, cards: [{ def: "BP02-046" }] }]);
     const other = d({ me: { field: ["BP09-050"], hand: ["QUICK-SAC"], deck: ["V1"] } }).play("QUICK-SAC");
     expect([other.hand(), other.zone("me", "deck")]).toEqual([[], ["V1"]]);
+    expect(other.events.filter((e) => e.type === "cardsLookedAt")).toMatchObject([{ player: 0, cards: [{ def: "V1" }] }]);
   });
 
   it("051 Staff of Whirlwinds — damage equal to your Runecraft followers to each enemy leader and follower", () => {

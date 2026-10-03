@@ -156,6 +156,8 @@ export type ToWorker =
   | { kind: "step" }
   /** A person has seen the announcement `seq`: the game goes on. */
   | { kind: "acknowledge"; seq: number }
+  /** A person has seen the cards they looked at (`seq`, GameUpdate.looked): the game goes on. */
+  | { kind: "lookSeen"; seq: number }
   /**
    * Online play: an answer of the remote seat, the `index`th input of the game (0 = the first); `hash` is the other program's
    * state before it (stateHash), which this game must have too. Applied once this game has reached it, in order.
@@ -248,6 +250,18 @@ export interface QuickAnnouncement {
   choices: ChoiceMade[];
 }
 
+/**
+ * Cards the person at this screen has just looked at (CR 5.11.1: the top card of their deck, ...) that no decision of theirs
+ * shows (nothing among them could be taken, or the ability only looks): the game waits until they have seen them ("lookSeen"),
+ * as after an announcement. Their own information only (the cardsLookedAt events are private to the player).
+ */
+export interface LookedCards {
+  /** Tells looks apart (for "lookSeen"). */
+  seq: number;
+  player: PlayerId;
+  cards: { id: CardId; card: CardInfo }[];
+}
+
 /** An event for the game log, already hidden for the log's viewer (CR 4.1.2), with the cards it names. */
 export interface LogEntry {
   seq: number;
@@ -267,6 +281,8 @@ export interface GameUpdate {
   manual: ManualInfo | null;
   /** A Quick card or ability just resolved: the game waits until a person has seen it (null: nothing to see). */
   announcement: QuickAnnouncement | null;
+  /** Cards the person just looked at, shown before the game goes on (null: nothing to show). */
+  looked: LookedCards | null;
   /** A replay being watched (null: a game being played). */
   watch: WatchState | null;
   /**

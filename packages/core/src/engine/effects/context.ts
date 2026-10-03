@@ -252,7 +252,10 @@ export interface EffectContext {
   /** CR 13.3.2.4 "Add X to a Stack on your field" (BP01-069 ruling: no Stack card -> a Magic Sediment). */
   addToStack(amount: number): Proc<void>;
 
-  /** A selection made during resolution (Aura-protected enemy cards are removed, CR 12.15). */
+  /**
+   * A selection made during resolution (Aura-protected enemy cards are removed, CR 12.15). `peek`: the cards the player is
+   * looking at (the top of the deck, CR 5.11.1), shown with the selection; looking at them is told even if nothing can be selected.
+   */
   selectCards(candidates: readonly CardId[], min: number, max: number, player?: PlayerId, peek?: readonly CardId[]): Proc<CardId[]>;
   /**
    * A choice among cards that is not the ability "selecting" them (no Aura filtering), e.g. a
@@ -446,6 +449,16 @@ export function makeEffectContext(g: G, init: EffectInit): EffectContext {
   const memory = init.memory;
   const selfIfPresent = () => (g.state.cards[init.self] ? init.self : null);
   /**
+   * CR 5.11.1: the player looks at these cards (cardsLookedAt, private to them). Told once per resolution: an ability that
+   * looks and then offers a choice among the same cards (a selection that shows them) tells it once.
+   */
+  const looked = new Set<string>();
+  const look = (cards: readonly CardId[], player: PlayerId): void => {
+    const fresh = cards.filter((id) => g.state.cards[id] !== undefined && !looked.has(`${player}:${id}`));
+    for (const id of fresh) looked.add(`${player}:${id}`);
+    if (fresh.length > 0) g.emit({ type: "cardsLookedAt", player, cards: cardRefs(g, fresh) });
+  };
+  /**
    * This ability's card as it is now (or as printed, once it is gone), for the cards it moves and the damage it deals. A given
    * ability (a pseudo definition such as "grant:…") has no printed card: once its card is gone, it counts as a follower
    * without traits.
@@ -620,8 +633,7 @@ export function makeEffectContext(g: G, init: EffectInit): EffectContext {
       return yield* putOntoField(g, chosen, ctrl, "effect", { chooser: ctrl, engaged: opts.engaged ?? false, cause: cause() });
     },
     *lookAt(cards, player = ctrl) {
-      const present = cards.filter((id) => g.state.cards[id] !== undefined);
-      if (present.length > 0) g.emit({ type: "cardsLookedAt", player, cards: cardRefs(g, present) });
+      look(cards, player);
     },
     topCards(count, player = ctrl) {
       return g.state.players[player].zones.deck.slice(0, Math.max(0, count));
@@ -767,6 +779,8 @@ export function makeEffectContext(g: G, init: EffectInit): EffectContext {
     },
 
     *selectCards(candidates, min, max, player = ctrl, peek) {
+      // The cards looked at are seen even when none of them can be selected (then nothing is asked: SD07-012).
+      if (peek) look(peek, player);
       const legal = candidates.filter((id) => selectableBy(g, id, ctrl));
       const hi = Math.min(max, legal.length);
       return yield* selectCards(g, player, "effect", legal, Math.min(min, hi), hi, selfIfPresent(), peek);

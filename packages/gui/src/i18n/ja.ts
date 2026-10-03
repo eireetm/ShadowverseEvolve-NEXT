@@ -454,6 +454,9 @@ export const ja: Record<MessageKey, string> = {
   "announce.item": "「{name}」",
   "announce.separator": "、",
   "announce.ok": "OK",
+  "looked.title": "見る",
+  "looked.text": "{cards}を見ました（あなただけに見えています）",
+  "looked.ok": "OK",
 
   "replays.title": "リプレイ",
   "replays.empty": "保存したリプレイはまだありません。対戦の終了時に「リプレイを保存」を押してください。",
