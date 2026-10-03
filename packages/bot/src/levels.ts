@@ -6,15 +6,15 @@ import { PlannerBot, type PlannerBotOptions } from "./planner";
 /**
  * The bots a player chooses between. Easy is the greedy bot (one action at a time). Medium plans its whole
  * turn with what its player can see. Hard plans the same way in the real game, reading every hidden card and the results
- * of future random events: it cheats, on purpose (the project owner's request, 2026-09-30). The beta levels are Medium and
- * Hard with what is being tried next: a lethal search first, a mulligan by the curve, and the leader's
- * defense valued on a curve; `npm run bot:arena` compares them with the others.
+ * of future random events: it cheats, on purpose (the project owner's request, 2026-09-30). Both play a sure lethal first
+ * (lethal.ts). The beta levels are Medium and Hard with a mulligan by the curve and the leader's defense valued on a curve;
+ * `npm run bot:arena` compares them with the others.
  */
 export type BotLevel = "easy" | "medium" | "hard" | "medium-beta" | "hard-beta";
 
 export const BOT_LEVELS: readonly BotLevel[] = ["easy", "medium", "hard", "medium-beta", "hard-beta"];
 
-export const MEDIUM_OPTIONS: PlannerBotOptions = { replyPlans: 4, beamWidth: 6, maxSimulations: 600 };
+export const MEDIUM_OPTIONS: PlannerBotOptions = { replyPlans: 4, beamWidth: 6, maxSimulations: 600, lethalSearch: 800 };
 
 export const HARD_OPTIONS: PlannerBotOptions = {
   cheat: true,
@@ -23,6 +23,7 @@ export const HARD_OPTIONS: PlannerBotOptions = {
   replyPlans: 6,
   beamWidth: 8,
   maxSimulations: 900,
+  lethalSearch: 800,
 };
 
 /**
@@ -32,9 +33,9 @@ export const HARD_OPTIONS: PlannerBotOptions = {
  */
 export const LEADER_CURVE: LeaderCurve = { base: 0.7, extra: 1.8, scale: 6, threat: 0.5 };
 
-export const MEDIUM_BETA_OPTIONS: PlannerBotOptions = { ...MEDIUM_OPTIONS, lethalSearch: 300, mulligan: "curve", weights: { leaderCurve: LEADER_CURVE } };
+export const MEDIUM_BETA_OPTIONS: PlannerBotOptions = { ...MEDIUM_OPTIONS, mulligan: "curve", weights: { leaderCurve: LEADER_CURVE } };
 
-export const HARD_BETA_OPTIONS: PlannerBotOptions = { ...HARD_OPTIONS, lethalSearch: 500, mulligan: "curve", weights: { leaderCurve: LEADER_CURVE } };
+export const HARD_BETA_OPTIONS: PlannerBotOptions = { ...HARD_OPTIONS, mulligan: "curve", weights: { leaderCurve: LEADER_CURVE } };
 
 const PLANNER_OPTIONS: Record<Exclude<BotLevel, "easy">, PlannerBotOptions> = {
   medium: MEDIUM_OPTIONS,

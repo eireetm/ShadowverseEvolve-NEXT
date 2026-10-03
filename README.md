@@ -19,10 +19,10 @@
   - BP22 是先行测试版：只有日文和中文数据（仓库旁边的 `BP22.json`，官方日文卡表），按日文实现、中文对照；英文卡名和文本暂时显示为 `unavailable`。等英文数据出来后补齐。
 - **Bot（`@sve/bot`）**：界面上有四个难度，只用 Core 的公开 API：
   - Bot-简单：贪心，每个决策都模拟所有候选回答，评估局面后选最好的；
-  - Bot-中等：规划整个回合，再模拟对手的下一回合，只用玩家看得到的信息；
-  - Bot-困难：同样规划，但作弊，直接透过引擎读完整的局面（对手的手牌、双方牌组的顺序）；
-  - Bot-困难 beta：在困难的基础上加了单独的斩杀搜索、按费用曲线换牌、主战者体力的价值曲线，同样读对手信息。
-  - 另有试验版 medium-beta（中等加上同样三项，不作弊），只在 `npm run bot:arena` 里。
+  - Bot-中等：规划整个回合，再模拟对手的下一回合，只用玩家看得到的信息；规划之前先找"确保能赢"的斩杀：在几个对手手牌和牌序的抽样里都能赢、对手应对也挡不住才执行；
+  - Bot-困难：同样规划（同样先找斩杀），但作弊，直接透过引擎读完整的局面（对手的手牌、双方牌组的顺序）；
+  - Bot-困难 beta：在困难的基础上加了按费用曲线换牌、主战者体力的价值曲线，同样读对手信息。
+  - 另有试验版 medium-beta（中等加上同样两项，不作弊），只在 `npm run bot:arena` 里。
 - **GUI（`@sve/gui`）**：Web 界面（Vite + React），引擎和 Bot 在 Web Worker 里运行。
   - 牌桌按场地图摆放，点击或拖拽操作，有动画、箭头和音效；
   - 组卡界面：筛选、异画、赛制和禁卡表、卡组码；
@@ -74,6 +74,7 @@ npm run dev:gui
 | `npm run bench` | 性能基准：随机对局、复制和抽样一局、Bot 每个决策的耗时 |
 | `npm run bot:arena -- [局数] [A] [B]` | Bot 互打（easy / medium / hard，试验版 medium-beta / hard-beta；sve-fool / sve-good / sve-planner 是模仿 SVE Simulator 三个 AI 的对照组，只用于测试）：示例卡组，两局一组交换座位、轮流打遍所有卡组组合，打印按"对"计分的得分和 95% 区间、先后手、先手胜率、回合数、每副卡组的得分和思考时间。`--decks sd01,sd02` 选卡组（`train` / `holdout` / `legal`：`tools/rl/decksets.json` 的卡组集，按标准赛制和它的禁卡表检查），`--mirror` 双方用同一副，`--workers 8` 多进程一起打，`--seed` 换一批对局，`--independent` 每局单独的种子，`--range a-b` 只打其中一段，`--out 文件夹` 存下每一局（可重放的记录 `games.jsonl.gz`）和报告，`--replays N` 把前 N 局存成对局界面能打开的录像。`medium:identity`（把手写估值从外面传进去，应和 medium 完全一样）和 `medium:negated`（估值反过来，应该几乎全输）用来检查估值接口 |
 | `npm run rl:verify -- 文件夹` | 重放 `bot:arena --out` 存下的对局：每个输入是否合法、结果是否和记录一样 |
+| `npm run rl:lethal -- 文件夹` | 统计 `bot:arena --out` 存下的对局里漏掉的斩杀：重放每一局，在每个己方主要阶段的决定上用宽搜索找"确保能赢"的斩杀（换 6 个公平抽样都能赢、对手应对也挡不住），找到了那回合却没赢就算漏掉；打印有漏斩杀的局数、漏的一方后来输掉的局数。较慢（每局几秒），`--games N` 只看前 N 局，`--workers N` 多进程 |
 | `npm run bench:throughput -- [random\|easy\|medium\|hard]` | 整台电脑一分钟能打多少局：多个进程同时开始（`--workers N`，默认 CPU 线程数），各打 `--seconds` 秒 |
 | `npm run build:cards` | 从抓取的卡牌数据（仓库旁边的 `assets/`，先行测试版的卡包读仓库旁边的 `BP22.json` 这类卡表）重新生成 `packages/core/data/*.json` |
 | `npm run scripts:index` | 新增卡牌脚本后，重新生成脚本注册表（`packages/core/src/script/<卡包>/index.ts`） |
@@ -375,10 +376,10 @@ An unofficial rules engine, AI and client for the *Shadowverse: Evolve* trading 
   - BP22 is a pre-release set: only Japanese and Chinese data exist (`BP22.json` next to the repository, the official Japanese card list). It is implemented from the Japanese text, checked against the Chinese; English names and texts show `unavailable` for now. They will be filled in once the English data is out.
 - **Bot (`@sve/bot`)**: four levels in the interface, on the Core's public API only:
   - Bot-Easy: greedy. For each decision it simulates every candidate answer and picks the best-scoring result.
-  - Bot-Medium: plans its whole turn, then plays out the opponent's next turn. It uses only what its player can see.
-  - Bot-Hard: plans the same way, but cheats: reads the whole game (the opponent's hand, both decks in order).
-  - Bot-Hard beta: Bot-Hard with a separate lethal search, a mulligan by the cost curve and the leader's defense valued on a curve: also read the whole game.
-  - A trial medium-beta (Bot-Medium with the same three, fair) is only in `npm run bot:arena`.
+  - Bot-Medium: plans its whole turn, then plays out the opponent's next turn. It uses only what its player can see. Before planning it looks for a sure lethal: one that wins in several samples of the opponent's hand and the deck order, whatever the opponent answers.
+  - Bot-Hard: plans the same way (lethal first too), but cheats: reads the whole game (the opponent's hand, both decks in order).
+  - Bot-Hard beta: Bot-Hard with a mulligan by the cost curve and the leader's defense valued on a curve: also reads the whole game.
+  - A trial medium-beta (Bot-Medium with the same two, fair) is only in `npm run bot:arena`.
 - **GUI (`@sve/gui`)**: a web interface (Vite + React). The engine and the bots run in a Web Worker.
   - A table laid out on the playmat picture, played by clicking and dragging, with animations, arrows and sounds.
   - A deck builder with filters, alternate arts, formats and restriction lists, and deck codes.
@@ -430,6 +431,7 @@ Run these at the repository root:
 | `npm run bench` | Benchmarks: random games, copying and sampling a game, the bot's time per decision |
 | `npm run bot:arena -- [games] [A] [B]` | Bots against each other (easy / medium / hard, the trial medium-beta / hard-beta, and sve-fool / sve-good / sve-planner, imitations of SVE Simulator's three AIs used only as benchmarks): the sample decks, games in pairs with the seats swapped, going through every matchup of the decks; prints the score by pairs with a 95% interval, going first and second, the first player's win rate, game length, the score per deck and thinking time. `--decks sd01,sd02` picks decks (`train` / `holdout` / `legal`: the deck sets of `tools/rl/decksets.json`, checked against the standard format and its restriction list), `--mirror` gives both players the same deck, `--workers 8` plays on several processes, `--seed` another series of games, `--independent` a seed per game, `--range a-b` only part of the series, `--out folder` keeps every game (replayable records, `games.jsonl.gz`) and the report, `--replays N` saves the first N games as replays the GUI opens. `medium:identity` (the hand-written evaluation passed in from outside: plays exactly as medium) and `medium:negated` (the evaluation turned round: should lose nearly every game) check the evaluation interface |
 | `npm run rl:verify -- folder` | Replays the games `bot:arena --out` kept: is every input legal, does each game end as recorded |
+| `npm run rl:lethal -- folder` | Missed lethal in the games `bot:arena --out` kept: replays each game and, at each main phase decision of the player whose turn it is, looks hard for a sure lethal (it wins in 6 fair samples, whatever the opponent answers); one found in a turn the player didn't win is a miss. Prints the games with a miss and those the player who missed it lost. Slow (seconds a game): `--games N` takes the first N, `--workers N` uses N processes |
 | `npm run bench:throughput -- [random\|easy\|medium\|hard]` | How many games the whole computer plays in a minute: several processes start together (`--workers N`, default: CPU threads), each plays for `--seconds` |
 | `npm run build:cards` | Rebuild `packages/core/data/*.json` from the scraped card data (the `assets/` folder next to the repository; a pre-release set from its card list next to the repository, such as `BP22.json`) |
 | `npm run scripts:index` | Regenerate the card script registries (`packages/core/src/script/<set>/index.ts`) after adding scripts |

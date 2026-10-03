@@ -1,6 +1,5 @@
 import {
   defaultAnswer,
-  opponentOf,
   seedRng,
   validateAnswer,
   type Answer,
@@ -8,16 +7,15 @@ import {
   type Decision,
   type Engine,
   type GameSession,
-  type MainAction,
   type PlayerId,
-  type PlayerView,
   type RngState,
 } from "./core";
-import { candidateAnswers } from "./candidates";
-import { DEFAULT_WEIGHTS, weightsEvaluator, type EvalWeights, type Evaluator } from "./evaluate";
+import { planBranches } from "./branches";
+import { DEFAULT_WEIGHTS, exactResults, weightsEvaluator, type EvalWeights, type Evaluator } from "./evaluate";
 import { GreedyBot, type BotStats } from "./greedy";
+import { adaptStep, lethalWithinReach, lineWins, searchSureLethal, stepOf, type LethalStep, type Responder } from "./lethal";
 import { redrawByExpectation, redrawKnowingDeck } from "./mulligan";
-import { fastAnswer, lookupFromReader, type CardLookup } from "./policy";
+import { fastAnswer, lookupFromReader } from "./policy";
 
 export interface PlannerBotOptions {
   seed?: string | number;
@@ -61,10 +59,15 @@ export interface PlannerBotOptions {
   /** Decisions per turn in its main phase; after that it gives default answers, which stop any cycle it can stop. */
   maxDecisionsPerTurn?: number;
   /**
-   * Before planning a turn, look for lethal with this many answers at most (0: don't): a search that ranks positions only by
-   * the defense the opponent's leader keeps if every attack on it we could declare now lands (the beta bots).
+   * Sure lethal first (lethal.ts): before planning at a main phase decision of its turn, look for a line that surely wins this
+   * turn with this many answers at most, and play it (0: don't; the opponent models don't).
    */
   lethalSearch?: number;
+  /**
+   * A fair bot's lethal must win in this many more samples of what it knows, the opponent answering (default 3); its plans
+   * that win in its sample count as won only if they do too. A cheating bot plays in the real game and needs none.
+   */
+  lethalChecks?: number;
   /** "curve": keep or redraw by the curve of the first turns (mulligan.ts); "greedy" (default): the greedy bot's rule. */
   mulligan?: "greedy" | "curve";
 }
@@ -78,10 +81,6 @@ interface Node {
   depth: number;
   /** The position scored as it stands (the search's ranking). */
   value: number;
-  /** The face damage our attacks declarable now could deal (at a choice inside an action: as at its parent). */
-  reach: number;
-  /** The lethal search's ranking: the opponent's leader defense left once that damage lands (lower first), then its defense. */
-  lethal: number;
   /** The game ended, or our turn did: nothing left to plan. */
   done: boolean;
   key: string;
@@ -98,6 +97,11 @@ type Stop = "decide" | "turnOver" | "gameOver";
  */
 export class PlannerBot {
   readonly stats: BotStats = { decisions: 0, simulations: 0, simulationFailures: 0, simulationErrors: {}, fallbacks: 0, lastError: null };
+  /**
+   * Sure lethal first: searches made and skipped (nothing new since this turn's last one), lines played and dropped on the
+   * way (no longer sure), lines found but not sure, and plans that won in the bot's sample but not surely (not taken as won).
+   */
+  readonly lethalStats = { searches: 0, skipped: 0, played: 0, dropped: 0, rejected: 0, unsurePlans: 0 };
   private readonly evaluator: Evaluator;
   private readonly replyEvaluator: Evaluator;
   private readonly modelEvaluator: Evaluator | undefined;
@@ -114,6 +118,7 @@ export class PlannerBot {
   private readonly replyModel: "greedy" | "planner";
   private readonly opponentQuick: boolean;
   private readonly lethalSearch: number;
+  private readonly lethalChecks: number;
   private readonly mulliganMode: "greedy" | "curve";
   private readonly greedy: GreedyBot;
   private plans = 0;
@@ -124,14 +129,20 @@ export class PlannerBot {
   private decisionsThisTurn = 0;
   /** The plan being carried out: its positions from the first answer on, and how many answers of it were given. */
   private current: { path: Node[]; given: number; turn: number } | null = null;
+  /** The sure lethal being played: its steps, how many were given. */
+  private lethal: { turn: number; steps: LethalStep[]; given: number } | null = null;
+  /** This turn's positions where a lethal search found nothing (a search there again would find nothing new). */
+  private lethalSeen: { turn: number; keys: Set<string> } | null = null;
+  private lethalSearches = 0;
 
   constructor(
     private readonly engine: Engine,
     options: PlannerBotOptions = {},
   ) {
     const weights: EvalWeights = { ...DEFAULT_WEIGHTS, ...options.weights, keywords: { ...DEFAULT_WEIGHTS.keywords, ...options.weights?.keywords } };
-    this.evaluator = options.evaluator ?? weightsEvaluator(weights);
-    this.replyEvaluator = options.replyEvaluator ?? this.evaluator;
+    // A finished game is scored as won, lost or drawn, never by an evaluation (exactResults).
+    this.evaluator = exactResults(options.evaluator ?? weightsEvaluator(weights), weights.win);
+    this.replyEvaluator = options.replyEvaluator ? exactResults(options.replyEvaluator, weights.win) : this.evaluator;
     this.modelEvaluator = options.modelEvaluator;
     this.seed = String(options.seed ?? "planner");
     this.cheat = options.cheat ?? false;
@@ -146,6 +157,7 @@ export class PlannerBot {
     this.replyModel = options.replyModel ?? "greedy";
     this.opponentQuick = options.opponentQuick ?? false;
     this.lethalSearch = options.lethalSearch ?? 0;
+    this.lethalChecks = options.lethalChecks ?? 3;
     this.mulliganMode = options.mulligan ?? "greedy";
     this.greedy = new GreedyBot(engine, { seed: `${this.seed}:greedy`, evaluator: this.modelEvaluator });
   }
@@ -182,7 +194,79 @@ export class PlannerBot {
     }
     if (++this.decisionsThisTurn > this.maxDecisionsPerTurn) return defaultAnswer(d);
     if (d.type === "mainPhase" && ++this.actionsThisTurn > this.maxActionsPerTurn) return defaultAnswer(d);
-    return this.followPlan(session, me) ?? this.plan(session, me);
+    return this.sureLethal(session, me) ?? this.followPlan(session, me) ?? this.plan(session, me);
+  }
+
+  /**
+   * Sure lethal first (lethal.ts): the next step of the lethal line being played while it is still sure from here, or at a
+   * main phase decision with lethal within reach, a new search; a line found is played at once. Null: plan as usual.
+   */
+  private sureLethal(game: GameSession, me: PlayerId): Answer | null {
+    if (this.lethalSearch <= 0) return null;
+    const d = game.decision!;
+    const turn = game.state.turn;
+    if (this.lethal && (this.lethal.turn !== turn || this.lethal.given >= this.lethal.steps.length)) this.lethal = null;
+    const line = this.lethal;
+    if (line) {
+      // An answer of the opponent or a card drawn may have changed it: checked again at each main phase decision.
+      const rest = line.steps.slice(line.given);
+      const seed = `${this.seed}:lethal:${this.lethalSearches++}`;
+      const answer = d.type !== "mainPhase" || this.sureFrom(game, me, rest, seed, 2) ? adaptStep(game, rest[0]!) : null;
+      if (answer) {
+        line.given += 1;
+        return answer;
+      }
+      this.lethal = null;
+      this.lethalStats.dropped += 1;
+      return null;
+    }
+    if (d.type !== "mainPhase") return null;
+    const view = game.view(me);
+    if (!lethalWithinReach(view, d, me)) return null;
+    if (this.lethalSeen?.turn === turn && this.lethalSeen.keys.has(JSON.stringify(view))) {
+      this.lethalStats.skipped += 1;
+      return null;
+    }
+    this.lethalStats.searches += 1;
+    const seed = `${this.seed}:lethal:${this.lethalSearches++}`;
+    const found = searchSureLethal(me, {
+      budget: this.lethalSearch,
+      beam: 16,
+      maxBranches: this.maxBranches,
+      world: (i) => (this.cheat ? game.clone() : game.determinized(me, `${seed}:${i}`)),
+      checks: this.cheat ? 0 : this.lethalChecks,
+      searchResponder: () => this.responder(this.opponentQuick),
+      checkResponder: () => this.responder(true),
+      maxLines: 6,
+      seed,
+    });
+    this.stats.simulations += found.simulations;
+    this.lethalStats.rejected += found.rejected;
+    const first = found.line ? adaptStep(game, found.line[0]!) : null;
+    if (!found.line || !first) {
+      const keys = this.lethalSeen?.turn === turn ? this.lethalSeen.keys : new Set<string>();
+      for (const key of found.seen) keys.add(key);
+      this.lethalSeen = { turn, keys };
+      return null;
+    }
+    this.lethalStats.played += 1;
+    this.lethal = { turn, steps: found.line, given: 1 };
+    this.current = null;
+    return first;
+  }
+
+  /** Does the line surely win from this position: in the real game (cheating), or in `samples` samples of what we know? */
+  private sureFrom(game: GameSession, me: PlayerId, line: readonly LethalStep[], seed: string, samples: number): boolean {
+    if (this.cheat) return lineWins(game.clone(), line, me, this.responder(true));
+    for (let i = 0; i < samples; i++) if (!lineWins(game.determinized(me, `${seed}:${i}`), line, me, this.responder(true))) return false;
+    return true;
+  }
+
+  /** The opponent in a simulation of our turn: a fresh greedy model (`model` false: they pass). */
+  private responder(model: boolean): Responder {
+    if (!model) return null;
+    const bot = this.model("greedy");
+    return (session) => bot.decide(session);
   }
 
   /**
@@ -205,11 +289,7 @@ export class PlannerBot {
     const seed = `${this.seed}:${this.plans++}`;
     const world = () => (this.cheat ? game.clone() : game.determinized(me, seed));
     const root = this.node(world(), null, null, me, turn, "decide");
-    if (this.lethalSearch > 0 && root.session.decision?.type === "mainPhase") {
-      const lethal = this.findLethal(root, me, turn, world);
-      if (lethal) return this.carryOut(lethal, turn);
-    }
-    const finished: Node[] = [];
+    let finished: Node[] = [];
     const seen = new Set<string>([root.key]);
     let frontier = [root];
     let budget = this.maxSimulations;
@@ -233,6 +313,8 @@ export class PlannerBot {
       frontier = children.slice(0, this.beamWidth);
     }
     for (const node of frontier) if (canEnd(node.session.decision!)) finished.push(node);
+    // A plan that wins in our sample only because of what was sampled (a card drawn, the opponent passing) isn't a won one.
+    if (!this.cheat && this.lethalChecks > 0) finished = finished.filter((node) => node.session.result?.winner !== me || this.sureWin(node, game, me, seed));
     if (finished.length === 0) return fastAnswer(game.decision!, lookupFromReader(game.reader()));
     // The best plans by the position they leave, then by the position after the opponent's reply.
     finished.sort((a, b) => b.value - a.value);
@@ -258,36 +340,13 @@ export class PlannerBot {
     return path[0]?.answer ?? endMainPhase();
   }
 
-  /**
-   * Lethal first (the beta bots): a beam search over this turn's answers ranked by the defense the opponent's
-   * leader keeps once every attack on it we could declare now lands. A play that only opens the way (a Ward taken out, a
-   * Storm follower played, an attacker made stronger) ranks high, which the normal search, ranking whole positions, may not
-   * see in time. Searched only when lethal is within reach; returns a plan that wins the game, or null.
-   */
-  private findLethal(root: Node, me: PlayerId, turn: number, world: () => GameSession): Node | null {
-    if (!lethalWithinReach(root, me)) return null;
-    const seen = new Set<string>([root.key]);
-    let frontier = [root];
-    let budget = this.lethalSearch;
-    for (let depth = 0; depth < 16 && frontier.length > 0 && budget > 0; depth++) {
-      const children: Node[] = [];
-      for (const node of frontier) {
-        for (const answer of this.branches(node.session.decision!, lookupFromReader(node.session.reader()))) {
-          if (budget-- <= 0) break;
-          const child = this.expand(node, answer, me, turn, world);
-          if (!child) continue;
-          if (child.done) {
-            if (child.session.result?.winner === me) return child;
-          } else if (!seen.has(child.key)) {
-            seen.add(child.key);
-            children.push(child);
-          }
-        }
-      }
-      children.sort((a, b) => a.lethal - b.lethal);
-      frontier = children.slice(0, Math.max(8, this.beamWidth));
-    }
-    return null;
+  /** A plan that won in our sample: does it win in the other samples too, the opponent answering (lethal.ts)? */
+  private sureWin(node: Node, game: GameSession, me: PlayerId, seed: string): boolean {
+    const steps: LethalStep[] = [];
+    for (let n: Node | null = node; n && n.parent; n = n.parent) steps.unshift(stepOf(n.parent.session, n.answer!));
+    const sure = this.sureFrom(game, me, steps, `${seed}:won`, this.lethalChecks);
+    if (!sure) this.lethalStats.unsurePlans += 1;
+    return sure;
   }
 
   /**
@@ -306,26 +365,9 @@ export class PlannerBot {
     return redraw ? { type: "mulligan", redraw: true, bottomOrder: [...d.hand] } : { type: "mulligan", redraw: false };
   }
 
-  /** The answers worth trying at a decision of a plan: main phase actions by kind in turns, the rest as the greedy bot does. */
-  private branches(d: Decision, lookup: CardLookup): Answer[] {
-    if (d.type !== "mainPhase") return candidateAnswers(d, lookup, this.rng, this.maxBranches);
-    const groups: Record<string, { key: string; answer: Answer }[]> = { attack: [], play: [], evolve: [], activate: [] };
-    const seen = new Set<string>();
-    for (const action of d.actions) {
-      if (action.type === "endMainPhase" || action.type === "manual") continue;
-      const key = actionKey(action, lookup);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      groups[action.type]!.push({ key, answer: { type: "mainPhase", action } });
-    }
-    // Attacks on the leader first, then on the most valuable followers.
-    groups.attack!.sort((a, b) => targetRank(b.answer, lookup) - targetRank(a.answer, lookup));
-    const out: Answer[] = [];
-    const lists = Object.values(groups);
-    for (let i = 0; out.length < this.maxBranches && lists.some((l) => i < l.length); i++) {
-      for (const list of lists) if (i < list.length && out.length < this.maxBranches) out.push(list[i]!.answer);
-    }
-    return out;
+  /** The answers worth trying at a decision of a plan (branches.ts). */
+  private branches(d: Decision, lookup: ReturnType<typeof lookupFromReader>): Answer[] {
+    return planBranches(d, lookup, this.rng, this.maxBranches);
   }
 
   /** Give `answer` in a copy of `node` and play on to our next decision (the opponent passes in their quick windows). */
@@ -375,17 +417,12 @@ export class PlannerBot {
 
   private node(session: GameSession, parent: Node | null, answer: Answer | null, me: PlayerId, turn: number, stop: Stop): Node {
     const view = session.view(me);
-    const decision = session.decision;
-    const reach = decision?.type === "mainPhase" && decision.player === me ? faceReach(view, decision, me) : (parent?.reach ?? 0);
-    const defense = view.players[opponentOf(me)].leaderDefense;
     return {
       session,
       parent,
       answer,
       depth: parent ? parent.depth + 1 : 0,
       value: this.evaluator(view, me),
-      reach,
-      lethal: (defense - reach) * 10 + defense,
       done: stop !== "decide",
       key: JSON.stringify(view),
     };
@@ -426,61 +463,10 @@ export class PlannerBot {
   }
 }
 
-/** The face damage of the attacks on the opponent's leader that can be declared at this main phase decision (each attacker once). */
-function faceReach(view: PlayerView, d: Extract<Decision, { type: "mainPhase" }>, me: PlayerId): number {
-  const leader = view.players[opponentOf(me)].leader?.id;
-  const attackers = new Set<CardId>();
-  for (const a of d.actions) if (a.type === "attack" && a.target === leader) attackers.add(a.attacker);
-  let sum = 0;
-  for (const card of view.players[me].field) if (!card.hidden && attackers.has(card.id)) sum += Math.max(0, card.attack ?? 0);
-  return sum;
-}
-
-/**
- * Is lethal worth searching for? The opponent's defense is low, or at most the face damage we can declare now, plus the
- * attack of the Storm followers we could play (CR 12.9.2), plus a margin for what spells, evolutions and abilities may add.
- */
-function lethalWithinReach(root: Node, me: PlayerId): boolean {
-  const view = root.session.view(me);
-  const side = view.players[me];
-  let storm = 0;
-  for (const card of side.hand) {
-    if (!card.hidden && card.type === "follower" && card.keywords.includes("storm") && (card.cost ?? 99) <= side.playPoints) storm += Math.max(0, card.attack ?? 0);
-  }
-  const defense = view.players[opponentOf(me)].leaderDefense;
-  return defense <= 10 || defense <= root.reach + storm + 6;
-}
-
 function canEnd(d: Decision): boolean {
   return d.type === "mainPhase" && d.actions.some((a) => a.type === "endMainPhase");
 }
 
 function endMainPhase(): Answer {
   return { type: "mainPhase", action: { type: "endMainPhase" } };
-}
-
-/** Actions that give the same position: the same card played from the same place, attacks by identical followers. */
-function actionKey(action: MainAction, lookup: CardLookup): string {
-  switch (action.type) {
-    case "play": {
-      const f = lookup(action.card);
-      return f ? `play|${f.def}|${f.zone}|${String(f.cost)}` : JSON.stringify(action);
-    }
-    case "evolve": {
-      const f = lookup(action.evolveCard);
-      return JSON.stringify({ ...action, evolveCard: f?.def ?? action.evolveCard });
-    }
-    case "attack": {
-      const a = lookup(action.attacker);
-      return a ? `attack|${a.def}|${a.value}|${a.zone}|${action.target}` : JSON.stringify(action);
-    }
-    default:
-      return JSON.stringify(action);
-  }
-}
-
-function targetRank(answer: Answer, lookup: CardLookup): number {
-  if (answer.type !== "mainPhase" || answer.action.type !== "attack") return 0;
-  const target = lookup(answer.action.target);
-  return target?.zone === "leader" ? 1_000 : (target?.value ?? 0);
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createEngine, script, seedRng, validateAnswer, type Answer, type GameSession } from "../src/core";
+import { createEngine, seedRng, validateAnswer, type Answer, type GameSession } from "../src/core";
 import {
   GreedyBot,
   HARD_BETA_OPTIONS,
@@ -10,43 +10,12 @@ import {
   curveValue,
   redrawByExpectation,
   redrawKnowingDeck,
-  type PlannerBotOptions,
 } from "../src";
 import { ALL_CARDS, ALL_SCRIPTS } from "../../core/src/sets";
-import { checkInvariants, deckPool, drive, randomDeck, testFollower } from "../../core/src/testing";
+import { checkInvariants, deckPool, randomDeck } from "../../core/src/testing";
 
-// The beta bots: Medium and Hard with a lethal search first, a mulligan by the curve, and the leader's
-// defense valued on a curve.
-
-describe("the lethal search", () => {
-  const { defineCard } = script;
-  const cards = createEngine({
-    cards: [testFollower("FAIRY", 1, 1, 1), testFollower("HITTER", 3, 4, 2), testFollower("WALL", 2, 1, 3), testFollower("FILLER", 1, 1, 1)],
-    scripts: { WALL: defineCard({ keywords: ["ward"] }) },
-  });
-  const fillers = Array<string>(10).fill("FILLER");
-  /**
-   * Our turn against 8 defense behind an engaged 1/3 Ward: the only lethal is three 1/1s into the Ward, then both 4/2s at the
-   * leader. A 4/2 into the Ward looks better (it takes the Ward out and lives), and leaves the opponent at 1.
-   */
-  function ourTurn(options: PlannerBotOptions) {
-    const t = drive(cards, { me: { deck: fillers, field: ["FAIRY", "FAIRY", "FAIRY", "HITTER", "HITTER"] }, opp: { deck: fillers, field: [{ card: "WALL", engaged: true }], leaderDefense: 8 } });
-    const bot = new PlannerBot(cards, { seed: "s", ...options });
-    const turn = t.game.state.turn;
-    for (let i = 0; i < 60 && t.game.decision?.player === 0 && t.game.state.turn === turn; i++) t.game.act(bot.decide(t.game));
-    return { won: t.game.result?.winner === 0, opponent: t.game.state.players[1].leaderDefense };
-  }
-
-  it("finds lethal that needs the Ward taken out by the small followers, where a narrow plan takes the trade that looks better", () => {
-    expect(ourTurn({ beamWidth: 2 })).toEqual({ won: false, opponent: 1 });
-    expect(ourTurn({ beamWidth: 2, lethalSearch: 300 })).toEqual({ won: true, opponent: 0 });
-  });
-
-  it("medium beta and hard beta find it", () => {
-    expect(ourTurn(MEDIUM_BETA_OPTIONS).won).toBe(true);
-    expect(ourTurn(HARD_BETA_OPTIONS).won).toBe(true);
-  });
-});
+// The beta bots: Medium and Hard with a mulligan by the curve and the leader's defense valued on a curve (their sure lethal
+// first is Medium's and Hard's: lethal.test.ts).
 
 describe("the mulligan by the curve (CR 6.2.1.8)", () => {
   const inHand = (costs: number[]) => costs.map((cost) => ({ cost, from: 1 }));

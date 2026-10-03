@@ -104,6 +104,15 @@ export function evaluate(view: PlayerView, me: PlayerId, w: EvalWeights = DEFAUL
  */
 export type Evaluator = (view: PlayerView, me: PlayerId) => number;
 
+/**
+ * `evaluator`, with a finished game scored as won (`win`), lost (−`win`) or drawn (0) whatever it would say: a proven result
+ * is never left to an evaluation (a learned one is trained on positions still being played). The bots wrap every evaluation
+ * they are given in it; the hand-written one already scores so.
+ */
+export function exactResults(evaluator: Evaluator, win: number = DEFAULT_WEIGHTS.win): Evaluator {
+  return (view, me) => (view.result ? (view.result.winner === me ? win : view.result.winner === null ? 0 : -win) : evaluator(view, me));
+}
+
 /** The hand-written evaluation with these weights. */
 export const weightsEvaluator =
   (w: EvalWeights): Evaluator =>

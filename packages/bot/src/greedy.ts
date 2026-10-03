@@ -11,7 +11,7 @@ import {
   type RngState,
 } from "./core";
 import { candidateAnswers } from "./candidates";
-import { DEFAULT_WEIGHTS, weightsEvaluator, type EvalWeights, type Evaluator } from "./evaluate";
+import { DEFAULT_WEIGHTS, exactResults, weightsEvaluator, type EvalWeights, type Evaluator } from "./evaluate";
 import { fastAnswer, lookupFromReader, lookupFromView } from "./policy";
 
 export interface GreedyBotOptions {
@@ -84,7 +84,7 @@ export class GreedyBot {
     options: GreedyBotOptions = {},
   ) {
     const weights = { ...DEFAULT_WEIGHTS, ...options.weights, keywords: { ...DEFAULT_WEIGHTS.keywords, ...options.weights?.keywords } };
-    this.evaluator = options.evaluator ?? weightsEvaluator(weights);
+    this.evaluator = exactResults(options.evaluator ?? weightsEvaluator(weights), weights.win);
     this.seed = String(options.seed ?? "greedy");
     this.maxCandidates = options.maxCandidates ?? 32;
     this.maxSimulationSteps = options.maxSimulationSteps ?? 200;
