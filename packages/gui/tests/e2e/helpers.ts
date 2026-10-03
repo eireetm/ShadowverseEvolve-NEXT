@@ -191,3 +191,14 @@ async function answerInDialog(body: Locator, kind: string, choose: (n: number) =
   await button.click();
   return text;
 }
+
+/** Answer what comes (the redraws, the opponent's turn ...) until the person's main phase. */
+export async function toMainPhase(page: Page): Promise<void> {
+  for (let i = 0; i < 40; i++) {
+    const kind = (await page.locator(".sve-decision").getAttribute("data-decision"))!;
+    if (kind === "mainPhase") return;
+    if (kind !== "waiting") await answer(page, kind);
+    await page.waitForTimeout(100);
+  }
+  throw new Error("no main phase");
+}

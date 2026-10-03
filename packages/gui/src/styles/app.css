@@ -2388,6 +2388,64 @@ option {
   white-space: nowrap;
 }
 
+/* The settings' token art (TokenArtWindow.tsx): every token, then one token's printings in a second window. Both dim the
+   whole screen (the settings have no card panel on the left). */
+.sve-token-art-backdrop {
+  inset: 0;
+}
+
+.sve-token-art {
+  width: min(1100px, calc(100vw - 40px));
+}
+
+.sve-token-art-printings {
+  width: min(900px, calc(100vw - 80px));
+}
+
+.sve-token-art .sve-modal-header {
+  align-items: center;
+}
+
+.sve-token-art-grid {
+  --sve-card-width: 96px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 10px;
+}
+
+.sve-token-art-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.sve-token-art-option:hover {
+  background: rgba(88, 166, 255, 0.12);
+}
+
+.sve-token-art-current {
+  background: rgba(240, 180, 41, 0.18);
+  box-shadow: inset 0 0 0 2px var(--sve-accent);
+}
+
+.sve-token-art-name {
+  max-width: 100%;
+  font-size: 11px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sve-token-art-count {
+  font-size: 10px;
+  color: var(--sve-muted);
+}
+
 /* The main deck's summary: counts by type and the cost curve. */
 .sve-deck-stats {
   display: inline-flex;

@@ -5,6 +5,9 @@ import { engine } from "./store";
 import { applyUiTransparency, currentUiTransparency, loadResources } from "../resources/resources";
 import { updateSettings, useSettings, type CardLang, type UiLang } from "./settings";
 import { settingsFilePath } from "./settings-file";
+import { useApp } from "./store";
+import { changedTokens } from "./token-art";
+import { TokenArtWindow } from "./TokenArtWindow";
 import { APP_VERSION } from "./version";
 
 type ResourceStatus =
@@ -88,6 +91,8 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
   };
   const transparency = settings.uiTransparency ?? currentUiTransparency();
   const file = settingsFilePath();
+  const catalog = useApp((s) => s.catalog);
+  const [tokenArt, setTokenArt] = useState(false);
   return (
     <div className="sve-menu">
       <div className="sve-menu-panel sve-settings">
@@ -137,6 +142,16 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
               </button>
             </span>
           </div>
+          <div className="sve-settings-row">
+            <span>{t("settings.tokenArt")}</span>
+            <button type="button" disabled={!catalog} onClick={() => setTokenArt(true)} data-testid="settings-token-art">
+              {t("settings.tokenArtChoose")}
+            </button>
+          </div>
+          <p className="sve-hint" data-testid="settings-token-art-help">
+            {t("settings.tokenArtHelp", { n: changedTokens(catalog, settings.tokenArt) })}
+          </p>
+          {tokenArt && catalog ? <TokenArtWindow onClose={() => setTokenArt(false)} /> : null}
         </section>
         {hostApi.platform !== "web" ? <ResourcesSection /> : null}
         <section className="sve-settings-group">

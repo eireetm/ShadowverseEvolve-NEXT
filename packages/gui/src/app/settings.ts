@@ -33,6 +33,8 @@ export interface Settings {
   builderAllPrintings: boolean;
   /** How see-through the interface is, 0–0.6 (null: the style's own, public/theme.css or the built-in one). */
   uiTransparency: number | null;
+  /** The printing each token is shown with, by its definition (token-art.ts; the look only). None: its own. */
+  tokenArt: Record<string, string>;
   /** A person picks the mat slot of each card they put on the field or into the EX area (the look only). */
   manualSlots: boolean;
   /** Manual debugging: clicks on cards, decks, leaders and point panels open what can be done by hand. */
@@ -59,6 +61,7 @@ export const DEFAULT_SETTINGS: Settings = {
   builderDeck: null,
   builderAllPrintings: false,
   uiTransparency: null,
+  tokenArt: {},
   manualSlots: false,
   manualDebug: false,
   announceQuick: true,

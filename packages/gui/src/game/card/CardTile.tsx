@@ -34,11 +34,13 @@ interface Props {
   children?: ReactNode;
   /** A face-down card of the evolve deck: the evolve deck's back. */
   evolveBack?: boolean;
+  /** The printing as it is, not a token's chosen art (CardArt). */
+  exact?: boolean;
 }
 
 const MAX_KEYWORDS = 3;
 
-export function CardTile({ card, info, side, size = "normal", mark = null, onClick, onPointerDown, className, style, children, evolveBack = false }: Props) {
+export function CardTile({ card, info, side, size = "normal", mark = null, onClick, onPointerDown, className, style, children, evolveBack = false, exact = false }: Props) {
   const catalog = useApp((s) => s.catalog);
   const { cardLang, uiLang } = useSettings();
   const t = useT();
@@ -90,7 +92,7 @@ export function CardTile({ card, info, side, size = "normal", mark = null, onCli
     >
       <div className="sve-card-frame">
         <div className="sve-card-face">
-          <CardArt printing={shown.printing} def={shown.def} back={shown.back} name={name} subtitle={def ? t(`type.${def.type}` as const) : undefined} />
+          <CardArt printing={shown.printing} def={shown.def} back={shown.back} name={name} subtitle={def ? t(`type.${def.type}` as const) : undefined} exact={exact} />
         </div>
         {/* Numbers and keywords stay upright when an engaged card lies sideways. */}
         <div className="sve-card-overlay">

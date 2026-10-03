@@ -1,18 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
-import { answer, clickCard, startGame, useSettings } from "./helpers";
+import { clickCard, startGame, toMainPhase, useSettings } from "./helpers";
 
 // Manual debugging: at a main phase decision a click on a deck, a card, a leader or a player's panel opens what can be done
 // by hand, the legal actions apart from the illegal ones; each operation goes through the engine and into the log.
-
-async function toMainPhase(page: Page): Promise<void> {
-  for (let i = 0; i < 40; i++) {
-    const kind = (await page.locator(".sve-decision").getAttribute("data-decision"))!;
-    if (kind === "mainPhase") return;
-    if (kind !== "waiting") await answer(page, kind);
-    await page.waitForTimeout(100);
-  }
-  throw new Error("no main phase");
-}
 
 const handCount = (page: Page) => page.locator(".sve-hand-own .sve-card").count();
 

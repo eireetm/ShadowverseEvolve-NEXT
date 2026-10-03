@@ -29,7 +29,7 @@
   - 录像、复现包（逐字节重现一局）、撤销 / 倒回、手动调试；
   - P2P 联机，不需要自己的服务器；
   - 界面和卡牌文本都可以切换中文、英文、日文；
-  - 外观、声音、字体都可以换成自己的文件（见"自定义资源"）。
+  - 外观、声音、字体都可以换成自己的文件（见"自定义资源"）；衍生物在对局里显示哪个印刷版本的卡图，可以在设置页的"衍生物卡图"里选。
 - **安卓版**：同一个界面装进安卓 WebView（Capacitor），手机横屏使用。
 
 ### 声明
@@ -383,7 +383,7 @@ An unofficial rules engine, AI and client for the *Shadowverse: Evolve* trading 
   - Replays, bug report files that replay a game exactly, undo and rewind, and manual debugging.
   - Peer-to-peer online play with no server of its own.
   - The interface and the card text can each be English, Chinese or Japanese.
-  - Pictures, sounds and fonts can be replaced with your own files (see "Custom resources").
+  - Pictures, sounds and fonts can be replaced with your own files (see "Custom resources"); which printing a token shows in games is chosen in the settings ("Token art").
 - **Android app**: the same interface in the Android WebView (Capacitor), played with the phone held sideways.
 
 ### Disclaimer

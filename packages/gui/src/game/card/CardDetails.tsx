@@ -2,6 +2,7 @@ import { useState } from "react";
 import { cardName, cardText } from "../../app/catalog";
 import { type CardLang, useSettings } from "../../app/settings";
 import { useApp } from "../../app/store";
+import { shownPrinting } from "../../app/token-art";
 import { traitName } from "../../app/traits";
 import { findCard, sideOf } from "../../engine/view-utils";
 import { htmlLang, useT } from "../../i18n";
@@ -23,7 +24,7 @@ export function CardDetails() {
   const shown = useFocusSelect((f) => f.shown);
   const update = useApp((s) => s.update);
   const catalog = useApp((s) => s.catalog);
-  const { cardLang, uiLang } = useSettings();
+  const { cardLang, uiLang, tokenArt } = useSettings();
   const t = useT();
   const [viewing, setViewing] = useState<readonly ArtFace[] | null>(null);
   if (!shown || !catalog) return <p className="sve-hint">{t("card.hint")}</p>;
@@ -51,7 +52,8 @@ export function CardDetails() {
   // The physical card's printings (a back face has none: its front's).
   const physical = def.frontFace ? catalog.def(def.frontFace) : def;
   const printings = physical?.printings ?? [];
-  const printing = focus.printing ?? printings[0] ?? null;
+  // A token: the printing its picture shows (token-art.ts).
+  const printing = shownPrinting(catalog, tokenArt, def.id, focus.printing ?? printings[0] ?? null);
   const faces = (): ArtFace[] => {
     const front = physical ?? def;
     const face = (id: string, back: boolean): ArtFace => ({ def: id, printing, back, name: cardName(catalog.def(id), cardLang, id) });
