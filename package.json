@@ -23,7 +23,9 @@
     "card": "tsx tools/show-card.ts",
     "scripts:index": "tsx tools/gen-script-index.ts",
     "bench": "tsx tools/bench.ts",
-    "bot:arena": "tsx tools/bot-arena.ts"
+    "bot:arena": "tsx tools/bot-arena.ts",
+    "bench:throughput": "tsx tools/throughput.ts",
+    "rl:verify": "tsx tools/rl-verify.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.2",

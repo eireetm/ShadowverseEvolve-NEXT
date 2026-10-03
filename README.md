@@ -72,7 +72,9 @@ npm run dev:gui
 | `npm run release:pc -- --zip` | 打 PC 发行版（见"发行版"） |
 | `npm run card -- <卡号>` | 查一张卡：各语言文本、日文类型、相关卡、官方 QA、脚本状态 |
 | `npm run bench` | 性能基准：随机对局、复制和抽样一局、Bot 每个决策的耗时 |
-| `npm run bot:arena -- [局数] [A] [B]` | Bot 互打（easy / medium / hard，试验版 medium-beta / hard-beta；sve-fool / sve-good / sve-planner 是模仿 SVE Simulator 三个 AI 的对照组，只用于测试）：示例卡组，两局一组交换座位，打印胜率和思考时间。`--decks sd01,sd02` 选卡组，`--mirror` 双方用同一副，`--workers 8` 多进程一起打 |
+| `npm run bot:arena -- [局数] [A] [B]` | Bot 互打（easy / medium / hard，试验版 medium-beta / hard-beta；sve-fool / sve-good / sve-planner 是模仿 SVE Simulator 三个 AI 的对照组，只用于测试）：示例卡组，两局一组交换座位、轮流打遍所有卡组组合，打印按"对"计分的得分和 95% 区间、先后手、先手胜率、回合数、每副卡组的得分和思考时间。`--decks sd01,sd02` 选卡组（`train` / `holdout` / `legal`：`tools/rl/decksets.json` 的卡组集，按标准赛制和它的禁卡表检查），`--mirror` 双方用同一副，`--workers 8` 多进程一起打，`--seed` 换一批对局，`--independent` 每局单独的种子，`--range a-b` 只打其中一段，`--out 文件夹` 存下每一局（可重放的记录 `games.jsonl.gz`）和报告，`--replays N` 把前 N 局存成对局界面能打开的录像。`medium:identity`（把手写估值从外面传进去，应和 medium 完全一样）和 `medium:negated`（估值反过来，应该几乎全输）用来检查估值接口 |
+| `npm run rl:verify -- 文件夹` | 重放 `bot:arena --out` 存下的对局：每个输入是否合法、结果是否和记录一样 |
+| `npm run bench:throughput -- [random\|easy\|medium\|hard]` | 整台电脑一分钟能打多少局：多个进程同时开始（`--workers N`，默认 CPU 线程数），各打 `--seconds` 秒 |
 | `npm run build:cards` | 从抓取的卡牌数据（仓库旁边的 `assets/`，先行测试版的卡包读仓库旁边的 `BP22.json` 这类卡表）重新生成 `packages/core/data/*.json` |
 | `npm run scripts:index` | 新增卡牌脚本后，重新生成脚本注册表（`packages/core/src/script/<卡包>/index.ts`） |
 | `npm run cards:status` | 生成每张卡的实现和测试状态表（写到 `docs/card-status*.md`） |
@@ -134,7 +136,7 @@ packages/
     scripts/            打安卓 APK、生成示例卡组
     test/               单元测试（随 npm test 运行）
     tests/e2e/          端到端测试（Playwright）
-tools/                  卡牌数据构建、查卡、条款提取和核对、卡牌状态、性能基准
+tools/                  卡牌数据构建、查卡、条款提取和核对、卡牌状态、性能基准、Bot 互打和对局记录的检查（`rl/`：训练和测试用的卡组集）
 ```
 
 依赖方向：`gui` → `bot` → `core`。Core 不知道界面和 Bot 的存在。
@@ -426,7 +428,9 @@ Run these at the repository root:
 | `npm run release:pc -- --zip` | Build the PC release (see "Releases") |
 | `npm run card -- <card number>` | Show a card: its text in each language, Japanese traits, related cards, official Q&A, script status |
 | `npm run bench` | Benchmarks: random games, copying and sampling a game, the bot's time per decision |
-| `npm run bot:arena -- [games] [A] [B]` | Bots against each other (easy / medium / hard, the trial medium-beta / hard-beta, and sve-fool / sve-good / sve-planner, imitations of SVE Simulator's three AIs used only as benchmarks): the sample decks, games in pairs with the seats swapped; prints the win rate and thinking time. `--decks sd01,sd02` picks decks, `--mirror` gives both players the same deck, `--workers 8` plays on several processes |
+| `npm run bot:arena -- [games] [A] [B]` | Bots against each other (easy / medium / hard, the trial medium-beta / hard-beta, and sve-fool / sve-good / sve-planner, imitations of SVE Simulator's three AIs used only as benchmarks): the sample decks, games in pairs with the seats swapped, going through every matchup of the decks; prints the score by pairs with a 95% interval, going first and second, the first player's win rate, game length, the score per deck and thinking time. `--decks sd01,sd02` picks decks (`train` / `holdout` / `legal`: the deck sets of `tools/rl/decksets.json`, checked against the standard format and its restriction list), `--mirror` gives both players the same deck, `--workers 8` plays on several processes, `--seed` another series of games, `--independent` a seed per game, `--range a-b` only part of the series, `--out folder` keeps every game (replayable records, `games.jsonl.gz`) and the report, `--replays N` saves the first N games as replays the GUI opens. `medium:identity` (the hand-written evaluation passed in from outside: plays exactly as medium) and `medium:negated` (the evaluation turned round: should lose nearly every game) check the evaluation interface |
+| `npm run rl:verify -- folder` | Replays the games `bot:arena --out` kept: is every input legal, does each game end as recorded |
+| `npm run bench:throughput -- [random\|easy\|medium\|hard]` | How many games the whole computer plays in a minute: several processes start together (`--workers N`, default: CPU threads), each plays for `--seconds` |
 | `npm run build:cards` | Rebuild `packages/core/data/*.json` from the scraped card data (the `assets/` folder next to the repository; a pre-release set from its card list next to the repository, such as `BP22.json`) |
 | `npm run scripts:index` | Regenerate the card script registries (`packages/core/src/script/<set>/index.ts`) after adding scripts |
 | `npm run cards:status` | Write each card's implementation and test status (to `docs/card-status*.md`) |
@@ -488,7 +492,7 @@ packages/
     scripts/            building the Android APK, generating the sample decks
     test/               unit tests (run by npm test)
     tests/e2e/          end-to-end tests (Playwright)
-tools/                  building card data, card lookup, rules clauses and citation checks, card status, benchmarks
+tools/                  building card data, card lookup, rules clauses and citation checks, card status, benchmarks, bot matches and checks of recorded games (`rl/`: deck sets for training and testing)
 ```
 
 Dependencies go one way: `gui` → `bot` → `core`. The Core knows nothing about the interface or the bots.

@@ -1,0 +1,7 @@
+{
+  "about": "Deck sets for training and testing bots (npm run bot:arena -- --decks train|holdout|legal). Sample decks (packages/gui/decks/samples) that are legal in the standard format under the restriction list below; the Cross Craft deck and csd03a/csd03b (banned cards) are left out. The holdout decks never go into training data: they test cards the bots haven't seen. Each class of a holdout deck is in the training set too.",
+  "format": "standard",
+  "restrictionList": "10_26_JPN",
+  "train": ["sd01", "sd02", "sd03", "sd04", "sd05", "sd06", "sd08", "csd01", "csd02a", "csd02b", "dsd01b", "pcs01"],
+  "holdout": ["sd07", "dsd01a", "csd02c"]
+}

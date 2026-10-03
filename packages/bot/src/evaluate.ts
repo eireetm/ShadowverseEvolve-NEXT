@@ -98,6 +98,18 @@ export function evaluate(view: PlayerView, me: PlayerId, w: EvalWeights = DEFAUL
   return sideValue(mine, theirs, w) - sideValue(theirs, mine, w);
 }
 
+/**
+ * Scores a position for `me` (higher is better for `me`) from `me`'s view: the hand-written evaluation, or a learned one put
+ * in the bots' place of it. It must be deterministic (the same view gives the same score), as the bots are.
+ */
+export type Evaluator = (view: PlayerView, me: PlayerId) => number;
+
+/** The hand-written evaluation with these weights. */
+export const weightsEvaluator =
+  (w: EvalWeights): Evaluator =>
+  (view, me) =>
+    evaluate(view, me, w);
+
 /** The attack of a side's followers on the field: what they could deal next turn. */
 function boardAttack(s: PlayerSideView): number {
   let sum = 0;

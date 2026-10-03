@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createEngine, script, validateAnswer, type Answer, type GameSession, type PlayerId } from "../src/core";
-import { GreedyBot } from "../src";
+import { evaluate, GreedyBot } from "../src";
 import { ALL_CARDS, ALL_SCRIPTS } from "../../core/src/sets";
 import { PERPETUAL_CYCLE_LIMIT } from "../../core/src/engine/abilities/confirmation";
 import { checkInvariants, deckPool, drive, randomAgent, randomDeck, testAmulet, testFollower } from "../../core/src/testing";
@@ -38,6 +38,15 @@ function playGame(g: GameSession, players: [Player, Player]): Answer[] {
 const clean = (bot: GreedyBot) => [bot.stats.fallbacks, bot.stats.simulationFailures, bot.stats.lastError];
 
 describe("GreedyBot", () => {
+  it("an injected evaluation takes the hand-written one's place: wrapped, it gives the same game", () => {
+    let calls = 0;
+    const play = (bot: GreedyBot) => playGame(newGame("greedy-evaluator"), [botPlayer(bot), randomPlayer("r")]);
+    const plain = play(new GreedyBot(engine, { seed: "e" }));
+    const injected = play(new GreedyBot(engine, { seed: "e", evaluator: (view, me) => (calls++, evaluate(view, me)) }));
+    expect(injected).toEqual(plain);
+    expect(calls).toBeGreaterThan(0);
+  }, 120_000);
+
   it("plays whole games against itself and against a random player: legal answers, every game ends", () => {
     for (let i = 0; i < GAMES; i++) {
       const a = new GreedyBot(engine, { seed: `a${i}` });

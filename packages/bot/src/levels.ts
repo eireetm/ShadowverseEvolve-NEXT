@@ -47,16 +47,21 @@ export interface Bot {
   decide(session: GameSession): Answer;
 }
 
+/** The evaluations a bot can be given in place of the hand-written one (PlannerBotOptions; the greedy bot takes `evaluator`). */
+export type BotEvaluation = Pick<PlannerBotOptions, "evaluator" | "replyEvaluator" | "modelEvaluator">;
+
 /**
  * A bot of a level. `effort` scales how much the planners search, for a slower device (a phone: less); it changes how
- * long they think, not what they know. The same seed and effort give the same answers.
+ * long they think, not what they know. `evaluation` puts other evaluations in the hand-written one's place (a learned one).
+ * The same seed and effort give the same answers.
  */
-export function createBot(engine: Engine, level: BotLevel, seed: string, effort = 1): Bot {
-  if (level === "easy") return new GreedyBot(engine, { seed });
+export function createBot(engine: Engine, level: BotLevel, seed: string, effort = 1, evaluation: BotEvaluation = {}): Bot {
+  if (level === "easy") return new GreedyBot(engine, { seed, evaluator: evaluation.evaluator });
   const options = PLANNER_OPTIONS[level];
   const scaled = (n: number | undefined, least: number) => Math.max(least, Math.round((n ?? least) * effort));
   return new PlannerBot(engine, {
     ...options,
+    ...evaluation,
     seed,
     maxSimulations: scaled(options.maxSimulations, 100),
     replyPlans: scaled(options.replyPlans, 2),

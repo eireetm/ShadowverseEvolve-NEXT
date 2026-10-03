@@ -14,7 +14,7 @@ import {
   type RngState,
 } from "./core";
 import { candidateAnswers } from "./candidates";
-import { DEFAULT_WEIGHTS, evaluate, type EvalWeights } from "./evaluate";
+import { DEFAULT_WEIGHTS, weightsEvaluator, type EvalWeights, type Evaluator } from "./evaluate";
 import { GreedyBot, type BotStats } from "./greedy";
 import { redrawByExpectation, redrawKnowingDeck } from "./mulligan";
 import { fastAnswer, lookupFromReader, type CardLookup } from "./policy";
@@ -27,6 +27,21 @@ export interface PlannerBotOptions {
    */
   cheat?: boolean;
   weights?: Partial<EvalWeights>;
+  /**
+   * Scores the positions the search compares instead of the hand-written evaluation with `weights` (a learned one): every
+   * step of a plan, and the plans' final positions unless `replyEvaluator` is given.
+   */
+  evaluator?: Evaluator;
+  /**
+   * Scores only the positions the best plans are finally compared by: after the opponent's reply, or where the game or our
+   * turn already ended. Default: `evaluator`.
+   */
+  replyEvaluator?: Evaluator;
+  /**
+   * The evaluation of the opponent models (the opponent's turn after a plan, their quick windows) and of the greedy bot that
+   * answers outside our main phase. Default: the hand-written one with the default weights.
+   */
+  modelEvaluator?: Evaluator;
   /** Plans kept at each step of the search. */
   beamWidth?: number;
   /** Answers tried at each decision of a plan. */
@@ -83,7 +98,9 @@ type Stop = "decide" | "turnOver" | "gameOver";
  */
 export class PlannerBot {
   readonly stats: BotStats = { decisions: 0, simulations: 0, simulationFailures: 0, simulationErrors: {}, fallbacks: 0, lastError: null };
-  private readonly weights: EvalWeights;
+  private readonly evaluator: Evaluator;
+  private readonly replyEvaluator: Evaluator;
+  private readonly modelEvaluator: Evaluator | undefined;
   private readonly seed: string;
   private readonly cheat: boolean;
   private readonly beamWidth: number;
@@ -112,7 +129,10 @@ export class PlannerBot {
     private readonly engine: Engine,
     options: PlannerBotOptions = {},
   ) {
-    this.weights = { ...DEFAULT_WEIGHTS, ...options.weights, keywords: { ...DEFAULT_WEIGHTS.keywords, ...options.weights?.keywords } };
+    const weights: EvalWeights = { ...DEFAULT_WEIGHTS, ...options.weights, keywords: { ...DEFAULT_WEIGHTS.keywords, ...options.weights?.keywords } };
+    this.evaluator = options.evaluator ?? weightsEvaluator(weights);
+    this.replyEvaluator = options.replyEvaluator ?? this.evaluator;
+    this.modelEvaluator = options.modelEvaluator;
     this.seed = String(options.seed ?? "planner");
     this.cheat = options.cheat ?? false;
     this.beamWidth = options.beamWidth ?? 6;
@@ -127,7 +147,7 @@ export class PlannerBot {
     this.opponentQuick = options.opponentQuick ?? false;
     this.lethalSearch = options.lethalSearch ?? 0;
     this.mulliganMode = options.mulligan ?? "greedy";
-    this.greedy = new GreedyBot(engine, { seed: `${this.seed}:greedy` });
+    this.greedy = new GreedyBot(engine, { seed: `${this.seed}:greedy`, evaluator: this.modelEvaluator });
   }
 
   decide(session: GameSession): Answer {
@@ -221,7 +241,7 @@ export class PlannerBot {
     let choice: Node = finished[0]!;
     let choiceValue = -Infinity;
     for (const node of this.replyPlans > 0 ? best.values() : []) {
-      const value = node.done ? node.value : this.afterReply(node, me, turn, world);
+      const value = node.done ? this.finalValue(node, me) : this.afterReply(node, me, turn, world);
       if (value > choiceValue) {
         choice = node;
         choiceValue = value;
@@ -363,7 +383,7 @@ export class PlannerBot {
       parent,
       answer,
       depth: parent ? parent.depth + 1 : 0,
-      value: evaluate(view, me, this.weights),
+      value: this.evaluator(view, me),
       reach,
       lethal: (defense - reach) * 10 + defense,
       done: stop !== "decide",
@@ -374,9 +394,15 @@ export class PlannerBot {
   /** A fresh model of the opponent (a fair one: it plans with what the opponent can see). */
   private model(kind: "greedy" | "planner"): { decide(session: GameSession): Answer } {
     const seed = `${this.seed}:model:${this.models++}`;
+    const evaluator = this.modelEvaluator;
     return kind === "planner"
-      ? new PlannerBot(this.engine, { seed, replyPlans: 0, beamWidth: 4, maxBranches: 12, maxSimulations: 150 })
-      : new GreedyBot(this.engine, { seed, maxCandidates: 12 });
+      ? new PlannerBot(this.engine, { seed, replyPlans: 0, beamWidth: 4, maxBranches: 12, maxSimulations: 150, evaluator, modelEvaluator: evaluator })
+      : new GreedyBot(this.engine, { seed, maxCandidates: 12, evaluator });
+  }
+
+  /** A plan's position scored as plans are finally compared (where the game or our turn already ended, or a reply failed). */
+  private finalValue(node: Node, me: PlayerId): number {
+    return this.replyEvaluator === this.evaluator ? node.value : this.replyEvaluator(node.session.view(me), me);
   }
 
   /** The position at our next main phase after ending the turn at `node` and the opponent's turn (played by a model). */
@@ -391,11 +417,11 @@ export class PlannerBot {
         if (!d || (d.player === me && d.type === "mainPhase" && session.state.turn > turn)) break;
         session.act(d.player === me ? fastAnswer(d, lookupFromReader(session.reader())) : opponent.decide(session));
       }
-      return evaluate(session.view(me), me, this.weights);
+      return this.replyEvaluator(session.view(me), me);
     } catch (e) {
       this.stats.simulationFailures += 1;
       this.stats.lastError = e instanceof Error ? e.message : String(e);
-      return node.value - 1_000;
+      return this.finalValue(node, me) - 1_000;
     }
   }
 }

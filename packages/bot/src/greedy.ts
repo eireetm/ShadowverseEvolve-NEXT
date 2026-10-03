@@ -11,13 +11,15 @@ import {
   type RngState,
 } from "./core";
 import { candidateAnswers } from "./candidates";
-import { DEFAULT_WEIGHTS, evaluate, type EvalWeights } from "./evaluate";
+import { DEFAULT_WEIGHTS, weightsEvaluator, type EvalWeights, type Evaluator } from "./evaluate";
 import { fastAnswer, lookupFromReader, lookupFromView } from "./policy";
 
 export interface GreedyBotOptions {
   /** Seeds the bot's own randomness (how hidden cards are sampled, which answers are sampled). */
   seed?: string | number;
   weights?: Partial<EvalWeights>;
+  /** Scores the positions it compares instead of the hand-written evaluation with `weights` (a learned one). */
+  evaluator?: Evaluator;
   /** Most answers compared per decision; each costs one simulation. */
   maxCandidates?: number;
   /** Most inputs one simulation plays before the position is scored where it stands. */
@@ -63,7 +65,7 @@ const EPSILON = 1e-9;
  */
 export class GreedyBot {
   readonly stats: BotStats = { decisions: 0, simulations: 0, simulationFailures: 0, simulationErrors: {}, fallbacks: 0, lastError: null };
-  private readonly weights: EvalWeights;
+  private readonly evaluator: Evaluator;
   private readonly seed: string;
   private readonly maxCandidates: number;
   private readonly maxSimulationSteps: number;
@@ -81,7 +83,8 @@ export class GreedyBot {
     private readonly engine: Engine,
     options: GreedyBotOptions = {},
   ) {
-    this.weights = { ...DEFAULT_WEIGHTS, ...options.weights, keywords: { ...DEFAULT_WEIGHTS.keywords, ...options.weights?.keywords } };
+    const weights = { ...DEFAULT_WEIGHTS, ...options.weights, keywords: { ...DEFAULT_WEIGHTS.keywords, ...options.weights?.keywords } };
+    this.evaluator = options.evaluator ?? weightsEvaluator(weights);
     this.seed = String(options.seed ?? "greedy");
     this.maxCandidates = options.maxCandidates ?? 32;
     this.maxSimulationSteps = options.maxSimulationSteps ?? 200;
@@ -141,7 +144,7 @@ export class GreedyBot {
     if (baseline ? candidates.length === 0 : candidates.length <= 1) return candidates[0] ?? baseline ?? fastAnswer(d, lookup);
     const seed = `${this.seed}:${this.simulatedDecisions++}`;
     let best: Answer = baseline ?? candidates[0]!;
-    let bestValue = baseline ? evaluate(view, me, this.weights) + EPSILON : -Infinity;
+    let bestValue = baseline ? this.evaluator(view, me) + EPSILON : -Infinity;
     for (const candidate of candidates) {
       const value = this.simulate(session, me, candidate, seed);
       if (value !== null && value > bestValue) {
@@ -166,7 +169,7 @@ export class GreedyBot {
       for (let steps = 0; sim.decision && sim.decision.type !== "mainPhase" && steps < this.maxSimulationSteps; steps++) {
         sim.act(fastAnswer(sim.decision, lookupFromReader(reader)));
       }
-      return evaluate(sim.view(me), me, this.weights);
+      return this.evaluator(sim.view(me), me);
     } catch (e) {
       this.stats.simulationFailures += 1;
       const message = `${e instanceof Error ? e.name : "Error"}: ${e instanceof Error ? e.message : String(e)}`.slice(0, 300);

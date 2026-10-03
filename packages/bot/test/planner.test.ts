@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createEngine, script, validateAnswer, type Answer, type GameSession } from "../src/core";
-import { GreedyBot, HARD_OPTIONS as HARD, MEDIUM_OPTIONS as MEDIUM, PlannerBot, type PlannerBotOptions } from "../src";
+import { evaluate, GreedyBot, HARD_OPTIONS as HARD, MEDIUM_OPTIONS as MEDIUM, PlannerBot, type Evaluator, type PlannerBotOptions } from "../src";
 import { ALL_CARDS, ALL_SCRIPTS } from "../../core/src/sets";
 import { PERPETUAL_CYCLE_LIMIT } from "../../core/src/engine/abilities/confirmation";
 import { checkInvariants, deckPool, drive, randomAgent, randomDeck, testAmulet, testFollower, type ScenarioSide } from "../../core/src/testing";
@@ -131,6 +131,23 @@ describe("PlannerBot in whole games", () => {
   it("is reproducible: same seeds, same game", () => {
     const run = () => playGame(newGame("planner-repro"), [botPlayer(new PlannerBot(engine, { seed: "x" })), botPlayer(new PlannerBot(engine, { seed: "y", ...HARD }))]);
     expect(run()).toEqual(run());
+  }, 600_000);
+
+  it("an injected evaluation takes the hand-written one's place: wrapped, it gives the same game, and each place asks it", () => {
+    for (const [name, options] of [["medium", MEDIUM], ["hard", HARD]] as const) {
+      const calls = { search: 0, reply: 0, model: 0 };
+      const wrapped =
+        (place: keyof typeof calls): Evaluator =>
+        (view, me) => {
+          calls[place] += 1;
+          return evaluate(view, me);
+        };
+      const play = (bot: PlannerBot) => playGame(newGame(`planner-evaluator-${name}`), [botPlayer(bot), botPlayer(new GreedyBot(engine, { seed: "other" }))]);
+      const plain = play(new PlannerBot(engine, { seed: "e", ...options }));
+      const injected = play(new PlannerBot(engine, { seed: "e", ...options, evaluator: wrapped("search"), replyEvaluator: wrapped("reply"), modelEvaluator: wrapped("model") }));
+      expect(injected, name).toEqual(plain);
+      expect([calls.search > 0, calls.reply > 0, calls.model > 0], name).toEqual([true, true, true]);
+    }
   }, 600_000);
 
   it("medium decides on what its player can see only: other hidden cards, same decision", () => {
