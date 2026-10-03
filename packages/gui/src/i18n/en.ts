@@ -147,6 +147,7 @@ export const en = {
   "tokenArt.count": "{n} printings",
   "tokenArt.printings": "{name}: printings",
   "tokenArt.own": "Its own",
+  "tokenArt.view": "View",
   "settings.online": "Online play",
   "settings.turnUrls": "TURN relay",
   "settings.turnUsername": "User name",

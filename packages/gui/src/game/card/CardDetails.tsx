@@ -7,7 +7,7 @@ import { traitName } from "../../app/traits";
 import { findCard, sideOf } from "../../engine/view-utils";
 import { htmlLang, useT } from "../../i18n";
 import { counterName } from "../../i18n/counters";
-import { useFocusSelect } from "../focus";
+import { useFocusSelect, type FocusCard } from "../focus";
 import { ArtViewer, type ArtFace } from "./ArtViewer";
 import { CardArt } from "./CardArt";
 import { CardText } from "./CardText";
@@ -16,20 +16,28 @@ import { displayOf } from "./display";
 const LANGS: readonly CardLang[] = ["en", "cn", "ja"];
 
 /**
- * The last card the pointer went over: picture (click it for a large one), names, type, traits, stats, text, printings. A
- * card of the game is followed while it stays in its zone (it evolves, takes damage ...); once it moves it is a new card
- * (CR 4.1.4) and the panel keeps what it was.
+ * The last card the pointer went over (CardPanel). A card of the game is followed while it stays in its zone (it evolves,
+ * takes damage ...); once it moves it is a new card (CR 4.1.4) and the panel keeps what it was.
  */
 export function CardDetails() {
   const shown = useFocusSelect((f) => f.shown);
   const update = useApp((s) => s.update);
   const catalog = useApp((s) => s.catalog);
+  const t = useT();
+  if (!shown || !catalog) return <p className="sve-hint">{t("card.hint")}</p>;
+  const now = shown.id && update ? findCard(update.view, shown.id) : null;
+  return <CardPanel focus={now && update ? { ...displayOf(now, sideOf(update.view, now.id), catalog), view: now } : shown} />;
+}
+
+/**
+ * A card's panel: picture (click it for a large one), names, type, traits, stats, text, printings. `exact`: this printing as
+ * it is, not a token's chosen art; without `art`, no picture (the token art window shows one printing large beside it).
+ */
+export function CardPanel({ focus, exact = false, art = true }: { focus: FocusCard; exact?: boolean; art?: boolean }) {
+  const catalog = useApp((s) => s.catalog)!;
   const { cardLang, uiLang, tokenArt } = useSettings();
   const t = useT();
   const [viewing, setViewing] = useState<readonly ArtFace[] | null>(null);
-  if (!shown || !catalog) return <p className="sve-hint">{t("card.hint")}</p>;
-  const now = shown.id && update ? findCard(update.view, shown.id) : null;
-  const focus = now && update ? { ...displayOf(now, sideOf(update.view, now.id), catalog), view: now } : shown;
   const def = catalog.def(focus.def);
   if (!def) return <p className="sve-hint">{focus.def}</p>;
   const view = focus.view;
@@ -53,7 +61,8 @@ export function CardDetails() {
   const physical = def.frontFace ? catalog.def(def.frontFace) : def;
   const printings = physical?.printings ?? [];
   // A token: the printing its picture shows (token-art.ts).
-  const printing = shownPrinting(catalog, tokenArt, def.id, focus.printing ?? printings[0] ?? null);
+  const own = focus.printing ?? printings[0] ?? null;
+  const printing = exact ? own : shownPrinting(catalog, tokenArt, def.id, own);
   const faces = (): ArtFace[] => {
     const front = physical ?? def;
     const face = (id: string, back: boolean): ArtFace => ({ def: id, printing, back, name: cardName(catalog.def(id), cardLang, id) });
@@ -61,9 +70,11 @@ export function CardDetails() {
   };
   return (
     <div className="sve-details">
-      <button type="button" className="sve-details-art" onClick={() => setViewing(faces())} title={t("card.enlarge")} data-testid="details-art">
-        <CardArt printing={focus.printing} def={def.id} back={focus.back} name={name} subtitle={t(`type.${def.type}` as const)} />
-      </button>
+      {art ? (
+        <button type="button" className="sve-details-art" onClick={() => setViewing(faces())} title={t("card.enlarge")} data-testid="details-art">
+          <CardArt printing={focus.printing} def={def.id} back={focus.back} name={name} subtitle={t(`type.${def.type}` as const)} exact={exact} />
+        </button>
+      ) : null}
       <h3 className="sve-details-name" lang={htmlLang(cardLang)}>
         {name}
       </h3>

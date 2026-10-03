@@ -26,6 +26,16 @@ test("token art: a printing chosen in the settings is the Fairy made in a game",
   await fairy.click();
   const printings = page.getByTestId("token-art-printings");
   await expect(printings.locator('.sve-token-art-option[data-printing="BP01-T03"]')).toHaveClass(/sve-token-art-current/);
+  // "View": that printing large, beside what the card panel says of it; it chooses nothing.
+  await printings.locator('.sve-token-art-option[data-printing="SD01-T01"]').getByTestId("token-art-view").click();
+  const preview = page.getByTestId("token-art-preview");
+  await expect(preview.locator(".sve-token-art-preview-art [data-printing]")).toHaveAttribute("data-printing", "SD01-T01");
+  await expect(preview.locator(".sve-details-name")).toHaveText("Fairy");
+  await expect(preview.locator(".sve-details-meta")).toContainText("SD01-T01");
+  await expect(preview.locator(".sve-details-printings .sve-current")).toContainText("SD01-T01");
+  await page.keyboard.press("Escape");
+  await expect(preview).toHaveCount(0);
+  await expect(printings.locator('.sve-token-art-option[data-printing="BP01-T03"]')).toHaveClass(/sve-token-art-current/);
   await printings.locator('.sve-token-art-option[data-printing="SD01-T01"]').click();
   await expect(printings).toHaveCount(0);
   await expect(fairy.locator(".sve-printing-label")).toHaveText("SD01-T01");

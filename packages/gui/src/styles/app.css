@@ -2446,6 +2446,38 @@ option {
   color: var(--sve-muted);
 }
 
+.sve-token-art-view {
+  margin-top: 2px;
+  padding: 1px 10px;
+  font-size: 11px;
+}
+
+/* One printing viewed: its picture as large as the window allows, and the card panel's text beside it. */
+.sve-token-art-preview {
+  width: min(980px, calc(100vw - 60px));
+}
+
+.sve-token-art-preview-body {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.sve-token-art-preview-art {
+  --w: min(420px, 42vw, calc((84vh - 70px) * 63 / 88));
+  flex: none;
+  width: var(--w);
+  aspect-ratio: 63 / 88;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #2a303b;
+}
+
+.sve-token-art-preview-text {
+  flex: 1;
+  min-width: 0;
+}
+
 /* The main deck's summary: counts by type and the cost curve. */
 .sve-deck-stats {
   display: inline-flex;

@@ -152,6 +152,7 @@ export const ja: Record<MessageKey, string> = {
   "tokenArt.count": "{n} 種類",
   "tokenArt.printings": "{name}：印刷バージョン",
   "tokenArt.own": "初期値",
+  "tokenArt.view": "見る",
   "settings.online": "オンライン",
   "settings.turnUrls": "TURN 中継",
   "settings.turnUsername": "ユーザー名",

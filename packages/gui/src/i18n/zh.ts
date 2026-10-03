@@ -151,6 +151,7 @@ export const zh: Record<MessageKey, string> = {
   "tokenArt.count": "{n} 个版本",
   "tokenArt.printings": "{name}：印刷版本",
   "tokenArt.own": "默认",
+  "tokenArt.view": "查看",
   "settings.online": "联机",
   "settings.turnUrls": "TURN 中转",
   "settings.turnUsername": "用户名",
