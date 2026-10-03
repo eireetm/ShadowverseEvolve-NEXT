@@ -19,6 +19,7 @@ import { parseDeckFile } from "../decks/format";
 import type { SeatController } from "../engine/protocol";
 import { parseReplay } from "../replays/replay-format";
 import { ownCardArtUrl } from "../resources/lookup";
+import { setInBackground } from "../resources/sound";
 import type { DeckFileEntry, Host, HostInfo, ImportResult, ReplayFileEntry } from "./api";
 import { mergeResources } from "./bundled";
 import { resourcePathInZip } from "./zip-paths";
@@ -305,10 +306,12 @@ export async function createNativeHost(platform: AppPlatform): Promise<Host> {
 }
 
 /**
- * Android's back button: closes what is open or goes back a screen (app/back.ts); on the main menu the app goes to the
- * background. An iPhone has no back button: the app's own buttons go back.
+ * The app in the background: Capacitor leaves the web view running, music and all, so the sounds stop until the app is
+ * back (sound.ts). Android's back button: closes what is open or goes back a screen (app/back.ts); on the main menu the app
+ * goes to the background. An iPhone has no back button: the app's own buttons go back.
  */
 export async function installNativeShell(platform: AppPlatform): Promise<void> {
+  await App.addListener("appStateChange", ({ isActive }) => setInBackground(!isActive));
   if (platform !== "android") return;
   await App.addListener("backButton", () => {
     if (!goBack()) void App.minimizeApp();

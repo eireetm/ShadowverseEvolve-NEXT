@@ -14,6 +14,7 @@ import { planSounds, SFX, type BgmName, type SfxName, type SoundCue } from "./so
 const AT_ONCE = 4;
 
 function playUrl(url: string): void {
+  if (inBackground) return;
   const audio = new Audio(url);
   audio.volume = getSettings().volume;
   void audio.play().catch(() => {
@@ -84,6 +85,10 @@ const resolve = (cue: SoundCue): string | null => (cue.card ? cardSoundUrl(cue.c
 const FADE_MS = 500;
 let music: { name: BgmName; url: string; audio: HTMLAudioElement } | null = null;
 let waitingForGesture = false;
+/** The app is in the background (setInBackground). */
+let inBackground = false;
+/** Music fading out after a change of screen (paused at once when the app goes to the background). */
+const leaving = new Set<HTMLAudioElement>();
 
 /** The fade each music element is in (a newer one stops the older). */
 const fades = new WeakMap<HTMLAudioElement, number>();
@@ -115,7 +120,7 @@ function start(audio: HTMLAudioElement): void {
         waitingForGesture = false;
         window.removeEventListener("pointerdown", retry);
         window.removeEventListener("keydown", retry);
-        if (music) start(music.audio);
+        if (music && !inBackground) start(music.audio);
       };
       window.addEventListener("pointerdown", retry);
       window.addEventListener("keydown", retry);
@@ -128,14 +133,45 @@ export function playBgm(name: BgmName | null): void {
   const url = name ? bgmUrl(name) : null;
   if (music && music.name === name && music.url === url) return;
   const old = music;
-  if (old) fade(old.audio, 0, () => old.audio.pause());
+  // In the background the old music is already paused: nothing to fade.
+  if (old && !old.audio.paused) {
+    leaving.add(old.audio);
+    fade(old.audio, 0, () => {
+      old.audio.pause();
+      leaving.delete(old.audio);
+    });
+  }
   music = null;
   if (!name || !url) return;
   const audio = new Audio(url);
   audio.loop = true;
   audio.volume = 0;
   music = { name, url, audio };
-  start(audio);
+  // In the background it starts when the app is back.
+  if (!inBackground) start(audio);
+}
+
+/**
+ * The app went to the background (another app in front, the screen off, the app being closed) or came back. The phone
+ * apps' web view would go on playing there: the music pauses where it is and goes on, faded in, when the app is back;
+ * sound effects of that time aren't played.
+ */
+export function setInBackground(away: boolean): void {
+  if (away === inBackground) return;
+  inBackground = away;
+  if (away) {
+    for (const audio of leaving) audio.pause();
+    leaving.clear();
+  }
+  if (!music) return;
+  // A fade under way stops here.
+  fades.set(music.audio, ++fadeSeq);
+  if (away) {
+    music.audio.pause();
+  } else {
+    music.audio.volume = 0;
+    start(music.audio);
+  }
 }
 
 // The music follows its volume setting at once (a fade in stops there).
