@@ -711,6 +711,20 @@ option {
   border-bottom: 1px solid var(--sve-border);
 }
 
+/* The deck builder: the card shown, one copy more or fewer in the deck, and how many it has. */
+.sve-copy-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sve-copy-count {
+  min-width: 1.6em;
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
 /* The table: the opponent's hand, the two mats, your hand; the side panels beside the mats. */
 .sve-table {
   position: relative;
@@ -1504,6 +1518,55 @@ option {
 }
 
 /* The result over the table. */
+/* Who goes first, said for a few seconds as a game begins (board/TurnOrderNotice.tsx): over the top of the table, out of
+   the way of the redraw window. */
+.sve-turn-order {
+  position: absolute;
+  top: 16%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 34px;
+  border-radius: 14px;
+  background: rgb(20 26 36 / var(--sve-ui-alpha));
+  border: 1px solid var(--sve-accent);
+  box-shadow: 0 16px 48px #000b;
+  cursor: pointer;
+  animation: sve-turn-order 3.2s ease forwards;
+}
+
+.sve-turn-order strong {
+  font-size: 30px;
+  color: var(--sve-accent);
+  white-space: nowrap;
+}
+
+.sve-turn-order span {
+  color: var(--sve-muted);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+@keyframes sve-turn-order {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
+  8%,
+  85% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 .sve-result-overlay {
   position: absolute;
   inset: 0;
@@ -3003,6 +3066,57 @@ option {
 
 /* The online server's configuration window (settings, online screen). */
 /* Over the whole screen: it opens from menus, which have no left column. */
+/* The online screen: the person's name; the server's lobby (the public rooms, to join or watch). */
+.sve-online-name input {
+  flex: 1;
+  min-width: 0;
+}
+
+.sve-online-check-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sve-online-lobby h4 {
+  margin: 4px 0 6px;
+  font-size: 14px;
+  color: var(--sve-muted);
+}
+
+.sve-online-lobby ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.sve-online-lobby li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--sve-border);
+  border-radius: 6px;
+}
+
+.sve-online-lobby-what {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sve-online-lobby-what strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .sve-server-config-backdrop {
   inset: 0;
 }

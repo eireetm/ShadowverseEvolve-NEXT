@@ -72,11 +72,15 @@ export interface OnlineState {
   watchers: number;
   /** The room's spectator seats: the online server says how many its rooms have; the public networks' rooms have 2. */
   seats: number;
+  /** The players' names in the online game played or watched, player 1's first ("": none given); null: no such game. */
+  names: [string, string] | null;
+  /** The online server keeps the finished games its players both let it keep (it says so when a program connects). */
+  records: boolean;
 }
 
 export const NO_PREP: Prep = { rules: null, mine: null, theirs: null, theirsProblems: null, starting: false };
 
-let state: OnlineState = { phase: { kind: "idle" }, since: Date.now(), chat: [], error: null, prep: NO_PREP, game: null, room: null, watchers: 0, seats: SPECTATOR_SEATS };
+let state: OnlineState = { phase: { kind: "idle" }, since: Date.now(), chat: [], error: null, prep: NO_PREP, game: null, room: null, watchers: 0, seats: SPECTATOR_SEATS, names: null, records: false };
 const listeners = new Set<() => void>();
 
 export function setOnline(change: Partial<OnlineState>): void {

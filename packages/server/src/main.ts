@@ -5,6 +5,7 @@
 //   sve-server keys                         the keys' names
 //   sve-server revoke <name>                remove a key (its connections close within seconds)
 //   sve-server status                       who is connected now, and this hour's use per key
+//   sve-server records                      the finished games kept (a file a month), to download and train with
 // The configuration file is /etc/sve-server/server.ini (or $SVE_SERVER_CONFIG, or --config). A running server reads it again
 // when it changes (once it has stayed the same for a few seconds: an editor writing it isn't caught halfway), and the
 // certificate files when they change (certbot renews them every few days).
@@ -15,6 +16,7 @@ import { createServer as createHttpsServer, get as httpsGet } from "node:https";
 import { get as httpGet } from "node:http";
 import { dirname } from "node:path";
 import { clientConfigText, newConfigText, newKey, readConfig, validKeyName, withKey, withoutKey, type ServerConfig } from "./config";
+import { recordFiles } from "./records";
 import { startRelay, type RelayStatus } from "./relay";
 
 declare const __SERVER_VERSION__: string;
@@ -35,6 +37,7 @@ const HELP = [
   "sve-server keys            列出密钥 the keys",
   "sve-server revoke <名字>   作废密钥 revoke a key",
   "sve-server status          现在的连接和本小时的用量 who is connected now, this hour's use",
+  "sve-server records         保存下来的对局 the games kept (to train the bots)",
   "配置文件 configuration: /etc/sve-server/server.ini (--config <file>)",
 ].join("\n");
 
@@ -77,9 +80,9 @@ function certificateEnd(pem: string): { date: string; hours: number } {
 }
 
 function formatStatus(s: RelayStatus): string {
-  const lines = [`在线 online: ${s.connections} · 房间 rooms: ${s.rooms}`];
-  lines.push("密钥 key — 现在的连接 connections now · 本小时 this hour: 连上 connects / 开房 rooms / 流量 KB");
-  for (const [name, k] of Object.entries(s.keys)) lines.push(`  ${name} — ${k.connections} · ${k.connects} / ${k.rooms} / ${Math.round(k.bytes / 1024)}`);
+  const lines = [`在线 online: ${s.connections} · 房间 rooms: ${s.rooms} · 大厅 lobby: ${s.lobby.following} 人看 following, ${s.lobby.listed} 个公开房间 public rooms`];
+  lines.push("密钥 key — 现在的连接 connections now · 本小时 this hour: 连上 connects / 开房 rooms / 流量 KB / 存下的对局 games kept");
+  for (const [name, k] of Object.entries(s.keys)) lines.push(`  ${name} — ${k.connections} · ${k.connects} / ${k.rooms} / ${Math.round(k.bytes / 1024)} / ${k.records}`);
   const refused = Object.entries(s.refused);
   if (refused.length > 0) lines.push(`拒绝 refused: ${refused.map(([why, n]) => `${why} ${n}`).join(", ")}`);
   return lines.join("\n");
@@ -121,7 +124,7 @@ function run(): void {
   relay = startRelay(server, config, log);
   server.on("error", (err) => fail(`服务器启动失败 the server can't start: ${err.message}`));
   const listening = () =>
-    log(`sve-server ${VERSION} listening on port ${config.port} (${tls ? "wss" : "ws"}): ${config.keys.size} keys, ${config.spectators} spectator seats per room`);
+    log(`sve-server ${VERSION} listening on port ${config.port} (${tls ? "wss" : "ws"}): ${config.keys.size} keys, ${config.spectators} spectator seats per room, records ${config.records.enabled ? `kept in ${config.records.dir}` : "off"}`);
   if (config.listen) server.listen(config.port, config.listen, listening);
   else server.listen(config.port, listening);
 
@@ -131,7 +134,7 @@ function run(): void {
     if (next.port !== config.port || next.tlsCert !== config.tlsCert || next.tlsKey !== config.tlsKey) log("config: the port or the certificate files changed: restart to use them (sudo systemctl restart sve-server)");
     config = next;
     relay!.configure(next);
-    log(`config read again: ${next.keys.size} keys (${[...next.keys.keys()].join(", ")}), ${next.spectators} spectator seats`);
+    log(`config read again: ${next.keys.size} keys (${[...next.keys.keys()].join(", ")}), ${next.spectators} spectator seats, records ${next.records.enabled ? "on" : "off"}`);
   };
   const reloadTls = () => {
     if (!tls || !("setSecureContext" in server)) return;
@@ -170,7 +173,7 @@ function run(): void {
   // Every hour: the hour's numbers, and a warning when the certificate isn't being renewed.
   setInterval(() => {
     const s = relay!.takeHour();
-    log(`hour: ${s.connections} connected, ${s.rooms} rooms; ${Object.entries(s.keys).map(([n, k]) => `${n} ${k.connects} connects/${k.rooms} rooms/${Math.round(k.bytes / 1024)} KB`).join("; ")}${Object.keys(s.refused).length ? `; refused ${JSON.stringify(s.refused)}` : ""}`);
+    log(`hour: ${s.connections} connected, ${s.rooms} rooms (${s.lobby.listed} public); ${Object.entries(s.keys).map(([n, k]) => `${n} ${k.connects} connects/${k.rooms} rooms/${Math.round(k.bytes / 1024)} KB/${k.records} games`).join("; ")}${Object.keys(s.refused).length ? `; refused ${JSON.stringify(s.refused)}` : ""}`);
     if (tls) {
       const end = certificateEnd(readTls().cert);
       if (end.hours < 48) log(`WARNING: the certificate ends in ${end.hours} h and hasn't been renewed (sudo certbot renew)`);
@@ -212,7 +215,14 @@ function status(): void {
 const [command, name] = words;
 if (command === undefined || command === "run") run();
 else if (command === "status") status();
-else if (command === "keys") {
+else if (command === "records") {
+  const config = configOf(configFile);
+  const files = recordFiles(config.records.dir);
+  console.log(`保存对局 keeping games: ${config.records.enabled ? "开 on" : "关 off"} · ${config.records.dir}`);
+  if (files.length === 0) console.log("还没有对局 no games yet");
+  for (const f of files) console.log(`  ${f.file} — ${f.games} 局 games, ${(f.bytes / 1024).toFixed(0)} KB`);
+  if (files.length > 0) console.log(`共 in all: ${files.reduce((s, f) => s + f.games, 0)} 局 games（在控制台的"文件管理"里打开这个文件夹下载 download them with the console's file manager）`);
+} else if (command === "keys") {
   const config = configOf(configFile);
   if (config.keys.size === 0) console.log("没有密钥 no keys");
   for (const [n, key] of config.keys) console.log(`${n} = ${key.slice(0, 4)}…`);

@@ -4,9 +4,12 @@
 // sender's state (engine/game-host.ts). After a lost connection, the same room connects again and the answers the other side
 // is missing are sent again. Spectators ("观战": two seats a room on the public networks, as many as the online server says
 // on it) join the host's room: the host tells them the game (its options and its inputs so far) and passes on both players'
-// answers and the chat; they can't do anything else. The state lives in net/state.ts.
+// answers and the chat; they can't do anything else. Each program says its person's name (the other player's and the
+// spectators' screens show it) and whether they let the online server keep their games. On the server, the host describes
+// its room for the lobby (its name, the rules, who is in), and a finished game both players let it keep is sent to it (both
+// programs send it: the server keeps it once). The state lives in net/state.ts.
 import type { Catalog } from "../app/catalog";
-import { getSettings } from "../app/settings";
+import { getSettings, subscribeSettings } from "../app/settings";
 import { engine, getApp } from "../app/store";
 import { APP_VERSION, PLATFORM } from "../app/version";
 import { DECK_FORMAT, toDeckList, type DeckFile } from "../decks/format";
@@ -18,10 +21,10 @@ import { newRoomCode } from "./codes";
 import type { PeerLink } from "./link";
 import { answerConnection, BadCodeError, offerConnection, type ManualAttempt } from "./manual";
 import type { MessageKey } from "../i18n";
-import { BACKLOG_PIECE, MAX_SPECTATOR_SEATS, SPECTATOR_SEATS, watchedOptions, type Hello, type JoinAs, type NetMessage, type ReadyDeck, type Rules, type WatchedGame } from "./messages";
+import { BACKLOG_PIECE, cleanName, MAX_SPECTATOR_SEATS, SPECTATOR_SEATS, watchedOptions, type Hello, type JoinAs, type NetMessage, type ReadyDeck, type Rules, type WatchedGame } from "./messages";
 import type { TurnServer } from "./relays";
 import { meet, type Admission, type Meeting, type MeetingHandlers } from "./rooms";
-import { serverNetwork, type JoinMode, type ServerProblem } from "./server";
+import { serverNetwork, type JoinMode, type ServerProblem, type ServerRoom } from "./server";
 import { currentServer } from "./server-config";
 import { currentLink, gameStarted, getOnline, NO_PREP, setChatRelay, setLink, setOnline, type OnlineRole, type Prep } from "./state";
 
@@ -34,8 +37,16 @@ declare const __ENGINE_FINGERPRINT__: string;
 /** The rules code's fingerprint (vite.config.ts); "dev" where the build didn't make one (tests). */
 export const ENGINE = typeof __ENGINE_FINGERPRINT__ === "string" ? __ENGINE_FINGERPRINT__ : "dev";
 
-// What this program tells the other one (the card data's fingerprint once the catalog is known).
-let hello: Hello = { t: "hello", version: PROTOCOL, cards: "", engine: ENGINE, app: APP_VERSION, platform: PLATFORM };
+/** This program's person's name, as shown ("": none given). */
+const myName = (): string => cleanName(getSettings().playerName);
+
+/** What this program tells the other one: who it is (the card data's fingerprint once the catalog is known), its person. */
+function helloOf(cards: string): Hello {
+  const name = myName();
+  return { t: "hello", version: PROTOCOL, cards, engine: ENGINE, app: APP_VERSION, platform: PLATFORM, ...(name ? { name } : {}), share: getSettings().shareGames };
+}
+
+let hello: Hello = helloOf("");
 
 async function sha256(text: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
@@ -53,10 +64,35 @@ export async function cardsFingerprint(catalog: Catalog): Promise<string> {
 }
 
 export async function identify(catalog: Catalog): Promise<void> {
-  hello = { t: "hello", version: PROTOCOL, cards: await cardsFingerprint(catalog), engine: ENGINE, app: APP_VERSION, platform: PLATFORM };
+  hello = helloOf(await cardsFingerprint(catalog));
   // Connected before the fingerprint was ready: the other side learns it now.
   currentLink()?.send(hello);
   for (const w of watchers) w.link.send(hello);
+}
+
+// The person changed their name, whether the server may keep their games, or whether their rooms are public: the other
+// side hears it, the game shows it, the lobby lists it.
+subscribeSettings(() => {
+  const next = helloOf(hello.cards);
+  if (next.name !== hello.name || next.share !== hello.share) {
+    hello = next;
+    currentLink()?.send(hello);
+    for (const w of watchers) w.link.send(hello);
+    nameTheGame();
+  }
+  describeRoom();
+});
+
+/** The other program, as it last said (it stays known after the connection is gone: the game it played is still shown). */
+let lastPeer: Hello | null = null;
+
+/** The players' names of the game this program plays: its person's at its seat, the other's at the other seat. */
+function nameTheGame(): void {
+  const game = getOnline().game;
+  if (!game || game.seat === null) return;
+  const mine = myName();
+  const theirs = lastPeer?.name ?? "";
+  setOnline({ names: game.seat === 0 ? [mine, theirs] : [theirs, mine] });
 }
 
 /** Whether the other program can play with this one (null: not known yet). A spectator's must be the same too. */
@@ -114,6 +150,7 @@ const turn = (): TurnServer | null => {
 function stopLooking(): void {
   meeting?.cancel();
   meeting = null;
+  serverRoom = null;
   attempt?.cancel();
   attempt = null;
   if (rewatch !== null) window.clearTimeout(rewatch);
@@ -200,6 +237,7 @@ function connected(role: "host" | "guest", peer: PeerLink): void {
     disconnect();
     resetSeed();
     setOnline({ phase: { kind: "closed", reason: "lost" }, prep: { ...getOnline().prep, starting: false } });
+    describeRoom();
   };
   peer.onMessage = (message) => void receive(message);
   peer.onClose = lost;
@@ -207,6 +245,7 @@ function connected(role: "host" | "guest", peer: PeerLink): void {
   if (role === "host") {
     sendRules();
     peer.send({ t: "watchers", n: watchers.length });
+    describeRoom();
   }
   if (going && game) peer.send({ t: "resume", game: game.id, have: getApp().update?.inputCount ?? 0 });
   startPinging(peer, lost);
@@ -219,7 +258,9 @@ async function receive(message: NetMessage): Promise<void> {
   const link = currentLink();
   switch (message.t) {
     case "hello":
+      lastPeer = message;
       setOnline({ phase: { ...phase, peer: message } });
+      nameTheGame();
       await seedStep();
       break;
     case "chat":
@@ -371,6 +412,7 @@ function watchedGame(options: GameOptions, backlog: number): WatchedGame {
     secondLeaders: options.secondLeaders ?? [null, null],
     turnOrder: options.turnOrder ?? "choose",
     backlog,
+    players: getOnline().names ?? [myName(), lastPeer?.name ?? ""],
   };
 }
 
@@ -387,8 +429,10 @@ function begin(seed: string, seat: 0 | 1): void {
   const options = onlineOptions(seed, prep.rules, host, guest, seat);
   engine.send({ kind: "start", options });
   setOnline({ game: { id: seed, seat, opponent: prep.theirs.name }, prep: { ...NO_PREP, rules: prep.rules } });
+  nameTheGame();
   // The host's spectators watch the new game from its start.
   if (seat === 0) toWatchers({ t: "watch", game: watchedGame(options, 0) });
+  describeRoom();
   gameStarted();
 }
 
@@ -398,8 +442,14 @@ function playSettings() {
   return { paused: false, revealAll: false, manualDebug: false, announceQuick: settings.announceQuick, attackPauseMs: Math.min(settings.botDelayMs, 500) };
 }
 
-// The engine worker's answers of this program's person go to the other program (and the host's, to its spectators).
+// The engine worker's answers of this program's person go to the other program (and the host's, to its spectators); a
+// finished game is said to the lobby and, when both players allow it, kept on the server.
 engine.subscribe((message) => {
+  if (message.kind === "update" && message.update.result && message.update.online && !message.update.online.spectating) {
+    describeRoom();
+    void keepGame(message.update.seed);
+    return;
+  }
   if (message.kind !== "localInput" || !getOnline().game) return;
   sent.push(message);
   const input: NetMessage = { t: "input", index: message.index, input: message.input, hash: message.hash };
@@ -425,6 +475,7 @@ export function updateRules(): void {
   setOnline({ prep: { ...NO_PREP, rules } });
   sendRules();
   currentLink()?.send({ t: "ready", deck: null });
+  describeRoom();
 }
 
 function sendRules(): void {
@@ -482,6 +533,7 @@ function countWatchers(): void {
   setOnline({ watchers: n });
   currentLink()?.send({ t: "watchers", n });
   for (const w of watchers) w.link.send({ t: "watchers", n });
+  describeRoom();
 }
 
 function addWatcher(link: PeerLink): void {
@@ -626,7 +678,7 @@ function startWatching(): void {
   engine.send({ kind: "settings", settings: playSettings() });
   engine.send({ kind: "spectate", options: watchedOptions(coming.game), inputs: coming.inputs });
   const continuing = getOnline().game?.id === coming.game.id;
-  setOnline({ game: { id: coming.game.id, seat: null, opponent: "" } });
+  setOnline({ game: { id: coming.game.id, seat: null, opponent: "" }, names: coming.game.players ?? null });
   // A new game shows by itself; the same game again (after a lost connection) just goes on.
   if (!continuing) gameStarted();
 }
@@ -674,10 +726,57 @@ function meetRoom(code: string, role: "host" | JoinAs, server: boolean, mode: Jo
   }
   return meet(code, role, null, handlers, undefined, [
     serverNetwork(settings, mode, {
-      onWelcome: (seats) => setOnline({ seats: Math.max(0, Math.min(MAX_SPECTATOR_SEATS, seats)) }),
+      onWelcome: (seats, records) => setOnline({ seats: Math.max(0, Math.min(MAX_SPECTATOR_SEATS, seats)), records }),
       onProblem: (problem) => serverProblem(problem, role, mode),
+      onRoom: (room) => {
+        serverRoom = room;
+        describeRoom();
+      },
     }),
   ]);
+}
+
+/** The room joined on the online server (to describe it for the lobby, to send a finished game), while there is one. */
+let serverRoom: ServerRoom | null = null;
+
+/** The host of a room on the server: what the lobby shows of it — its name, the rules, who is in, whether it plays. */
+function describeRoom(): void {
+  const { room, prep } = getOnline();
+  if (!serverRoom || room?.role !== "host" || !room.server) return;
+  const rules = prep.rules ?? hostRules();
+  serverRoom.describe({
+    name: myName(),
+    format: rules.format,
+    list: rules.list,
+    turnOrder: rules.turnOrder,
+    public: getSettings().publicRooms,
+    players: currentLink() ? 2 : 1,
+    watchers: watchers.length,
+    playing: playing(),
+  });
+}
+
+/** Whether the online server keeps this game: it keeps games, and both players allow it (the other's word, as last said). */
+export function gameKept(): boolean {
+  const { room, records } = getOnline();
+  return !!room?.server && records && getSettings().shareGames && lastPeer?.share === true;
+}
+
+/** The games sent to be kept (a game is sent once). */
+const sentGames = new Set<string>();
+
+/**
+ * A finished online game, sent for the server to keep when both players allow it: the replay of the game (its seed, both
+ * decks, every answer: the program can play it again), with the version and fingerprints of the program that played it. No
+ * names, no chat. Both players' programs send it; the server keeps it once.
+ */
+async function keepGame(seed: string): Promise<void> {
+  const game = getOnline().game;
+  if (!game || game.id !== seed || game.seat === null || sentGames.has(seed) || !gameKept() || !serverRoom) return;
+  sentGames.add(seed);
+  const replay = await engine.exportReplay();
+  if (!replay || replay.options.seed !== seed || !serverRoom) return;
+  await serverRoom.record(seed, { format: "sve-online-record", version: 1, app: APP_VERSION, platform: PLATFORM, engine: ENGINE, cards: hello.cards, replay });
 }
 
 /** A host's tries at a room code the server doesn't have yet (another host may have just made the code drawn). */
@@ -834,7 +933,8 @@ export function leave(): void {
   disconnect();
   resetSeed();
   incoming = null;
-  setOnline({ phase: { kind: "idle" }, error: null, prep: NO_PREP, game: null, room: null, watchers: 0 });
+  setOnline({ phase: { kind: "idle" }, error: null, prep: NO_PREP, game: null, room: null, watchers: 0, names: null });
+  serverRoom = null;
 }
 
 /** The role of the connection (or of the room being looked for), for the screens. */

@@ -4,7 +4,8 @@
 // server), the round trip, whether both programs are the same, a chat, and the next game's preparation: the host's rules,
 // each player's deck, ready. Both ready, the game starts (on the game screen); after it, the next one is prepared here. A
 // lost connection can be made again, and the game goes on where it was. A room's games can also be watched (a spectator's
-// seat, "观战"): the spectator sees them, and the chat, and does nothing else.
+// seat, "观战"): the spectator sees them, and the chat, and does nothing else. The person's name goes with the connection;
+// on the server, its lobby lists the public rooms ("xxx 的房间") to join or watch with a click.
 import { useEffect, useState } from "react";
 import { errorText } from "../app/errors";
 import { updateSettings, useSettings } from "../app/settings";
@@ -14,14 +15,17 @@ import type { TurnOrder } from "../engine/protocol";
 import { formatProblemText, type FormatProblem } from "../formats/formats";
 import { FormatPicker } from "../formats/FormatPicker";
 import { hostApi, type DeckFileEntry } from "../host/api";
-import { useT, type Translate } from "../i18n";
+import { useT, type MessageKey, type Translate } from "../i18n";
 import { APP_VERSION, PLATFORM } from "../app/version";
 import { checkNetwork, type NetworkCheck } from "../net/check";
 import { normalizeRoomCode } from "../net/codes";
-import { SPECTATOR_SEATS, type Rules } from "../net/messages";
+import { cleanName, NAME_MAX, SPECTATOR_SEATS, type Rules } from "../net/messages";
+import { watchLobby, type LobbyRoom, type ServerProblem } from "../net/server";
+import type { ServerSettings } from "../net/server-config";
 import {
   acceptReply,
   cancel,
+  gameKept,
   getOnline,
   hostManually,
   hostRoom,
@@ -236,7 +240,84 @@ function Start() {
   const server = useServerConfig().server;
   // Keyed: a server saved in the window moves its part up without making it again (the window stays open).
   const parts = [<ServerStart key="server" />, <PublicStart key="public" titled={server !== null} />];
-  return <div className="sve-online-step">{server ? parts : parts.reverse()}</div>;
+  return (
+    <div className="sve-online-step">
+      <NameField />
+      {server ? parts : parts.reverse()}
+    </div>
+  );
+}
+
+/** The person's name, which goes with every connection (the other player's screen, the spectators', the lobby). */
+function NameField() {
+  const t = useT();
+  const { playerName } = useSettings();
+  return (
+    <label className="sve-field sve-online-name">
+      <span>{t("online.nameLabel")}</span>
+      <input
+        value={playerName}
+        maxLength={NAME_MAX + 8}
+        placeholder={t("online.namePlaceholder")}
+        onChange={(e) => updateSettings({ playerName: e.target.value })}
+        onBlur={(e) => updateSettings({ playerName: cleanName(e.target.value) })}
+        data-testid="online-name"
+      />
+    </label>
+  );
+}
+
+/** A name as shown, or "someone" when none was given. */
+const nameOr = (name: string | undefined, t: Translate): string => (name ? name : t("online.anonymous"));
+
+/**
+ * The server's lobby: the rooms their hosts made public — whose, the rules, waiting or playing, the spectators — to join
+ * or watch with a click. Followed while this part is shown (the server says each change).
+ */
+function Lobby({ server }: { server: ServerSettings }) {
+  const t = useT();
+  const [rooms, setRooms] = useState<LobbyRoom[] | null>(null);
+  const [problem, setProblem] = useState<ServerProblem | null>(null);
+  useEffect(() => {
+    const lobby = watchLobby(server, setRooms, setProblem);
+    return () => lobby.close();
+  }, [server.address, server.key]);
+  return (
+    <div className="sve-online-lobby" data-testid="online-lobby" data-rooms={rooms?.length ?? -1}>
+      <h4>{t("online.lobby")}</h4>
+      {problem ? (
+        <p className="sve-problem">{t("online.lobbyProblem", { why: t(`online.server.${problem}`) })}</p>
+      ) : rooms === null ? (
+        <p className="sve-hint">…</p>
+      ) : rooms.length === 0 ? (
+        <p className="sve-hint">{t("online.lobbyEmpty")}</p>
+      ) : (
+        <ul>
+          {rooms.map((room) => (
+            <li key={room.code} data-code={room.code} data-testid="online-lobby-room">
+              <span className="sve-online-lobby-what">
+                <strong>{t("online.lobbyRoom", { name: nameOr(room.name, t) })}</strong>
+                <span className="sve-hint">
+                  {[
+                    t(`format.${room.format}` as MessageKey),
+                    room.list ?? t("format.noList"),
+                    t(room.playing ? "online.lobbyPlaying" : room.players < 2 ? "online.lobbyWaiting" : "online.lobbyPlaying"),
+                    t("online.lobbySpectators", { n: room.watchers, max: room.seats }),
+                  ].join(" · ")}
+                </span>
+              </span>
+              <button type="button" disabled={room.players >= 2 || room.playing} onClick={() => joinRoom(room.code, true)} data-testid="online-lobby-join">
+                {t("online.join")}
+              </button>
+              <button type="button" disabled={room.watchers >= room.seats} onClick={() => watchRoom(room.code, false, true)} data-testid="online-lobby-watch">
+                {t("online.watch")}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 /** Who goes first, as a select (the online screen's rules: here before a room is made, and in the room for its host). */
@@ -263,6 +344,7 @@ function TurnOrderField({ testId }: { testId: string }) {
  */
 function ServerStart() {
   const t = useT();
+  const settings = useSettings();
   const server = useServerConfig().server;
   const [code, setCode] = useState("");
   const [editing, setEditing] = useState(false);
@@ -277,6 +359,10 @@ function ServerStart() {
             <FormatPicker />
             <TurnOrderField testId="online-server-turn-order" />
           </fieldset>
+          <label className="sve-online-check-label">
+            <input type="checkbox" checked={settings.publicRooms} onChange={(e) => updateSettings({ publicRooms: e.target.checked })} data-testid="online-server-public" />
+            {t("online.publicRoom")}
+          </label>
           <button type="button" className="sve-primary sve-menu-button" onClick={() => hostRoom(undefined, false, true)} data-testid="online-server-host">
             {t("online.host")}
           </button>
@@ -296,6 +382,7 @@ function ServerStart() {
             </button>
           </form>
           <p className="sve-hint">{t("online.server.watchHint")}</p>
+          <Lobby server={server} />
         </>
       ) : (
         <p className="sve-hint">{t("online.server.noneHelp")}</p>
@@ -440,6 +527,7 @@ interface WatchingProps {
  */
 function Watching({ phase, identified, going, onGame }: WatchingProps) {
   const t = useT();
+  const { names } = useOnline();
   const same = identified ? samePrograms(phase.peer) : null;
   return (
     <div className="sve-online-step" data-testid="online-watching">
@@ -463,6 +551,12 @@ function Watching({ phase, identified, going, onGame }: WatchingProps) {
           {same === null ? t("online.peerUnknown") : same ? t("online.peerSame") : t("online.watchDifferent")}
         </li>
         <Versions peer={phase.peer} />
+        {names ? (
+          <li data-testid="online-players">
+            {t("online.playersLabel")}
+            {t("online.playersVs", { a: nameOr(names[0], t), b: nameOr(names[1], t) })}
+          </li>
+        ) : null}
       </ul>
       <WatchersFact />
       {going ? (
@@ -609,8 +703,17 @@ function Connected({ phase, identified, going, onGame, onEditDecks }: ConnectedP
           {same === null ? t("online.peerUnknown") : same ? t("online.peerSame") : t("online.peerDifferent")}
         </li>
         <Versions peer={phase.peer} />
+        <li data-testid="online-peer-name">
+          {t("online.peerNameLabel")}
+          {phase.peer ? nameOr(phase.peer.name, t) : "…"}
+        </li>
       </ul>
       <WatchersFact />
+      {online.room?.server && online.records ? (
+        <p className="sve-hint" data-testid="online-share" data-kept={gameKept() ? "yes" : "no"}>
+          {t(gameKept() ? "online.shareYes" : "online.shareNo")}
+        </p>
+      ) : null}
       {going && online.game ? (
         <div className="sve-online-game" data-testid="online-game">
           <p>{t("online.gameGoing", { deck: online.game.opponent })}</p>

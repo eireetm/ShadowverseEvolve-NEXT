@@ -1,3 +1,7 @@
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { constants, gunzipSync } from "node:zlib";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { useSettings } from "./helpers";
 import { expectSameInputs, playAtRandom, readyBoth, watchProblems } from "./online-helpers";
@@ -132,6 +136,62 @@ test("through the online server, a lost connection: the game waits, the other pl
   if ((await host.locator(".sve-decision").getAttribute("data-decision")) !== "over") expect(after).toBe(30);
   expect(await inputs(host)).toBeGreaterThan(before);
   console.log(`answers while cut off: ${meanwhile}; after reconnecting: ${after}`);
+  expect(problems).toEqual([]);
+});
+
+/** The games the test relay kept (tests/e2e/relay.ini: [records] dir), one JSON line each. */
+function keptGames(): { key: string; record: { format: string; replay: { options: { seed: string }; inputs: unknown[] } } }[] {
+  const dir = fileURLToPath(new URL("../../.e2e-relay-records", import.meta.url));
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir)
+    .filter((f) => f.endsWith(".jsonl.gz"))
+    .flatMap((f) => gunzipSync(readFileSync(join(dir, f)), { finishFlush: constants.Z_SYNC_FLUSH }).toString("utf8").split("\n"))
+    .filter((line) => line.trim() !== "")
+    .map((line) => JSON.parse(line));
+}
+
+test("names, the lobby, and a game the server keeps: a public room joined from the lobby, played, conceded", async ({ browser }) => {
+  test.setTimeout(300_000);
+  const problems: string[] = [];
+  const host = await openOnline(browser, SERVER, { playerName: "小明", setupDecks: ["samples/sd01.json", "samples/sd02.json"] });
+  const guest = await openOnline(browser, SERVER, { setupDecks: ["samples/sd03.json", "samples/sd02.json"] });
+  watchProblems([host, guest], problems);
+  // The guest gives a name here (the online screen keeps it in the settings).
+  await guest.getByTestId("online-name").fill("小红");
+  await expect(host.getByTestId("online-name")).toHaveValue("小明");
+  await expect(host.getByTestId("online-server-public")).toBeChecked();
+  await host.getByTestId("online-server-host").click();
+  const code = (await host.getByTestId("online-room-code").innerText({ timeout: 30_000 })).trim();
+
+  // The lobby lists the host's room: its name, the rules, waiting; one click joins it.
+  const listed = guest.locator(`[data-testid="online-lobby-room"][data-code="${code}"]`);
+  await expect(listed).toContainText("小明's room", { timeout: 15_000 });
+  await expect(listed).toContainText("waiting for a player");
+  await listed.getByTestId("online-lobby-join").click();
+  for (const page of [host, guest]) await expect(page.getByTestId("online-connected")).toBeVisible({ timeout: 30_000 });
+  await expect(host.getByTestId("online-peer-name")).toHaveText("Opponent: 小红");
+  await expect(guest.getByTestId("online-peer-name")).toHaveText("Opponent: 小明");
+  // Both allow the server to keep their games (the setting's default): said so.
+  for (const page of [host, guest]) await expect(page.getByTestId("online-share")).toHaveAttribute("data-kept", "yes");
+
+  // In the game, the players' boxes show the names.
+  await readyBoth(host, guest);
+  await expect(host.getByTestId("player-panel-0").locator(".sve-player-name")).toHaveText("小明 · You");
+  await expect(host.getByTestId("player-panel-1").locator(".sve-player-name")).toHaveText("小红");
+  await expect(guest.getByTestId("player-panel-1").locator(".sve-player-name")).toHaveText("小红 · You");
+  const before = keptGames().length;
+  await playAtRandom(host, guest, 12, problems, 31);
+  if ((await host.locator(".sve-decision").getAttribute("data-decision")) !== "over") {
+    host.once("dialog", (dialog) => void dialog.accept());
+    await host.getByTestId("game-concede").click();
+  }
+  for (const page of [host, guest]) await expect(page.getByTestId("result-new-game")).toBeVisible({ timeout: 30_000 });
+  // The server kept the game once (both programs sent it): the replay of it, with every answer.
+  await expect.poll(() => keptGames().length, { timeout: 15_000 }).toBe(before + 1);
+  const kept = keptGames().at(-1)!;
+  expect(kept.key).toBe("e2e");
+  expect(kept.record.format).toBe("sve-online-record");
+  expect(kept.record.replay.inputs.length).toBeGreaterThan(12);
   expect(problems).toEqual([]);
 });
 

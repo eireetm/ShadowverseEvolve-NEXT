@@ -9,5 +9,7 @@ dist-android/
 dist-ios/
 # The online server to build releases with (its address and key): never published.
 /online-server.ini
+# The end-to-end tests' relay keeps the games played through it here.
+packages/gui/.e2e-relay-records/
 # The project's notes (docs/) stay on the developer's machine: the README says what a user needs.
 docs/

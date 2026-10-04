@@ -5,10 +5,16 @@ import type { CardLang } from "../app/settings";
 import type { AbilitySummary, DecisionInfo, GameUpdate } from "../engine/protocol";
 import { findCard } from "../engine/view-utils";
 import type { MessageKey, Translate } from "../i18n";
+import { getOnline } from "../net/state";
 import { displayOf } from "./card/display";
 
-/** "Player 1", with who plays it ("Player 2 (Bot-Medium)"); a spectator's two players are just "Player 1" and "Player 2". */
-export function playerLabel(p: PlayerId, update: Pick<GameUpdate, "controllers">, t: Translate): string {
+/**
+ * "Player 1", with who plays it ("Player 2 (Bot-Medium)"); a spectator's two players are just "Player 1" and "Player 2". In
+ * an online game, the name its person gave, when they gave one (net/state.ts).
+ */
+export function playerLabel(p: PlayerId, update: Pick<GameUpdate, "controllers"> & Partial<Pick<GameUpdate, "online">>, t: Translate): string {
+  const named = update.online ? getOnline().names?.[p] : undefined;
+  if (named) return named;
   const name = t("game.playerN", { n: p + 1 });
   const controller = update.controllers[p];
   const watched = update.controllers[0] === "remote" && update.controllers[1] === "remote";

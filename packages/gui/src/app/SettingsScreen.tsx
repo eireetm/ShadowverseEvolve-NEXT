@@ -238,6 +238,11 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
           </div>
           <p className="sve-hint">{t("settings.serverHelp")}</p>
           {serverWindow ? <ServerConfigWindow onClose={() => setServerWindow(false)} /> : null}
+          <label className="sve-settings-row" title={t("settings.shareGamesHelp")}>
+            <span>{t("settings.shareGames")}</span>
+            <input type="checkbox" checked={settings.shareGames} onChange={(e) => updateSettings({ shareGames: e.target.checked })} data-testid="settings-share-games" />
+          </label>
+          <p className="sve-hint">{t("settings.shareGamesHelp")}</p>
         </section>
         <button type="button" className="sve-menu-button" onClick={onBack}>
           {t("common.back")}

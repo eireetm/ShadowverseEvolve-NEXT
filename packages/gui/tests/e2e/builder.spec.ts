@@ -43,6 +43,18 @@ test("builds a deck: filters, click and drag to add, right-click and drag back t
   await tiles.first().click();
   expect(await count(page, "evolve")).toBe(1);
 
+  // The card panel: one copy more or fewer of the card it shows (beside "Back"), where a click in the pool puts it.
+  await tiles.first().hover();
+  await expect(page.getByTestId("builder-copies")).toHaveAttribute("data-count", "1");
+  await page.getByTestId("builder-plus").click();
+  expect(await count(page, "evolve")).toBe(2);
+  await page.getByTestId("builder-minus").click();
+  await page.getByTestId("builder-minus").click();
+  expect(await count(page, "evolve")).toBe(0);
+  await expect(page.getByTestId("builder-minus")).toBeDisabled();
+  await page.getByTestId("builder-plus").click();
+  expect(await count(page, "evolve")).toBe(1);
+
   // Drag a card in; right-click one out; drag one back onto the pool.
   await page.getByTestId("builder-type").selectOption("follower");
   await settled(page);

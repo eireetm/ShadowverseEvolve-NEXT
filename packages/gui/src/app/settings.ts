@@ -43,6 +43,12 @@ export interface Settings {
   announceQuick: boolean;
   /** Online play: the player's own TURN relay, for networks that can't connect directly (empty urls: none). */
   turn: TurnServer;
+  /** Online play: the name the other player and the spectators see, and the server's lobby ("xxx 的房间"); "": none given. */
+  playerName: string;
+  /** Online play on the server: a finished game is kept on the server (to train the bots), if both players allow it. */
+  shareGames: boolean;
+  /** Online play on the server: a room made is listed in the server's lobby (else it is joined by its code only). */
+  publicRooms: boolean;
 }
 
 const KEY = "sve-gui-settings";
@@ -66,6 +72,9 @@ export const DEFAULT_SETTINGS: Settings = {
   manualDebug: false,
   announceQuick: true,
   turn: { urls: "", username: "", credential: "" },
+  playerName: "",
+  shareGames: true,
+  publicRooms: true,
 };
 
 /** Settings saved by an older version, brought up to date: "deck restrictions" off became the unlimited format. */

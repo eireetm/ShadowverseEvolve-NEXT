@@ -78,6 +78,10 @@ export type Pick = (n: number) => number;
  */
 export async function answer(page: Page, kind: string, pick?: Pick): Promise<string> {
   const choose = (n: number) => (pick ? pick(n) : 0);
+  // Cards looked at by a look-only ability (board/LookedCards.tsx): its window over the table is closed first, as a person
+  // would (it is no answer: the decision under it is answered next).
+  const looked = page.getByTestId("looked-ok");
+  if (await looked.isVisible()) await looked.click();
   if (kind === "announcement") return (await acknowledge(page), "OK");
   const click = async (id: string) => {
     const button = await tableButton(page, id);

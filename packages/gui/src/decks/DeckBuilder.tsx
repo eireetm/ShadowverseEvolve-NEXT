@@ -11,6 +11,7 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent } from "react";
 import { useCompact, useTouch } from "../app/compact";
 import { setDetailsOpen, useDetailsOpen } from "../game/details";
+import { useFocusSelect } from "../game/focus";
 import { installLongPress } from "../game/long-press";
 import { cardName } from "../app/catalog";
 import { errorText } from "../app/errors";
@@ -31,7 +32,7 @@ import { DeckStats } from "./DeckStats";
 import { ABILITIES, NO_FILTERS, poolEntries, setsOf, traitsOf, type AbilityTag, type PoolFilters, type TypeFilter } from "./filters";
 import { cardCount, emptyDeck, type DeckFile } from "./format";
 import { LeaderPicker } from "./LeaderPicker";
-import { addCard, clearDeck, copiesOf, copiesOfDefinition, fileNameFor, removeCard, sectionOf, sortDeck, type DeckSection } from "./model";
+import { addCard, clearDeck, copiesOf, copiesOfDefinition, fileNameFor, isDeckCard, removeCard, sectionOf, sortDeck, type DeckSection } from "./model";
 import { useBack } from "../app/back";
 
 const POOL_DATA = "application/x-sve-pool";
@@ -325,6 +326,7 @@ export function DeckBuilder({ onBack, onTextEditor, initialFile }: Props) {
                 {t("common.back")}
               </button>
             )}
+            <CopyButtons deck={deck} onAdd={add} onRemove={remove} />
           </div>
           <section className="sve-sidebar-card">
             <CardDetails />
@@ -597,6 +599,38 @@ export function DeckBuilder({ onBack, onTextEditor, initialFile }: Props) {
         </ProblemsDialog>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * The card the panel shows, one copy more or fewer in the deck (beside "back": for reading a card before adding it, and for
+ * players who'd rather press than click tiles). It goes where clicking it in the pool puts it: its section, this printing.
+ * One fewer takes this printing out, or else another printing of the card. A card that can't be in a deck has none.
+ */
+function CopyButtons({ deck, onAdd, onRemove }: { deck: DeckFile; onAdd: (card: CatalogCard, printing: string) => void; onRemove: (section: DeckSection, printing: string) => void }) {
+  const t = useT();
+  const catalog = useApp((s) => s.catalog);
+  const shown = useFocusSelect((f) => f.shown);
+  if (!catalog || !shown || shown.back) return null;
+  const card = (shown.printing ? catalog.printing(shown.printing) : undefined) ?? catalog.def(shown.def);
+  if (!card || !isDeckCard(card)) return null;
+  const printing = shown.printing && card.printings.includes(shown.printing) ? shown.printing : (card.printings[0] ?? card.id);
+  const section = sectionOf(card);
+  const count = copiesOfDefinition(deck, card.printings);
+  // One fewer: this printing if the deck has it, else the last printing of the card it has.
+  const taken = (deck[section][printing] ?? 0) > 0 ? printing : [...card.printings].reverse().find((p) => (deck[section][p] ?? 0) > 0);
+  return (
+    <span className="sve-copy-buttons" data-testid="builder-copies" data-count={count}>
+      <button type="button" disabled={taken === undefined} onClick={() => taken && onRemove(section, taken)} title={t("builder.removeOne")} data-testid="builder-minus">
+        −1
+      </button>
+      <span className="sve-copy-count" title={t("builder.inDeck", { n: count })}>
+        {count}
+      </span>
+      <button type="button" onClick={() => onAdd(card, printing)} title={t("builder.addOne")} data-testid="builder-plus">
+        +1
+      </button>
+    </span>
   );
 }
 

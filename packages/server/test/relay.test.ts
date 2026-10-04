@@ -1,8 +1,13 @@
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { constants, gunzipSync } from "node:zlib";
 import { afterEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
 import { APP_ID, clientConfigText, newConfigText, newKey, readConfig, withKey, withoutKey, type ServerConfig } from "../src/config";
+import { recordFiles } from "../src/records";
 import { CLOSE, RELAY_PROTOCOL, startRelay, type Relay } from "../src/relay";
 
 // The online server's relay (src/relay.ts): keys, rooms by code, messages passed in a room, comings and goings, the limits.
@@ -205,6 +210,70 @@ describe("the relay", () => {
     // The hour's numbers start again after they are taken.
     expect(relay!.takeHour().refused).toEqual({ key: 1 });
     expect(relay!.status().refused).toEqual({});
+  });
+});
+
+describe("the lobby and the games kept", () => {
+  const info = (over: Record<string, unknown> = {}) => ({ t: "info", name: "小明", format: "standard", list: "10_26_JPN", turnOrder: "choose", public: true, players: 1, watchers: 0, playing: false, ...over });
+
+  it("lists the rooms their hosts made public, with what the host says of them, and follows their changes", async () => {
+    const url = await start(configWith({ spectators: 3 }));
+    const lobby = await welcomed(url);
+    lobby.send({ t: "lobby" });
+    expect(await lobby.next("rooms")).toEqual({ t: "rooms", rooms: [] });
+    const host = await inRoom(url, "PUB001", "create");
+    host.send(info({ name: "  小明\u0000\n的名字太长了一二三四五六七八九十  " }));
+    const listed = (await lobby.next("rooms")).rooms as Record<string, unknown>[];
+    expect(listed).toEqual([{ code: "PUB001", name: "小明 的名字太长了一二三四五六七", format: "standard", list: "10_26_JPN", turnOrder: "choose", players: 1, watchers: 0, playing: false, seats: 3 }]);
+    // A private room isn't listed; only the host's word counts.
+    const secret = await inRoom(url, "PRV001", "create");
+    secret.send(info({ public: false, name: "秘密" }));
+    const guest = await inRoom(url, "PUB001", "join");
+    guest.send(info({ name: "冒名" }));
+    host.send(info({ players: 2, playing: true }));
+    const later = (await lobby.next("rooms")).rooms as Record<string, unknown>[];
+    expect(later.map((r) => [r.code, r.name, r.players, r.playing])).toEqual([["PUB001", "小明", 2, true]]);
+    // The host gone, the one left speaks for the room; everyone gone, it isn't listed.
+    host.ws.close();
+    await guest.next("gone");
+    guest.send(info({ name: "小红" }));
+    expect(((await lobby.next("rooms")).rooms as Record<string, unknown>[]).map((r) => r.name)).toEqual(["小红"]);
+    guest.ws.close();
+    expect(await lobby.next("rooms")).toEqual({ t: "rooms", rooms: [] });
+    expect(relay!.status().lobby).toEqual({ following: 1, listed: 0 });
+  });
+
+  it("keeps a finished game once (both players send it), up to a key's day, in a file a month", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "sve-records-"));
+    try {
+      const base = configWith();
+      const config = { ...base, records: { ...base.records, dir, perKeyPerDay: 2 } };
+      const url = await start(config);
+      const a = await welcomed(url);
+      expect(a.received[0]).toMatchObject({ records: true });
+      const game = (id: string) => ({ t: "record", id, d: { id, inputs: [[0, { type: "mulligan", redraw: false }]], app: "0.3.0" } });
+      a.send(game("seed-1"));
+      expect(await a.next("recorded")).toEqual({ t: "recorded", id: "seed-1", kept: "kept" });
+      const b = await welcomed(url);
+      b.send(game("seed-1"));
+      expect(await b.next("recorded")).toEqual({ t: "recorded", id: "seed-1", kept: "again" });
+      a.send(game("seed-2"));
+      await a.next("recorded");
+      a.send(game("seed-3"));
+      expect((await a.next("recorded")).kept).toBe("quota");
+      const files = recordFiles(dir);
+      expect(files.map((f) => [f.file.replace(/^.*[\\/]/, ""), f.games])).toEqual([[`${new Date().toISOString().slice(0, 7)}.jsonl.gz`, 2]]);
+      const lines = gunzipSync(readFileSync(files[0]!.file), { finishFlush: constants.Z_SYNC_FLUSH }).toString().trim().split("\n").map((l) => JSON.parse(l));
+      expect(lines.map((l) => [l.key, l.record.id])).toEqual([["friends", "seed-1"], ["friends", "seed-2"]]);
+      expect(relay!.status().keys.friends!.records).toBe(2);
+      // Turned off: nothing is kept, and the apps are told so when they connect.
+      relay!.configure({ ...config, records: { ...config.records, enabled: false } });
+      a.send(game("seed-4"));
+      expect((await a.next("recorded")).kept).toBe("off");
+      expect((await welcomed(url)).received[0]).toMatchObject({ records: false });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

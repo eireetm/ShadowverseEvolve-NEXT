@@ -6,7 +6,8 @@ import type { FormatId, GameOptions, RecordedInput, TurnOrder } from "../engine/
 /**
  * Who a program is: the protocol, a fingerprint of its card data and one of its engine (the rules code): two programs play
  * a game only when all three are the same. Its version and platform are shown to the person (programs before 0.2.1 don't
- * say them).
+ * say them); its person's name (cleanName; none: not given) and whether they let the online server keep their games
+ * (`share`: the server keeps a game only when both players do). Said again when the name or the sharing changes.
  */
 export interface Hello {
   t: "hello";
@@ -15,6 +16,16 @@ export interface Hello {
   engine: string;
   app?: string;
   platform?: string;
+  name?: string;
+  share?: boolean;
+}
+
+/** The longest name a person can give (characters). */
+export const NAME_MAX = 16;
+
+/** A name as it is shown: no control characters or line breaks, spaces collapsed, at most NAME_MAX characters. */
+export function cleanName(text: string): string {
+  return [...text.replace(/[\t\n\r]+/g, " ").replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\ufeff]/g, "").replace(/\s+/g, " ").trim()].slice(0, NAME_MAX).join("").trim();
 }
 
 /** The game's rules, set by the host. */
@@ -57,6 +68,8 @@ export interface WatchedGame {
   secondLeaders: [string | null, string | null];
   turnOrder: TurnOrder;
   backlog: number;
+  /** The players' names, player 1's (the host's) first ("": none given); older hosts don't say them. */
+  players?: [string, string];
 }
 
 /** The inputs a "backlog" message brings at most. */
@@ -155,6 +168,7 @@ function watchedGame(v: unknown): WatchedGame | null {
     secondLeaders: [leaders[0] as string | null, leaders[1] as string | null],
     turnOrder: g.turnOrder as TurnOrder,
     backlog: g.backlog,
+    ...(Array.isArray(g.players) && g.players.length === 2 && g.players.every((p) => isString(p, 64)) ? { players: [cleanName(g.players[0] as string), cleanName(g.players[1] as string)] as [string, string] } : {}),
   };
 }
 
@@ -193,6 +207,8 @@ export function parseMessage(value: unknown): NetMessage | null {
             engine: m.engine,
             ...(isString(m.app, 20) ? { app: m.app } : {}),
             ...(isString(m.platform, 20) ? { platform: m.platform } : {}),
+            ...(isString(m.name, 64) && cleanName(m.name) !== "" ? { name: cleanName(m.name) } : {}),
+            ...(typeof m.share === "boolean" ? { share: m.share } : {}),
           }
         : null;
     case "select":

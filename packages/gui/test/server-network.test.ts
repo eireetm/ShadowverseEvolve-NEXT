@@ -1,12 +1,16 @@
+import { mkdtempSync, rmSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { readConfig } from "../../server/src/config";
+import { recordFiles } from "../../server/src/records";
 import { startRelay, type Relay } from "../../server/src/relay";
 import type { PeerLink } from "../src/net/link";
-import type { JoinAs, NetMessage } from "../src/net/messages";
+import { cleanName, parseMessage, type JoinAs, type NetMessage } from "../src/net/messages";
 import { meet, type Admission } from "../src/net/rooms";
-import { checkServer, serverNetwork, type JoinMode, type ServerProblem } from "../src/net/server";
+import { checkServer, serverNetwork, watchLobby, type JoinMode, type LobbyRoom, type RoomInfo, type ServerProblem, type ServerRoom } from "../src/net/server";
 import { parseServerConfig, type ServerSettings } from "../src/net/server-config";
 
 // The online server as a network rooms meet on (src/net/server.ts), against the server's own relay (packages/server) run
@@ -156,6 +160,75 @@ describe("rooms on the online server", () => {
     expect(await checkServer(settings)).toMatchObject({ ok: true, seats: 7 });
     expect(await checkServer({ ...settings, key: "not-the-key-1" })).toEqual({ ok: false, problem: "key" });
     expect(await checkServer({ ...settings, address: "ws://127.0.0.1:9" })).toEqual({ ok: false, problem: "unreachable" });
+  });
+});
+
+describe("the server's lobby and the games it keeps", () => {
+  const info = (over: Partial<RoomInfo> = {}): RoomInfo => ({ name: "小明", format: "standard", list: "10_26_JPN", turnOrder: "choose", public: true, players: 1, watchers: 0, playing: false, ...over });
+
+  it("lists the rooms their hosts describe as public, and follows them; the room's handle comes once it is joined", async () => {
+    const settings = await startServer(4);
+    const seen: LobbyRoom[][] = [];
+    const lobby = watchLobby(settings, (rooms) => seen.push(rooms), () => undefined);
+    meetings.push({ cancel: () => lobby.close() });
+    await until(() => seen.length === 1);
+    expect(seen[0]).toEqual([]);
+    let handle: ServerRoom | null = null;
+    const host = meet("LOBBY1", "host", null, { onLink: () => undefined, onFull: () => undefined }, undefined, [
+      serverNetwork(settings, "create", { onProblem: () => undefined, onRoom: (room) => (handle = room) }),
+    ]);
+    meetings.push(host);
+    await until(() => handle !== null);
+    handle!.describe(info());
+    await until(() => seen.length === 2);
+    expect(seen[1]).toEqual([{ code: "LOBBY1", name: "小明", format: "standard", list: "10_26_JPN", turnOrder: "choose", players: 1, watchers: 0, playing: false, seats: 4 }]);
+    handle!.describe(info({ public: false }));
+    await until(() => seen.length === 3);
+    expect(seen[2]).toEqual([]);
+    // The host leaves: nothing to list (and nothing changes for a private room).
+    handle!.describe(info({ players: 2 }));
+    await until(() => seen.length === 4);
+    host.cancel();
+    await until(() => seen.length === 5);
+    expect(seen[4]).toEqual([]);
+  });
+
+  it("keeps a finished game sent by the players' programs once, and says whether it keeps games", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "sve-gui-records-"));
+    try {
+      const base = readConfig(`[keys]\ntests = ${KEY}\n`).config;
+      server = createServer();
+      relay = startRelay(server, { ...base, records: { ...base.records, dir } });
+      await new Promise<void>((done) => server!.listen(0, "127.0.0.1", () => done()));
+      const settings: ServerSettings = { name: "test", address: `ws://127.0.0.1:${(server.address() as AddressInfo).port}`, key: KEY };
+      const handles: ServerRoom[] = [];
+      let records: boolean | null = null;
+      for (const role of ["host", "player"] as const) {
+        meetings.push(
+          meet("KEEP01", role, null, { onLink: () => undefined, onFull: () => undefined }, undefined, [
+            serverNetwork(settings, role === "host" ? "create" : "join", { onProblem: () => undefined, onWelcome: (_, r) => (records = r), onRoom: (room) => handles.push(room) }),
+          ]),
+        );
+        await until(() => handles.length === (role === "host" ? 1 : 2));
+      }
+      expect(records).toBe(true);
+      const game = { format: "sve-online-record", version: 1, replay: { options: { seed: "s1" }, inputs: [] } };
+      expect(await handles[0]!.record("s1", game)).toBe("kept");
+      expect(await handles[1]!.record("s1", game)).toBe("again");
+      expect(recordFiles(dir).map((f) => f.games)).toEqual([1]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("names and sharing in the programs' hello", () => {
+  it("are kept clean: no control characters, at most 16 characters; a watched game carries the players' names", () => {
+    expect(cleanName("  小明\u0000‮  的\n名字 ")).toBe("小明 的 名字");
+    expect(cleanName("一二三四五六七八九十一二三四五六七八")).toHaveLength(16);
+    const hello = { t: "hello", version: "online-3", cards: "c", engine: "e", name: " 小红\u0007 ", share: true };
+    expect(parseMessage(hello)).toEqual({ t: "hello", version: "online-3", cards: "c", engine: "e", name: "小红", share: true });
+    expect(parseMessage({ ...hello, name: "", share: "yes" })).toEqual({ t: "hello", version: "online-3", cards: "c", engine: "e" });
   });
 });
 

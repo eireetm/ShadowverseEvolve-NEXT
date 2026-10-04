@@ -35,6 +35,18 @@ export interface ServerConfig {
   limits: Limits;
   /** The keys, by name (a key per name). */
   keys: Map<string, string>;
+  /** Finished games the two players let the server keep (records.ts), to train the bots. */
+  records: RecordsConfig;
+}
+
+export interface RecordsConfig {
+  enabled: boolean;
+  /** Where (a file of games per month); the service's own folder (systemd StateDirectory). */
+  dir: string;
+  /** At most this many games a day from one key (a disk filled by one key would stop everyone's). */
+  perKeyPerDay: number;
+  /** Games aren't kept while the disk has less free space than this (MB). */
+  minFreeMb: number;
 }
 
 export const DEFAULTS = {
@@ -47,6 +59,9 @@ export const DEFAULTS = {
   maxMessageKb: 256,
   messagesPerSecond: 30,
   kbPerSecond: 32,
+  recordsDir: "/var/lib/sve-server/games",
+  recordsPerKeyPerDay: 2000,
+  recordsMinFreeMb: 1024,
 } as const;
 
 /** One "name = value" line of a section. */
@@ -57,6 +72,7 @@ interface Entry {
 }
 
 const SECTION = /^\s*\[([^\]]+)\]\s*$/;
+const FLAGS = new Map([...["yes", "true", "on", "1"].map((v) => [v, true] as const), ...["no", "false", "off", "0"].map((v) => [v, false] as const)]);
 const ENTRY = /^\s*([^=;#\s][^=]*?)\s*=\s*(.*?)\s*$/;
 
 /** The file's entries in order (comments and blank lines skipped). */
@@ -123,8 +139,18 @@ export function readConfig(text: string): { config: ServerConfig; problems: stri
       bytesPerSecond: number("limits", "kb_per_second", DEFAULTS.kbPerSecond, 1, 1_000_000) * 1024,
     },
     keys,
+    records: { enabled: true, dir: DEFAULTS.recordsDir, perKeyPerDay: DEFAULTS.recordsPerKeyPerDay, minFreeMb: DEFAULTS.recordsMinFreeMb },
   };
   if ((config.tlsCert === null) !== (config.tlsKey === null)) problems.push("[server] tls_cert and tls_key go together: plain ws:// without them");
+  const enabled = get("records", "enabled");
+  const on = enabled === undefined || enabled === "" ? true : FLAGS.get(enabled.toLowerCase());
+  if (on === undefined) problems.push(`[records] enabled = ${enabled}: yes or no, yes instead`);
+  config.records = {
+    enabled: on ?? true,
+    dir: get("records", "dir") || DEFAULTS.recordsDir,
+    perKeyPerDay: number("records", "per_key_per_day", DEFAULTS.recordsPerKeyPerDay, 0, 1_000_000),
+    minFreeMb: number("records", "min_free_mb", DEFAULTS.recordsMinFreeMb, 0, 10_000_000),
+  };
   return { config, problems };
 }
 
@@ -233,6 +259,15 @@ max_connections_per_ip = ${DEFAULTS.maxConnectionsPerIp}
 max_message_kb = ${DEFAULTS.maxMessageKb}
 messages_per_second = ${DEFAULTS.messagesPerSecond}
 kb_per_second = ${DEFAULTS.kbPerSecond}
+
+[records]
+; Finished online games are kept here when both players allow it (the apps' setting, on by default), to train the bots:
+; seeds, decks and answers only (no names, no chat, no addresses). sudo sve-server records: how many there are.
+; 双方都同意时（App 的设置，默认开着）把下完的联机对局存在这里，用来训练 Bot：只有种子、卡组和每一步的回答，没有名字、聊天和 IP。
+enabled = yes
+dir = ${DEFAULTS.recordsDir}
+per_key_per_day = ${DEFAULTS.recordsPerKeyPerDay}
+min_free_mb = ${DEFAULTS.recordsMinFreeMb}
 
 [keys]
 ; Who may use this server: a line per key, "name = key". Delete a line and that key stops working at once

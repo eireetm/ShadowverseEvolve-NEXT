@@ -24,6 +24,7 @@ import { DragLayer } from "./DragLayer";
 import { PIECES, pieceStyle, pileRect, rectStyle, rowRect, slotRect, type PileZone, type SlotZone, type TableLayout } from "./layout";
 import { pressCard } from "./pointer";
 import { ResultOverlay } from "./ResultOverlay";
+import { TurnOrderNotice } from "./TurnOrderNotice";
 import { EMPTY_ROW, chooseSlot, rowKey, useSlots, type Slots } from "./slots";
 import { useTableLayout } from "./useTableLayout";
 import { openZone } from "./zone-browser";
@@ -426,6 +427,7 @@ export function Table({ update, onNewGame, onMenu, onReplays }: { update: GameUp
       <DecisionDialog key={update.inputCount} update={update} />
       <QuickAnnouncement update={update} />
       <LookedCards update={update} />
+      <TurnOrderNotice update={update} />
       <ResultOverlay update={update} onNewGame={onNewGame} onMenu={onMenu} onReplays={onReplays} />
     </div>
   );

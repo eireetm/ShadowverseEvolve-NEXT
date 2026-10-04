@@ -26,9 +26,11 @@ Shadowverse: Evolve NEXT  {{version}}  联机服务器 / online server
   sudo sve-server client 名字        再打印一次某把密钥的客户端配置
   sudo sve-server keys              列出所有密钥
   sudo sve-server revoke 名字        作废一把密钥（用它的连接几秒内断开）
+  sudo sve-server records           保存下来的对局有多少（双方都同意时存的，用来训练 AI；
+                                    在"文件管理"里打开 /var/lib/sve-server/games/ 下载）
   sudo journalctl -u sve-server -n 100    看日志（每小时一行统计）
   sudo systemctl restart sve-server       重启
-  配置文件：/etc/sve-server/server.ini（sudo nano 编辑：观战席、上限、密钥；保存后几秒内生效）
+  配置文件：/etc/sve-server/server.ini（sudo nano 编辑：观战席、上限、保存对局、密钥；保存后几秒内生效）
 
 【English】
 
@@ -58,6 +60,8 @@ Commands (in the web terminal)
   sudo sve-server client <name>     a key's client config again
   sudo sve-server keys              the keys
   sudo sve-server revoke <name>     revoke a key (its connections close within seconds)
+  sudo sve-server records           the games kept (when both players allow it, to train the AI; download them
+                                    from /var/lib/sve-server/games/ with the console's file manager)
   sudo journalctl -u sve-server -n 100    the log (a line of numbers every hour)
   sudo systemctl restart sve-server       restart
-  Configuration: /etc/sve-server/server.ini (sudo nano: spectator seats, limits, keys; read again within seconds)
+  Configuration: /etc/sve-server/server.ini (sudo nano: spectator seats, limits, keeping games, keys; read again within seconds)

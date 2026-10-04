@@ -2,18 +2,24 @@
 // its code; the server passes their messages to one another in the room and tells them who comes and who goes. It knows
 // nothing of the game: the two programs play it (each runs the same engine and sends only its player's answers), and the
 // room's protocol (who is the host, the seats, the spectators) is theirs too — the server is the meeting place and the wire,
-// as the public relays and the WebRTC connection are without it. Everything is within limits (message sizes and rates, rooms,
-// connections), so a key that leaks can't do more than play.
+// as the public relays and the WebRTC connection are without it. Besides: the lobby (the rooms their hosts made public,
+// with what the host says of them: its name, the rules, who is in) and the finished games both players let the server keep
+// (records.ts). Everything is within limits (message sizes and rates, rooms, connections), so a key that leaks can't do more
+// than play.
 //
 // The messages, JSON (app → server):
-//   hello {v, app, key}           first, within 10 seconds        → welcome {v, id, seats} | refused {why}, closed
+//   hello {v, app, key}           first, within 10 seconds        → welcome {v, id, seats, records} | refused {why}, closed
 //   join {room, mode}             create: a new room; join: one that exists; any: either   → joined {peers} | nojoin {why}
 //   to {id, d}                    d to the program `id` of the room                         → that program gets from {id, d}
+//   info {name, format, list, turnOrder, public, players, watchers, playing}   the room's host: what the lobby shows of it
+//   lobby {}                      (not in a room) the public rooms now, and again whenever they change → rooms {rooms}
+//   record {id, d}                a finished game to keep                                     → recorded {id, kept}
 // and (server → app) peer {id} / gone {id}: a program came into the room / left it; closed {why}: closed by the server.
 import { createHash, randomBytes } from "node:crypto";
 import type { IncomingMessage, Server } from "node:http";
 import { WebSocketServer, type RawData, type WebSocket } from "ws";
 import { APP_ID, type ServerConfig } from "./config";
+import { recordStore, type Kept, type RecordStore } from "./records";
 
 /** The relay's own protocol (the apps' online protocol is theirs). */
 export const RELAY_PROTOCOL = 1;
@@ -26,9 +32,34 @@ export const CLOSE = { refused: 4001, limit: 4008, revoked: 4003, shutdown: 4010
 
 type Refusal = "version" | "app" | "key" | "busy";
 
+/** What a room's host says of it for the lobby. */
+export interface RoomInfo {
+  /** The host's name ("" : none given). */
+  name: string;
+  format: string;
+  list: string | null;
+  turnOrder: string;
+  /** Listed in the lobby (else joined by its code only). */
+  public: boolean;
+  /** Players in it (1: the host waits for the other), spectators, and whether a game is being played. */
+  players: number;
+  watchers: number;
+  playing: boolean;
+}
+
+/** A room as the lobby lists it. */
+export interface LobbyRoom extends Omit<RoomInfo, "public"> {
+  code: string;
+  /** Its spectator seats (the server's). */
+  seats: number;
+}
+
 interface Room {
   code: string;
   members: Map<string, Conn>;
+  /** The program that made it (its host), the one whose info is taken; another member's once it has gone. */
+  owner: string;
+  info: RoomInfo | null;
 }
 
 interface Conn {
@@ -39,6 +70,8 @@ interface Conn {
   key: string | null;
   keyName: string | null;
   room: Room | null;
+  /** It follows the lobby. */
+  lobby: boolean;
   /** Token buckets: messages and bytes it may still send now. */
   messages: number;
   bytes: number;
@@ -53,12 +86,15 @@ interface KeyUse {
   connects: number;
   rooms: number;
   bytes: number;
+  records: number;
 }
 
 export interface RelayStatus {
   connections: number;
   rooms: number;
-  /** Per key name: connections now, and this hour's connects, rooms made and bytes passed. */
+  /** Connections following the lobby, and the rooms it lists. */
+  lobby: { following: number; listed: number };
+  /** Per key name: connections now, and this hour's connects, rooms made, bytes passed and games kept. */
   keys: Record<string, { connections: number } & KeyUse>;
   /** This hour's refused connections, by reason. */
   refused: Record<string, number>;
@@ -83,9 +119,28 @@ function addressOf(req: IncomingMessage): string {
   return raw.startsWith("::ffff:") ? raw.slice(7) : raw;
 }
 
-/** Serve the relay on `server` (HTTP or HTTPS): WebSocket upgrades at any path. `log` gets a line per notable event. */
-export function startRelay(server: Server, initial: ServerConfig, log: (line: string) => void = () => undefined, pingMs = 25_000): Relay {
+/** A name as the apps show it (their cleanName): no control characters, spaces collapsed, at most 16 characters. */
+function cleanName(text: string): string {
+  return [...text.replace(/[\t\n\r]+/g, " ").replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\ufeff]/g, "").replace(/\s+/g, " ").trim()].slice(0, 16).join("").trim();
+}
+
+const shortString = (v: unknown, max = 40): v is string => typeof v === "string" && v.length <= max;
+const count = (v: unknown, max: number): v is number => typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= max;
+
+/** What a host said of its room, or null when it isn't that. */
+function infoOf(m: Record<string, unknown>): RoomInfo | null {
+  if (!shortString(m.name, 64) || !shortString(m.format) || !(m.list === null || shortString(m.list)) || !shortString(m.turnOrder)) return null;
+  if (typeof m.public !== "boolean" || typeof m.playing !== "boolean" || !count(m.players, 2) || !count(m.watchers, 1000)) return null;
+  return { name: cleanName(m.name), format: m.format, list: m.list, turnOrder: m.turnOrder, public: m.public, players: m.players, watchers: m.watchers, playing: m.playing };
+}
+
+/**
+ * Serve the relay on `server` (HTTP or HTTPS): WebSocket upgrades at any path. `log` gets a line per notable event; `store`
+ * keeps the games sent (by default where the configuration says).
+ */
+export function startRelay(server: Server, initial: ServerConfig, log: (line: string) => void = () => undefined, pingMs = 25_000, store?: RecordStore): Relay {
   let config = initial;
+  const records = store ?? recordStore(config.records, log);
   let byHash = new Map<string, string>();
   const setKeys = () => (byHash = new Map([...config.keys].map(([name, key]) => [hashOf(key), name])));
   setKeys();
@@ -96,7 +151,7 @@ export function startRelay(server: Server, initial: ServerConfig, log: (line: st
   let refused = new Map<string, number>();
   const use = (name: string): KeyUse => {
     let u = hour.get(name);
-    if (!u) hour.set(name, (u = { connects: 0, rooms: 0, bytes: 0 }));
+    if (!u) hour.set(name, (u = { connects: 0, rooms: 0, bytes: 0, records: 0 }));
     return u;
   };
 
@@ -106,6 +161,24 @@ export function startRelay(server: Server, initial: ServerConfig, log: (line: st
   const send = (c: Conn, message: object): void => {
     if (c.ws.readyState === c.ws.OPEN) c.ws.send(JSON.stringify(message));
   };
+
+  // ---- The lobby: the public rooms, sent to those following it now and (a moment after) whenever they change ----
+  const listed = (): LobbyRoom[] =>
+    [...rooms.values()]
+      .filter((r) => r.info?.public)
+      .map((r) => {
+        const { public: _, ...shown } = r.info!;
+        return { code: r.code, ...shown, seats: config.spectators };
+      });
+  let lobbyTimer: NodeJS.Timeout | null = null;
+  const lobbyChanged = (): void => {
+    lobbyTimer ??= setTimeout(() => {
+      lobbyTimer = null;
+      const message = { t: "rooms", rooms: listed() };
+      for (const c of conns) if (c.lobby) send(c, message);
+    }, 300);
+  };
+
   const refuse = (c: Conn, why: Refusal): void => {
     refused.set(why, (refused.get(why) ?? 0) + 1);
     send(c, { t: "refused", why });
@@ -118,6 +191,7 @@ export function startRelay(server: Server, initial: ServerConfig, log: (line: st
     room.members.delete(c.id);
     for (const m of room.members.values()) send(m, { t: "gone", id: c.id });
     if (room.members.size === 0) rooms.delete(room.code);
+    if (room.info?.public) lobbyChanged();
   };
   const drop = (c: Conn): void => {
     if (!conns.delete(c)) return;
@@ -154,13 +228,14 @@ export function startRelay(server: Server, initial: ServerConfig, log: (line: st
     c.key = key;
     c.keyName = name;
     use(name).connects += 1;
-    send(c, { t: "welcome", v: RELAY_PROTOCOL, id: c.id, seats: config.spectators });
+    send(c, { t: "welcome", v: RELAY_PROTOCOL, id: c.id, seats: config.spectators, records: config.records.enabled });
   };
 
   const join = (c: Conn, m: Record<string, unknown>): void => {
     const code = typeof m.room === "string" ? m.room : "";
     const mode = m.mode;
     if (c.room || !ROOM_CODE.test(code) || (mode !== "create" && mode !== "join" && mode !== "any")) return;
+    c.lobby = false;
     let room = rooms.get(code);
     if (room && mode === "create") return send(c, { t: "nojoin", why: "exists" });
     if (!room && mode === "join") return send(c, { t: "nojoin", why: "missing" });
@@ -169,7 +244,7 @@ export function startRelay(server: Server, initial: ServerConfig, log: (line: st
         log(`no room for ${c.keyName}: ${rooms.size} rooms (max_rooms)`);
         return send(c, { t: "nojoin", why: "busy" });
       }
-      room = { code, members: new Map() };
+      room = { code, members: new Map(), owner: c.id, info: null };
       rooms.set(code, room);
       use(c.keyName!).rooms += 1;
     }
@@ -181,9 +256,28 @@ export function startRelay(server: Server, initial: ServerConfig, log: (line: st
     c.room = room;
   };
 
+  /** The room's host says what the lobby shows of it (its owner's word; another member's once the owner has gone). */
+  const describe = (c: Conn, m: Record<string, unknown>): void => {
+    const room = c.room;
+    const info = infoOf(m);
+    if (!room || !info) return;
+    if (room.owner !== c.id && room.members.has(room.owner)) return;
+    room.owner = c.id;
+    const was = JSON.stringify(room.info);
+    room.info = info;
+    if (JSON.stringify(info) !== was && (info.public || JSON.parse(was ?? "null")?.public)) lobbyChanged();
+  };
+
+  const keep = (c: Conn, m: Record<string, unknown>): void => {
+    if (!shortString(m.id, 128) || typeof m.d !== "object" || m.d === null) return;
+    const kept: Kept = records.keep(m.id, c.keyName!, m.d);
+    if (kept === "kept") use(c.keyName!).records += 1;
+    send(c, { t: "recorded", id: m.id, kept });
+  };
+
   wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
     const ip = addressOf(req);
-    const c: Conn = { id: newId(), ws, ip, key: null, keyName: null, room: null, messages: 0, bytes: 0, refilled: Date.now(), alive: true, hello: null };
+    const c: Conn = { id: newId(), ws, ip, key: null, keyName: null, room: null, lobby: false, messages: 0, bytes: 0, refilled: Date.now(), alive: true, hello: null };
     c.messages = config.limits.messagesPerSecond * 10;
     c.bytes = config.limits.bytesPerSecond * 64;
     conns.add(c);
@@ -222,7 +316,11 @@ export function startRelay(server: Server, initial: ServerConfig, log: (line: st
         if (!to || to === c) return;
         use(c.keyName!).bytes += size;
         send(to, { t: "from", id: c.id, d: msg.d });
-      }
+      } else if (msg.t === "info") describe(c, msg);
+      else if (msg.t === "lobby" && !c.room) {
+        c.lobby = true;
+        send(c, { t: "rooms", rooms: listed() });
+      } else if (msg.t === "record") keep(c, msg);
     });
   });
 
@@ -241,15 +339,18 @@ export function startRelay(server: Server, initial: ServerConfig, log: (line: st
 
   const status = (): RelayStatus => {
     const keys: RelayStatus["keys"] = {};
-    for (const name of new Set([...config.keys.keys(), ...hour.keys()])) keys[name] = { connections: 0, ...(hour.get(name) ?? { connects: 0, rooms: 0, bytes: 0 }) };
-    for (const c of conns) if (c.keyName !== null) (keys[c.keyName] ??= { connections: 0, connects: 0, rooms: 0, bytes: 0 }).connections += 1;
-    return { connections: conns.size, rooms: rooms.size, keys, refused: Object.fromEntries(refused) };
+    const none = (): KeyUse => ({ connects: 0, rooms: 0, bytes: 0, records: 0 });
+    for (const name of new Set([...config.keys.keys(), ...hour.keys()])) keys[name] = { connections: 0, ...(hour.get(name) ?? none()) };
+    for (const c of conns) if (c.keyName !== null) (keys[c.keyName] ??= { connections: 0, ...none() }).connections += 1;
+    const following = [...conns].filter((c) => c.lobby).length;
+    return { connections: conns.size, rooms: rooms.size, lobby: { following, listed: listed().length }, keys, refused: Object.fromEntries(refused) };
   };
 
   return {
     configure(next) {
       config = next;
       setKeys();
+      records.configure(next.records);
       wss.options.maxPayload = next.limits.maxMessageBytes;
       // A key removed or changed: its connections end now.
       for (const c of conns) {
@@ -258,6 +359,7 @@ export function startRelay(server: Server, initial: ServerConfig, log: (line: st
           c.ws.close(CLOSE.revoked, "revoked");
         }
       }
+      lobbyChanged();
     },
     status,
     takeHour() {
@@ -268,6 +370,7 @@ export function startRelay(server: Server, initial: ServerConfig, log: (line: st
     },
     close() {
       clearInterval(pinger);
+      if (lobbyTimer) clearTimeout(lobbyTimer);
       for (const c of conns) c.ws.close(CLOSE.shutdown, "shutdown");
       wss.close();
     },

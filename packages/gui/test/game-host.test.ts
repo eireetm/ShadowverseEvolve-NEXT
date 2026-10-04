@@ -247,7 +247,8 @@ describe("GameHost (engine worker logic)", () => {
       expect(again.last().announcement).toBeNull();
     }
     expect(announced).toBeGreaterThan(0);
-  });
+    // Several whole games: under a second alone, more while the whole suite runs.
+  }, 30_000);
 
   it("after an attack is declared, shows it a moment before its combat when passing is all the other player can do", () => {
     const messages: FromWorker[] = [];

@@ -7,6 +7,7 @@
 import { hostApi } from "../host/api";
 import { translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { cleanName } from "../net/messages";
 import { DEFAULT_SETTINGS, getSettings, subscribeSettings, updateSettings, type CardLang, type Settings, type UiLang } from "./settings";
 
 /** One key of the file: where it is, its comment, and the setting it holds. */
@@ -37,7 +38,7 @@ function whole(value: string, min: number, max: number): number | null {
 
 const percent = (fraction: number): string => String(Math.round(fraction * 100));
 
-const flag = (field: "animations" | "announceQuick" | "manualSlots" | "manualDebug") => ({
+const flag = (field: "animations" | "announceQuick" | "manualSlots" | "manualDebug" | "shareGames") => ({
   values: "true, false",
   get: (s: Settings) => String(s[field]),
   set: (_: Settings, v: string) => {
@@ -119,6 +120,16 @@ const ENTRIES: readonly Entry[] = [
   { section: "online", key: "turn_urls", field: "turn", label: "settings.turnUrls", ...turn("urls"), values: "turn:host:port …" },
   { section: "online", key: "turn_username", field: "turn", label: "settings.turnUsername", ...turn("username") },
   { section: "online", key: "turn_password", field: "turn", label: "settings.turnCredential", note: "settingsFile.plainPassword", ...turn("credential") },
+  {
+    section: "online",
+    key: "player_name",
+    field: "playerName",
+    label: "online.nameLabel",
+    values: "",
+    get: (s) => s.playerName,
+    set: (_, v) => ({ playerName: cleanName(v) }),
+  },
+  { section: "online", key: "share_games", field: "shareGames", label: "settings.shareGames", ...flag("shareGames") },
   { section: "debug", key: "manual_slots", field: "manualSlots", label: "debug.manualSlots", ...flag("manualSlots") },
   { section: "debug", key: "manual_debug", field: "manualDebug", label: "debug.manual", ...flag("manualDebug") },
 ];

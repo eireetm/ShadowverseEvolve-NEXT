@@ -115,6 +115,10 @@ ExecStart=$NODE /opt/sve-server/server.mjs --config $CONF
 ExecReload=/bin/kill -HUP \$MAINPID
 Restart=always
 RestartSec=3
+# /var/lib/sve-server: the games both players let the server keep (readable by all: no names, no addresses in them).
+StateDirectory=sve-server
+StateDirectoryMode=0755
+UMask=0022
 # Port 443 without being root; nothing written anywhere (it logs to the journal).
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
@@ -140,5 +144,5 @@ echo "Put this text in the project's online-server.ini, or paste it in the app's
 echo
 sve-server client first --config "$CONF" 2>/dev/null || sve-server keys --config "$CONF"
 echo
-echo "以后 later:  sudo sve-server status（谁在线 who is online） · sudo sve-server newkey <名字>（新密钥 a new key） · sudo sve-server revoke <名字>（作废 revoke）"
+echo "以后 later:  sudo sve-server status（谁在线 who is online） · sudo sve-server newkey <名字>（新密钥 a new key） · sudo sve-server revoke <名字>（作废 revoke） · sudo sve-server records（存下的对局 games kept）"
 echo "日志 log:    sudo journalctl -u sve-server -n 100"

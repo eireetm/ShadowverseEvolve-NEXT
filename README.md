@@ -254,7 +254,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
   - 键是印刷编号，异画用哪个编号都可以。
   - 双职业的卡组多一个 `leader2`。
 - **组卡界面**：主菜单"构筑卡组"。
-  - 点击或拖拽加入，右键或拖回卡池移除。
+  - 点击或拖拽加入，右键或拖回卡池移除；也可以用左边卡牌面板上方的"+1""−1"给卡组加减一张正在看的这张卡。
   - "文本编辑"用文字编辑卡组（每行一张，如 `3 SD01-011`）。
 - **卡组码**：组卡界面的"卡组码…"。
   - 把卡组变成一行文字（`SVE1-…`）分享，粘贴就能导入；
@@ -266,12 +266,14 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 
 ### 联机
 
-主菜单"联机对战"。两种方式：
+主菜单"联机对战"。两种方式。最上面填你的名字：对手、观战者和大厅都会看到，对局里也显示在玩家信息框里。
 
 - **使用服务器**：有人架了联机服务器（见"联机服务器"）、并且给了你配置时，联机界面最上面是"使用服务器（服务器的名字）"。
   - 先选好赛制、禁卡表、先后手，再"创建房间"，把 6 位房间号发给对方；对方在同一栏输入房间号，点"加入"或"观战"。进房间以后房主还能改规则。
   - 所有消息都经过服务器：不用打洞，也不用国外的公共服务；房间号输错会马上提示"房间不存在"；对方看不到你的 IP。
   - 配置：设置 → 联机 →"修改服务器配置"（联机界面里也有这个按钮），粘贴服务器的主人给你的文字，可以先"测试连接"。
+  - **大厅**：列出公开的房间（"xxx的房间"、规则、等待对手还是对局中、观战人数），点"加入"或"观战"就能进。创建时取消"在大厅里公开这个房间"，就只能用房间号进。
+  - **保存对局**：设置 → 联机 →"联机自动保存对局到云端"（默认开）。双方都开着时，下完的对局会存到服务器上，用来训练 AI：只有种子、双方卡组和每一步，没有名字和聊天。有一方关掉就不存，房间里会写明这局存不存。
 - **不用服务器（P2P）**：
   - **房间号**：一方创建房间，把 6 位房间号发给对方。双方借用公共的免费服务（Nostr、MQTT、BitTorrent）找到对方，然后用 WebRTC 直连。
   - **手动连接**：房间号连不上时，双方互相发送连接码（`SVE1-O-…` / `SVE1-A-…`）。
@@ -299,6 +301,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
   - iOS 版在 GitHub 上打包，拿不到这个文件（仓库公开时，打出的 IPA 谁都能下载，也不应该带），iOS 的朋友在设置里粘贴一次。
   - App 里"修改服务器配置"改的优先：电脑版写回 `online-server.ini`，手机上存在 App 里；"恢复成程序自带的"回到打包时的配置。
 - **密钥**（在服务器的终端里，`sudo sve-server …`）：`newkey <名字>` 新建一把并打印它的客户端配置、`revoke <名字>` 作废（用它的连接几秒内断开）、`keys` 列出、`client <名字>` 再打印一次、`status` 看现在的在线人数和每把密钥这个小时的用量。可以给不同的群、不同的人不同的密钥：哪把泄露了，只作废那一把，持有它的人在设置里换上新的配置就行。
+- **保存的对局**：`/var/lib/sve-server/games/`，每月一个文件（`2026-10.jsonl.gz`，每行一局，是 App 能重放的录像）。`sudo sve-server records` 看有多少局；在控制台的"文件管理"里下载。不想存：配置文件里 `[records] enabled = no`。每把密钥每天最多存 2000 局，磁盘剩余不到 1 GB 时不存。
 - **上限**（`/etc/sve-server/server.ini`，改了几秒内生效）：每个房间的观战席（默认 10）、房间总数、连接数（同一个 IP 默认最多 20 条：手机网络常常很多人共用一个 IP）、每条消息的大小、每秒的条数和流量。拿到密钥的人也只能拿它下棋。
 - **注意**：和 P2P 一样，改过的程序能看到对方的手牌（两边的程序都运行整局）；服务器只负责见面和转发。
 
@@ -664,7 +667,7 @@ Sound effects (26):
   - Keys are printing numbers; any printing of an alternate art will do.
   - A Cross Craft deck has a `leader2` as well.
 - **Deck builder**: "Build decks" on the main menu.
-  - Click or drag a card to add it; right-click it or drag it back to the pool to remove it.
+  - Click or drag a card to add it; right-click it or drag it back to the pool to remove it. "+1" and "−1" above the card panel on the left add or remove a copy of the card it shows.
   - "Edit as text" edits the deck as text, one card per line (e.g. `3 SD01-011`).
 - **Deck codes**: "Deck code…" in the deck builder.
   - It turns a deck into one line of text (`SVE1-…`) to share; paste a code to import the deck.
@@ -676,12 +679,14 @@ Sound effects (26):
 
 ### Online play
 
-"Online play" on the main menu, two ways:
+"Online play" on the main menu, two ways. Your name goes at the top: the other player, the spectators and the lobby see it, and the game shows it in the player's box.
 
 - **Use the server**: when someone runs an online server (see "Online server") and gave you its configuration, the online screen begins with "Use the server (its name)".
   - Choose the format, the restriction list and who goes first, then "Make a room", and send the 6-letter code to the other player, who types it in the same part and clicks "Join" or "Watch". The host can still change the rules in the room.
   - Every message goes through the server: no hole punching, no public services abroad; a wrong code is said at once ("no room of that code"); the other player doesn't see your IP.
   - Configuration: Settings > Online > "Edit the server configuration" (the online screen has the button too): paste the text the server's owner gave you; "Test the connection" first if you like.
+  - **Lobby**: the public rooms ("xxx's room", the rules, waiting or playing, the spectators), joined or watched with a click. Untick "List the room in the lobby" before making a room to have it joined by its code only.
+  - **Keeping games**: Settings > Online > "Keep my online games on the server" (on by default). When both players have it on, a finished game is kept on the server to train the AI: the seed, both decks and every move, no names, no chat. One of them off: not kept; the room says which.
 - **Without the server (P2P)**:
   - **Room code**: one player creates a room and sends the 6-letter code to the other. Both find each other through free public services (Nostr, MQTT, BitTorrent), then connect directly with WebRTC.
   - **Manual connection**: when a room code doesn't connect, the players exchange connection codes (`SVE1-O-…` / `SVE1-A-…`).
@@ -709,6 +714,7 @@ The server of "use the server" (`packages/server`), for a Linux server (Ubuntu) 
   - The iOS app is built on GitHub, which doesn't have the file (and while the repository is public anyone can download the IPA it builds, so it shouldn't): iOS players paste it in the settings once.
   - What "Edit the server configuration" saves comes first: written back to `online-server.ini` on a PC, kept in the app on a phone; "Back to the built-in one" returns to the build's.
 - **Keys** (in the server's terminal, `sudo sve-server …`): `newkey <name>` makes one and prints its client config, `revoke <name>` revokes one (its connections close within seconds), `keys` lists them, `client <name>` prints a config again, `status` shows who is connected and each key's use this hour. Give different groups or people different keys: when one leaks, revoke that one only; its holders paste a new config in the settings.
+- **Games kept**: `/var/lib/sve-server/games/`, a file a month (`2026-10.jsonl.gz`, a game a line: replays the app can play). `sudo sve-server records` says how many; download them with the console's file manager. To keep none: `[records] enabled = no` in the configuration. At most 2000 games a day per key, and none while the disk has less than 1 GB free.
 - **Limits** (`/etc/sve-server/server.ini`, read again within seconds): spectator seats per room (10 by default), rooms, connections (20 from one address by default: many people share one address on mobile networks), message size, messages and bytes per second. A key that leaks can't do more than play.
 - **Note**: as with P2P, a changed program can see the other player's hand (both programs run the whole game); the server only lets them meet and passes the messages.
 
