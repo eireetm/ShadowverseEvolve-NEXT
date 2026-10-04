@@ -13,9 +13,11 @@ const version = (JSON.parse(readFileSync(join(here, "package.json"), "utf8")) as
 /**
  * The online server this build uses unless the person sets another (src/net/server-config.ts): the project's
  * online-server.ini at the repository's root, which isn't in the repository (.gitignore) — whoever builds a release decides
- * whether it has one. Read when the dev server starts or a build is made.
+ * whether it has one. Read when the dev server starts or a build is made. SVE_NO_ONLINE_SERVER=1 leaves it out: the
+ * end-to-end tests' dev server (playwright.config.ts), whose tests set their own server and must never reach a real one.
  */
 function onlineServer(): string {
+  if (process.env.SVE_NO_ONLINE_SERVER === "1") return "";
   const file = join(here, "..", "..", "online-server.ini");
   return existsSync(file) ? readFileSync(file, "utf8").replace(/^\uFEFF/, "").replace(/\r\n/g, "\n") : "";
 }

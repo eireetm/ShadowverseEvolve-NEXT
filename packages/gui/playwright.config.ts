@@ -23,6 +23,8 @@ export default defineConfig({
       url: `http://localhost:${port}`,
       reuseExistingServer: false,
       timeout: 180_000,
+      // Not the project's own online server (online-server.ini, vite.config.ts): the tests set the test relay below.
+      env: { SVE_NO_ONLINE_SERVER: "1" },
     },
     {
       command: "npx tsx ../server/src/main.ts --config tests/e2e/relay.ini",
