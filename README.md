@@ -280,6 +280,8 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
   - **连不上时**：可以在设置里填自己的 TURN 中转；"检测网络"会显示这台电脑的网络情况。
 - **版本**：两边的联机协议、卡牌（定义、实现状态和禁卡表）和规则代码的指纹都相同才能开始，联机界面会显示是否相同；版本号本身不比。各自 `public/` 里的资源（卡图、音效、背景、字体、`theme.css`）、设置、界面语言、卡组都不用一样。同一版本的电脑版和安卓版可以互相联机；设置页最下面和联机界面都显示版本号，连不上时先确认双方的版本一样。
 - **对局**：双方各自运行同一局，只同步每一步的回答。断线后可以重连，接着打。
+  - **悔棋**：房主在规则里勾选"允许悔棋"（使用服务器时在创建房间之前，也可以在房间里改）。对局中在侧边栏"调试"里点"撤销我的上一个回答"：你上一个回答之后对方还没操作过，两边就一起退回到那一步；对方操作过就不能撤销。观战者也跟着退。
+  - 联机时种子和"保存复现包"在对局结束后才显示（有了它们，改过的程序能推算出牌组顺序）。
 - **观战**：知道房间号的人点"观战"进房间看对局。P2P 的房间最多 2 人；用服务器时由服务器决定（默认 10 人）。
   - 只能看双方都看得到的信息（看不到手牌），可以换边；不能操作，也不能发言（能看到聊天）。
   - 对局中途进来的马上追上进度；断线后自动重连。
@@ -693,6 +695,8 @@ Sound effects (26):
   - **If you can't connect**: set your own TURN relay in the settings; "Check the network" shows what this computer can reach.
 - **Versions**: a game starts only when both programs have the same online protocol and the same fingerprints of the cards (definitions, implementation status, restriction lists) and of the rules code; the online screen says whether they do. The version number itself isn't compared. The resources in each one's `public/` (card pictures, sounds, backgrounds, fonts, `theme.css`), the settings, the interface language and the decks can all differ. The PC program and the Android app of one version play each other; the bottom of the settings page and the online screen show the version: when two can't connect, check that both have the same one.
 - **The game**: each program runs the same game and only the answers are exchanged. After a lost connection, reconnect and play on.
+  - **Taking back**: the host ticks "Allow taking back answers" in the rules (on the server, before making the room; it can be changed in the room too). In the game, "Undo my last answer" on the sidebar's Debug tab takes both programs back to before your last answer, while the other player hasn't answered since; after they have, it can't. Spectators follow.
+  - Online, the seed and "Save a bug report file" are shown once the game is over (with them, a changed program could work out the decks' order).
 - **Watching**: anyone with the room code can click "Watch" to watch the room's games: 2 spectators a room at most without the server; with it, as many as the server says (10 by default).
   - Spectators see only what both players can see (no hands) and can swap sides; they can't play or chat (they read the chat).
   - One who comes in the middle of a game catches up at once; a lost connection connects again by itself.

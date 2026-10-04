@@ -195,6 +195,55 @@ test("names, the lobby, and a game the server keeps: a public room joined from t
   expect(problems).toEqual([]);
 });
 
+test("a room that allows taking answers back: the debug tab's undo, on both sides; the seed and the bug report file after the game", async ({ browser }) => {
+  test.setTimeout(240_000);
+  const problems: string[] = [];
+  const host = await openOnline(browser, SERVER, { allowUndo: true, setupTurnOrder: "player1", setupDecks: ["samples/sd01.json", "samples/sd02.json"] });
+  const guest = await openOnline(browser, SERVER, { setupDecks: ["samples/sd03.json", "samples/sd02.json"] });
+  watchProblems([host, guest], problems);
+  await expect(host.getByTestId("online-server-undo")).toBeChecked();
+  await host.getByTestId("online-server-host").click();
+  const code = (await host.getByTestId("online-room-code").innerText({ timeout: 30_000 })).trim();
+  await guest.getByTestId("online-server-code").fill(code);
+  await guest.getByTestId("online-server-join").click();
+  await expect(guest.getByTestId("online-rules")).toHaveText("Standard · restriction list: None · first player: Player 1 goes first · taking back allowed", { timeout: 30_000 });
+  await readyBoth(host, guest);
+  const inputs = (page: Page) => page.locator(".sve-decision").getAttribute("data-inputs");
+
+  // Player 1 keeps its hand; player 2 hasn't answered yet: player 1 takes it back (the debug tab's undo), on both sides.
+  await expect(host.locator(".sve-decision")).toHaveAttribute("data-decision", "mulligan", { timeout: 30_000 });
+  await host.getByTestId("table-keep").click();
+  for (const page of [host, guest]) await expect(page.locator(".sve-decision")).toHaveAttribute("data-inputs", "1");
+  await host.getByTestId("sidebar-show").click();
+  await host.getByTestId("tab-debug").click();
+  // Online, no seed and no bug report file while the game goes on.
+  await expect(host.getByTestId("debug-seed")).toHaveCount(0);
+  await expect(host.getByTestId("debug-export")).toHaveCount(0);
+  await host.getByTestId("debug-undo").click();
+  for (const page of [host, guest]) await expect(page.locator(".sve-decision")).toHaveAttribute("data-inputs", "0");
+  await expect(host.locator(".sve-decision")).toHaveAttribute("data-decision", "mulligan");
+  // (The sidebar covers the right of the table, where the decision's buttons are.)
+  await host.getByTestId("sidebar-hide").click();
+  // Answered again, and player 2 answers: nothing to take back for player 1 any more.
+  await host.getByTestId("table-keep").click();
+  await expect(guest.locator(".sve-decision")).toHaveAttribute("data-decision", "mulligan");
+  await guest.getByTestId("table-keep").click();
+  for (const page of [host, guest]) await expect(page.locator(".sve-decision")).toHaveAttribute("data-inputs", "2");
+  await host.getByTestId("sidebar-show").click();
+  await host.getByTestId("tab-debug").click();
+  await expect(host.getByTestId("debug-undo")).toBeDisabled();
+  expect(await inputs(host)).toBe(await inputs(guest));
+
+  // The game over (a concession), the seed and the bug report file are there.
+  host.once("dialog", (dialog) => void dialog.accept());
+  await host.getByTestId("game-concede").click();
+  await expect(host.getByTestId("result-new-game")).toBeVisible({ timeout: 30_000 });
+  await host.getByTestId("tab-debug").click();
+  await expect(host.getByTestId("debug-seed")).toHaveText(/\S/);
+  await expect(host.getByTestId("debug-export")).toBeVisible();
+  expect(problems).toEqual([]);
+});
+
 test("the server's configuration: none, pasted in the settings' window, tested; a wrong key is said", async ({ browser }) => {
   test.setTimeout(120_000);
   const page = await openOnline(browser, "");

@@ -4,11 +4,14 @@ import { engine, reportError } from "../../app/store";
 import type { GameUpdate } from "../../engine/protocol";
 import { hostApi, type HostInfo } from "../../host/api";
 import { useT } from "../../i18n";
+import { requestOnlineUndo } from "../../net/state";
 import { readReplayFile } from "../replay-files";
 
 /**
  * Tools for testing by hand: manual debugging, undo, rewind, replays (a bug report), hidden cards, bot pace. Online, both
- * programs play one game: only what changes nothing in it is here (saving a bug report, the look of the table).
+ * programs play one game: only what changes nothing in it is here (the look of the table), and "undo my last answer" in a
+ * room that allows it (the other program agrees: net/online.ts). The seed and the bug report file wait for the game's end
+ * online: with them, another program could show the hidden cards (the deck orders follow from the seed).
  */
 export function DebugPanel({ update }: { update: GameUpdate }) {
   const t = useT();
@@ -24,6 +27,8 @@ export function DebugPanel({ update }: { update: GameUpdate }) {
   const lastHuman = update.humanInputs[update.humanInputs.length - 1];
   const settings = update.settings;
   const online = update.online !== null;
+  // Online, the seed and the bug report file only once the game is over.
+  const secret = online && !update.result;
   const { animations, manualSlots, manualDebug } = useSettings();
   const setManual = (on: boolean) => {
     updateSettings({ manualDebug: on });
@@ -44,8 +49,12 @@ export function DebugPanel({ update }: { update: GameUpdate }) {
   return (
     <div className="sve-debug">
       <dl className="sve-debug-facts">
-        <dt>{t("debug.seed")}</dt>
-        <dd>{update.seed}</dd>
+        {!secret ? (
+          <>
+            <dt>{t("debug.seed")}</dt>
+            <dd data-testid="debug-seed">{update.seed}</dd>
+          </>
+        ) : null}
         <dt>{t("debug.inputs")}</dt>
         <dd>{update.inputCount}</dd>
       </dl>
@@ -57,7 +66,7 @@ export function DebugPanel({ update }: { update: GameUpdate }) {
           </label>
           {manualDebug ? <p className="sve-hint">{t("debug.manualHelp")}</p> : null}
           <div className="sve-debug-row">
-            <button type="button" disabled={lastHuman === undefined} onClick={() => engine.send({ kind: "rewind", inputs: lastHuman! })}>
+            <button type="button" disabled={lastHuman === undefined} onClick={() => engine.send({ kind: "rewind", inputs: lastHuman! })} data-testid="debug-undo">
               {t("debug.undo")}
             </button>
           </div>
@@ -69,11 +78,19 @@ export function DebugPanel({ update }: { update: GameUpdate }) {
             </button>
           </div>
         </>
+      ) : update.online?.allowUndo && !update.online.spectating ? (
+        <div className="sve-debug-row">
+          <button type="button" disabled={update.online.undo === null} onClick={requestOnlineUndo} data-testid="debug-undo">
+            {t("debug.undo")}
+          </button>
+        </div>
       ) : null}
       <div className="sve-debug-row">
-        <button type="button" onClick={() => void saveReplay()} data-testid="debug-export">
-          {t("debug.export")}
-        </button>
+        {!secret ? (
+          <button type="button" onClick={() => void saveReplay()} data-testid="debug-export">
+            {t("debug.export")}
+          </button>
+        ) : null}
         {!online ? (
           <label className="sve-file-button">
             {t("debug.import")}
@@ -81,7 +98,7 @@ export function DebugPanel({ update }: { update: GameUpdate }) {
           </label>
         ) : null}
       </div>
-      <p className="sve-hint">{t("debug.replayNote")}</p>
+      {!secret ? <p className="sve-hint">{t("debug.replayNote")}</p> : null}
       {!online ? (
         <>
           <label className="sve-check">

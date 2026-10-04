@@ -34,6 +34,8 @@ export interface Rules {
   /** The restriction list (a file of restrictions/), or none. */
   list: string | null;
   turnOrder: TurnOrder;
+  /** A player may take back their last answers while the other player hasn't answered since ("悔棋"). */
+  undo: boolean;
 }
 
 /** A player's deck, locked for the game ("ready"). */
@@ -70,6 +72,8 @@ export interface WatchedGame {
   backlog: number;
   /** The players' names, player 1's (the host's) first ("": none given); older hosts don't say them. */
   players?: [string, string];
+  /** The players may take answers back (the spectator's program follows: "takeBack"). */
+  allowUndo?: boolean;
 }
 
 /** The inputs a "backlog" message brings at most. */
@@ -106,7 +110,16 @@ export type NetMessage =
   /** An answer of the sender's seat: the game's `index`th input, and the sender's state before it (game-host.ts stateHash). */
   | { t: "input"; index: number; input: Input; hash: string }
   /** After reconnecting: the game in progress, and how many of its inputs the sender has played. */
-  | { t: "resume"; game: string; have: number };
+  | { t: "resume"; game: string; have: number }
+  /**
+   * Taking answers back, in a room that allows it: a player asks to take back the inputs from `from` on (theirs, and the
+   * engines' passes); the other program takes them back and says "undoOk" (then the asker does), or "undoNo" (it answered
+   * in between, or the room doesn't allow it). The host tells its spectators what was taken back ("takeBack").
+   */
+  | { t: "undo"; from: number }
+  | { t: "undoOk"; from: number }
+  | { t: "undoNo"; from: number }
+  | { t: "takeBack"; from: number };
 
 /** The longest chat line. */
 export const CHAT_MAX = 500;
@@ -168,6 +181,7 @@ function watchedGame(v: unknown): WatchedGame | null {
     secondLeaders: [leaders[0] as string | null, leaders[1] as string | null],
     turnOrder: g.turnOrder as TurnOrder,
     backlog: g.backlog,
+    ...(g.allowUndo === true ? { allowUndo: true } : {}),
     ...(Array.isArray(g.players) && g.players.length === 2 && g.players.every((p) => isString(p, 64)) ? { players: [cleanName(g.players[0] as string), cleanName(g.players[1] as string)] as [string, string] } : {}),
   };
 }
@@ -190,6 +204,7 @@ export function watchedOptions(game: WatchedGame): GameOptions {
     askEveryQuickWindow: true,
     manualActions: false,
     turnOrder: game.turnOrder,
+    allowUndo: game.allowUndo === true,
   };
 }
 
@@ -239,7 +254,7 @@ export function parseMessage(value: unknown): NetMessage | null {
       const r = m.rules as Record<string, unknown> | null;
       if (typeof r !== "object" || r === null) return null;
       if (!FORMATS.includes(r.format as FormatId) || !TURN_ORDERS.includes(r.turnOrder as TurnOrder) || !(r.list === null || isString(r.list))) return null;
-      return { t: "rules", rules: { format: r.format as FormatId, list: r.list as string | null, turnOrder: r.turnOrder as TurnOrder } };
+      return { t: "rules", rules: { format: r.format as FormatId, list: r.list as string | null, turnOrder: r.turnOrder as TurnOrder, undo: r.undo === true } };
     }
     case "ready": {
       if (m.deck === null) return { t: "ready", deck: null };
@@ -258,6 +273,11 @@ export function parseMessage(value: unknown): NetMessage | null {
     }
     case "resume":
       return isString(m.game, 128) && isIndex(m.have) ? { t: "resume", game: m.game, have: m.have } : null;
+    case "undo":
+    case "undoOk":
+    case "undoNo":
+    case "takeBack":
+      return isIndex(m.from) ? { t: m.t, from: m.from } : null;
     default:
       return null;
   }

@@ -607,6 +607,8 @@ export const zh: Record<MessageKey, string> = {
   "online.namePlaceholder": "对手和观战者会看到",
   "online.anonymous": "无名玩家",
   "online.publicRoom": "在大厅里公开这个房间",
+  "online.allowUndo": "允许悔棋",
+  "online.rulesUndo": "允许悔棋",
   "online.lobby": "大厅",
   "online.lobbyEmpty": "现在没有公开的房间：创建一个，或者用房间号加入。",
   "online.lobbyRoom": "{name}的房间",

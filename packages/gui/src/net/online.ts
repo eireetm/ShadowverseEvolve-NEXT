@@ -7,7 +7,9 @@
 // answers and the chat; they can't do anything else. Each program says its person's name (the other player's and the
 // spectators' screens show it) and whether they let the online server keep their games. On the server, the host describes
 // its room for the lobby (its name, the rules, who is in), and a finished game both players let it keep is sent to it (both
-// programs send it: the server keeps it once). The state lives in net/state.ts.
+// programs send it: the server keeps it once). In a room that allows it, a player takes back their last answer while the other
+// player hasn't answered since: the other program checks that and takes it back too, then the asker does — both play the
+// same inputs again (and the host's spectators follow). The state lives in net/state.ts.
 import type { Catalog } from "../app/catalog";
 import { getSettings, subscribeSettings } from "../app/settings";
 import { engine, getApp } from "../app/store";
@@ -26,12 +28,12 @@ import type { TurnServer } from "./relays";
 import { meet, type Admission, type Meeting, type MeetingHandlers } from "./rooms";
 import { serverNetwork, type JoinMode, type ServerProblem, type ServerRoom } from "./server";
 import { currentServer } from "./server-config";
-import { currentLink, gameStarted, getOnline, NO_PREP, setChatRelay, setLink, setOnline, type OnlineRole, type Prep } from "./state";
+import { currentLink, gameStarted, getOnline, NO_PREP, setChatRelay, setLink, setOnline, setUndoRequest, type OnlineRole, type Prep } from "./state";
 
 export { sendChat, useOnline, getOnline, canChat, type OnlinePhase } from "./state";
 
 /** The protocol these messages follow (a program with another one can't play with this one, or watch its games). */
-export const PROTOCOL = "online-3";
+export const PROTOCOL = "online-4";
 
 declare const __ENGINE_FINGERPRINT__: string;
 /** The rules code's fingerprint (vite.config.ts); "dev" where the build didn't make one (tests). */
@@ -158,6 +160,7 @@ function stopLooking(): void {
 }
 
 function disconnect(): void {
+  endAsking();
   if (pinger !== null) window.clearInterval(pinger);
   pinger = null;
   pingSent = new Map();
@@ -333,6 +336,25 @@ async function receive(message: NetMessage): Promise<void> {
         engine.send({ kind: "remoteInput", index: message.index, input: message.input, hash: message.hash });
       }
       break;
+    case "undo": {
+      // The other player takes back their last answers: when the room allows it and this player hasn't answered since (the
+      // engine checks), here too; then the other program does.
+      const game = state.game;
+      if (!game || game.seat === null) break;
+      const ok = await takeBack(message.from, (1 - game.seat) as 0 | 1);
+      if (ok) tookBack(message.from);
+      currentLink()?.send({ t: ok ? "undoOk" : "undoNo", from: message.from });
+      break;
+    }
+    case "undoOk":
+      if (asking?.from === message.from && state.game && state.game.seat !== null) {
+        if (await takeBack(message.from, state.game.seat)) tookBack(message.from);
+        endAsking();
+      }
+      break;
+    case "undoNo":
+      if (asking?.from === message.from) endAsking();
+      break;
     case "resume":
       // The other side is back: the answers of this side it hasn't played.
       if (state.game && message.game === state.game.id) {
@@ -397,6 +419,7 @@ export function onlineOptions(seed: string, rules: Rules, host: ReadyDeck, guest
     askEveryQuickWindow: true,
     manualActions: false,
     turnOrder: rules.turnOrder,
+    allowUndo: rules.undo,
   };
 }
 
@@ -413,6 +436,7 @@ function watchedGame(options: GameOptions, backlog: number): WatchedGame {
     turnOrder: options.turnOrder ?? "choose",
     backlog,
     players: getOnline().names ?? [myName(), lastPeer?.name ?? ""],
+    allowUndo: options.allowUndo === true,
   };
 }
 
@@ -457,12 +481,58 @@ engine.subscribe((message) => {
   toWatchers(input);
 });
 
+// ---- Taking an answer back (a room that allows it) ----
+
+/** This program asked the other to take back the inputs from `from` on (its person's answers wait meanwhile). */
+let asking: { from: number; timer: number } | null = null;
+/** The engine's answers to "takeBack", in order. */
+const takingBack: ((ok: boolean) => void)[] = [];
+
+engine.subscribe((message) => {
+  if (message.kind === "tookBack") takingBack.shift()?.(message.ok);
+});
+
+/** The engine takes back the inputs from `from` on, `seat`'s (null: a spectator following); whether it did. */
+function takeBack(from: number, seat: 0 | 1 | null): Promise<boolean> {
+  return new Promise((done) => {
+    takingBack.push(done);
+    engine.send({ kind: "takeBack", inputs: from, seat });
+  });
+}
+
+/** Inputs from `from` on are taken back on both sides: not to be sent again; the host's spectators take them back too. */
+function tookBack(from: number): void {
+  sent = sent.filter((m) => m.index < from);
+  if (getOnline().phase.kind === "connected" && getOnline().room?.role === "host") toWatchers({ t: "takeBack", from });
+}
+
+function endAsking(): void {
+  if (!asking) return;
+  window.clearTimeout(asking.timer);
+  asking = null;
+  engine.send({ kind: "hold", on: false });
+}
+
+/**
+ * "Undo my last answer" in an online game whose room allows it: the other program is asked (it takes the answer back when
+ * its player hasn't answered since), this person's answers waiting meanwhile. No answer within a while: nothing happens.
+ */
+function requestUndo(): void {
+  const from = getApp().update?.online?.undo;
+  const link = currentLink();
+  if (from === null || from === undefined || !link || asking || getOnline().phase.kind !== "connected") return;
+  engine.send({ kind: "hold", on: true });
+  asking = { from, timer: window.setTimeout(endAsking, 10_000) };
+  link.send({ t: "undo", from });
+}
+setUndoRequest(requestUndo);
+
 /** The rules in this program's settings (the host's are the game's). */
 function hostRules(): Rules {
   const settings = getSettings();
   const format = settings.format;
   const list = format === "unlimited" ? null : (restrictionList(settings.restrictionLists[format])?.id ?? null);
-  return { format, list, turnOrder: settings.setupTurnOrder };
+  return { format, list, turnOrder: settings.setupTurnOrder, undo: settings.allowUndo };
 }
 
 /** The host: the rules of the next game, from its settings (again whenever they change: both players are then not ready). */
@@ -660,6 +730,9 @@ function hear(message: NetMessage): void {
       break;
     case "input":
       if (state.game && !incoming) engine.send({ kind: "remoteInput", index: message.index, input: message.input, hash: message.hash });
+      break;
+    case "takeBack":
+      if (state.game && !incoming) void takeBack(message.from, null);
       break;
     case "bye":
       disconnect();

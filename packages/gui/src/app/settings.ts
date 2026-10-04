@@ -49,6 +49,8 @@ export interface Settings {
   shareGames: boolean;
   /** Online play on the server: a room made is listed in the server's lobby (else it is joined by its code only). */
   publicRooms: boolean;
+  /** Online play, the host's rule: players may take back their last answer while the other hasn't answered since. */
+  allowUndo: boolean;
 }
 
 const KEY = "sve-gui-settings";
@@ -75,6 +77,7 @@ export const DEFAULT_SETTINGS: Settings = {
   playerName: "",
   shareGames: true,
   publicRooms: true,
+  allowUndo: false,
 };
 
 /** Settings saved by an older version, brought up to date: "deck restrictions" off became the unlimited format. */

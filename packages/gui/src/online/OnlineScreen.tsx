@@ -338,6 +338,18 @@ function TurnOrderField({ testId }: { testId: string }) {
   );
 }
 
+/** Whether the players may take back their last answer while the other hasn't answered since (the host's rule). */
+function UndoField({ testId }: { testId: string }) {
+  const t = useT();
+  const { allowUndo } = useSettings();
+  return (
+    <label className="sve-online-check-label">
+      <input type="checkbox" checked={allowUndo} onChange={(e) => updateSettings({ allowUndo: e.target.checked })} data-testid={testId} />
+      {t("online.allowUndo")}
+    </label>
+  );
+}
+
 /**
  * The online server: the rules of the room to make (the host's settings, as in the room), make it, or join one by its code,
  * to play or to watch. Without a server configured: what it is, and the configuration's window.
@@ -358,6 +370,7 @@ function ServerStart() {
           <fieldset className="sve-online-rules">
             <FormatPicker />
             <TurnOrderField testId="online-server-turn-order" />
+            <UndoField testId="online-server-undo" />
           </fieldset>
           <label className="sve-online-check-label">
             <input type="checkbox" checked={settings.publicRooms} onChange={(e) => updateSettings({ publicRooms: e.target.checked })} data-testid="online-server-public" />
@@ -734,7 +747,8 @@ function Connected({ phase, identified, going, onGame, onEditDecks }: ConnectedP
 
 /** "Standard · restriction list: 01_26_JPN · first player: a random player chooses". */
 function rulesText(rules: Rules, t: ReturnType<typeof useT>): string {
-  return t("online.rulesSummary", { format: t(`format.${rules.format}`), list: rules.list ?? t("format.noList"), order: t(`turnOrder.${rules.turnOrder}`) });
+  const summary = t("online.rulesSummary", { format: t(`format.${rules.format}`), list: rules.list ?? t("format.noList"), order: t(`turnOrder.${rules.turnOrder}`) });
+  return rules.undo ? `${summary} · ${t("online.rulesUndo")}` : summary;
 }
 
 /**
@@ -754,7 +768,7 @@ function Prep({ role, same, onEditDecks }: { role: "host" | "guest"; same: boole
   // The host's rules follow its settings.
   useEffect(() => {
     if (role === "host") updateRules();
-  }, [role, settings.format, settings.restrictionLists, settings.setupTurnOrder]);
+  }, [role, settings.format, settings.restrictionLists, settings.setupTurnOrder, settings.allowUndo]);
   useEffect(() => {
     hostApi.listDecks().then(setDecks, (err: unknown) => reportError(String(err)));
   }, []);
@@ -787,6 +801,7 @@ function Prep({ role, same, onEditDecks }: { role: "host" | "guest"; same: boole
           <fieldset className="sve-online-rules" disabled={isReady}>
             <FormatPicker />
             <TurnOrderField testId="online-turn-order" />
+            <UndoField testId="online-undo" />
           </fieldset>
         ) : (
           <>

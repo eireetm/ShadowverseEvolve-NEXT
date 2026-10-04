@@ -78,6 +78,11 @@ export interface GameOptions {
   askEveryQuickWindow?: boolean;
   /** Who goes first (absent: as the rules say). */
   turnOrder?: TurnOrder;
+  /**
+   * Online play, a room that allows it: a player may take back their last answers while the other player hasn't answered
+   * since (both programs take them back together: "takeBack"). Absent: never.
+   */
+  allowUndo?: boolean;
 }
 
 /** One input of a game, with the seat that gave it (null: not given by a seat). */
@@ -149,6 +154,14 @@ export type ToWorker =
   | { kind: "concede"; seat: PlayerId }
   /** Play the game again from the start with its first `inputs` inputs (undo, rewind). */
   | { kind: "rewind"; inputs: number }
+  /**
+   * Online play, a room that allows it (GameOptions.allowUndo): back to the game's first `inputs` inputs, those after being
+   * `seat`'s answers and the engine's own passes only (an answer of the other player in between: refused). A spectator's
+   * program (seat null) follows what the two players took back. Answered with "tookBack".
+   */
+  | { kind: "takeBack"; inputs: number; seat: PlayerId | null }
+  /** Online play: this program's person's answers wait (are not taken) while the other program is asked to take one back. */
+  | { kind: "hold"; on: boolean }
   | { kind: "loadReplay"; replay: Replay; inputs?: number }
   | { kind: "exportReplay"; requestId: number }
   | { kind: "settings"; settings: Partial<HostSettings> }
@@ -287,9 +300,11 @@ export interface GameUpdate {
   watch: WatchState | null;
   /**
    * Online play (null: a local game): this program's seat and the one the other program plays (both null: a spectator,
-   * who watches the two players' programs), and whether the games differ.
+   * who watches the two players' programs), and whether the games differ. In a room that allows taking answers back
+   * (`allowUndo`), `undo` is where "undo my last answer" goes back to: this person's last answer, while the other player
+   * hasn't answered since and the game goes on (null: not now).
    */
-  online: { seat: PlayerId | null; remote: PlayerId | null; desync: string | null; spectating: boolean } | null;
+  online: { seat: PlayerId | null; remote: PlayerId | null; desync: string | null; spectating: boolean; allowUndo: boolean; undo: number | null } | null;
   /** Whose view this is (the human's seat; in hot seat, the player who must decide). */
   perspective: PlayerId;
   view: PlayerView;
@@ -315,5 +330,7 @@ export type FromWorker =
   | { kind: "localInput"; index: number; input: Input; hash: string }
   | { kind: "update"; update: GameUpdate }
   | { kind: "replay"; requestId: number; replay: Replay | null }
+  /** A "takeBack" done, or refused. */
+  | { kind: "tookBack"; inputs: number; ok: boolean }
   | { kind: "deckValidation"; requestId: number; errors: string[] }
   | { kind: "error"; message: string };

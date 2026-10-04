@@ -79,9 +79,16 @@ describe("messages", () => {
   });
 
   it("carry a game's preparation and answers, checked field by field", () => {
-    const rules = { format: "crossCraft", list: "01_26_EN_CROSS", turnOrder: "random" };
+    const rules = { format: "crossCraft", list: "01_26_EN_CROSS", turnOrder: "random", undo: false };
     expect(parseMessage({ t: "rules", rules })).toEqual({ t: "rules", rules });
     expect(parseMessage({ t: "rules", rules: { ...rules, list: null } })).toEqual({ t: "rules", rules: { ...rules, list: null } });
+    // Taking answers back: allowed only when the host says so.
+    expect(parseMessage({ t: "rules", rules: { ...rules, undo: true } })).toEqual({ t: "rules", rules: { ...rules, undo: true } });
+    expect(parseMessage({ t: "rules", rules: { ...rules, undo: "yes" } })).toEqual({ t: "rules", rules });
+    for (const t of ["undo", "undoOk", "undoNo", "takeBack"] as const) {
+      expect(parseMessage({ t, from: 12 })).toEqual({ t, from: 12 });
+      expect(parseMessage({ t, from: -1 })).toBeNull();
+    }
     for (const bad of [{ ...rules, format: "modern" }, { ...rules, turnOrder: "me" }, { ...rules, list: 3 }, null]) expect(parseMessage({ t: "rules", rules: bad })).toBeNull();
     const deck = { name: "Mine", deck: { leader: "SD01-LD01", main: ["SD01-001", "SD01-001"], evolve: ["SD01-016"] }, leader2: null };
     expect(parseMessage({ t: "ready", deck })).toEqual({ t: "ready", deck });

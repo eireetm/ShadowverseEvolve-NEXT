@@ -608,6 +608,8 @@ export const ja: Record<MessageKey, string> = {
   "online.namePlaceholder": "相手と観戦者に表示されます",
   "online.anonymous": "名無し",
   "online.publicRoom": "ロビーに公開する",
+  "online.allowUndo": "待ったを許可",
+  "online.rulesUndo": "待ったあり",
   "online.lobby": "ロビー",
   "online.lobbyEmpty": "公開中のルームはありません：ルームを作るか、コードで参加してください。",
   "online.lobbyRoom": "{name}のルーム",

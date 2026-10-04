@@ -87,8 +87,8 @@ describe("online play: two programs, one game", () => {
       const a = side(0, options(seed), announce);
       const b = side(1, options(seed), announce);
       // Each side is told whose seat is the other program's; nobody is asked the other's decisions.
-      expect(a.last().online).toEqual({ seat: 0, remote: 1, desync: null, spectating: false });
-      expect(b.last().online).toEqual({ seat: 1, remote: 0, desync: null, spectating: false });
+      expect(a.last().online).toEqual({ seat: 0, remote: 1, desync: null, spectating: false, allowUndo: false, undo: null });
+      expect(b.last().online).toEqual({ seat: 1, remote: 0, desync: null, spectating: false, allowUndo: false, undo: null });
       play(a, b);
       expect(a.last().result).not.toBeNull();
       expect(b.last().result).toEqual(a.last().result);
@@ -213,7 +213,7 @@ describe("online play: spectators", () => {
     const a = side(0, options("watch-1"), false);
     const b = side(1, options("watch-1"), false);
     const w = spectator(options("watch-1"));
-    expect(w.last().online).toEqual({ seat: null, remote: null, desync: null, spectating: true });
+    expect(w.last().online).toEqual({ seat: null, remote: null, desync: null, spectating: true, allowUndo: false, undo: null });
     play(a, b);
     expect(a.last().result).not.toBeNull();
     const rng = seedRng("watch-order");
@@ -285,5 +285,74 @@ describe("online play: spectators", () => {
     const concede = b.outbox.at(-1)!;
     w.host.handle({ kind: "remoteInput", index: concede.index, input: concede.input, hash: concede.hash });
     expect(w.last().result).toEqual({ winner: 0, losses: [{ player: 1, reason: "concede" }] });
+  });
+});
+
+describe("online play: taking an answer back (a room that allows it)", () => {
+  const allowing = (seed: string, allowUndo = true): GameOptions => ({ ...options(seed), turnOrder: "player1", allowUndo });
+  /** The engine's last answer to "takeBack". */
+  const tookBack = (messages: FromWorker[]) => messages.filter((m) => m.kind === "tookBack").at(-1);
+
+  it("takes a player's last answer back on both sides while the other hasn't answered since, and the spectators follow", () => {
+    const a = side(0, allowing("undo-1"), false);
+    const b = side(1, allowing("undo-1"), false);
+    const watcher = spectator(allowing("undo-1"));
+    expect(a.last().online).toMatchObject({ allowUndo: true, undo: null });
+    // Player 1 goes first: its redraw decision, then player 2's.
+    expect(a.last().decision?.decision.type).toBe("mulligan");
+    a.host.handle({ kind: "answer", seat: 0, answer: { type: "mulligan", redraw: false } });
+    for (const m of a.outbox) watcher.host.handle({ kind: "remoteInput", index: m.index, input: m.input, hash: m.hash });
+    deliver(a, b);
+    const at = a.last().online!.undo!;
+    expect(at).toBe(0);
+    expect(b.last().online!.undo).toBeNull();
+    // While asking, the asker's answers wait.
+    a.host.handle({ kind: "hold", on: true });
+    expect(a.last().online!.undo).toBeNull();
+    // The other program takes it back, then the asker; the spectator follows: the same game on all three.
+    b.host.handle({ kind: "takeBack", inputs: at, seat: 0 });
+    expect(tookBack(b.messages)).toEqual({ kind: "tookBack", inputs: at, ok: true });
+    a.host.handle({ kind: "takeBack", inputs: at, seat: 0 });
+    a.host.handle({ kind: "hold", on: false });
+    expect(tookBack(a.messages)).toMatchObject({ ok: true });
+    watcher.host.handle({ kind: "takeBack", inputs: at, seat: null });
+    expect(tookBack(watcher.messages)).toMatchObject({ ok: true });
+    for (const s of [a.host, watcher.host]) expect(JSON.stringify(s.session!.state)).toBe(JSON.stringify(b.host.session!.state));
+    expect(a.last().inputCount).toBe(0);
+    expect(a.last().decision?.decision.type).toBe("mulligan");
+    // Answered again, and the other player answers: nothing to take back for player 1 now, and the other program refuses.
+    a.host.handle({ kind: "answer", seat: 0, answer: { type: "mulligan", redraw: true } });
+    deliver(a, b);
+    expect(b.last().decision?.decision.player).toBe(1);
+    b.host.handle({ kind: "answer", seat: 1, answer: randomAnswer(b.rng, b.last().decision!.decision) });
+    deliver(b, a);
+    expect(a.last().online!.undo).toBeNull();
+    b.host.handle({ kind: "takeBack", inputs: 0, seat: 0 });
+    expect(tookBack(b.messages)).toMatchObject({ ok: false });
+    // Player 2 can take back its own answer; then the game goes on to the same end on both sides.
+    const mine = b.last().online!.undo!;
+    a.host.handle({ kind: "takeBack", inputs: mine, seat: 1 });
+    b.host.handle({ kind: "takeBack", inputs: mine, seat: 1 });
+    expect(JSON.stringify(a.host.session!.state)).toBe(JSON.stringify(b.host.session!.state));
+    play(a, b);
+    expect(a.last().result).not.toBeNull();
+    expect(b.host.replay()!.inputs).toEqual(a.host.replay()!.inputs);
+  }, 30_000);
+
+  it("takes nothing back in a room that doesn't allow it, nor once the game is over", () => {
+    const a = side(0, allowing("undo-2", false), false);
+    const b = side(1, allowing("undo-2", false), false);
+    a.host.handle({ kind: "answer", seat: 0, answer: { type: "mulligan", redraw: false } });
+    deliver(a, b);
+    expect(a.last().online).toMatchObject({ allowUndo: false, undo: null });
+    b.host.handle({ kind: "takeBack", inputs: 0, seat: 0 });
+    expect(tookBack(b.messages)).toMatchObject({ ok: false });
+    expect(b.last().inputCount).toBe(1);
+    const c = side(0, allowing("undo-3"), false);
+    c.host.handle({ kind: "concede", seat: 0 });
+    expect(c.last().result).not.toBeNull();
+    expect(c.last().online!.undo).toBeNull();
+    c.host.handle({ kind: "takeBack", inputs: 0, seat: 0 });
+    expect(tookBack(c.messages)).toMatchObject({ ok: false });
   });
 });

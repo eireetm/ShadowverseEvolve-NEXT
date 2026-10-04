@@ -111,6 +111,17 @@ export function setChatRelay(fn: ((text: string) => void) | null): void {
   chatRelay = fn;
 }
 
+/** "Undo my last answer" in an online game whose room allows it (net/online.ts asks the other program). */
+let undoRequest: (() => void) | null = null;
+
+export function setUndoRequest(fn: (() => void) | null): void {
+  undoRequest = fn;
+}
+
+export function requestOnlineUndo(): void {
+  undoRequest?.();
+}
+
 /** Whether this program may write in the chat: a player connected (a spectator only reads it). */
 export function canChat(s: OnlineState = state): boolean {
   return s.phase.kind === "connected" && s.phase.role !== "spectator";

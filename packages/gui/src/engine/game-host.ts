@@ -238,6 +238,8 @@ export class GameHost {
   /** Online play: the other program's answers waiting for this game to reach them, by index; why the two games differ. */
   private remoteQueue = new Map<number, { input: Input; hash: string }>();
   private desync: string | null = null;
+  /** Online play: this person's answers wait while the other program is asked to take one back (net/online.ts). */
+  private hold = false;
   /**
    * Online play, a spectator: both seats are the players' programs (their answers come as
    * "remoteInput" through the host); it is shown what both players can see (CR 4.1.2), from the side chosen.
@@ -257,6 +259,7 @@ export class GameHost {
       case "start":
         this.watching = null;
         this.spectating = false;
+        this.hold = false;
         return this.begin(message.options, []);
       case "spectate":
         this.watching = null;
@@ -278,6 +281,11 @@ export class GameHost {
         return;
       case "remoteInput":
         return this.remoteInput(message.index, message.input, message.hash);
+      case "takeBack":
+        return this.takeBack(message.inputs, message.seat);
+      case "hold":
+        this.hold = message.on;
+        return this.pump();
       case "loadReplay": {
         this.watching = null;
         this.spectating = false;
@@ -384,6 +392,8 @@ export class GameHost {
   }
 
   private answer(seat: PlayerId, answer: Answer): void {
+    // The other program is being asked to take an answer back: this person's next one waits for what it says.
+    if (this.hold && !this.isRemote(seat)) return;
     const game = this.game;
     const decision = game?.decision;
     if (!game || !decision) return this.error("there is no decision to answer");
@@ -417,6 +427,46 @@ export class GameHost {
     }
     sent?.(input);
     this.pump();
+  }
+
+  /**
+   * Online play, a room that allows it (GameOptions.allowUndo): back to the game's first `n` inputs. Those taken back must
+   * be `seat`'s answers and the engine's own passes: an answer of the other player in between, and it is refused (a
+   * spectator, seat null, follows what the two players agreed). Not once the game is over. Both programs play the first `n`
+   * inputs again — the same game on both sides (the engine is deterministic).
+   */
+  private takeBack(n: number, seat: PlayerId | null): void {
+    const game = this.game;
+    const ok =
+      !!game &&
+      !!this.options?.allowUndo &&
+      this.remotes().length > 0 &&
+      !this.desync &&
+      !game.isOver &&
+      Number.isInteger(n) &&
+      n >= 0 &&
+      (seat === null ? this.spectating : this.inputs.slice(n).every((r) => r.by === null || r.by === seat));
+    if (ok) {
+      // The other program's answers taken back that haven't been played here yet (this game waits for a person who
+      // hasn't seen something): never to be played.
+      for (const index of [...this.remoteQueue.keys()]) if (index >= n) this.remoteQueue.delete(index);
+      if (n < this.inputs.length) this.begin(this.options!, this.inputs.slice(0, n));
+    }
+    this.send({ kind: "tookBack", inputs: n, ok });
+  }
+
+  /** Online play: where "undo my last answer" goes back to (GameUpdate.online.undo). */
+  private undoPoint(): number | null {
+    const remotes = this.remotes();
+    if (!this.options?.allowUndo || remotes.length !== 1 || this.desync || this.hold || this.game?.isOver) return null;
+    const mine = opponentOf(remotes[0]!);
+    for (let i = this.inputs.length - 1; i >= 0; i--) {
+      const { by, input } = this.inputs[i]!;
+      if (by === mine) return input.type === "concede" ? null : i;
+      // The other player answered since.
+      if (by !== null) return null;
+    }
+    return null;
   }
 
   /** Online play: the seats other programs play (none: a local game; both: a spectator's). */
@@ -698,8 +748,9 @@ export class GameHost {
   private onlineState(): GameUpdate["online"] {
     const remotes = this.remotes();
     if (remotes.length === 0) return null;
-    if (remotes.length === 2) return { seat: null, remote: null, desync: this.desync, spectating: true };
-    return { seat: opponentOf(remotes[0]!), remote: remotes[0]!, desync: this.desync, spectating: false };
+    const allowUndo = !!this.options?.allowUndo;
+    if (remotes.length === 2) return { seat: null, remote: null, desync: this.desync, spectating: true, allowUndo, undo: null };
+    return { seat: opponentOf(remotes[0]!), remote: remotes[0]!, desync: this.desync, spectating: false, allowUndo, undo: this.undoPoint() };
   }
 
   private watchState(): WatchState | null {
