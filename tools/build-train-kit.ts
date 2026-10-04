@@ -11,7 +11,7 @@ import { createWriteStream, existsSync, mkdirSync, readFileSync, readdirSync, st
 import { basename, join, resolve } from "node:path";
 import { build as bundle } from "esbuild";
 import { Zip, ZipDeflate, ZipPassThrough } from "fflate";
-import { engineFingerprint } from "../packages/gui/fingerprint";
+import { rulesFingerprint } from "../packages/gui/fingerprint";
 import { ROOT, deckSet, sampleDeck, DECK_SETS } from "./rl/series";
 import { botFingerprint } from "./train/code";
 import type { Job, JobFile } from "./train/job";
@@ -42,8 +42,8 @@ const git = (...gitArgs: string[]) => {
   }
 };
 const commit = git("rev-parse", "--short", "HEAD") || "unknown";
-// Changes to what goes into the kit or its engine fingerprint (not, say, the release notes of the app).
-const uncommitted = git("status", "--porcelain", "--untracked-files=no", "--", "packages/core", "packages/bot", "packages/gui/src/engine", "packages/gui/fingerprint.ts", "tools") !== "";
+// Changes to what goes into the kit or its rules fingerprint (not, say, the release notes of the app).
+const uncommitted = git("status", "--porcelain", "--untracked-files=no", "--", "packages/core", "packages/bot", "packages/gui/fingerprint.ts", "tools") !== "";
 
 // The job with its decks written out (the kit has no repository), checked against the deck set's format.
 const file = JSON.parse(readFileSync(jobPath, "utf8")) as JobFile;
@@ -59,7 +59,7 @@ if (!names) {
 const job: Job = {
   ...file,
   deckLists: names.map((name) => sampleDeck(name)!),
-  engine: engineFingerprint(gui),
+  engine: rulesFingerprint(gui),
   bot: botFingerprint(ROOT),
   commit: `${commit}${uncommitted ? "+" : ""}`,
   version,

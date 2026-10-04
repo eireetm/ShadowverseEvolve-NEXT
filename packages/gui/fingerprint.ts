@@ -8,6 +8,18 @@ import { join, relative } from "node:path";
  * vite.config.ts builds it into the app; scripts/release-pc.ts writes it into a release's VERSION.txt.
  */
 export function engineFingerprint(gui: string): string {
+  return fingerprintOf(gui, ["../core/src", "../core/data", "src/engine"]);
+}
+
+/**
+ * The core's alone (its source and card data): what games played without the app depend on — the training kit's, taken
+ * back by npm run rl:ingest (a change of the app's worker host doesn't make them another engine's).
+ */
+export function rulesFingerprint(gui: string): string {
+  return fingerprintOf(gui, ["../core/src", "../core/data"]);
+}
+
+function fingerprintOf(gui: string, dirs: readonly string[]): string {
   const hash = createHash("sha256");
   const walk = (root: string, dir: string) => {
     for (const name of readdirSync(dir).sort()) {
@@ -19,6 +31,6 @@ export function engineFingerprint(gui: string): string {
       }
     }
   };
-  for (const dir of ["../core/src", "../core/data", "src/engine"]) walk(join(gui, dir), join(gui, dir));
+  for (const dir of dirs) walk(join(gui, dir), join(gui, dir));
   return hash.digest("hex").slice(0, 16);
 }

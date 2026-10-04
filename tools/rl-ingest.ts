@@ -21,7 +21,7 @@ import { join, resolve } from "node:path";
 import { constants, gunzipSync, gzipSync } from "node:zlib";
 import { createEngine, validateAnswer } from "../packages/core/src";
 import { ALL_CARDS, ALL_SCRIPTS } from "../packages/core/src/sets";
-import { engineFingerprint } from "../packages/gui/fingerprint";
+import { rulesFingerprint } from "../packages/gui/fingerprint";
 import { ROOT, deckSet, sampleDeck } from "./rl/series";
 import { botFingerprint } from "./train/code";
 import { playJobGame, type Job, type JobFile, type JobGame } from "./train/job";
@@ -39,7 +39,8 @@ if (!source || !existsSync(source) || !(recheck >= 0 && recheck <= 100)) {
 }
 
 const engine = createEngine({ cards: ALL_CARDS, scripts: ALL_SCRIPTS });
-const fingerprint = engineFingerprint(join(ROOT, "packages", "gui"));
+// The core's fingerprint (the kit's games are played and replayed with the core alone).
+const fingerprint = rulesFingerprint(join(ROOT, "packages", "gui"));
 const bots = botFingerprint(ROOT);
 // The jobs this repository knows, with their decks (as the kit was built with them).
 const jobs = new Map<string, Job>();
