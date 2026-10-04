@@ -45,6 +45,7 @@ import type {
   ToWorker,
   WatchState,
 } from "./protocol";
+import { knownController } from "./protocol";
 import { forEachCard } from "./view-utils";
 
 export interface Scheduler {
@@ -69,7 +70,7 @@ interface Bot {
  */
 function makeBot(engine: Engine, controller: SeatController, seed: string, seat: PlayerId, effort: number): Bot | null {
   if (controller === "greedy") return createBot(engine, "easy", `${seed}:greedy:${seat}`);
-  if (controller === "medium" || controller === "hard" || controller === "hard-beta") return createBot(engine, controller, `${seed}:${controller}:${seat}`, effort);
+  if (controller === "medium" || controller === "hard") return createBot(engine, controller, `${seed}:${controller}:${seat}`, effort);
   if (controller === "random") {
     const rng = seedRng(`${seed}:random:${seat}`);
     return { decide: (game) => randomAnswer(rng, game.decision!) };
@@ -347,8 +348,10 @@ export class GameHost {
   }
 
   /** A new game, then its first inputs again (rewind, replays). Bots start afresh: replayed answers are not re-decided. */
-  private begin(options: GameOptions, replay: readonly RecordedInput[]): void {
+  private begin(given: GameOptions, replay: readonly RecordedInput[]): void {
     this.stopTimer();
+    // A replay or bug report file of an older version may name a level no longer offered.
+    const options: GameOptions = { ...given, controllers: [knownController(given.controllers[0]), knownController(given.controllers[1])] };
     let game: GameSession;
     try {
       game = this.engine.newGame({ seed: options.seed, players: options.decks, config: configOf(options) });

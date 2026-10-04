@@ -22,10 +22,17 @@ import type {
  * Who plays a seat: a person at this screen, a bot run by the worker, or a person at another program (online play:
  * their answers come as "remoteInput"). The bots: "greedy" is Bot-Easy (the name it had
  * before the levels, kept for saved settings and replays), "medium" plans its turn fairly, "hard" plans reading every
- * hidden card, "hard-beta" is Hard with the beta additions (a lethal search, its mulligan, the leader's defense on a
- * curve), "random" answers at random (testing). Which bots read hidden cards is said in the README only, not in the GUI.
+ * hidden card, "random" answers at random (testing). Which bots read hidden cards is said in the README only, not in the GUI.
  */
-export type SeatController = "human" | "greedy" | "medium" | "hard" | "hard-beta" | "random" | "remote";
+export type SeatController = "human" | "greedy" | "medium" | "hard" | "random" | "remote";
+
+/**
+ * A seat's controller as an older version's file may name it (saved settings, a replay, a bug report file): Bot-Hard beta
+ * ("hard-beta", a level no longer offered) plays on as Bot-Hard.
+ */
+export function knownController(controller: string): SeatController {
+  return controller === "hard-beta" ? "hard" : (controller as SeatController);
+}
 
 /**
  * How decks are built (the GUI checks them, formats/formats.ts): standard (CR 6.1, and a restriction list), Cross Craft (two

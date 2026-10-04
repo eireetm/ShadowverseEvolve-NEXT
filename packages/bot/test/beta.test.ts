@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { createEngine, seedRng, validateAnswer, type Answer, type GameSession } from "../src/core";
 import {
   GreedyBot,
-  HARD_BETA_OPTIONS,
   LEADER_CURVE,
   MEDIUM_BETA_OPTIONS,
   PlannerBot,
@@ -14,8 +13,8 @@ import {
 import { ALL_CARDS, ALL_SCRIPTS } from "../../core/src/sets";
 import { checkInvariants, deckPool, randomDeck } from "../../core/src/testing";
 
-// The beta bots: Medium and Hard with a mulligan by the curve and the leader's defense valued on a curve (their sure lethal
-// first is Medium's and Hard's: lethal.test.ts).
+// The beta bot: Medium with a mulligan by the curve and the leader's defense valued on a curve (its sure lethal first is
+// Medium's: lethal.test.ts).
 
 describe("the mulligan by the curve (CR 6.2.1.8)", () => {
   const inHand = (costs: number[]) => costs.map((cost) => ({ cost, from: 1 }));
@@ -54,12 +53,12 @@ describe("the leader curve", () => {
   });
 });
 
-describe("the beta bots in whole games", () => {
+describe("the beta bot in whole games", () => {
   const engine = createEngine({ cards: ALL_CARDS, scripts: ALL_SCRIPTS });
   const pool = deckPool(engine);
 
-  it("medium beta and hard beta play whole games against the greedy bot: legal answers, every game ends", () => {
-    for (const [i, options] of [MEDIUM_BETA_OPTIONS, HARD_BETA_OPTIONS].entries()) {
+  it("medium beta plays whole games against the greedy bot: legal answers, every game ends", () => {
+    for (const [i, options] of [MEDIUM_BETA_OPTIONS].entries()) {
       const g = engine.newGame({ seed: `beta-${i}`, players: [randomDeck(pool, `beta-${i}/0`), randomDeck(pool, `beta-${i}/1`)], config: { deckRestrictions: false } });
       const beta = new PlannerBot(engine, { seed: `b${i}`, ...options });
       const greedy = new GreedyBot(engine, { seed: `g${i}` });

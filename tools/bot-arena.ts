@@ -1,7 +1,7 @@
 /**
  * Bots against each other: npm run bot:arena -- [games] [a] [b] [options]
  *
- * A bot is a level (easy | medium | hard | medium-beta | hard-beta), one of sve-server's AIs imitated (sve-fool, sve-good,
+ * A bot is a level (easy | medium | hard | medium-beta), one of sve-server's AIs imitated (sve-fool, sve-good,
  * sve-planner; tools/sve-server-ais), or easy / medium / hard with its evaluation swapped, to check the evaluation interface:
  * "medium:identity" plays with the hand-written evaluation passed in from outside (exactly as medium does), and
  * "medium:negated" scores its own positions the other way round (it plays to lose).
@@ -83,7 +83,7 @@ function makeBot(engine: Engine, spec: string, seed: string): Bot {
 /** The GUI's controller for a replay's seat (only shown while watching). */
 const controllerOf = (spec: string) => {
   const level = SPEC.exec(spec)![1]!;
-  return level === "easy" || level.startsWith("sve-") ? "greedy" : level === "hard" || level === "hard-beta" ? level : "medium";
+  return level === "easy" || level.startsWith("sve-") ? "greedy" : level === "hard" ? level : "medium";
 };
 
 // ---- Decks and the series ----
