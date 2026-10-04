@@ -1,0 +1,78 @@
+apply plugin: 'com.android.application'
+
+// A release is signed with the key a properties file names (storeFile, relative to that file; storePassword; keyAlias;
+// keyPassword). The file and the key stay outside the repository; scripts/android-apk.mjs --release passes its path in
+// SVE_ANDROID_SIGNING. Without it, a release build is left unsigned.
+def signingFile = System.getenv('SVE_ANDROID_SIGNING') ? file(System.getenv('SVE_ANDROID_SIGNING')) : null
+
+// The version is packages/gui/package.json's, like the PC release's (README "发行版"). versionCode must grow with every
+// release friends install over the last one: 0.1.2 -> 102, 0.2.0 -> 200, 1.0.0 -> 10000 (0.1 was 1).
+def sveVersion = new groovy.json.JsonSlurper().parse(file('../../package.json')).version as String
+def sveVersionParts = sveVersion.tokenize('.').collect { it as int } + [0, 0, 0]
+def sveVersionCode = sveVersionParts[0] * 10000 + sveVersionParts[1] * 100 + sveVersionParts[2]
+
+android {
+    namespace = "local.sve.next"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "local.sve.next"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode sveVersionCode
+        versionName sveVersion
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    signingConfigs {
+        if (signingFile) {
+            release {
+                def key = new Properties()
+                signingFile.withInputStream { key.load(it) }
+                storeFile new File(signingFile.parentFile, key.getProperty('storeFile'))
+                storePassword key.getProperty('storePassword')
+                keyAlias key.getProperty('keyAlias')
+                keyPassword key.getProperty('keyPassword')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (signingFile) signingConfig signingConfigs.release
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

@@ -1,0 +1,48 @@
+import type { PlayerId } from "../../model/ids";
+import type { GameState, TurnCounts } from "../../model/state";
+
+/** Counts of a turn in which nothing has happened yet. */
+export function emptyTurnCounts(turn: number): TurnCounts {
+  return {
+    turn,
+    followersDamagedBy: [],
+    discarded: 0,
+    followersDestroyed: 0,
+    followersToCemetery: 0,
+    followerAttacks: 0,
+    returnedToHand: 0,
+    returnedCards: [],
+    played: [],
+    leaderDefenseLost: 0,
+    stackRemovedByEarthRite: 0,
+    statsGained: [],
+    defenseGained: [],
+    evolved: 0,
+    leftField: [],
+    leaderDefenseGained: 0,
+    leaderDefenseGainedTotal: 0,
+    playFromBanished: false,
+    diceRolled: [],
+    magicalItemsBanished: 0,
+    attackerTraits: [],
+    unionBursts: 0,
+  };
+}
+
+/**
+ * The player's counts for the current turn, reset lazily when a new turn has begun. Used for
+ * "this turn" conditions: discards (CR 5.12), destroyed followers (5.6), follower attacks (8.4.5).
+ */
+export function thisTurn(state: GameState, player: PlayerId): TurnCounts {
+  const ps = state.players[player];
+  if (ps.thisTurn.turn !== state.turn) {
+    ps.thisTurn = emptyTurnCounts(state.turn);
+  }
+  return ps.thisTurn;
+}
+
+/** Read-only view of `thisTurn` (zero when nothing happened this turn). */
+export function countsThisTurn(state: Readonly<GameState>, player: PlayerId): TurnCounts {
+  const t = state.players[player].thisTurn;
+  return t.turn === state.turn ? t : emptyTurnCounts(state.turn);
+}

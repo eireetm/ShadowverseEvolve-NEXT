@@ -1,0 +1,6 @@
+# The player's own resources stay out of the repository: nothing official is ever shipped, and personal images and sounds
+# are the player's. Only the empty folders are tracked (the README lists what goes where).
+*
+!*/
+!.gitignore
+!**/.gitkeep

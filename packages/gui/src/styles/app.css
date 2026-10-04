@@ -1,0 +1,3616 @@
+/*
+ * The built-in look. Every size and color is a variable or a class (sve-...) so that public/theme.css (loaded after this
+ * file) can change anything; README "Custom resources" shows the main variables.
+ *
+ * As in YGOPro, the interface is a little see-through, so it never hides the background picture completely: panels,
+ * windows, buttons and fields at 224/255 (--sve-ui-alpha), the deck builder's card areas at 64/255 (--sve-area-alpha).
+ */
+:root {
+  --sve-ui-alpha: 0.88;
+  --sve-area-alpha: 0.25;
+  /* How much the background pictures (main menu, deck builder, battlefield) are darkened: 0 not at all, 1 black. */
+  --sve-background-dim: 0.2;
+  --sve-bg: #14171d;
+  --sve-panel: rgb(31 36 45 / var(--sve-ui-alpha));
+  --sve-panel-2: rgb(42 48 59 / var(--sve-ui-alpha));
+  --sve-input: rgb(17 20 26 / var(--sve-ui-alpha));
+  /* A card area of the deck builder (the deck sections, the pool): blue to black, like YGOPro's. */
+  --sve-area: linear-gradient(rgb(24 72 170 / var(--sve-area-alpha)), rgb(0 0 0 / var(--sve-area-alpha)));
+  --sve-background-shade: linear-gradient(rgb(4 8 16 / var(--sve-background-dim)), rgb(4 8 16 / var(--sve-background-dim)));
+  /* Behind everything when there is no background picture. */
+  --sve-backdrop: radial-gradient(ellipse at center, #0b2540 0%, #041222 70%, #020a14 100%);
+  --sve-border: #3a4252;
+  --sve-text: #e6e9ef;
+  --sve-muted: #98a1b1;
+  --sve-accent: #f0b429;
+  --sve-good: #4cc38a;
+  --sve-bad: #f06a6a;
+  --sve-action: #58a6ff;
+  --sve-candidate: #f0b429;
+  --sve-selected: #4cc38a;
+  --sve-evolved: #b48cff;
+  --sve-superevolved: #ffd166;
+  --sve-target: #ff5a5a;
+  /* The numbers on a card: attack blue, defense red, the cost circle in the card's class color (like the class icons). */
+  --sve-attack: #2f7bd6;
+  --sve-defense: #c0342c;
+  --sve-class-neutral: #7a818c;
+  --sve-class-forestcraft: #3e9a4b;
+  --sve-class-swordcraft: #e0b22c;
+  --sve-class-runecraft: #2b3c9c;
+  --sve-class-dragoncraft: #95592a;
+  --sve-class-abysscraft: #bd2f80;
+  --sve-class-havencraft: #efe5c7;
+  /* A card's width outside the table (the table sets it from the playmat's size). */
+  --sve-card-base: 84px;
+  --sve-card-width: var(--sve-card-base);
+  --sve-card-radius: 6px;
+  /* The card panel on the left of the game and the deck builder. */
+  --sve-left-width: clamp(220px, 19vw, 340px);
+  /* Pictures from public/ or the assets' Misc folder (src/resources/resources.ts). */
+  --sve-card-back-image: none;
+  --sve-evolve-back-image: none;
+  --sve-field-image: none;
+  --sve-unknown-image: none;
+  --sve-menu-image: none;
+  --sve-builder-image: none;
+  --sve-battle-image: none;
+  /* Chinese and Japanese share many characters but draw them differently: each language gets its own fonts first. */
+  --sve-font-latin: "Segoe UI", system-ui;
+  --sve-font-zh: "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Noto Sans SC", "Noto Sans CJK SC";
+  --sve-font-ja: "Yu Gothic UI", "Meiryo UI", "Meiryo", "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
+  color-scheme: dark;
+  font-family: var(--sve-font-latin), var(--sve-font-zh), var(--sve-font-ja), sans-serif;
+  font-size: 14px;
+}
+
+/* The interface in Japanese, or Japanese card text (lang="ja", i18n htmlLang). */
+:root:lang(ja),
+[lang|="ja"] {
+  font-family: "Segoe UI", var(--sve-font-ja), var(--sve-font-zh), system-ui, sans-serif;
+}
+
+[lang|="zh"] {
+  font-family: "Segoe UI", var(--sve-font-zh), var(--sve-font-ja), system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--sve-bg);
+  color: var(--sve-text);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button,
+.sve-file-button {
+  background: var(--sve-panel-2);
+  border: 1px solid var(--sve-border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+button:hover:not(:disabled),
+.sve-file-button:hover {
+  border-color: var(--sve-accent);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.sve-primary {
+  background: rgb(47 90 63 / var(--sve-ui-alpha));
+  border-color: var(--sve-good);
+  font-weight: 600;
+}
+
+input,
+select,
+textarea {
+  background: var(--sve-input);
+  border: 1px solid var(--sve-border);
+  border-radius: 4px;
+  padding: 3px 6px;
+}
+
+/* A select's list is drawn on its own: an opaque color keeps its options readable. */
+option {
+  background: #161a21;
+}
+
+/* App frame */
+.sve-app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.sve-tab-active {
+  border-color: var(--sve-accent) !important;
+  background: rgb(58 51 34 / var(--sve-ui-alpha));
+}
+
+/* The iOS app: the screen's rounded corners, notch and home bar stay clear of the game (index.html viewport-fit=cover; the
+   Android app keeps clear of a camera cutout natively). */
+:root[data-platform="ios"] .sve-app {
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.sve-screen {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sve-loading,
+.sve-fatal,
+.sve-empty-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 8px;
+}
+
+.sve-fatal pre {
+  max-width: 80vw;
+  overflow: auto;
+  color: var(--sve-bad);
+}
+
+.sve-hint,
+.sve-note {
+  color: var(--sve-muted);
+  font-size: 12px;
+}
+
+.sve-ok {
+  color: var(--sve-good);
+}
+
+.sve-problem,
+.sve-problems {
+  color: var(--sve-bad);
+  font-size: 12px;
+}
+
+.sve-check,
+.sve-range,
+.sve-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sve-toasts {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 520px;
+  z-index: 90;
+}
+
+.sve-toast {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  background: rgb(74 29 29 / var(--sve-ui-alpha));
+  border: 1px solid var(--sve-bad);
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Main menu, settings and game setup: a panel in the middle of the window, over the main menu's background (background_m).
+   The screen scrolls when the panel is taller than it (a tablet, a small window); the panel's auto margins center it while
+   it fits. */
+.sve-menu {
+  height: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 8px 0;
+  background:
+    var(--sve-background-shade),
+    var(--sve-menu-image) center / cover no-repeat,
+    var(--sve-backdrop);
+}
+
+.sve-menu > * {
+  margin: auto;
+}
+
+.sve-menu-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  min-width: 340px;
+  padding: 36px 44px;
+  border-radius: 16px;
+  background: var(--sve-panel);
+  border: 1px solid rgba(120, 170, 230, 0.25);
+  box-shadow: 0 20px 60px #000a;
+}
+
+.sve-menu-title {
+  margin: 0;
+  font-size: 34px;
+  letter-spacing: 1px;
+  color: #eaf3ff;
+  text-shadow: 0 0 18px rgba(80, 170, 255, 0.55);
+}
+
+.sve-menu-subtitle {
+  margin: 0 0 10px;
+  color: var(--sve-muted);
+  font-size: 13px;
+}
+
+/* The program's version, at the bottom of the settings: players compare it to play together online. */
+.sve-settings-version {
+  margin: 0;
+  color: var(--sve-muted);
+  font-size: 12px;
+}
+
+.sve-menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.sve-menu-button {
+  justify-content: center;
+  width: 100%;
+  min-width: 240px;
+  padding: 12px 20px;
+  font-size: 17px;
+  border-radius: 10px;
+  background: var(--sve-panel-2);
+}
+
+.sve-menu-primary {
+  background: linear-gradient(rgb(45 106 143 / var(--sve-ui-alpha)), rgb(29 74 108 / var(--sve-ui-alpha)));
+  border-color: #6cc4ff;
+  font-weight: 700;
+}
+
+.sve-menu-status {
+  font-size: 12px;
+  color: var(--sve-muted);
+}
+
+.sve-settings h2 {
+  margin: 0;
+}
+
+.sve-settings-group {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sve-settings-group h3 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--sve-accent);
+}
+
+.sve-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.sve-settings-row select {
+  min-width: 140px;
+}
+
+.sve-settings-slider {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sve-settings-value {
+  min-width: 3em;
+  text-align: right;
+}
+
+.sve-screen-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.sve-screen-header h2 {
+  margin: 0;
+}
+
+.sve-link-button {
+  align-self: flex-start;
+}
+
+.sve-big-button {
+  padding: 10px 26px;
+  font-size: 16px;
+}
+
+.sve-advanced summary {
+  cursor: pointer;
+  color: var(--sve-muted);
+}
+
+.sve-advanced-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  align-items: center;
+  padding: 10px 0;
+}
+
+/* Cards */
+.sve-card {
+  --w: var(--sve-card-width);
+  position: relative;
+  flex: none;
+  width: var(--w);
+}
+
+.sve-card-clickable,
+.sve-card-action,
+.sve-card-candidate,
+.sve-card-selected,
+.sve-card-target {
+  cursor: pointer;
+}
+
+.sve-card-small {
+  --w: calc(var(--sve-card-width) * 0.62);
+}
+
+.sve-card-large {
+  --w: calc(var(--sve-card-width) * 2.6);
+}
+
+.sve-card-frame {
+  position: relative;
+  width: var(--w);
+  height: calc(var(--w) * 88 / 63);
+}
+
+.sve-card-face {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--sve-card-radius);
+  overflow: hidden;
+  background: #2a303b;
+  box-shadow: 0 1px 3px #000a;
+}
+
+/* An engaged card lies sideways (CR 4.2.2), taking a sideways space. */
+.sve-card-engaged {
+  width: calc(var(--w) * 88 / 63);
+}
+
+.sve-card-engaged .sve-card-frame {
+  width: calc(var(--w) * 88 / 63);
+  height: var(--w);
+}
+
+.sve-card-engaged .sve-card-face {
+  inset: auto;
+  left: 50%;
+  top: 50%;
+  width: var(--w);
+  height: calc(var(--w) * 88 / 63);
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.sve-card-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.sve-card-back {
+  background-image: var(--sve-card-back-image), repeating-linear-gradient(45deg, #2b3448 0 6px, #232a3a 6px 12px);
+  background-size: cover;
+  border: 1px solid var(--sve-border);
+}
+
+/* The evolve deck's cards have a back of their own (the main deck's when there is no picture for it). */
+.sve-card-back.sve-card-back-evolve {
+  background-image: var(--sve-evolve-back-image), repeating-linear-gradient(45deg, #3b2c4f 0 6px, #2f243f 6px 12px);
+}
+
+.sve-card-art {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.sve-card-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 4px;
+  text-align: center;
+  font-size: calc(var(--w) * 0.12);
+  background: linear-gradient(#303a4d, #1d232e);
+}
+
+.sve-card-placeholder-sub {
+  color: var(--sve-muted);
+}
+
+.sve-stat {
+  position: absolute;
+  min-width: calc(var(--w) * 0.24);
+  height: calc(var(--w) * 0.24);
+  line-height: calc(var(--w) * 0.24);
+  padding: 0 2px;
+  border-radius: 999px;
+  text-align: center;
+  font-weight: 800;
+  font-size: calc(var(--w) * 0.16);
+  color: #fff;
+  box-shadow: 0 0 0 1px #0008;
+}
+
+.sve-stat-cost {
+  top: 2px;
+  left: 2px;
+  background: var(--sve-class-neutral);
+}
+
+.sve-stat-cost[data-class="Forestcraft"] {
+  background: var(--sve-class-forestcraft);
+}
+
+.sve-stat-cost[data-class="Swordcraft"] {
+  background: var(--sve-class-swordcraft);
+  color: #2b2003;
+}
+
+.sve-stat-cost[data-class="Runecraft"] {
+  background: var(--sve-class-runecraft);
+}
+
+.sve-stat-cost[data-class="Dragoncraft"] {
+  background: var(--sve-class-dragoncraft);
+}
+
+.sve-stat-cost[data-class="Abysscraft"] {
+  background: var(--sve-class-abysscraft);
+}
+
+.sve-stat-cost[data-class="Havencraft"] {
+  background: var(--sve-class-havencraft);
+  color: #3a311d;
+}
+
+.sve-stat-atk {
+  bottom: 2px;
+  left: 2px;
+  background: var(--sve-attack);
+}
+
+.sve-stat-def {
+  bottom: 2px;
+  right: 2px;
+  background: var(--sve-defense);
+}
+
+.sve-stat.sve-up {
+  color: #9bffcc;
+}
+
+.sve-stat.sve-down {
+  color: #ffc2c2;
+}
+
+.sve-card-keywords {
+  position: absolute;
+  top: 26%;
+  left: 2px;
+  right: 2px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.sve-kw,
+.sve-counter {
+  font-size: 9px;
+  line-height: 1.3;
+  background: #000c;
+  border-radius: 3px;
+  padding: 0 3px;
+}
+
+.sve-card-counters {
+  position: absolute;
+  bottom: 24%;
+  left: 2px;
+  right: 2px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.sve-counter {
+  background: #4b2a6b;
+}
+
+.sve-card-action .sve-card-face {
+  box-shadow: 0 0 0 2px var(--sve-action), 0 0 10px rgba(88, 166, 255, 0.55);
+}
+
+.sve-card-candidate .sve-card-face {
+  box-shadow: 0 0 0 2px var(--sve-candidate), 0 0 10px rgba(240, 180, 41, 0.5);
+}
+
+.sve-card-selected .sve-card-face {
+  box-shadow: 0 0 0 3px var(--sve-selected), 0 0 12px var(--sve-selected);
+}
+
+.sve-card-target .sve-card-face {
+  box-shadow: 0 0 0 2px var(--sve-target), 0 0 12px rgba(255, 90, 90, 0.6);
+}
+
+.sve-card-target-over .sve-card-face {
+  box-shadow: 0 0 0 4px var(--sve-target), 0 0 22px var(--sve-target);
+}
+
+.sve-card-active .sve-card-face {
+  box-shadow: 0 0 0 3px #fff, 0 0 16px var(--sve-action);
+}
+
+.sve-card-highlight .sve-card-face {
+  box-shadow: 0 0 0 3px var(--sve-accent), 0 0 14px var(--sve-accent);
+}
+
+/* The card being dragged stays in place, faded, while its copy follows the pointer. */
+.sve-card-dragged {
+  opacity: 0.35;
+}
+
+/* An opponent's card back is turned around (the table is seen from your side). */
+.sve-card-opponent .sve-card-back {
+  transform: rotate(180deg);
+}
+
+/* A card whose picture is missing: the "unknown" picture with its name. */
+.sve-card-unknown {
+  position: relative;
+  justify-content: flex-end;
+  padding: 0;
+}
+
+.sve-card-unknown-art {
+  position: absolute;
+  inset: 0;
+}
+
+.sve-card-unknown .sve-card-placeholder-name,
+.sve-card-unknown .sve-card-placeholder-sub {
+  position: relative;
+  width: 100%;
+  padding: 2px 3px;
+  background: #000b;
+}
+
+.sve-card-evolved .sve-card-face {
+  outline: 2px solid var(--sve-evolved);
+}
+
+.sve-card-superevolved .sve-card-face {
+  outline: 2px solid var(--sve-superevolved);
+}
+
+.sve-card-boxed .sve-card-face {
+  filter: grayscale(0.9) brightness(0.8);
+}
+
+.sve-attached {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+.sve-attached .sve-card {
+  --w: calc(var(--sve-card-width) * 0.4);
+}
+
+/*
+ * Game screen: the card panel and the table, over the battlefield's background (background_f). The log and debug sidebar
+ * is hidden unless shown; then it lies over the right of the table.
+ */
+.sve-game {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--sve-left-width) minmax(0, 1fr);
+  height: 100%;
+  background:
+    var(--sve-background-shade),
+    var(--sve-battle-image) center / cover no-repeat,
+    var(--sve-backdrop);
+}
+
+.sve-game-left,
+.sve-game-right {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--sve-panel);
+}
+
+.sve-game-left {
+  border-right: 1px solid var(--sve-border);
+}
+
+.sve-game-right {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  width: clamp(280px, 24vw, 400px);
+  border-left: 1px solid var(--sve-border);
+  box-shadow: -12px 0 30px #0008;
+}
+
+.sve-sidebar-show {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  z-index: 50;
+}
+
+.sve-sidebar-hide {
+  margin-left: auto;
+}
+
+.sve-game-left-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1px solid var(--sve-border);
+}
+
+/* The deck builder: the card shown, one copy more or fewer in the deck, and how many it has. */
+.sve-copy-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sve-copy-count {
+  min-width: 1.6em;
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The table: the opponent's hand, the two mats, your hand; the side panels beside the mats. */
+.sve-table {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.sve-mats {
+  position: relative;
+  width: var(--mat-width);
+  flex: none;
+}
+
+.sve-mat {
+  --sve-card-width: var(--sve-card-base);
+  position: relative;
+  width: var(--mat-width);
+  height: var(--mat-height);
+}
+
+/*
+ * The playmat: its picture's pieces (game/board/layout.ts), only the picture itself, so its see-through parts show the
+ * battlefield behind. The opponent's is the same turned 180 degrees. Without a picture, a plain mat with its line and the
+ * slots as outlines.
+ */
+.sve-mat-picture {
+  position: absolute;
+  inset: 0;
+}
+
+:root:not([data-field-image]) .sve-mat-picture {
+  background:
+    linear-gradient(transparent 60.4%, rgba(110, 200, 255, 0.5) 60.4%, rgba(110, 200, 255, 0.5) 60.7%, transparent 60.7%),
+    radial-gradient(ellipse at 50% 45%, #0f4b7a 0%, #062443 45%, #021a30 80%);
+  box-shadow: 0 0 0 1px rgba(110, 200, 255, 0.15);
+}
+
+.sve-mat-piece {
+  position: absolute;
+  background-image: var(--sve-field-image);
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+:root:not([data-field-image]) .sve-mat-piece-slot,
+:root:not([data-field-image]) .sve-mat-piece-pile {
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px rgba(110, 200, 255, 0.3);
+}
+
+.sve-mat-opponent .sve-mat-picture {
+  transform: rotate(180deg);
+}
+
+.sve-mat-zone {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* A row's zone (where animations fly to), and the row itself when it holds more cards than its slots. */
+.sve-mat-row-zone {
+  position: absolute;
+  pointer-events: none;
+}
+
+.sve-mat-row {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--mat-width) * 0.008);
+}
+
+/* A drawn slot of the field or the EX area and its card; an engaged card lies across the room between the slots. */
+.sve-slot {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Choose card spots by hand: the slots the waiting card may take light up, the waiting card pulses. */
+.sve-slot-choosable {
+  border-radius: 10px;
+  box-shadow: 0 0 0 2px var(--sve-accent), 0 0 18px rgba(240, 180, 41, 0.55);
+}
+
+.sve-slot-pick {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  cursor: pointer;
+  border-radius: 10px;
+}
+
+.sve-slot-pick:hover {
+  background: rgba(240, 180, 41, 0.18);
+}
+
+.sve-slot-waiting .sve-card-face {
+  animation: sve-waiting 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes sve-waiting {
+  from {
+    box-shadow: 0 0 0 2px var(--sve-accent);
+  }
+  to {
+    box-shadow: 0 0 0 3px var(--sve-accent), 0 0 20px var(--sve-accent);
+  }
+}
+
+/* Field cards stand by the line where the mats meet. */
+.sve-mat-opponent .sve-field-row {
+  align-items: flex-end;
+}
+
+.sve-mat-own .sve-field-row {
+  align-items: flex-start;
+}
+
+.sve-ex-row {
+  --sve-card-width: calc(var(--sve-card-base) * 0.82);
+}
+
+/* A card that fills a pile's spot on the mat (leader, piles). */
+.sve-slot-card,
+.sve-mat-zone .sve-slot-back {
+  --w: var(--sve-card-base);
+}
+
+.sve-slot-back {
+  width: var(--w);
+  height: calc(var(--w) * 88 / 63);
+  border-radius: var(--sve-card-radius);
+  box-shadow: 0 2px 6px #000a;
+}
+
+.sve-mat-opponent .sve-slot-back {
+  transform: rotate(180deg);
+}
+
+.sve-pile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.sve-pile-browsable {
+  cursor: zoom-in;
+}
+
+.sve-pile-count {
+  position: absolute;
+  bottom: 4%;
+  right: 4%;
+  min-width: 26px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #000c;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  font-weight: 800;
+  font-size: 13px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.sve-leader-card .sve-stat-def {
+  display: none;
+}
+
+.sve-leader-defense {
+  position: absolute;
+  left: 50%;
+  bottom: -8%;
+  transform: translateX(-50%);
+  min-width: 42%;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: linear-gradient(#a52a2a, #6d1414);
+  border: 2px solid #ffd7d7;
+  box-shadow: 0 2px 8px #000c;
+  font-size: calc(var(--w) * 0.24);
+  font-weight: 900;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* The hands: yours fanned under the mats, the opponent's backs above them. */
+.sve-hand-strip {
+  position: relative;
+  flex: none;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.sve-hand-own {
+  height: var(--hand-height);
+  align-items: flex-end;
+}
+
+.sve-hand-opponent {
+  height: var(--opponent-hand-height);
+  align-items: flex-start;
+}
+
+.sve-hand-cards {
+  position: relative;
+  height: 100%;
+}
+
+.sve-hand-card {
+  position: absolute;
+  z-index: 1;
+  transition: transform 0.14s ease-out;
+}
+
+.sve-hand-own .sve-hand-card {
+  --sve-card-width: var(--hand-card-width);
+  bottom: 4px;
+  transform-origin: 50% 100%;
+  transform: translateY(var(--fan-sink, 0px)) rotate(var(--fan-tilt, 0deg));
+}
+
+/* The card under the pointer rises out of the hand. */
+.sve-hand-own .sve-hand-card:hover {
+  transform: translateY(-22%) scale(1.28);
+  z-index: 60 !important;
+}
+
+.sve-hand-opponent .sve-hand-card {
+  --sve-card-width: var(--opponent-hand-card-width);
+  top: 3px;
+}
+
+/* Beside the mats: each player's panel, the turn and the buttons that finish a decision. */
+.sve-player-panel {
+  position: absolute;
+  width: min(190px, var(--side-width, 190px));
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgb(14 24 38 / var(--sve-ui-alpha));
+  border: 1px solid rgba(110, 200, 255, 0.22);
+  font-size: 12px;
+}
+
+.sve-player-opponent {
+  right: calc(100% + 12px);
+  bottom: calc(50% + 64px);
+}
+
+.sve-player-own {
+  left: calc(100% + 12px);
+  top: calc(50% + 64px);
+}
+
+.sve-player-panel.sve-active {
+  border-color: var(--sve-accent);
+  box-shadow: 0 0 14px rgba(240, 180, 41, 0.35);
+}
+
+.sve-player-panel.sve-deciding .sve-player-name::after {
+  content: " ●";
+  color: var(--sve-accent);
+}
+
+.sve-player-name {
+  font-weight: 700;
+}
+
+.sve-player-defense {
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1;
+  color: #ffb3b3;
+}
+
+.sve-player-pp strong {
+  font-size: 18px;
+  color: #7fd1ff;
+}
+
+.sve-player-label {
+  margin-right: 4px;
+  color: var(--sve-muted);
+}
+
+.sve-player-points {
+  display: flex;
+  gap: 10px;
+}
+
+.sve-player-points strong {
+  color: #ffe08a;
+}
+
+.sve-player-counts {
+  color: var(--sve-muted);
+}
+
+/* What a player's deck is built on: its universe, or its leaders' classes (not in the unlimited format). */
+.sve-player-basis {
+  font-size: 12px;
+  color: var(--sve-accent);
+}
+
+/* A Cross Craft player's two leaders: the second lies behind the first, like a small pile (click for both). */
+.sve-leader-stack {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sve-leader-second {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate(12%, -7%) rotate(5deg);
+  filter: brightness(0.8);
+  cursor: zoom-in;
+}
+
+.sve-leader-stack .sve-leader-card {
+  z-index: 1;
+}
+
+.sve-leader-two .sve-leader-card {
+  cursor: zoom-in;
+}
+
+.sve-leader-stack .sve-pile-count {
+  z-index: 2;
+}
+
+.sve-zone-label {
+  font-size: 11px;
+  color: var(--sve-muted);
+}
+
+.sve-trigger {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.sve-center-status,
+.sve-center-actions {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: min(190px, var(--side-width, 190px));
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sve-center-status {
+  /* Just under the opponent's panel, growing downwards (a long prompt never covers the panel). */
+  top: calc(50% - 56px);
+  transform: none;
+  right: calc(100% + 12px);
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgb(14 24 38 / var(--sve-ui-alpha));
+  border: 1px solid rgba(110, 200, 255, 0.22);
+  font-size: 12px;
+  color: #cfe3f5;
+}
+
+.sve-center-turn strong {
+  font-size: 15px;
+  color: #fff;
+}
+
+.sve-center-prompt {
+  color: var(--sve-muted);
+  line-height: 1.35;
+}
+
+.sve-center-prompt.sve-your-move {
+  color: #ffe6a8;
+}
+
+.sve-center-actions {
+  left: calc(100% + 12px);
+  align-items: stretch;
+}
+
+.sve-center-actions button {
+  justify-content: center;
+  padding: 8px 10px;
+  font-weight: 700;
+}
+
+.sve-center-actions .sve-primary {
+  font-size: 15px;
+  padding: 12px 10px;
+  background: linear-gradient(rgb(47 122 82 / var(--sve-ui-alpha)), rgb(31 90 59 / var(--sve-ui-alpha)));
+  box-shadow: 0 0 14px rgba(76, 195, 138, 0.35);
+}
+
+/* The card being played or resolved, over the middle of the table. */
+.sve-resolution-zone {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 20;
+  display: flex;
+  gap: 8px;
+  --sve-card-width: calc(var(--sve-card-base) * 0.55);
+  filter: drop-shadow(0 0 18px rgba(110, 200, 255, 0.55));
+  pointer-events: none;
+}
+
+/* A card's menu on the table. */
+.sve-card-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+}
+
+.sve-card-menu {
+  position: fixed;
+  z-index: 71;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 180px;
+  max-width: 320px;
+  padding: 8px;
+  border-radius: 10px;
+  background: rgb(20 26 36 / var(--sve-ui-alpha));
+  border: 1px solid var(--sve-action);
+  box-shadow: 0 10px 30px #000c;
+}
+
+.sve-card-menu-title {
+  padding: 0 4px 4px;
+  font-size: 12px;
+  color: var(--sve-muted);
+  border-bottom: 1px solid var(--sve-border);
+}
+
+.sve-card-menu button {
+  justify-content: flex-start;
+  text-align: left;
+  padding: 6px 10px;
+}
+
+/* Dragging: the card follows the pointer; an attack draws an arrow. */
+.sve-drag-ghost {
+  position: fixed;
+  z-index: 80;
+  pointer-events: none;
+  transform: translate(-50%, -60%) scale(1.08) rotate(-3deg);
+  filter: drop-shadow(0 12px 18px #000c);
+  opacity: 0.92;
+}
+
+.sve-drag-ghost.sve-drag-ok {
+  filter: drop-shadow(0 0 14px var(--sve-good));
+}
+
+.sve-arrow {
+  position: fixed;
+  inset: 0;
+  z-index: 75;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.sve-arrow path {
+  fill: none;
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.sve-arrow-drag path {
+  stroke: rgba(255, 90, 90, 0.9);
+  filter: drop-shadow(0 0 6px rgba(255, 90, 90, 0.9));
+}
+
+.sve-arrow-attack path {
+  stroke: rgba(255, 72, 72, 0.92);
+  stroke-dasharray: 12 8;
+  filter: drop-shadow(0 0 6px rgba(255, 72, 72, 0.85));
+}
+
+.sve-arrow-attack marker path {
+  fill: rgba(255, 84, 84, 0.95);
+}
+
+/* Dashed arrows (an attack, an effect's targets) flow toward what they point at. */
+.sve-arrow-attack > path,
+.sve-arrow-target > path {
+  animation: sve-dash-flow 0.7s linear infinite;
+}
+
+@keyframes sve-dash-flow {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+/* The animations' arrows (animation/AnimationLayer.tsx): they appear, stay a moment and fade (duration set inline). */
+.sve-arrow-flash {
+  animation: sve-arrow-flash 700ms ease-out both;
+}
+
+@keyframes sve-arrow-flash {
+  0% {
+    opacity: 0;
+  }
+  14% {
+    opacity: 1;
+  }
+  72% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.sve-arrow marker path {
+  stroke: none;
+  fill: rgba(255, 110, 70, 0.95);
+}
+
+/* Effects (animation/effects.ts): card copies in flight, rising numbers. */
+.sve-fx-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 78;
+  pointer-events: none;
+}
+
+.sve-ghost {
+  position: fixed !important;
+  margin: 0 !important;
+  transform-origin: 0 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.sve-float {
+  position: fixed;
+  font-size: 30px;
+  font-weight: 900;
+  -webkit-text-stroke: 1px #000;
+  text-shadow: 0 2px 6px #000;
+  pointer-events: none;
+}
+
+.sve-float-damage {
+  color: #ff5a5a;
+}
+
+.sve-float-heal {
+  color: #6dffb0;
+}
+
+/*
+ * A played card (animation/AnimationLayer.tsx) shows a moment in its player's corner beside the mats once it has landed:
+ * the opponent's at the top right, one's own at the bottom left (where a Quick one's announcement stands). It wipes in
+ * with a slight zoom and wipes out, like a slide show; it takes no clicks.
+ */
+.sve-showcase {
+  position: absolute;
+  z-index: 34;
+  width: min(270px, calc(var(--side-width, 270px) - 20px));
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  filter: drop-shadow(0 0 16px rgba(110, 200, 255, 0.55));
+}
+
+.sve-showcase-opponent {
+  top: 60px;
+  left: calc(50% + var(--mat-width) / 2 + 10px);
+}
+
+.sve-showcase-own {
+  bottom: 28px;
+  right: calc(50% + var(--mat-width) / 2 + 10px);
+}
+
+.sve-showcase-card {
+  --sve-card-width: min(calc(var(--side-width, 270px) * 0.62), 170px);
+  animation: sve-showcase-wipe-right 900ms cubic-bezier(0.2, 0.7, 0.25, 1) both;
+  animation-delay: inherit;
+}
+
+.sve-showcase-opponent .sve-showcase-card {
+  animation-name: sve-showcase-wipe-left;
+}
+
+@keyframes sve-showcase-wipe-right {
+  0% {
+    clip-path: inset(0 100% 0 0);
+    transform: scale(1.1);
+  }
+  20% {
+    clip-path: inset(0 0 0 0);
+    transform: scale(1);
+  }
+  78% {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+  100% {
+    clip-path: inset(0 0 0 100%);
+    opacity: 0.5;
+  }
+}
+
+@keyframes sve-showcase-wipe-left {
+  0% {
+    clip-path: inset(0 0 0 100%);
+    transform: scale(1.1);
+  }
+  20% {
+    clip-path: inset(0 0 0 0);
+    transform: scale(1);
+  }
+  78% {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+  100% {
+    clip-path: inset(0 100% 0 0);
+    opacity: 0.5;
+  }
+}
+
+/*
+ * A Quick card or ability that resolved (board/QuickAnnouncement.tsx): the table waits under a light shade (its cards stay
+ * readable, the selected ones light up), the card stands in its player's corner beside the mats — the opponent's at the top
+ * right, one's own at the bottom left — with what happened and OK. Above the sidebar, which stays usable.
+ */
+.sve-announce-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 44;
+  background: var(--sve-announce-shade, rgb(0 0 0 / 0.22));
+}
+
+.sve-announce {
+  position: absolute;
+  z-index: 56;
+  width: min(270px, calc(var(--side-width, 270px) - 20px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgb(14 24 38 / var(--sve-ui-alpha));
+  border: 1px solid rgba(110, 200, 255, 0.45);
+  box-shadow: 0 0 26px rgba(110, 200, 255, 0.35), 0 10px 30px #000a;
+}
+
+.sve-announce-opponent {
+  top: 48px;
+  left: calc(50% + var(--mat-width) / 2 + 10px);
+}
+
+.sve-announce-own {
+  bottom: 16px;
+  right: calc(50% + var(--mat-width) / 2 + 10px);
+}
+
+.sve-announce-card {
+  --sve-card-width: min(calc(var(--side-width, 270px) * 0.62), 170px);
+  filter: drop-shadow(0 0 18px rgba(110, 200, 255, 0.55));
+}
+
+.sve-announce-body {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+}
+
+.sve-announce-title {
+  align-self: center;
+  padding: 1px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: #cfeaff;
+  background: rgba(110, 200, 255, 0.2);
+  border: 1px solid rgba(110, 200, 255, 0.45);
+}
+
+.sve-announce-line {
+  margin: 0;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.sve-announce-body .sve-primary {
+  margin-top: 4px;
+}
+
+/*
+ * Cards one has just looked at (board/LookedCards.tsx; the top card of one's deck with nothing to take, or an ability that only
+ * looks): the table waits under a light shade, the cards in the middle with their names and OK. Only the player who looked
+ * sees it.
+ */
+.sve-looked-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 44;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: var(--sve-looked-shade, rgb(0 0 0 / 0.22));
+}
+
+.sve-looked {
+  z-index: 56;
+  max-width: min(600px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgb(14 24 38 / var(--sve-ui-alpha));
+  border: 1px solid rgba(110, 200, 255, 0.45);
+  box-shadow: 0 0 26px rgba(110, 200, 255, 0.35), 0 10px 30px #000a;
+}
+
+.sve-looked-title {
+  padding: 1px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: #cfeaff;
+  background: rgba(110, 200, 255, 0.2);
+  border: 1px solid rgba(110, 200, 255, 0.45);
+}
+
+.sve-looked-cards {
+  --sve-card-width: min(150px, 26vw);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.sve-looked-line {
+  margin: 0;
+  line-height: 1.45;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.sve-arrow-target path {
+  stroke: rgba(110, 200, 255, 0.9);
+  stroke-dasharray: 12 8;
+  filter: drop-shadow(0 0 6px rgba(110, 200, 255, 0.8));
+}
+
+.sve-arrow-target marker path {
+  fill: rgba(110, 200, 255, 0.95);
+}
+
+/* The result over the table. */
+/* Who goes first, said for a few seconds as a game begins (board/TurnOrderNotice.tsx): over the top of the table, out of
+   the way of the redraw window. */
+.sve-turn-order {
+  position: absolute;
+  top: 16%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 34px;
+  border-radius: 14px;
+  background: rgb(20 26 36 / var(--sve-ui-alpha));
+  border: 1px solid var(--sve-accent);
+  box-shadow: 0 16px 48px #000b;
+  cursor: pointer;
+  animation: sve-turn-order 3.2s ease forwards;
+}
+
+.sve-turn-order strong {
+  font-size: 30px;
+  color: var(--sve-accent);
+  white-space: nowrap;
+}
+
+.sve-turn-order span {
+  color: var(--sve-muted);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+@keyframes sve-turn-order {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
+  8%,
+  85% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.sve-result-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(2, 8, 16, 0.6);
+}
+
+.sve-result-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 28px 40px;
+  border-radius: 16px;
+  background: rgb(20 26 36 / var(--sve-ui-alpha));
+  border: 1px solid var(--sve-accent);
+  box-shadow: 0 20px 60px #000c;
+}
+
+.sve-result-panel h2 {
+  margin: 0;
+  font-size: 32px;
+  color: var(--sve-accent);
+}
+
+.sve-result-panel p {
+  margin: 0;
+  color: var(--sve-muted);
+}
+
+.sve-result-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+/*
+ * The decision window over the table (choices, confirmations, orders, cards not on the table). The table behind it is
+ * dimmed a little; "look at the table" folds it into a button at the bottom.
+ */
+.sve-decision {
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.sve-decision-open {
+  background: rgb(4 8 16 / 0.35);
+  pointer-events: auto;
+}
+
+.sve-decision-dialog {
+  --sve-card-width: 92px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(760px, calc(100% - 48px));
+  max-height: calc(100% - 64px);
+  overflow: auto;
+  padding: 16px 18px 12px;
+  border-radius: 14px;
+  background: var(--sve-panel);
+  border: 1px solid rgba(120, 170, 230, 0.35);
+  box-shadow: 0 20px 60px #000c;
+  pointer-events: auto;
+}
+
+.sve-decision.sve-busy .sve-decision-dialog {
+  opacity: 0.6;
+}
+
+.sve-decision-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 15px;
+}
+
+.sve-decision-tools {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 6px;
+  border-top: 1px solid var(--sve-border);
+}
+
+/* Where the buttons that finish a decision stand, beside the mats (they are none while the window is open). */
+.sve-decision-unfold {
+  position: absolute;
+  top: 50%;
+  left: calc(50% + var(--mat-width) / 2 + 12px);
+  width: min(190px, var(--side-width, 190px));
+  transform: translateY(-50%);
+  justify-content: center;
+  padding: 12px 10px;
+  font-size: 15px;
+  pointer-events: auto;
+  box-shadow: 0 0 18px rgba(76, 195, 138, 0.45);
+}
+
+/* The options of a choice, one per line. */
+.sve-actions-column {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.sve-actions-column > button {
+  justify-content: flex-start;
+  text-align: left;
+  padding: 8px 12px;
+}
+
+/* A pending automatic ability: its card and timing, then its own line of the card text (two lines at most, all of it on
+   hover). */
+.sve-actions-column > .sve-pending-option {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  max-width: 46em;
+}
+
+.sve-pending-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--sve-muted);
+}
+
+.sve-prompt {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  font-weight: 600;
+}
+
+.sve-prompt-source {
+  font-weight: 400;
+  color: var(--sve-muted);
+  font-size: 12px;
+}
+
+.sve-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sve-action-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.sve-action-group-title {
+  min-width: 64px;
+  font-size: 12px;
+  color: var(--sve-muted);
+}
+
+.sve-action-group-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sve-actions-end {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.sve-choice-cards,
+.sve-peek {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+/* Cards put on the deck in order: a pile, its top card first; each row moves up or down. */
+.sve-order {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0;
+  padding: 0;
+  list-style: none;
+  --sve-card-width: 64px;
+}
+
+.sve-order-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--sve-area);
+}
+
+.sve-order-position {
+  min-width: 1.4em;
+  font-weight: 700;
+  color: var(--sve-accent);
+  text-align: right;
+}
+
+.sve-order-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.sve-order-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.sve-concede {
+  border-color: #6b3030;
+}
+
+.sve-result-text {
+  font-weight: 700;
+  color: var(--sve-accent);
+}
+
+/* Side columns: the card panel (left), the log and debug tabs (right). */
+.sve-sidebar-card {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px;
+  border-bottom: 1px solid var(--sve-border);
+}
+
+.sve-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 6px 8px 0;
+}
+
+.sve-tab-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px;
+}
+
+.sve-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sve-details-art {
+  --w: min(200px, 100%);
+  display: block;
+  width: min(200px, 100%);
+  aspect-ratio: 63 / 88;
+  padding: 0;
+  align-self: center;
+  border: none;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #2a303b;
+  cursor: zoom-in;
+}
+
+.sve-details-other,
+.sve-details-printings {
+  color: var(--sve-muted);
+  font-size: 13px;
+}
+
+.sve-details-printings .sve-current {
+  color: var(--sve-accent);
+  font-weight: 700;
+}
+
+/* A card's picture, large (click the picture in the card panel). */
+.sve-art-viewer {
+  gap: 24px;
+  cursor: zoom-out;
+}
+
+.sve-art-viewer-card {
+  height: min(86vh, 1282px, calc((100vw - var(--sve-left-width) - 80px) / var(--faces, 1) * 88 / 63));
+  aspect-ratio: 63 / 88;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #2a303b;
+  box-shadow: 0 20px 60px #000c;
+}
+
+.sve-details-name {
+  margin: 6px 0 0;
+  font-size: 18px;
+}
+
+.sve-details-names,
+.sve-details-type,
+.sve-details-traits,
+.sve-details-meta {
+  font-size: 13.5px;
+  color: var(--sve-muted);
+}
+
+.sve-details-stats {
+  display: flex;
+  gap: 14px;
+  font-size: 15px;
+}
+
+.sve-details-stat {
+  display: flex;
+  gap: 4px;
+  align-items: baseline;
+}
+
+.sve-details-stat small {
+  color: var(--sve-muted);
+}
+
+.sve-details-state,
+.sve-details-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 13.5px;
+}
+
+.sve-card-text {
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+
+.sve-card-text p {
+  margin: 0 0 4px;
+}
+
+.sve-token {
+  display: inline-block;
+  padding: 0 4px;
+  margin: 0 1px;
+  border-radius: 3px;
+  background: #3b4457;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.sve-token-cost {
+  background: #1f4f93;
+}
+
+.sve-token-fanfare,
+.sve-token-lastwords {
+  background: #6b4a12;
+}
+
+.sve-token-evolve {
+  background: #4c2f75;
+}
+
+.sve-token-icon {
+  height: 1.2em;
+  vertical-align: middle;
+}
+
+.sve-log {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: 100%;
+}
+
+.sve-log-lines {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.sve-log-line {
+  padding: 1px 4px;
+  font-size: 13px;
+  border-radius: 3px;
+}
+
+.sve-log-line:hover {
+  background: #ffffff14;
+}
+
+.sve-log-turn {
+  margin-top: 8px;
+  padding-top: 4px;
+  border-top: 1px solid var(--sve-border);
+  color: var(--sve-accent);
+  font-weight: 700;
+}
+
+.sve-log-minor {
+  color: var(--sve-muted);
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.sve-debug {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sve-debug-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  margin: 0;
+}
+
+.sve-debug-facts dd {
+  margin: 0;
+}
+
+.sve-debug-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.sve-debug-row input[type="number"] {
+  width: 70px;
+}
+
+.sve-json {
+  max-height: 260px;
+  overflow: auto;
+  font-size: 11px;
+  background: var(--sve-input);
+  padding: 6px;
+}
+
+/* The deck builder's deck code window: the code to copy, a code to import and what it brings. */
+.sve-deck-code {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: min(640px, 92vw);
+}
+
+/* Nothing shrinks to fit a small screen: the window scrolls instead. */
+.sve-deck-code > * {
+  flex: none;
+}
+
+.sve-deck-code p {
+  margin: 0;
+}
+
+.sve-deck-code-notes {
+  margin: 4px 0 0;
+  padding-left: 20px;
+}
+
+.sve-deck-code hr {
+  width: 100%;
+  margin: 6px 0;
+  border: none;
+  border-top: 1px solid var(--sve-border);
+}
+
+.sve-deck-code-text {
+  width: 100%;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  word-break: break-all;
+  resize: vertical;
+}
+
+/* Zone browser */
+/* A window over the screen dims everything but the card panel on the left, which shows the card under the pointer. */
+.sve-modal-backdrop {
+  position: fixed;
+  inset: 0 0 0 var(--sve-left-width);
+  background: #000a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+}
+
+.sve-modal {
+  max-width: 90vw;
+  max-height: 84vh;
+  overflow: auto;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--sve-panel);
+  border: 1px solid var(--sve-border);
+}
+
+.sve-modal-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.sve-modal-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sve-face-up-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.sve-face-up-tag {
+  padding: 0 6px;
+  border-radius: 4px;
+  background: rgba(240, 180, 41, 0.18);
+  border: 1px solid var(--sve-accent);
+  color: var(--sve-accent);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Setup: a large panel over the main menu's background. */
+.sve-setup {
+  width: min(1040px, calc(100% - 32px));
+  max-height: calc(100% - 32px);
+  overflow: auto;
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border-radius: 16px;
+  background: var(--sve-panel);
+  border: 1px solid rgba(120, 170, 230, 0.25);
+  box-shadow: 0 20px 60px #000a;
+}
+
+.sve-setup h2 {
+  margin: 0;
+}
+
+.sve-seats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.sve-seat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--sve-panel-2);
+}
+
+.sve-seat h3 {
+  margin: 0;
+}
+
+.sve-seat select {
+  flex: 1;
+  min-width: 0;
+}
+
+.sve-deck-status {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.sve-setup-options,
+.sve-setup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+}
+
+/* Deck text editor: its three columns are panels over the deck builder's background. */
+.sve-decks {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  height: 100%;
+  padding: 12px;
+  background:
+    var(--sve-background-shade),
+    var(--sve-builder-image) center / cover no-repeat,
+    var(--sve-backdrop);
+}
+
+.sve-decks section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px;
+  border-radius: 10px;
+  background: var(--sve-panel);
+}
+
+.sve-decks-files ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sve-decks-files li button {
+  width: 100%;
+  text-align: left;
+  font-size: 12px;
+}
+
+.sve-deck-text {
+  flex: 1;
+  min-height: 300px;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 13px;
+}
+
+.sve-search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 40%;
+  overflow: auto;
+}
+
+.sve-search-result {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.sve-search-result:hover {
+  background: #ffffff14;
+}
+
+.sve-search-name small,
+.sve-search-meta {
+  color: var(--sve-muted);
+}
+
+.sve-decks-details {
+  border-top: 1px solid var(--sve-border);
+  padding-top: 6px;
+}
+
+/* Deck builder: the card panel, the deck (files and leader above the main and evolve deck), the filters and the card
+   pool, over the deck builder's background (background_d). */
+.sve-builder {
+  display: grid;
+  grid-template-columns: var(--sve-left-width) minmax(0, 1fr) clamp(300px, 27vw, 470px);
+  height: 100%;
+  background:
+    var(--sve-background-shade),
+    var(--sve-builder-image) center / cover no-repeat,
+    var(--sve-backdrop);
+}
+
+.sve-builder-center {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.sve-builder-top {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--sve-panel);
+  border-bottom: 1px solid var(--sve-border);
+}
+
+.sve-builder-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.sve-builder-files {
+  max-width: 240px;
+}
+
+.sve-builder-name {
+  width: 180px;
+}
+
+.sve-unsaved {
+  font-size: 12px;
+  color: var(--sve-accent);
+}
+
+.sve-leader-button {
+  border-color: var(--sve-accent);
+  font-weight: 700;
+}
+
+/* The deck: the area the pool's cards are dropped on; each section a see-through card area under a title bar. */
+.sve-builder-deck {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px 12px 16px;
+}
+
+.sve-builder-deck.sve-drop-ok {
+  box-shadow: inset 0 0 0 2px var(--sve-good), inset 0 0 30px rgba(76, 195, 138, 0.25);
+}
+
+.sve-deck-section + .sve-deck-section {
+  margin-top: 14px;
+}
+
+.sve-deck-section h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: fit-content;
+  margin: 0 0 6px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: var(--sve-panel);
+  border: 1px solid rgba(110, 200, 255, 0.15);
+  font-size: 14px;
+  color: #cfe3f5;
+}
+
+.sve-deck-count {
+  font-size: 18px;
+  color: var(--sve-accent);
+}
+
+.sve-deck-grid {
+  display: grid;
+  gap: 6px;
+  min-height: calc(var(--sve-card-width) * 88 / 63);
+  padding: 6px;
+  border-radius: 10px;
+  background: var(--sve-area);
+  border: 1px solid rgba(110, 200, 255, 0.25);
+}
+
+.sve-deck-tile,
+.sve-pool-tile {
+  position: relative;
+  cursor: grab;
+}
+
+.sve-deck-tile:hover .sve-card-face,
+.sve-pool-tile:hover .sve-card-face {
+  box-shadow: 0 0 0 2px var(--sve-action), 0 4px 12px #000a;
+}
+
+.sve-deck-empty {
+  grid-column: 1 / -1;
+  align-self: center;
+  justify-self: center;
+  color: var(--sve-muted);
+  font-size: 12px;
+}
+
+/* The right column: the filters above the card pool, as in YGOPro's deck editor. */
+.sve-builder-pool {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-left: 1px solid var(--sve-border);
+}
+
+.sve-builder-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px 8px;
+  background: var(--sve-panel);
+  border-bottom: 1px solid var(--sve-border);
+}
+
+.sve-builder-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 6px;
+}
+
+.sve-builder-filter-grid > *,
+.sve-builder-search {
+  width: 100%;
+  min-width: 0;
+}
+
+.sve-builder-filter-grid > button {
+  justify-content: center;
+}
+
+.sve-builder-pool-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+}
+
+.sve-builder-pool-grid {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  padding: 8px 12px;
+  background: var(--sve-area);
+}
+
+.sve-pool-count {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--sve-accent);
+  color: #1a1300;
+  font-size: 12px;
+  font-weight: 800;
+  pointer-events: none;
+}
+
+.sve-pool-count-other {
+  background: rgb(20 26 36 / 0.85);
+  color: var(--sve-accent);
+  border: 1px solid var(--sve-accent);
+}
+
+.sve-pool-sentinel {
+  grid-column: 1 / -1;
+  height: 1px;
+}
+
+/* "All versions": each printing's number under its picture; alternate printings in the accent color. */
+.sve-builder-all-printings {
+  grid-column: 1 / -1;
+  font-size: 12px;
+}
+
+.sve-printing-label {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  text-align: center;
+  color: var(--sve-muted);
+  text-shadow: 0 1px 2px #000;
+}
+
+.sve-printing-label.sve-alt {
+  color: var(--sve-accent);
+  font-weight: 700;
+}
+
+/* The leader window. */
+.sve-leader-picker {
+  width: min(1100px, calc(100vw - var(--sve-left-width) - 60px));
+}
+
+.sve-leader-picker .sve-modal-header {
+  align-items: center;
+}
+
+.sve-leader-grid {
+  --sve-card-width: 96px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 10px;
+}
+
+.sve-leader-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.sve-leader-option:hover {
+  background: rgba(88, 166, 255, 0.12);
+}
+
+.sve-leader-current {
+  background: rgba(240, 180, 41, 0.18);
+  box-shadow: inset 0 0 0 2px var(--sve-accent);
+}
+
+.sve-leader-none {
+  justify-content: center;
+  min-height: 120px;
+  font-size: 14px;
+}
+
+.sve-leader-name {
+  max-width: 100%;
+  font-size: 11px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The settings' token art (TokenArtWindow.tsx): every token, then one token's printings in a second window. Both dim the
+   whole screen (the settings have no card panel on the left). */
+.sve-token-art-backdrop {
+  inset: 0;
+}
+
+.sve-token-art {
+  width: min(1100px, calc(100vw - 40px));
+}
+
+.sve-token-art-printings {
+  width: min(900px, calc(100vw - 80px));
+}
+
+.sve-token-art .sve-modal-header {
+  align-items: center;
+}
+
+.sve-token-art-grid {
+  --sve-card-width: 96px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 10px;
+}
+
+.sve-token-art-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.sve-token-art-option:hover {
+  background: rgba(88, 166, 255, 0.12);
+}
+
+.sve-token-art-current {
+  background: rgba(240, 180, 41, 0.18);
+  box-shadow: inset 0 0 0 2px var(--sve-accent);
+}
+
+.sve-token-art-name {
+  max-width: 100%;
+  font-size: 11px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sve-token-art-count {
+  font-size: 10px;
+  color: var(--sve-muted);
+}
+
+.sve-token-art-view {
+  margin-top: 2px;
+  padding: 1px 10px;
+  font-size: 11px;
+}
+
+/* One printing viewed: its picture as large as the window allows, and the card panel's text beside it. */
+.sve-token-art-preview {
+  width: min(980px, calc(100vw - 60px));
+}
+
+.sve-token-art-preview-body {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.sve-token-art-preview-art {
+  --w: min(420px, 42vw, calc((84vh - 70px) * 63 / 88));
+  flex: none;
+  width: var(--w);
+  aspect-ratio: 63 / 88;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #2a303b;
+}
+
+.sve-token-art-preview-text {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The main deck's summary: counts by type and the cost curve. */
+.sve-deck-stats {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-left: 14px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--sve-muted);
+}
+
+.sve-curve {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 30px;
+}
+
+.sve-curve-bar {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  width: 14px;
+  height: 100%;
+  padding-bottom: 12px;
+}
+
+.sve-curve-fill {
+  display: block;
+  min-height: 1px;
+  border-radius: 2px 2px 0 0;
+  background: linear-gradient(#7fd1ff, #2d6a8f);
+}
+
+.sve-curve-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  font-size: 9px;
+  text-align: center;
+}
+
+/*
+ * An engaged card lies turned 90 degrees clockwise (CR 4.2.2): its numbers move with their corners and stay upright. The
+ * cost (top left) goes to the top right, the attack (bottom left) to the top left, the defense (bottom right) to the
+ * bottom left; keywords and counters lie along the top and bottom edges.
+ */
+.sve-card-engaged .sve-stat-cost {
+  top: 2px;
+  left: auto;
+  right: 2px;
+}
+
+.sve-card-engaged .sve-stat-atk {
+  top: 2px;
+  bottom: auto;
+  left: 2px;
+}
+
+.sve-card-engaged .sve-stat-def {
+  bottom: 2px;
+  left: 2px;
+  right: auto;
+}
+
+.sve-card-engaged .sve-card-keywords {
+  top: 3px;
+  left: 30%;
+  right: 30%;
+  justify-content: center;
+}
+
+.sve-card-engaged .sve-card-counters {
+  bottom: 3px;
+  left: 30%;
+  right: 12%;
+  justify-content: center;
+}
+
+/* A pile holding a card that can act (an ability used from the cemetery ...), and that card in the pile's window. */
+.sve-pile-action {
+  cursor: pointer;
+}
+
+.sve-pile-action .sve-card-face,
+.sve-pile-action .sve-slot-back {
+  box-shadow: 0 0 0 2px var(--sve-action), 0 0 12px rgba(88, 166, 255, 0.6);
+}
+
+.sve-zone-action {
+  cursor: pointer;
+}
+
+/* The format and its restriction list (deck builder, game setup). */
+.sve-format-picker {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+}
+
+/* A deck's problems in the format, told when the deck is saved or the builder is left. */
+.sve-problems-dialog {
+  width: min(640px, 90vw);
+}
+
+.sve-problems-dialog .sve-problems {
+  margin: 8px 0 12px;
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.sve-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Manual debugging (game/manual/ManualDialog.tsx): what can be done by hand, legal and illegal apart. */
+.sve-manual {
+  width: min(720px, 92vw);
+}
+
+.sve-manual-section {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border-left: 3px solid var(--sve-bad);
+  background: rgb(0 0 0 / 0.18);
+}
+
+.sve-manual-section.sve-manual-legal {
+  border-left-color: var(--sve-good);
+}
+
+.sve-manual-section h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+
+.sve-manual-tag {
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #1a0c0c;
+  background: var(--sve-bad);
+}
+
+.sve-manual-legal .sve-manual-tag {
+  color: #0c1a12;
+  background: var(--sve-good);
+}
+
+.sve-manual-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.sve-manual-amount {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sve-manual-amount input[type="number"] {
+  width: 58px;
+}
+
+.sve-manual-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  max-height: 180px;
+  overflow: auto;
+}
+
+.sve-manual-token {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--sve-panel-2);
+}
+
+.sve-manual-search {
+  width: 100%;
+  margin-bottom: 6px;
+}
+
+.sve-manual-target {
+  cursor: pointer;
+}
+
+.sve-debug-manual {
+  font-weight: 700;
+  color: var(--sve-accent);
+}
+
+/* Replays (replays/ReplaysScreen.tsx): the saved replays, newest first, each with its buttons. */
+.sve-replays {
+  width: min(760px, 92vw);
+  align-items: stretch;
+}
+
+.sve-replays h2 {
+  text-align: center;
+}
+
+.sve-replay-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 56vh;
+  overflow: auto;
+}
+
+.sve-replay-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--sve-panel-2);
+  border: 1px solid var(--sve-border);
+}
+
+.sve-replay-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sve-replay-buttons,
+.sve-replays-actions {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+
+.sve-replays-actions {
+  justify-content: center;
+}
+
+.sve-replays-folder {
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.sve-file-button.sve-disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Watching a replay (game/watch/WatchBar.tsx): its playback bar under the card panel on the left. */
+.sve-watch {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-top: 1px solid var(--sve-border);
+  background: rgb(14 24 38 / var(--sve-ui-alpha));
+}
+
+.sve-watch-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sve-watch-progress {
+  position: relative;
+}
+
+.sve-watch-progress input[type="range"] {
+  width: 100%;
+  margin: 0;
+}
+
+/* A mark under the progress bar where each turn begins. */
+.sve-watch-turns {
+  position: relative;
+  height: 6px;
+  margin: 0 7px;
+}
+
+.sve-watch-turns span {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 6px;
+  background: var(--sve-accent);
+  opacity: 0.7;
+}
+
+.sve-watch-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  gap: 6px;
+}
+
+.sve-watch-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+
+.sve-watch-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* A replay's Quick announcement only tells: the table's cards can still be pointed at. */
+.sve-announce-backdrop.sve-announce-watch {
+  pointer-events: none;
+  background: transparent;
+}
+
+/* Online play (online/OnlineScreen.tsx): making or joining a room, codes by hand, the connection and its chat. */
+.sve-online {
+  width: min(620px, 92vw);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  align-items: stretch;
+}
+
+.sve-online h2 {
+  text-align: center;
+}
+
+.sve-online-step {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sve-online-step p {
+  margin: 0;
+}
+
+.sve-online-join {
+  display: flex;
+  gap: 8px;
+}
+
+.sve-online-join input {
+  flex: 1;
+  min-width: 0;
+}
+
+.sve-online-code {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.sve-online-code textarea {
+  flex: 1;
+  min-width: 0;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.sve-online-room-code {
+  align-items: center;
+  justify-content: center;
+}
+
+.sve-online-room-code strong {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 34px;
+  letter-spacing: 0.18em;
+  color: var(--sve-accent);
+}
+
+.sve-online-manual {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--sve-border);
+  border-radius: 8px;
+}
+
+.sve-online-manual[open] {
+  display: flex;
+}
+
+.sve-online-manual > * + * {
+  margin-top: 6px;
+}
+
+.sve-online-manual textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+}
+
+/* The online screen's parts: on the online server ("使用服务器"), and on the public networks (P2P). */
+.sve-online-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--sve-border);
+  border-radius: 8px;
+}
+
+.sve-online-section h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.sve-online-server {
+  border-color: var(--sve-accent);
+}
+
+/* The rules before a room is made: as the room's own (.sve-online-prep), labels on one line, selects within the panel. */
+.sve-online-server .sve-online-rules,
+.sve-online-server .sve-format-picker,
+.sve-online-server .sve-field {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.sve-online-server .sve-field > span {
+  white-space: nowrap;
+}
+
+.sve-online-server .sve-field select {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.sve-settings-server {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sve-settings-server > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The online server's configuration window (settings, online screen). */
+/* Over the whole screen: it opens from menus, which have no left column. */
+/* The online screen: the person's name; the server's lobby (the public rooms, to join or watch). */
+.sve-online-name input {
+  flex: 1;
+  min-width: 0;
+}
+
+.sve-online-check-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sve-online-lobby h4 {
+  margin: 4px 0 6px;
+  font-size: 14px;
+  color: var(--sve-muted);
+}
+
+.sve-online-lobby ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.sve-online-lobby li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--sve-border);
+  border-radius: 6px;
+}
+
+.sve-online-lobby-what {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sve-online-lobby-what strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The online screen's three boxes at the bottom (the Chinese interface only): sponsors' places, and thanks. */
+.sve-online-thanks {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sve-thanks-gap, 8px);
+  margin-top: 4px;
+}
+
+.sve-online-thanks > div {
+  height: var(--sve-thanks-height, 56px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.sve-online-thanks-ad {
+  border: 1px dashed var(--sve-border);
+  color: var(--sve-muted);
+}
+
+.sve-online-thanks-sponsor {
+  border: 1px solid var(--sve-accent);
+  color: var(--sve-accent);
+  font-weight: 700;
+}
+
+.sve-server-config-backdrop {
+  inset: 0;
+}
+
+.sve-server-config {
+  width: min(560px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sve-server-config textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 13px;
+}
+
+.sve-server-config p {
+  margin: 0;
+  word-break: break-all;
+}
+
+.sve-online-ok {
+  font-size: 18px;
+  font-weight: 700;
+  color: #7be0a4;
+}
+
+.sve-online-facts {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sve-online-chat {
+  min-height: 90px;
+  max-height: 34vh;
+  overflow: auto;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--sve-panel-2);
+  border: 1px solid var(--sve-border);
+}
+
+.sve-online-chat p {
+  margin: 0 0 4px;
+  overflow-wrap: anywhere;
+}
+
+.sve-online-mine strong {
+  color: #8ec5ff;
+}
+
+.sve-online-theirs strong {
+  color: #f0c36b;
+}
+
+/* "Check the network" (net/check.ts): what this computer can reach, to compare between two players. */
+.sve-online-check-button {
+  align-self: center;
+}
+
+.sve-online-check {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--sve-border);
+  border-radius: 8px;
+}
+
+.sve-online-check ul {
+  margin: 0;
+  padding-left: 18px;
+  overflow-wrap: anywhere;
+}
+
+.sve-online-ok-text {
+  color: #7be0a4;
+}
+
+/* The next game's preparation: the host's rules, this player's deck, the other player's. */
+.sve-online-prep {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--sve-border);
+  border-radius: 8px;
+}
+
+.sve-online-prep section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sve-online-prep h3 {
+  margin: 0;
+  font-size: 14px;
+  color: var(--sve-muted);
+}
+
+.sve-online-prep .sve-field > span {
+  white-space: nowrap;
+}
+
+.sve-online-prep .sve-field select {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.sve-online-prep section > .sve-field select {
+  flex: 1;
+}
+
+.sve-online-rules {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+.sve-online-rules:disabled {
+  opacity: 0.7;
+}
+
+.sve-online-game {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--sve-accent);
+  border-radius: 8px;
+}
+
+.sve-online-chat-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.sve-tab-body > .sve-online-chat-box {
+  height: 100%;
+}
+
+.sve-tab-body > .sve-online-chat-box .sve-online-chat {
+  flex: 1;
+  max-height: none;
+}
+
+/* A game online: the connection under the menu button (lost: the game waits), the other player's new messages. */
+.sve-game-online {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: #7be0a4;
+  border-bottom: 1px solid var(--sve-border);
+}
+
+.sve-game-online-lost {
+  color: #ff9a8a;
+}
+
+.sve-game-online button {
+  font-size: 12px;
+  padding: 2px 8px;
+}
+
+/* The two programs' games differ: nothing can be played any more. */
+.sve-desync {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 300;
+  transform: translate(-50%, -50%);
+  width: min(460px, 90vw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 22px;
+  border-radius: 12px;
+  border: 1px solid #b04a4a;
+  background: var(--sve-panel);
+  box-shadow: 0 20px 60px #000c;
+  text-align: center;
+}
+
+.sve-desync p {
+  margin: 0;
+}
+
+.sve-menu-hint {
+  max-width: 320px;
+  margin: 0;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------
+   Small screens: a phone held sideways (app/compact.ts). The same query as COMPACT_QUERY; the table
+   switches by its own height (board/layout.ts COMPACT_HEIGHT, data-compact).
+   --------------------------------------------------------------------------------------------------------------------- */
+@media (max-height: 560px), (max-width: 760px) {
+  /* No fixed left column: the game's card panel is a drawer, and windows dim the whole screen. */
+  :root {
+    --sve-left-width: 0px;
+  }
+
+  /* The menus: smaller (they scroll when still too tall, as on any screen). */
+  .sve-menu-panel {
+    padding: 14px 24px;
+    gap: 8px;
+  }
+
+  .sve-menu-title {
+    font-size: 24px;
+  }
+
+  .sve-menu-subtitle {
+    margin: 0;
+  }
+
+  .sve-menu-buttons {
+    gap: 6px;
+  }
+
+  .sve-menu-button {
+    padding: 7px 16px;
+    font-size: 15px;
+  }
+
+  .sve-setup {
+    max-height: none;
+    padding: 12px 16px;
+    gap: 10px;
+  }
+}
+
+/* The game on a small screen: the table takes the whole width; the card panel is a drawer over its left side. */
+.sve-game.sve-game-compact {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.sve-game-compact .sve-game-left.sve-drawer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 60;
+  width: min(340px, 44vw);
+  /* Nearly opaque: the table's panels would show through the card text. */
+  background: rgb(16 22 32 / 0.96);
+  border-right: 1px solid var(--sve-border);
+  box-shadow: 12px 0 30px #0008;
+}
+
+.sve-drawer-hide {
+  margin-left: auto;
+}
+
+.sve-details-show {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  z-index: 50;
+}
+
+.sve-game-compact .sve-sidebar-show {
+  top: 6px;
+  right: 8px;
+}
+
+/* A finger on the table (a phone, a tablet): no scrolling, zooming or long-press menu of the browser (dragging a card is
+   the table's). Its windows scroll on their own: they are scroll containers. */
+.sve-table {
+  touch-action: none;
+  -webkit-touch-callout: none;
+}
+
+/* The compact table (board/layout.ts): the mats take the height; on the left the opponent's panel (top), the status
+   (middle) and yours (bottom); on the right the buttons (top) and your hand (bottom). */
+.sve-table[data-compact] .sve-player-panel {
+  width: min(170px, var(--side-width));
+  padding: 4px 8px;
+  gap: 1px;
+  font-size: 10px;
+}
+
+.sve-table[data-compact] .sve-player-defense {
+  font-size: 20px;
+}
+
+.sve-table[data-compact] .sve-player-opponent {
+  right: calc(100% + 8px);
+  top: 30px;
+  bottom: auto;
+}
+
+.sve-table[data-compact] .sve-player-own {
+  left: auto;
+  right: calc(100% + 8px);
+  top: auto;
+  bottom: 0;
+}
+
+.sve-table[data-compact] .sve-center-status {
+  right: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  width: min(170px, var(--side-width));
+  padding: 4px 8px;
+  font-size: 10px;
+}
+
+.sve-table[data-compact] .sve-center-turn strong {
+  font-size: 12px;
+}
+
+.sve-table[data-compact] .sve-center-prompt {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.sve-table[data-compact] .sve-center-actions {
+  left: calc(100% + 8px);
+  top: 30px;
+  transform: none;
+  width: min(200px, var(--side-width));
+}
+
+.sve-table[data-compact] .sve-center-actions button {
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+.sve-table[data-compact] .sve-hand-own {
+  position: absolute;
+  right: 6px;
+  bottom: 2px;
+  z-index: 5;
+  width: var(--side-width);
+  height: var(--hand-height);
+}
+
+.sve-table[data-compact] .sve-announce {
+  width: min(240px, calc(var(--side-width) - 12px));
+  padding: 8px;
+  gap: 6px;
+}
+
+.sve-table[data-compact] .sve-result-panel {
+  padding: 14px 20px;
+}
+
+/* Cards put in order on a small screen: lower rows, so the whole pile and the buttons fit. */
+.sve-game-compact .sve-order {
+  --sve-card-width: 44px;
+  gap: 2px;
+  margin: 4px 0;
+}
+
+.sve-game-compact .sve-order-item {
+  padding: 1px 6px;
+}
+
+/* Windows on a small screen: a little smaller and never taller than the screen. */
+.sve-game-compact .sve-decision-dialog {
+  --sve-card-width: 64px;
+  width: min(760px, calc(100% - 24px));
+  max-height: calc(100% - 20px);
+  padding: 10px 12px 8px;
+  gap: 6px;
+}
+
+.sve-game-compact .sve-modal {
+  max-width: 96vw;
+  max-height: 92vh;
+}
+
+/* The deck builder on a small screen: a tab bar (back, the card drawer, the deck, the pool) over the tab shown. */
+.sve-builder.sve-builder-compact {
+  position: relative;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.sve-builder-compact > .sve-builder-center,
+.sve-builder-compact > .sve-builder-pool {
+  grid-row: 2;
+  grid-column: 1;
+}
+
+.sve-builder-compact[data-tab="deck"] > .sve-builder-pool,
+.sve-builder-compact[data-tab="pool"] > .sve-builder-center {
+  display: none;
+}
+
+.sve-builder-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: var(--sve-panel);
+  border-bottom: 1px solid var(--sve-border);
+}
+
+/* The deck tab scrolls as a whole: its buttons, then the deck. */
+.sve-builder-compact .sve-builder-center {
+  overflow-y: auto;
+}
+
+.sve-builder-compact .sve-builder-deck {
+  flex: none;
+  overflow: visible;
+}
+
+.sve-builder-compact .sve-builder-top {
+  padding: 6px 8px;
+  gap: 6px;
+}
+
+/* The pool tab scrolls as a whole too: the filters scroll away above the cards, which then have the whole height. */
+.sve-builder-compact .sve-builder-pool {
+  border-left: none;
+  overflow-y: auto;
+}
+
+.sve-builder-compact .sve-builder-pool-grid {
+  flex: none;
+  overflow: visible;
+}
+
+.sve-builder-compact .sve-builder-filters {
+  padding: 6px 8px;
+}
+
+/* The drawer of the card panel, in a game or the deck builder: over the left side. */
+.sve-builder-compact .sve-game-left.sve-drawer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 60;
+  width: min(340px, 44vw);
+  background: rgb(16 22 32 / 0.96);
+  border-right: 1px solid var(--sve-border);
+  box-shadow: 12px 0 30px #0008;
+}
+
+.sve-builder-compact .sve-deck-tile,
+.sve-builder-compact .sve-pool-tile {
+  cursor: pointer;
+  -webkit-touch-callout: none;
+}

@@ -1,0 +1,8 @@
+{
+  // The online server runs on Node (a Linux server): Node's APIs, and the ws library.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts", "scripts/**/*.ts"]
+}

@@ -1,0 +1,742 @@
+# SVEN — Shadowverse: Evolve NEXT
+
+**[中文](#中文) · [English](#english)**
+
+---
+
+<a id="中文"></a>
+
+## 中文
+
+《Shadowverse: Evolve》（影之诗：进化对决）实体卡牌游戏的非官方对战引擎、AI 和客户端。规则由引擎自动处理，可以对战 AI、联机、组卡组、看录像，支持PC和安卓平台。仅用于个人学习和测试。
+
+### 内容
+
+- **Core（规则引擎，`@sve/core`）**
+  - 纯 TypeScript，结果确定，可以在没有界面的环境里运行，不依赖界面或文件。
+  - 按综合规则（v1.26.1）逐条实现，规则判断都注明条款编号。
+  - 支持 57 个卡包的 3,689 个卡牌定义，共 7,564 个印刷版本，异画共用同一个定义。
+  - BP22 是先行测试版：只有日文和中文数据（仓库旁边的 `BP22.json`，官方日文卡表），按日文实现、中文对照；英文卡名和文本暂时显示为 `unavailable`。等英文数据出来后补齐。
+- **Bot（`@sve/bot`）**：界面上有四个难度，只用 Core 的公开 API：
+  - Bot-简单：贪心，每个决策都模拟所有候选回答，评估局面后选最好的；
+  - Bot-中等：规划整个回合，再模拟对手的下一回合，只用玩家看得到的信息；规划之前先找"确保能赢"的斩杀：在几个对手手牌和牌序的抽样里都能赢、对手应对也挡不住才执行；
+  - Bot-困难：同样规划（同样先找斩杀），但作弊，直接透过引擎读完整的局面（对手的手牌、双方牌组的顺序）；
+  - Bot-困难 beta：在困难的基础上加了按费用曲线换牌、主战者体力的价值曲线，同样读对手信息。
+  - 另有试验版 medium-beta（中等加上同样两项，不作弊），只在 `npm run bot:arena` 里。
+- **GUI（`@sve/gui`）**：Web 界面（Vite + React），引擎和 Bot 在 Web Worker 里运行。
+  - 牌桌按场地图摆放，点击或拖拽操作，有动画、箭头和音效；
+  - 组卡界面：筛选、异画、赛制和禁卡表、卡组码；
+  - 录像、复现包（逐字节重现一局）、撤销 / 倒回、手动调试；
+  - 联机：P2P（不需要服务器），或者经过自己架的联机服务器（`@sve/server`）；
+  - 界面和卡牌文本都可以切换中文、英文、日文；
+  - 外观、声音、字体都可以换成自己的文件（见"自定义资源"）；衍生物在对局里显示哪个印刷版本的卡图，可以在设置页的"衍生物卡图"里选。
+- **安卓版**：同一个界面装进安卓 WebView（Capacitor），手机横屏使用。
+
+### 声明
+
+- 这是非官方的同人项目，与 Cygames、Bushiroad 等官方无关，不做商业用途。
+- 仓库**不包含任何卡图、官方美术或声音**。
+- 卡牌数据（`packages/core/data/`）包含卡名和卡牌文本，有英文、中文、日文三种，中文多为民间翻译，用于规则处理和显示。
+- 想看到卡图，请把自己的图片放进 `packages/gui/public/`（见"自定义资源"）。
+
+### 环境
+
+- Node.js 24.x 和 npm（使用 npm workspaces）。
+- 端到端测试使用本机安装的 Chrome，Playwright 不另外下载浏览器。
+- 打安卓 APK 需要 Android Studio（自带 JDK 和 SDK）。
+
+### 快速开始
+
+```bash
+npm install
+npm run dev:gui
+```
+
+- `npm run dev:gui` 启动开发服务器。
+- 页面打开就是主界面。引擎在后台加载几秒，加载完"对战 AI"才能点。
+- 开发服务器只监听本机，改了界面代码，页面会自动刷新。端口被占用时换下一个，也可以用 `SVE_GUI_PORT` 指定。
+
+### 常用命令
+
+在仓库根目录执行：
+
+| 命令 | 作用 |
+|---|---|
+| `npm run dev:gui` | 启动 GUI 开发服务器并打开浏览器 |
+| `npm run build:gui` | GUI 的生产构建（`packages/gui/dist/`），用 `npm run preview -w @sve/gui` 查看 |
+| `npm test` | 全部单元测试（Vitest：Core、Bot、GUI、工具） |
+| `npm run typecheck` | 类型检查（源码、测试、工具） |
+| `npm run test:gui` | GUI 的端到端测试（Playwright） |
+| `npm run android:apk` | 打安卓 APK（见"安卓版"） |
+| `npm run ios:ipa` | 打 iOS 的 IPA（见"iOS 版"，要在 Mac 上） |
+| `npm run release:pc -- --zip` | 打 PC 发行版（见"发行版"） |
+| `npm run release:server` | 打联机服务器的安装包 |
+| `npm run card -- <卡号>` | 查一张卡：各语言文本、日文类型、相关卡、官方 QA、脚本状态 |
+| `npm run bench` | 性能基准：随机对局、复制和抽样一局、Bot 每个决策的耗时 |
+| `npm run bot:arena -- [局数] [A] [B]` | Bot 互打（easy / medium / hard，试验版 medium-beta / hard-beta；sve-fool / sve-good / sve-planner 是模仿 SVE Simulator 三个 AI 的对照组，只用于测试）：示例卡组，两局一组交换座位、轮流打遍所有卡组组合，打印按"对"计分的得分和 95% 区间、先后手、先手胜率、回合数、每副卡组的得分和思考时间。`--decks sd01,sd02` 选卡组（`train` / `holdout` / `legal`：`tools/rl/decksets.json` 的卡组集，按标准赛制和它的禁卡表检查），`--mirror` 双方用同一副，`--workers 8` 多进程一起打，`--seed` 换一批对局，`--independent` 每局单独的种子，`--range a-b` 只打其中一段，`--out 文件夹` 存下每一局（可重放的记录 `games.jsonl.gz`）和报告，`--replays N` 把前 N 局存成对局界面能打开的录像。`medium:identity`（把手写估值从外面传进去，应和 medium 完全一样）和 `medium:negated`（估值反过来，应该几乎全输）用来检查估值接口 |
+| `npm run rl:verify -- 文件夹` | 重放 `bot:arena --out` 存下的对局：每个输入是否合法、结果是否和记录一样 |
+| `npm run release:train -- --zip` | 打"训练数据包"：给帮忙跑对局的朋友 |
+| `npm run rl:ingest -- 文件夹` | 收下朋友们训练数据包里的对局：检查后并进数据集 |
+| `npm run rl:coverage -- 文件夹` | `bot:arena --out` 存下的对局里，每种决定 Bot 实际比较了几个答案：重放每一局，对每个决定用引擎列出全部合法答案，和规划型 Bot 会比较的答案数对照；"有好几个合法答案、却只比较一个"的决定类型（盲区）排在前面，写明理由的列为"有意为之"。`--games N` 只看前 N 局 |
+| `npm run rl:behaviour -- 文件夹` | `bot:arena --out` 存下的对局里的行为统计：守护在自己回合横置登场的比例、能用速攻的时机和用了几次、对局结束时先后手各剩多少进化点和超进化点、回合结束时手里还有打得出的随从的比例。用来比较新旧两版 Bot（同门互打的胜率看不出共同的盲区）。`--games N` 只看前 N 局 |
+| `npm run rl:lethal -- 文件夹` | 统计 `bot:arena --out` 存下的对局里漏掉的斩杀：重放每一局，在每个己方主要阶段的决定上用宽搜索找"确保能赢"的斩杀（换 6 个公平抽样都能赢、对手应对也挡不住），找到了那回合却没赢就算漏掉；打印有漏斩杀的局数、漏的一方后来输掉的局数。较慢（每局几秒），`--games N` 只看前 N 局，`--workers N` 多进程 |
+| `npm run bench:throughput -- [random\|easy\|medium\|hard]` | 整台电脑一分钟能打多少局：多个进程同时开始（`--workers N`，默认 CPU 线程数），各打 `--seconds` 秒 |
+| `npm run build:cards` | 从抓取的卡牌数据（仓库旁边的 `assets/`，先行测试版的卡包读仓库旁边的 `BP22.json` 这类卡表）重新生成 `packages/core/data/*.json` |
+| `npm run scripts:index` | 新增卡牌脚本后，重新生成脚本注册表（`packages/core/src/script/<卡包>/index.ts`） |
+| `npm run cards:status` | 生成每张卡的实现和测试状态表（写到 `docs/card-status*.md`） |
+| `npm run rules:clauses` | 从综合规则的 PDF（仓库旁边的 `rules/`）提取条款编号表 `tools/data/cr-clauses.json` |
+| `npm run rules:index` | 生成"条款 → 代码 / 测试"对照表（写到 `docs/rules-index.md`） |
+
+环境变量：
+
+| 变量 | 作用 |
+|---|---|
+| `SVE_ASSETS_DIR` | 本机素材文件夹（卡图、`Misc/`），默认是仓库旁边的 `assets/` |
+| `SVE_GUI_PORT` | 开发服务器的端口，默认 5173 |
+| `SVE_E2E_PORT` | 端到端测试的端口，默认 5199 |
+| `SVE_E2E_CHANNEL` | 端到端测试用的浏览器，默认 `chrome`，也可以是 `msedge` |
+| `SVE_E2E_HEADED=1` | 端到端测试时显示浏览器窗口 |
+| `SVE_MONKEY_GAMES=18` | 端到端测试里随机乱点，多打几局 |
+| `SVE_E2E_ONLINE=1` | 端到端测试里也测经过公共中转的联机（需要外网） |
+| `BOT_GAMES=200` | Bot 的长时间对局测试（`npx vitest run packages/bot`） |
+
+### 目录结构
+
+```
+packages/
+  core/                 规则引擎（@sve/core）
+    src/
+      model/            数据类型：游戏状态、卡牌定义、决策和回答
+      data/             卡牌 JSON → 卡牌定义（规范化、异画合并、卡牌数据库）
+      engine/           规则引擎：flow/（回合流程）、abilities/（能力）、actions/（第 5 章的动作）、
+                        state/（区域、数值）、effects/（给卡牌脚本用的接口）、runtime/（执行框架）
+      script/           卡牌脚本：script/<卡包>/<卡号>.ts，一个卡牌定义一个文件
+      events/ view/     对外事件；按玩家视角过滤隐藏信息
+      sets/             各卡包的卡牌数据和脚本注册表
+      testing/          测试工具（对局脚本、随机 agent、不变量检查）
+    data/               卡牌数据（<卡包>.json，由 build:cards 生成，不要手改）
+    test/               规则测试、卡牌测试、整局测试
+  bot/                  Bot（@sve/bot），只用 Core 的公开 API
+  server/               联机服务器（@sve/server）：按房间号转发消息、密钥、上限；scripts/ 里是安装脚本和打包
+  gui/                  界面（@sve/gui）
+    index.html
+    vite.config.ts
+    host/               本机服务层（Node，Vite 插件）：卡图、自定义资源、卡组文件、录像的 /api/*
+    src/
+      app/              主界面、设置、应用状态、卡池目录
+      engine/           后台线程（引擎和 Bot）、消息协议
+      game/             对局画面：牌桌、动画、卡牌、决策窗口、日志、调试
+      decks/            组卡界面、卡组文件格式、卡组码、文本编辑器
+      formats/          赛制和禁卡表
+      net/ online/      联机
+      replays/          录像
+      resources/        自定义资源的查找、主题、音效
+      host/             文件的读写：电脑上调用本机服务层，安卓上读写手机里的文件
+      i18n/             界面文字（英文、中文、日文）
+      styles/           内置样式
+    public/             玩家的自定义资源（只有空文件夹进仓库）
+    decks/samples/      示例卡组
+    replays/            保存的录像（不进仓库）
+    restrictions/       禁卡表，一个文件一张（格式见其中的 README.md）
+    android/            安卓工程（Capacitor）
+    ios/                iOS 工程（Capacitor，Xcode）
+    scripts/            打安卓 APK、生成示例卡组
+    test/               单元测试（随 npm test 运行）
+    tests/e2e/          端到端测试（Playwright）
+tools/                  卡牌数据构建、查卡、条款提取和核对、卡牌状态、性能基准、Bot 互打和对局记录的检查（`rl/`：训练和测试用的卡组集、生成数据的任务 `rl/jobs/`；`train/`：训练数据包）
+```
+
+依赖方向：`gui` → `bot` → `core`。Core 不知道界面和 Bot 的存在。
+
+### 自定义资源
+
+游戏的外观和声音都可以用自己的文件替换或补充，不用改代码。
+
+**查找顺序**，先找到的优先：
+1. `packages/gui/public/` 里你自己的文件；
+2. 本机素材文件夹：默认是仓库旁边的 `assets/`，`SVE_ASSETS_DIR` 可改。
+   - 卡图是 `<卡号>/<卡号>.webp`，双面卡的背面是 `<卡号>_back.webp`；
+   - `Misc/` 里放场地、卡背等图片（见本节最后）；
+3. 内置的样子（纯色和文字）。声音没有内置的，没有文件就不响。
+
+**规则**：
+- 文件名（不含扩展名）要完全一致，区分大小写。
+  - 图片可以是 `png`、`jpg`、`jpeg`、`webp`、`gif`、`avif`；
+  - 声音可以是 `mp3`、`ogg`、`wav`、`m4a`；
+  - 都按这个顺序找，同名的只用第一个。
+- 界面启动时读一次文件清单。放进新文件后刷新页面；图片有缓存时按 Ctrl+F5。
+- 按卡查找的资源，先找印刷编号（如 `BP01-SL01`，每个异画各有一个），再找卡牌定义编号（如 `BP01-001`）。给本体放一个文件，所有异画都会用它。
+- 编号里的 `Ⓢ`（如 `BP03-LDⓈ01`）在文件名里也可以写成普通的 `S`（`BP03-LDS01.png`）。
+
+**图片**（下表的路径都在 `public/` 下，省略扩展名）
+
+| 文件 | 用途 |
+|---|---|
+| `images/cards/<编号>` | 卡图；双面卡的背面是 `images/cards/<编号>_back` |
+| `images/cards/unknown` | 卡图缺失时的替代图（上面会写出卡名） |
+| `images/backs/default` | 主卡组的卡背（牌组、背面朝上的卡、对手的手牌） |
+| `images/backs/evolve` | 进化牌组的卡背（没有时用主卡组的卡背） |
+| `textures/board/field` | 一方的场地，对手的是同一张图旋转 180°。牌桌按原图（1586×992）上的格子摆卡，换图时要保持同样的尺寸和格子位置 |
+| `textures/menu/background_m` | 主界面的背景（设置、开局页也用） |
+| `textures/menu/background_d` | 组卡界面的背景（没有时用主界面的） |
+| `textures/menu/background_f` | 对局画面的背景 |
+| `textures/icons/<图标名>` | 卡牌文本里的图标（见下） |
+
+图标名：`fanfare`、`lastwords`、`act`、`evolve`、`engage`、`quick`、`q`、`ub`、`feed`、`ride`、`adv`、`cost00` … `cost10`、`costX`、`attack`、`defense`、`forestcraft`、`swordcraft`、`runecraft`、`dragoncraft`、`abysscraft`、`havencraft`。
+
+**声音**（音量在设置页调）
+
+| 文件 | 什么时候放 |
+|---|---|
+| `audio/bgm/menu`、`audio/bgm/deck`、`audio/bgm/battle` | 背景音乐：主界面、组卡界面、对局中。循环播放，换界面时淡入淡出 |
+| `audio/sfx/<名字>` | 通用音效，名字见下表 |
+| `audio/cards/<编号>-p` | 这张卡被使用时（所有卡都可以有） |
+| `audio/cards/<编号>-a` | 这只随从攻击时 |
+| `audio/cards/<编号>-d` | 这只随从被破坏时 |
+
+通用音效（26 个）：
+
+| 名字 | 什么时候响 |
+|---|---|
+| `draw` | 抽牌 |
+| `spell`、`follower`、`amulet` | 使用法术、随从、护符（没有时用 `play`） |
+| `play` | 以上三种共用的后备 |
+| `attack` | 随从攻击 |
+| `damage`、`leader-damage` | 随从、主战者受到伤害（主战者的没有时用 `damage`） |
+| `destroy` | 破坏 |
+| `evolve`、`super-evolve` | 进化、超进化（超进化的没有时用 `evolve`） |
+| `heal` | 回复 |
+| `buff` | 获得攻击力、生命值 |
+| `target` | 效果选择了卡 |
+| `token` | 生成衍生物 |
+| `banish` | 消失 |
+| `discard` | 舍弃 |
+| `bounce` | 回到手牌 |
+| `counter` | 放置或取除指示物 |
+| `shuffle` | 洗切牌组 |
+| `turn` | 回合开始 |
+| `quick` | 快速提示弹出 |
+| `game-start` | 对局开始 |
+| `win`、`lose` | 胜、负 |
+| `click` | 界面点击 |
+
+- 一张卡有自己的音效时，就不放对应的通用音效：`-p` 代替 `spell` / `follower` / `amulet`，`-a` 代替 `attack`，`-d` 代替 `destroy`。
+- 进化后的随从，先找进化卡的编号，再找原来那张卡的编号。
+
+**字体和样式**
+- `fonts/<任意名>`：字体文件，在 `theme.css` 里用 `@font-face` 引用。
+- `theme.css`：在内置样式之后加载，可以覆盖任何颜色、大小和字体。界面元素的类名都以 `sve-` 开头。例如：
+
+```css
+:root {
+  --sve-ui-alpha: 0.88;       /* 面板、窗口、按钮的不透明度（1 为完全不透明） */
+  --sve-area-alpha: 0.25;     /* 组卡界面的卡组区和卡池 */
+  --sve-background-dim: 0.2;  /* 背景图压暗的程度（0 为不压暗） */
+  --sve-accent: #f0b429;      /* 强调色 */
+  --sve-card-base: 96px;      /* 牌桌以外的卡牌大小 */
+  font-family: "My Font", sans-serif;
+}
+@font-face {
+  font-family: "My Font";
+  src: url("/fonts/MyFont.woff2") format("woff2");
+}
+```
+
+### 卡组
+
+- **卡组文件**：`packages/gui/decks/<名字>.json`，也可以放在子文件夹里，`samples/` 里是示例卡组。
+
+```json
+{ "format": "sve-deck", "version": 1, "name": "My deck", "leader": "SD01-LD01",
+  "main": { "SD01-011": 3 }, "evolve": { "SD01-004": 2 }, "notes": "备注" }
+```
+
+  - 键是印刷编号，异画用哪个编号都可以。
+  - 双职业的卡组多一个 `leader2`。
+- **组卡界面**：主菜单"构筑卡组"。
+  - 点击或拖拽加入，右键或拖回卡池移除；也可以用左边卡牌面板上方的"+1""−1"给卡组加减一张正在看的这张卡。
+  - "文本编辑"用文字编辑卡组（每行一张，如 `3 SD01-011`）。
+- **卡组码**：组卡界面的"卡组码…"。
+  - 把卡组变成一行文字（`SVE1-…`）分享，粘贴就能导入；
+  - 也能导入 SVE Simulator（另一个模拟器）的卡组码，按卡名找卡。
+- **赛制和禁卡表**：
+  - 赛制有标准、双职业（综合规则附录 B-2）、无限制；
+  - 禁卡表（亚洲、欧美、中国大陆）在 `packages/gui/restrictions/`，每张一个文件；
+  - 组卡时只提醒不符合的地方，开局时不符合就不能开始。
+
+### 联机
+
+主菜单"联机对战"。两种方式。最上面填你的名字：对手、观战者和大厅都会看到，对局里也显示在玩家信息框里。
+
+- **使用服务器**：有人架了联机服务器、并且给了配置时，联机界面最上面是"使用服务器（服务器的名字）"。
+  - 先选好赛制、禁卡表、先后手，再"创建房间"，把 6 位房间号发给对方；对方在同一栏输入房间号，点"加入"或"观战"。进房间以后房主还能改规则。
+  - 所有消息都经过服务器：不用打洞，也不用国外的公共服务；房间号输错会马上提示"房间不存在"；对方看不到你的 IP。
+  - 配置：设置 → 联机 →"修改服务器配置"（联机界面里也有这个按钮），粘贴服务器的主人给你的文字，可以先"测试连接"。
+  - **大厅**：列出公开的房间（"xxx的房间"、规则、等待对手还是对局中、观战人数），点"加入"或"观战"就能进。创建时取消"在大厅里公开这个房间"，就只能用房间号进。
+  - **保存对局**：设置 → 联机 →"联机自动保存对局到云端"（默认开）。双方都开着时，下完的对局会存到服务器上，用来训练 AI：只有种子、双方卡组和每一步，没有名字和聊天。有一方关掉就不存，房间里会写明这局存不存。
+- **不用服务器（P2P）**：
+  - **房间号**：一方创建房间，把 6 位房间号发给对方。双方借用公共的免费服务（Nostr、MQTT、BitTorrent）找到对方，然后用 WebRTC 直连。
+  - **手动连接**：房间号连不上时，双方互相发送连接码（`SVE1-O-…` / `SVE1-A-…`）。
+  - **连不上时**：可以在设置里填自己的 TURN 中转；"检测网络"会显示这台电脑的网络情况。
+- **版本**：两边的联机协议、卡牌（定义、实现状态和禁卡表）和规则代码的指纹都相同才能开始，联机界面会显示是否相同；版本号本身不比。各自 `public/` 里的资源（卡图、音效、背景、字体、`theme.css`）、设置、界面语言、卡组都不用一样。同一版本的电脑版和安卓版可以互相联机；设置页最下面和联机界面都显示版本号，连不上时先确认双方的版本一样。
+- **对局**：双方各自运行同一局，只同步每一步的回答。断线后可以重连，接着打。
+  - **悔棋**：房主在规则里勾选"允许悔棋"（使用服务器时在创建房间之前，也可以在房间里改）。对局中在侧边栏"调试"里点"撤销我的上一个回答"：你上一个回答之后对方还没操作过，两边就一起退回到那一步；对方操作过就不能撤销。观战者也跟着退。
+  - 联机时种子和"保存复现包"在对局结束后才显示（有了它们，改过的程序能推算出牌组顺序）。
+- **观战**：知道房间号的人点"观战"进房间看对局。P2P 的房间最多 2 人；用服务器时由服务器决定（默认 10 人）。
+  - 只能看双方都看得到的信息（看不到手牌），可以换边；不能操作，也不能发言（能看到聊天）。
+  - 对局中途进来的马上追上进度；断线后自动重连。
+  - 只有用房间号连接时才能观战（手动连接不行）。
+
+### 录像和复现包
+
+- **录像**：对局结束后点"保存录像"，存在 `packages/gui/replays/`（不进仓库）；主菜单"观看录像"播放。
+- **复现包**：调试页"保存复现包"，里面是种子、双方卡组和全部回答，能逐字节重现一局，报告问题时附上它。开局页"高级"里可以载入。
+
+### 发行版
+
+有 PC 版和安卓版两种。
+
+- **版本号**：`packages/gui/package.json` 的 `version`，PC 版和安卓版都用它，发新版前先改。
+  - 安卓的 versionCode 按版本号算（0.1.2 → 102，0.2.0 → 200）。每次都比上一次大，朋友才能直接覆盖安装，并保留数据。
+- **PC 版**：`npm run release:pc -- --zip`
+  - 在仓库旁边生成 `SVEN-<版本>-pc/` 文件夹和同名的 zip。
+  - 文件夹已经存在时不会覆盖：换一个 `--out <文件夹>`，或者先删掉旧的。
+  - 里面有：
+    - 程序（`app/`）；
+    - 本机服务器（`server.mjs`，双击 `start.bat` 或运行 `node server.mjs`）；
+    - 示例卡组、空的 `replays/` 和 `public/` 文件夹结构；
+    - 三语的 `README.txt`，以及写着版本、提交和引擎指纹的 `VERSION.txt`。
+  - `--public <文件夹>`：把这个文件夹里的资源一起放进 `public/`（默认不放）。
+  - 仓库根目录有 `online-server.ini` 时一起放进去。
+  - 需要 Node.js 20 以上。
+  - **设置文件 `settings.ini`**：第一次启动时在这个文件夹里生成（带着浏览器里原有的设置）。
+    - 里面是设置页的各项（语言、界面透明度、音量、快速提示、TURN 中转）和调试页的几项（动画、Bot 速度、手动选择卡片位置、手动调试），每项上面有三语的说明。
+    - 文件优先：启动时读取，缺少的项和写错的值用默认值；在游戏里改的设置会写回文件，只改那一项，其他的行和注释保留。
+    - 在游戏关着时改，或者改完后刷新页面。设置跟着文件夹走，换端口、换浏览器也不会丢；从旧版更新时保留它。
+- **安卓版**：`npm run android:apk -- --release --public <资源文件夹> --out <APK 路径>`（选项见"安卓版"）。
+  - 每次都要用同一个密钥签名（默认是仓库旁边的 `SVE-signing/`），换了密钥就不能覆盖安装。
+  - 密钥要备份，不要给别人。
+  - 仓库根目录有 `online-server.ini` 时，App 带着这个服务器。
+- **联机**：双方的引擎指纹一样才能对局（`VERSION.txt` 和联机界面里都能看到）。
+  - 改了 `packages/core/` 或 `packages/gui/src/engine/` 的代码（只改注释也算），指纹就会变，大家都要换新版。
+  - 联机协议（`packages/gui/src/net/` 的 `PROTOCOL`）变了也一样；只改了界面的版本可以和旧版互相联机。
+
+### 安卓版
+
+- **构建**：装好 Android Studio 后运行 `npm run android:apk`，得到调试版 APK `packages/gui/android/app/build/outputs/apk/debug/app-debug.apk`。
+  - 脚本使用 Android Studio 自带的 JDK（`JAVA_HOME` 可改）；SDK 默认在 `%LOCALAPPDATA%\Android\Sdk`（`ANDROID_HOME` 可改）。
+  - 第一次构建会自动下载 Gradle 和需要的 SDK。
+- **发行版**：`npm run android:apk -- --release --public <资源文件夹> --out <APK 路径>`
+  - `--release`：用发行版密钥签名。
+    - 密钥写在仓库外的一个 properties 文件里：`storeFile`（相对这个文件）、`storePassword`、`keyAlias`、`keyPassword`。
+    - 用 `--signing <文件>` 指定，默认是仓库旁边的 `SVE-signing/keystore.properties`。
+  - `--public <文件夹>`：把这个文件夹里的资源打包进 App（手机上同名的文件优先）。
+  - `--out <文件>`：打好后把 APK 拷到那里。
+  - 版本号和 versionCode 见"发行版"。
+- **手机上的文件**：都在 `Android/data/local.sve.next/files/` 下。
+  - `public/`：资源，用数据线拷进去，或者在设置页导入 zip；
+  - `decks/`、`replays/`：卡组和录像；
+  - `exports/`：导出的文件，导出后会弹出分享菜单。
+- **要求**：安卓 7 以上，系统 WebView 103 以上；更旧时显示一个说明页。
+- **小屏排版**：
+  - 左栏变成抽屉，用按钮或长按卡牌打开；
+  - 组卡分成"卡组"和"卡池"两页；
+  - 返回键先关掉打开的东西。
+- **平板**：屏幕够大时用电脑版的排版，按手指操作：点一下卡组里的卡移除一张，长按卡牌看详情，用手指把卡拖到场上使用。
+
+### iOS 版
+
+- **构建**：`npm run ios:ipa`，得到不签名的 IPA `SVEN-<版本>-ios.ipa`（在仓库旁边；`--out <文件>` 可改，`--public <文件夹>` 和安卓版一样把资源打包进 App）。
+  - Xcode 只能在 Mac 上运行：在别的系统上，这个命令只做到网页部分和 Capacitor 的拷贝（`packages/gui/ios/`）。
+  - 没有 Mac 时可采用 GitHub 的工作流：仓库页面 › Actions › "iOS IPA" › Run workflow，跑完后在这次运行的 Artifacts 里下载 `SVEN-ios`（里面就是 IPA）。
+- **安装**：IPA 没有签名，用自己的 Apple ID 签名安装（例如 AltStore、Sideloadly）。
+- **设备上的文件**：在"文件"App 的"我的 iPhone（iPad）› SVE NEXT"里：`public/`（资源：用"文件"App 拷进去，或者在设置页导入 zip）、`decks/`、`replays/`、`exports/`。
+- **要求**：iOS / iPadOS 16.4 以上。横屏全屏，屏幕常亮；iPad 用宽屏排版、手指操作（见"安卓版"的平板）。
+- 和同一版本的电脑版、安卓版可以互相联机。
+- 联机服务器的配置不在 IPA 里：在设置 → 联机 →"修改服务器配置"里粘贴。
+
+### 在代码里使用 Core
+
+```ts
+import { createEngine } from "@sve/core";
+import { ALL_CARDS, ALL_SCRIPTS } from "@sve/core/sets";
+
+const engine = createEngine({ cards: ALL_CARDS, scripts: ALL_SCRIPTS });
+const game = engine.newGame({
+  seed: 42,
+  players: [deckA, deckB], // { leader?, main: 印刷编号[], evolve: 印刷编号[] }
+  config: { deckRestrictions: false },
+});
+while (game.decision) game.act(chooseAnswer(game.decision));
+```
+
+引擎是确定的：种子、卡组和每一步的回答都相同，就得到完全相同的一局。
+
+---
+
+<a id="english"></a>
+
+## English
+
+An unofficial rules engine, AI and client for the *Shadowverse: Evolve* trading card game. The engine applies the rules, so you can play against the AI, play online, build decks and watch replays, on a computer or an Android phone. It is meant for personal study and testing only.
+
+### What's inside
+
+- **Core (the rules engine, `@sve/core`)**
+  - Plain TypeScript and deterministic. It runs headless, with no dependency on a UI or on files.
+  - It implements the Comprehensive Rules (v1.26.1) clause by clause, and every rules decision cites its clause number.
+  - It supports 3,689 card definitions from 57 sets, 7,564 printings in all; alternate arts share one definition.
+  - BP22 is a pre-release set: only Japanese and Chinese data exist (`BP22.json` next to the repository, the official Japanese card list). It is implemented from the Japanese text, checked against the Chinese; English names and texts show `unavailable` for now. They will be filled in once the English data is out.
+- **Bot (`@sve/bot`)**: four levels in the interface, on the Core's public API only:
+  - Bot-Easy: greedy. For each decision it simulates every candidate answer and picks the best-scoring result.
+  - Bot-Medium: plans its whole turn, then plays out the opponent's next turn. It uses only what its player can see. Before planning it looks for a sure lethal: one that wins in several samples of the opponent's hand and the deck order, whatever the opponent answers.
+  - Bot-Hard: plans the same way (lethal first too), but cheats: reads the whole game (the opponent's hand, both decks in order).
+  - Bot-Hard beta: Bot-Hard with a mulligan by the cost curve and the leader's defense valued on a curve: also reads the whole game.
+  - A trial medium-beta (Bot-Medium with the same two, fair) is only in `npm run bot:arena`.
+- **GUI (`@sve/gui`)**: a web interface (Vite + React). The engine and the bots run in a Web Worker.
+  - A table laid out on the playmat picture, played by clicking and dragging, with animations, arrows and sounds.
+  - A deck builder with filters, alternate arts, formats and restriction lists, and deck codes.
+  - Replays, bug report files that replay a game exactly, undo and rewind, and manual debugging.
+  - Online play: peer to peer (no server needed), or through an online server of your own (`@sve/server`).
+  - The interface and the card text can each be English, Chinese or Japanese.
+  - Pictures, sounds and fonts can be replaced with your own files (see "Custom resources"); which printing a token shows in games is chosen in the settings ("Token art").
+- **Android app**: the same interface in the Android WebView (Capacitor), played with the phone held sideways.
+
+### Disclaimer
+
+- This is an unofficial fan project. It is not affiliated with Cygames, Bushiroad or any other rights holder, and it is not for commercial use.
+- The repository contains **no card images, official artwork or sounds**.
+- The card data (`packages/core/data/`) holds card names and card text in English, Chinese and Japanese, used to apply the rules and to show the cards. Most of the Chinese text is a fan translation.
+- To see card images, put your own pictures in `packages/gui/public/` (see "Custom resources").
+
+### Requirements
+
+- Node.js 24.x and npm (the repository uses npm workspaces).
+- The end-to-end tests use the Chrome installed on the machine; Playwright downloads no browser.
+- Building the Android APK needs Android Studio, which brings its own JDK and SDK.
+
+### Getting started
+
+```bash
+npm install
+npm run dev:gui
+```
+
+- `npm run dev:gui` starts the dev server and opens http://localhost:5173.
+- The page opens on the main menu. The engine loads in the background for a few seconds; "Play vs AI" becomes available when it is ready.
+- The dev server listens on this machine only and reloads the page when the interface code changes. If the port is taken it uses the next one; set `SVE_GUI_PORT` to choose it.
+
+### Commands
+
+Run these at the repository root:
+
+| Command | What it does |
+|---|---|
+| `npm run dev:gui` | Start the GUI dev server and open the browser |
+| `npm run build:gui` | Production build of the GUI (`packages/gui/dist/`); view it with `npm run preview -w @sve/gui` |
+| `npm test` | All unit tests (Vitest: Core, Bot, GUI, tools) |
+| `npm run typecheck` | Type-check sources, tests and tools |
+| `npm run test:gui` | The GUI's end-to-end tests (Playwright) |
+| `npm run android:apk` | Build the Android APK (see "Android app") |
+| `npm run ios:ipa` | Build the iOS IPA (see "iOS app"; on a Mac) |
+| `npm run release:pc -- --zip` | Build the PC release (see "Releases") |
+| `npm run release:server` | Build the online server's package |
+| `npm run card -- <card number>` | Show a card: its text in each language, Japanese traits, related cards, official Q&A, script status |
+| `npm run bench` | Benchmarks: random games, copying and sampling a game, the bot's time per decision |
+| `npm run bot:arena -- [games] [A] [B]` | Bots against each other (easy / medium / hard, the trial medium-beta / hard-beta, and sve-fool / sve-good / sve-planner, imitations of SVE Simulator's three AIs used only as benchmarks): the sample decks, games in pairs with the seats swapped, going through every matchup of the decks; prints the score by pairs with a 95% interval, going first and second, the first player's win rate, game length, the score per deck and thinking time. `--decks sd01,sd02` picks decks (`train` / `holdout` / `legal`: the deck sets of `tools/rl/decksets.json`, checked against the standard format and its restriction list), `--mirror` gives both players the same deck, `--workers 8` plays on several processes, `--seed` another series of games, `--independent` a seed per game, `--range a-b` only part of the series, `--out folder` keeps every game (replayable records, `games.jsonl.gz`) and the report, `--replays N` saves the first N games as replays the GUI opens. `medium:identity` (the hand-written evaluation passed in from outside: plays exactly as medium) and `medium:negated` (the evaluation turned round: should lose nearly every game) check the evaluation interface |
+| `npm run rl:verify -- folder` | Replays the games `bot:arena --out` kept: is every input legal, does each game end as recorded |
+| `npm run release:train -- --zip` | Builds the training kit for friends who lend their computers |
+| `npm run rl:ingest -- folder` | Takes the games friends made with the kit: checks them and adds them to the dataset |
+| `npm run rl:coverage -- folder` | How many answers a bot really compares at each kind of decision, in the games `bot:arena --out` kept: replays each game and, at every decision, sets the legal answers the engine lists against the answers a planner bot would compare. Decision types with several legal answers where only one is compared (blind spots) come first; those blind on purpose are marked with the reason. `--games N` takes the first N |
+| `npm run rl:behaviour -- folder` | Behaviour counts in the games `bot:arena --out` kept: Ward followers entering engaged in their own turn, quick windows with something to play and the Quick plays made, evolution and super-evolution points left at the end of a game for the first and the second player, turns ended with a playable follower in hand. For comparing two versions of a bot (win rates between bots that share a blind spot can't show it). `--games N` takes the first N |
+| `npm run rl:lethal -- folder` | Missed lethal in the games `bot:arena --out` kept: replays each game and, at each main phase decision of the player whose turn it is, looks hard for a sure lethal (it wins in 6 fair samples, whatever the opponent answers); one found in a turn the player didn't win is a miss. Prints the games with a miss and those the player who missed it lost. Slow (seconds a game): `--games N` takes the first N, `--workers N` uses N processes |
+| `npm run bench:throughput -- [random\|easy\|medium\|hard]` | How many games the whole computer plays in a minute: several processes start together (`--workers N`, default: CPU threads), each plays for `--seconds` |
+| `npm run build:cards` | Rebuild `packages/core/data/*.json` from the scraped card data (the `assets/` folder next to the repository; a pre-release set from its card list next to the repository, such as `BP22.json`) |
+| `npm run scripts:index` | Regenerate the card script registries (`packages/core/src/script/<set>/index.ts`) after adding scripts |
+| `npm run cards:status` | Write each card's implementation and test status (to `docs/card-status*.md`) |
+| `npm run rules:clauses` | Extract the clause table `tools/data/cr-clauses.json` from the Comprehensive Rules PDF (the `rules/` folder next to the repository) |
+| `npm run rules:index` | Write the "clause → code / tests" index (to `docs/rules-index.md`) |
+
+Environment variables:
+
+| Variable | What it does |
+|---|---|
+| `SVE_ASSETS_DIR` | The local assets folder (card images, `Misc/`); by default `assets/` next to the repository |
+| `SVE_GUI_PORT` | The dev server's port (5173 by default) |
+| `SVE_E2E_PORT` | The end-to-end tests' port (5199 by default) |
+| `SVE_E2E_CHANNEL` | The browser for the end-to-end tests: `chrome` by default, or `msedge` |
+| `SVE_E2E_HEADED=1` | Show the browser window during the end-to-end tests |
+| `SVE_MONKEY_GAMES=18` | Play more games at random in the end-to-end tests |
+| `SVE_E2E_ONLINE=1` | Also test online play through the public relays (needs the internet) |
+| `BOT_GAMES=200` | The bot's long test run (`npx vitest run packages/bot`) |
+
+### Layout
+
+```
+packages/
+  core/                 the rules engine (@sve/core)
+    src/
+      model/            data types: game state, card definitions, decisions and answers
+      data/             card JSON → card definitions (normalizing, merging alternate arts, the card database)
+      engine/           the engine: flow/ (turn structure), abilities/, actions/ (chapter 5 actions),
+                        state/ (zones, values), effects/ (the API for card scripts), runtime/
+      script/           card scripts: script/<set>/<card>.ts, one file per card definition
+      events/ view/     events for the outside; hiding what a player can't see
+      sets/             each set's card data and script registry
+      testing/          test tools (game scripts, random agents, invariant checks)
+    data/               card data (<set>.json, generated by build:cards: don't edit by hand)
+    test/               rules tests, card tests, whole-game tests
+  bot/                  the bot (@sve/bot), on the Core's public API only
+  server/               the online server (@sve/server): messages passed by room code, keys, limits; scripts/: the install script and the package
+  gui/                  the interface (@sve/gui)
+    index.html
+    vite.config.ts
+    host/               the local service (Node, a Vite plugin): /api/* for card images, custom resources, decks, replays
+    src/
+      app/              main menu, settings, app state, card catalog
+      engine/           the background thread (engine and bots), the message protocol
+      game/             the game screen: table, animations, cards, decision window, log, debug
+      decks/            deck builder, deck file format, deck codes, text editor
+      formats/          formats and restriction lists
+      net/ online/      online play
+      replays/          replays
+      resources/        finding custom resources, the theme, sounds
+      host/             file access: the local service on a computer, the phone's files on Android
+      i18n/             interface text (English, Chinese, Japanese)
+      styles/           built-in style
+    public/             your own resources (only the empty folders are in the repository)
+    decks/samples/      sample decks
+    replays/            saved replays (not in the repository)
+    restrictions/       restriction lists, one file each (format in its README.md)
+    android/            the Android project (Capacitor)
+    ios/                the iOS project (Capacitor, Xcode)
+    scripts/            building the Android APK, generating the sample decks
+    test/               unit tests (run by npm test)
+    tests/e2e/          end-to-end tests (Playwright)
+tools/                  building card data, card lookup, rules clauses and citation checks, card status, benchmarks, bot matches and checks of recorded games (`rl/`: deck sets for training and testing, data jobs in `rl/jobs/`; `train/`: the training kit)
+```
+
+Dependencies go one way: `gui` → `bot` → `core`. The Core knows nothing about the interface or the bots.
+
+### Custom resources
+
+The game's look and sound can be replaced or extended with your own files, with no code change.
+
+**Where things are looked for**, first found wins:
+1. Your own files in `packages/gui/public/`.
+2. The local assets folder: by default `assets/` next to the repository, or set `SVE_ASSETS_DIR`.
+   - Card images are `<card>/<card>.webp`, and the back of a double-faced card is `<card>_back.webp`.
+   - `Misc/` holds the playmat, card backs and other pictures (see the end of this section).
+3. The built-in look (plain colors and text). There are no built-in sounds: without a file, nothing plays.
+
+**Rules**:
+- The file name without its extension must match exactly, case included.
+  - Pictures can be `png`, `jpg`, `jpeg`, `webp`, `gif` or `avif`.
+  - Sounds can be `mp3`, `ogg`, `wav` or `m4a`.
+  - They are tried in that order, and only the first match is used.
+- The interface reads the list of files once when it starts. After adding files, reload the page, with Ctrl+F5 if pictures are cached.
+- Per-card resources are looked up by printing number first (e.g. `BP01-SL01`; each alternate art has its own), then by card definition number (e.g. `BP01-001`). One file for the base card serves all its alternate arts.
+- A `Ⓢ` in a number (e.g. `BP03-LDⓈ01`) may also be a plain `S` in the file name (`BP03-LDS01.png`).
+
+**Pictures** (paths under `public/`, extension left out)
+
+| File | What it is |
+|---|---|
+| `images/cards/<number>` | A card image; the back of a double-faced card is `images/cards/<number>_back` |
+| `images/cards/unknown` | Shown when a card image is missing (with the card name written on it) |
+| `images/backs/default` | The main deck's card back (the deck, face-down cards, the opponent's hand) |
+| `images/backs/evolve` | The evolve deck's card back (the main deck's back when missing) |
+| `textures/board/field` | One side's playmat; the opponent's is the same picture turned 180°. Cards sit on the slots drawn on the original (1586×992), so a new picture must keep that size and those slots |
+| `textures/menu/background_m` | The main menu's background (also settings and game setup) |
+| `textures/menu/background_d` | The deck builder's background (the main menu's when missing) |
+| `textures/menu/background_f` | The game screen's background |
+| `textures/icons/<icon>` | Icons in card text (see below) |
+
+Icon names: `fanfare`, `lastwords`, `act`, `evolve`, `engage`, `quick`, `q`, `ub`, `feed`, `ride`, `adv`, `cost00` … `cost10`, `costX`, `attack`, `defense`, `forestcraft`, `swordcraft`, `runecraft`, `dragoncraft`, `abysscraft`, `havencraft`.
+
+**Sounds** (volume in the settings)
+
+| File | When it plays |
+|---|---|
+| `audio/bgm/menu`, `audio/bgm/deck`, `audio/bgm/battle` | Music: main menu, deck builder, in a game. Loops, and fades between screens |
+| `audio/sfx/<name>` | Sound effects, names below |
+| `audio/cards/<number>-p` | When this card is played (any card) |
+| `audio/cards/<number>-a` | When this follower attacks |
+| `audio/cards/<number>-d` | When this follower is destroyed |
+
+Sound effects (26):
+
+| Name | When it plays |
+|---|---|
+| `draw` | Drawing |
+| `spell`, `follower`, `amulet` | Playing a spell, follower or amulet (`play` when missing) |
+| `play` | The fallback for those three |
+| `attack` | A follower attacks |
+| `damage`, `leader-damage` | A follower or a leader takes damage (`damage` when the leader's is missing) |
+| `destroy` | A card is destroyed |
+| `evolve`, `super-evolve` | Evolving, super-evolving (`evolve` when the latter is missing) |
+| `heal` | Healing |
+| `buff` | Gaining attack or defense |
+| `target` | An effect selects a card |
+| `token` | A token is created |
+| `banish` | Banishing |
+| `discard` | Discarding |
+| `bounce` | Returning to the hand |
+| `counter` | Putting or removing counters |
+| `shuffle` | Shuffling the deck |
+| `turn` | A turn starts |
+| `quick` | The Quick announcement appears |
+| `game-start` | The game starts |
+| `win`, `lose` | Winning, losing |
+| `click` | Clicking in the interface |
+
+- A card's own sound replaces the matching effect: `-p` replaces `spell` / `follower` / `amulet`, `-a` replaces `attack`, `-d` replaces `destroy`.
+- An evolved follower looks for its evolved card's number first, then the original card's.
+
+**Fonts and style**
+- `fonts/<any name>`: font files, referenced from `theme.css` with `@font-face`.
+- `theme.css`: loaded after the built-in style, so it can override any color, size or font. Every element of the interface has a class starting with `sve-`. For example:
+
+```css
+:root {
+  --sve-ui-alpha: 0.88;       /* opacity of panels, windows, buttons (1 = opaque) */
+  --sve-area-alpha: 0.25;     /* the deck builder's card areas */
+  --sve-background-dim: 0.2;  /* how much the background pictures are darkened (0 = not at all) */
+  --sve-accent: #f0b429;      /* accent color */
+  --sve-card-base: 96px;      /* card size outside the table */
+  font-family: "My Font", sans-serif;
+}
+@font-face {
+  font-family: "My Font";
+  src: url("/fonts/MyFont.woff2") format("woff2");
+}
+```
+
+### Decks
+
+- **Deck files**: `packages/gui/decks/<name>.json`, also in sub-folders. `samples/` holds the sample decks.
+
+```json
+{ "format": "sve-deck", "version": 1, "name": "My deck", "leader": "SD01-LD01",
+  "main": { "SD01-011": 3 }, "evolve": { "SD01-004": 2 }, "notes": "notes" }
+```
+
+  - Keys are printing numbers; any printing of an alternate art will do.
+  - A Cross Craft deck has a `leader2` as well.
+- **Deck builder**: "Build decks" on the main menu.
+  - Click or drag a card to add it; right-click it or drag it back to the pool to remove it. "+1" and "−1" above the card panel on the left add or remove a copy of the card it shows.
+  - "Edit as text" edits the deck as text, one card per line (e.g. `3 SD01-011`).
+- **Deck codes**: "Deck code…" in the deck builder.
+  - It turns a deck into one line of text (`SVE1-…`) to share; paste a code to import the deck.
+  - It also imports deck codes of SVE Simulator (another simulator), finding the cards by name.
+- **Formats and restriction lists**:
+  - The formats are Standard, Cross Craft (Comprehensive Rules Appendix B-2) and Unlimited.
+  - The restriction lists (Asia, English, Mainland China) are in `packages/gui/restrictions/`, one file each.
+  - The deck builder only points out what a deck doesn't meet; a game can't start with such a deck.
+
+### Online play
+
+"Online play" on the main menu, two ways. Your name goes at the top: the other player, the spectators and the lobby see it, and the game shows it in the player's box.
+
+- **Use the server**: when someone runs an online server and has given out its configuration, the online screen begins with "Use the server (its name)".
+  - Choose the format, the restriction list and who goes first, then "Make a room", and send the 6-letter code to the other player, who types it in the same part and clicks "Join" or "Watch". The host can still change the rules in the room.
+  - Every message goes through the server: no hole punching, no public services abroad; a wrong code is said at once ("no room of that code"); the other player doesn't see your IP.
+  - Configuration: Settings > Online > "Edit the server configuration" (the online screen has the button too): paste the text the server's owner gave you; "Test the connection" first if you like.
+  - **Lobby**: the public rooms ("xxx's room", the rules, waiting or playing, the spectators), joined or watched with a click. Untick "List the room in the lobby" before making a room to have it joined by its code only.
+  - **Keeping games**: Settings > Online > "Keep my online games on the server" (on by default). When both players have it on, a finished game is kept on the server to train the AI: the seed, both decks and every move, no names, no chat. One of them off: not kept; the room says which.
+- **Without the server (P2P)**:
+  - **Room code**: one player creates a room and sends the 6-letter code to the other. Both find each other through free public services (Nostr, MQTT, BitTorrent), then connect directly with WebRTC.
+  - **Manual connection**: when a room code doesn't connect, the players exchange connection codes (`SVE1-O-…` / `SVE1-A-…`).
+  - **If you can't connect**: set your own TURN relay in the settings; "Check the network" shows what this computer can reach.
+- **Versions**: a game starts only when both programs have the same online protocol and the same fingerprints of the cards (definitions, implementation status, restriction lists) and of the rules code; the online screen says whether they do. The version number itself isn't compared. The resources in each one's `public/` (card pictures, sounds, backgrounds, fonts, `theme.css`), the settings, the interface language and the decks can all differ. The PC program and the Android app of one version play each other; the bottom of the settings page and the online screen show the version: when two can't connect, check that both have the same one.
+- **The game**: each program runs the same game and only the answers are exchanged. After a lost connection, reconnect and play on.
+  - **Taking back**: the host ticks "Allow taking back answers" in the rules (on the server, before making the room; it can be changed in the room too). In the game, "Undo my last answer" on the sidebar's Debug tab takes both programs back to before your last answer, while the other player hasn't answered since; after they have, it can't. Spectators follow.
+  - Online, the seed and "Save a bug report file" are shown once the game is over (with them, a changed program could work out the decks' order).
+- **Watching**: anyone with the room code can click "Watch" to watch the room's games: 2 spectators a room at most without the server; with it, as many as the server says (10 by default).
+  - Spectators see only what both players can see (no hands) and can swap sides; they can't play or chat (they read the chat).
+  - One who comes in the middle of a game catches up at once; a lost connection connects again by itself.
+  - Watching needs a room code (not a manual connection).
+
+### Replays and bug report files
+
+- **Replays**: "Save replay" after a game stores it in `packages/gui/replays/` (not in the repository); "Watch replays" on the main menu plays it.
+- **Bug report files**: "Save a bug report file" on the debug tab stores the seed, both decks and every answer, enough to replay the game exactly. Attach it when reporting a problem; "Advanced (testing)" on the game setup page loads it.
+
+### Releases
+
+Come in two kinds: for PCs and for Android.
+
+- **Version**: the `version` in `packages/gui/package.json`, used by both. Change it before building a new release.
+  - Android's versionCode comes from it (0.1.2 → 102, 0.2.0 → 200). It must grow every time, so people can install the new APK over the old one and keep their data.
+- **PC**: `npm run release:pc -- --zip`
+  - It writes a folder `SVEN-<version>-pc/` next to the repository, and a zip of it.
+  - It never writes into an existing folder: pass another `--out <folder>`, or delete the old one first.
+  - Inside:
+    - the program (`app/`);
+    - the local server (`server.mjs`: double-click `start.bat`, or run `node server.mjs`);
+    - the sample decks, an empty `replays/`, and the `public/` folder structure;
+    - `README.txt` in three languages, and `VERSION.txt` with the version, the commit and the engine fingerprint.
+  - `--public <folder>`: copies that folder's resources into `public/` (none by default).
+  - With `online-server.ini` at the repository's root, the release has it too.
+  - Requires Node.js 20 or newer.
+  - **Settings file `settings.ini`**: written into the folder at the first start (with the settings the browser had).
+    - It holds the settings page's settings (languages, interface transparency, volumes, the Quick pause, the TURN relay) and a few of the debug panel's (animations, bot speed, choosing card spots by hand, manual debugging), each with a comment in three languages.
+    - The file comes first: it is read at the start (a missing key or a wrong value: the default), and a setting changed in the game is written back to it, that key only; other lines and comments stay.
+    - Edit it while the game is closed, or reload the page after saving. The settings go with the folder, so another port or browser doesn't lose them; keep the file when updating from an older version.
+- **Android**: `npm run android:apk -- --release --public <resource folder> --out <APK path>` (options under "Android app").
+  - Always sign with the same key (by default `SVE-signing/` next to the repository). With another key, the APK can't be installed over the old one.
+  - Back the key up, and keep it to yourself.
+  - With `online-server.ini` at the repository's root, the app has that server.
+- **Online play**: both sides need the same engine fingerprint (shown in `VERSION.txt` and in the online screen).
+  - Changing code in `packages/core/` or `packages/gui/src/engine/` (even only comments) changes it, and everyone needs the new release.
+  - So does a new online protocol (`PROTOCOL` in `packages/gui/src/net/`); a release that only changes the interface plays with the older one.
+### Android app
+
+- **Build**: with Android Studio installed, `npm run android:apk` makes a debug APK at `packages/gui/android/app/build/outputs/apk/debug/app-debug.apk`.
+  - The script uses Android Studio's JDK (or `JAVA_HOME`), and the SDK in `%LOCALAPPDATA%\Android\Sdk` (or `ANDROID_HOME`).
+  - The first build downloads Gradle and the SDK parts it needs.
+- **Release**: `npm run android:apk -- --release --public <resource folder> --out <APK path>`
+  - `--release`: signs with the release key.
+    - The key is described in a properties file kept outside the repository: `storeFile` (relative to that file), `storePassword`, `keyAlias`, `keyPassword`.
+    - Pass it with `--signing <file>`; by default it is `SVE-signing/keystore.properties` next to the repository.
+  - `--public <folder>`: builds that folder's resources into the app (files on the phone with the same name win).
+  - `--out <file>`: copies the APK there.
+  - The version and versionCode: see "Releases".
+- **Files on the phone**: all under `Android/data/local.sve.next/files/`.
+  - `public/`: resources, copied over USB or imported from a zip in the settings.
+  - `decks/`, `replays/`: decks and replays.
+  - `exports/`: exported files, handed to the share menu.
+- **Requirements**: Android 7 or later, with a system WebView of version 103 or later. An older WebView shows a page that says so.
+- **Small screens**:
+  - The left column becomes a drawer, opened by its button or a long press on a card.
+  - The deck builder has a "Deck" tab and a "Card pool" tab.
+  - The back button first closes whatever is open.
+- **Tablets**: a big enough screen keeps the PC layout, used with fingers: tap a deck's card to take it out, hold a card to read it, drag a card onto the field with a finger.
+
+### iOS app
+
+- **Build**: `npm run ios:ipa` makes an unsigned IPA, `SVEN-<version>-ios.ipa` next to the repository (`--out <file>` changes it; `--public <folder>` builds resources into the app, as for Android).
+  - Xcode runs only on a Mac: elsewhere the command does the web part and Capacitor's copy (`packages/gui/ios/`) only.
+  - Without a Mac, one can use the GitHub workflow: the repository's Actions > "iOS IPA" > Run workflow, then download the artifact `SVEN-ios` (the IPA) from the run.
+- **Install**: the IPA isn't signed; sign and install it with your own Apple ID (e.g. AltStore, Sideloadly).
+- **Files on the device**: in the Files app, On My iPhone (iPad) > SVE NEXT: `public/` (resources: copied with the Files app, or a zip imported in the settings), `decks/`, `replays/`, `exports/`.
+- **Requirements**: iOS / iPadOS 16.4 or later. Played sideways on the whole screen, which stays on; an iPad has the wide layout used with fingers (see the tablets under "Android app").
+- It plays online with the PC program and the Android app of the same version.
+- The online server's configuration isn't in the IPA: paste it in Settings > Online > "Edit the server configuration".
+
+### Using the Core in code
+
+```ts
+import { createEngine } from "@sve/core";
+import { ALL_CARDS, ALL_SCRIPTS } from "@sve/core/sets";
+
+const engine = createEngine({ cards: ALL_CARDS, scripts: ALL_SCRIPTS });
+const game = engine.newGame({
+  seed: 42,
+  players: [deckA, deckB], // { leader?, main: printing numbers[], evolve: printing numbers[] }
+  config: { deckRestrictions: false },
+});
+while (game.decision) game.act(chooseAnswer(game.decision));
+```
+
+The engine is deterministic: the same seed, decks and answers give exactly the same game.

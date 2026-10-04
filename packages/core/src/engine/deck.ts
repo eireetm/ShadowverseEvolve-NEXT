@@ -1,0 +1,227 @@
+import { DEFAULT_LEADER, type CardDatabase } from "../data/database";
+import type { CardDefinition, PrintingId, Universe } from "../model/card";
+import type { GameConfig } from "../model/config";
+import type { PlayerId } from "../model/ids";
+import type { GameState, PlayerState } from "../model/state";
+import { seedRng } from "../rng/rng";
+import type { ScriptRegistry } from "../script/types";
+import { placeInitialCard } from "./state/zones";
+import { emptyTurnCounts } from "./state/turn-counts";
+
+/** A player's cards for one game (CR 6.1.1). Entries are printing card numbers. */
+export interface DeckList {
+  /** CR 6.1.1.1. Optional only when deck restrictions are off (a placeholder leader is used). */
+  leader?: PrintingId;
+  /** CR 6.1.1.2 */
+  main: readonly PrintingId[];
+  /** CR 6.1.1.3 */
+  evolve: readonly PrintingId[];
+}
+
+export type ImplementationStatus = "vanilla" | "scripted" | "missing";
+
+/**
+ * CR 6.1.1.5 — the universe a deck is based on: the one its leader and every card of its main and evolve decks
+ * share (6.1.1.5.2). Otherwise the deck is based on a class (null). The engine decides this from the deck list
+ * instead of a declaration at 6.2.1.3 (confirmed by the owner): a deck of one universe's cards is based on it.
+ */
+export function deckUniverse(db: CardDatabase, deck: DeckList): Universe | null {
+  if (deck.leader === undefined || !db.hasPrinting(deck.leader)) return null;
+  const universe = db.ofPrinting(deck.leader).universe;
+  if (universe === undefined) return null;
+  for (const p of [...deck.main, ...deck.evolve]) {
+    if (!db.hasPrinting(p) || db.ofPrinting(p).universe !== universe) return null;
+  }
+  return universe;
+}
+
+/** Does the engine know how this card behaves? Cards without card text need no script. */
+export function implementationStatus(scripts: ScriptRegistry, def: CardDefinition): ImplementationStatus {
+  if (scripts[def.id]) return "scripted";
+  return hasCardText(def) ? "missing" : "vanilla";
+}
+
+/** Card text in any language: a Japanese-only card (BP21-PR10) has an empty English text. */
+export function hasCardText(def: CardDefinition): boolean {
+  return def.text.en !== "" || (def.text.ja ?? "") !== "";
+}
+
+/**
+ * Check a deck list. Two groups of checks:
+ *  - structural rules the engine relies on, always enforced: card types per deck
+ *    (6.1.1.1–6.1.1.3), tokens never in decks (9.1.4), unimplemented cards;
+ *  - construction rules (6.1.1.2 sizes, 6.1.1.3 size, 6.1.1.4 copies, 6.1.1.5 class),
+ *    enforced only when `config.deckRestrictions` is on.
+ * Returns human-readable problems (empty = valid).
+ */
+export function validateDeck(
+  db: CardDatabase,
+  scripts: ScriptRegistry,
+  deck: DeckList,
+  config: Pick<GameConfig, "deckRestrictions" | "allowUnimplementedCards" | "rules">,
+): string[] {
+  const problems: string[] = [];
+  const resolve = (printing: PrintingId, where: string): CardDefinition | null => {
+    if (!db.hasPrinting(printing)) {
+      problems.push(`${where}: unknown card number ${printing}`);
+      return null;
+    }
+    return db.ofPrinting(printing);
+  };
+
+  const leader = deck.leader !== undefined ? resolve(deck.leader, "leader") : null;
+  if (leader && leader.type !== "leader") problems.push(`leader: ${deck.leader} is not a leader card (6.1.1.1)`);
+
+  const main = deck.main.map((p) => resolve(p, "main deck")).filter((d): d is CardDefinition => d !== null);
+  const evolve = deck.evolve.map((p) => resolve(p, "evolve deck")).filter((d): d is CardDefinition => d !== null);
+
+  for (const d of main) {
+    if (d.type === "leader" || d.evolved || d.advanced || d.token) {
+      problems.push(`main deck: ${d.id} ${d.name} cannot be in the main deck (6.1.1.2, 9.1.4)`);
+    }
+  }
+  // CR 6.1.1.3 — only evolved cards and advanced cards (9.2) go into the evolve deck.
+  for (const d of evolve) {
+    if (!(d.evolved || d.advanced) || d.token) problems.push(`evolve deck: ${d.id} ${d.name} is not an evolved or advanced card (6.1.1.3)`);
+  }
+  if (!config.allowUnimplementedCards) {
+    const missing = new Set(
+      [...main, ...evolve, ...(leader ? [leader] : [])]
+        .filter((d) => implementationStatus(scripts, d) === "missing")
+        .map((d) => `${d.id} ${d.name}`),
+    );
+    for (const m of missing) problems.push(`card effect not implemented yet: ${m}`);
+  }
+
+  if (config.deckRestrictions) {
+    const r = config.rules.deck;
+    if (!leader) problems.push("a leader card is required (6.1.1.1)");
+    if (deck.main.length < r.mainMin || deck.main.length > r.mainMax) {
+      problems.push(`main deck has ${deck.main.length} cards, needs ${r.mainMin}–${r.mainMax} (6.1.1.2)`);
+    }
+    if (deck.evolve.length > r.evolveMax) {
+      problems.push(`evolve deck has ${deck.evolve.length} cards, at most ${r.evolveMax} (6.1.1.3)`);
+    }
+    // CR 6.1.2 — deck-construction passives of cards in the main deck restricting the other cards
+    // (BP19-110); as prohibitions they also cap cards allowing more copies of themselves (CR 1.3.3).
+    const restrictions = main.flatMap((d) => {
+      const x = scripts[d.id]?.restrictsDeck;
+      return x ? [x] : [];
+    });
+    for (const [label, cards] of [["main deck", main], ["evolve deck", evolve]] as const) {
+      const counts = new Map<string, { n: number; limit: number }>();
+      for (const d of cards) {
+        // CR 6.1.2 — a card's own deck-construction passive replaces the limit (BP09-049 "up to 50").
+        let limit = scripts[d.id]?.deckLimit ?? r.copiesPerName;
+        for (const x of restrictions) if (!x.exempt(d)) limit = Math.min(limit, x.copies);
+        counts.set(d.name, { n: (counts.get(d.name)?.n ?? 0) + 1, limit });
+      }
+      for (const [name, { n, limit }] of counts) {
+        if (n > limit) problems.push(`${label}: ${n} copies of "${name}", at most ${limit} (6.1.1.4)`);
+      }
+    }
+    // CR 14.4.4.1.1 — Starting Amulet: all the Starting Amulet cards used in the main and evolve decks share one name (a
+    // deck-construction passive, 6.1.2).
+    const startingAmulets = new Set(
+      [...main, ...evolve].filter((d) => scripts[d.id]?.keywords?.includes("startingAmulet")).map((d) => d.name),
+    );
+    if (startingAmulets.size > 1) problems.push(`Starting Amulet cards with different names: ${[...startingAmulets].join(", ")} (14.4.4.1.1)`);
+    // CR 14.4.2.1 — a deck based on Cardfight!! Vanguard has a Starting Amulet card, and its cards with a Trigger are of the
+    // leader's class.
+    if (deckUniverse(db, deck) === "vanguard") {
+      if (startingAmulets.size === 0) problems.push("a Cardfight!! Vanguard deck needs a Starting Amulet card (14.4.2.1.1)");
+      for (const d of [...main, ...evolve]) {
+        if (leader && d.trigger !== undefined && d.class !== leader.class) {
+          problems.push(`${d.id} ${d.name} has a Trigger and is not of the leader's class ${leader.class} (14.4.2.1.2)`);
+        }
+      }
+    }
+    // CR 6.1.1.5 — based on a universe (6.1.1.5.2, by construction of deckUniverse) or on the leader's class.
+    if (leader && deckUniverse(db, deck) === null) {
+      for (const d of [...main, ...evolve]) {
+        if (d.class !== "Neutral" && d.class !== leader.class) {
+          problems.push(`${d.id} ${d.name} (${d.class}) does not match the leader class ${leader.class} (6.1.1.5.1)`);
+        }
+      }
+    }
+  }
+  return problems;
+}
+
+function emptyPlayer(id: PlayerId, leaderDefense: number): PlayerState {
+  return {
+    id,
+    leaderDefense, // CR 2.8.3.1 (set again in 6.2.1.12)
+    playPoints: 0,
+    maxPlayPoints: 0,
+    evolutionPoints: 0,
+    superEvolutionPoints: 0,
+    universe: null,
+    turnsPassed: 0,
+    zones: {
+      leader: [],
+      deck: [],
+      hand: [],
+      field: [],
+      ex: [],
+      cemetery: [],
+      banished: [],
+      evolveDeck: [],
+      evolveZone: [],
+      raceZone: [],
+      driveZone: [],
+      triggerZone: [],
+      equipmentZone: [],
+    },
+    evolveAbilityTurn: null,
+    drewFromEmptyDeck: false,
+    cardsPlayed: { turn: 0, count: 0 },
+    leaderDefenseLostTurn: null,
+    skipNextTurn: false,
+    thisTurn: emptyTurnCounts(0),
+  };
+}
+
+/**
+ * The state before CR 6.2.1.4: leaders in leader areas (6.2.1.2), main decks in deck areas
+ * (not yet shuffled) and evolve decks in evolve deck areas (6.2.1.5).
+ */
+export function createInitialState(
+  db: CardDatabase,
+  decks: readonly [DeckList, DeckList],
+  seed: string | number,
+  config: GameConfig,
+): GameState {
+  const state: GameState = {
+    schema: 1,
+    config,
+    rng: seedRng(seed),
+    seq: 0,
+    turn: 0,
+    activePlayer: 0,
+    firstPlayer: null,
+    phase: "setup",
+    players: [emptyPlayer(0, config.rules.leaderDefense), emptyPlayer(1, config.rules.leaderDefense)],
+    cards: {},
+    resolution: [],
+    effects: [],
+    pending: [],
+    delayed: [],
+    nextPlay: [],
+    restrictions: [],
+    extraTurns: [],
+    revealed: [],
+    attack: null,
+    fights: [],
+    result: null,
+    anchor: null,
+  };
+  ([0, 1] as PlayerId[]).forEach((p) => {
+    const deck = decks[p];
+    placeInitialCard(state, db, deck.leader ?? DEFAULT_LEADER.id, p, "leader");
+    state.players[p].universe = deckUniverse(db, deck); // CR 6.1.1.5, 6.2.1.3
+    for (const printing of deck.main) placeInitialCard(state, db, printing, p, "deck");
+    for (const printing of deck.evolve) placeInitialCard(state, db, printing, p, "evolveDeck");
+  });
+  return state;
+}

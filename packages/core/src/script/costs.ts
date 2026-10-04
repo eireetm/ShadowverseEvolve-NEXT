@@ -1,0 +1,385 @@
+import type { CardId, PlayerId } from "../model/ids";
+import type { GameReader } from "../engine/query";
+import type { CustomCost, PlayOption } from "./types";
+
+/**
+ * Reusable costs ("[cost]: [effect]"). Costs are paid from your own zones only (BP01-123
+ * ruling), and selecting cards for a cost is not the ability "selecting" them, so Aura does
+ * not apply.
+ */
+type Filter = (game: GameReader, card: CardId) => boolean;
+
+/** "Return another [matching] card on your field to its owner's hand" (e.g. BP03-002: a follower). */
+export function returnAnotherFromYourField(filter: Filter = () => true): CustomCost {
+  return {
+    canPay: (g, c, self) => g.cards(c, "field").some((id) => id !== self && filter(g, id)),
+    *pay(fx) {
+      const cards = fx.game.cards(fx.controller, "field").filter((id) => id !== fx.self && filter(fx.game, id));
+      yield* fx.returnToHand(yield* fx.chooseCards(cards, 1, 1));
+    },
+  };
+}
+
+/** "Return another card on your field to its owner's hand" (BP01-002 / 003). */
+export const returnAnotherCardOnYourField: CustomCost = returnAnotherFromYourField();
+
+/**
+ * "Bury another [matching] card" — on your field (CR 10.4.3: a cost's unspecified zone is its
+ * controller's), e.g. BP09-071 "Bury another follower", BP09-096 "Bury another amulet".
+ */
+export function buryAnotherFromYourField(filter: Filter = () => true): CustomCost {
+  return {
+    canPay: (g, c, self) => g.cards(c, "field").some((id) => id !== self && filter(g, id)),
+    *pay(fx) {
+      const cards = fx.game.cards(fx.controller, "field").filter((id) => id !== fx.self && filter(fx.game, id));
+      yield* fx.bury(yield* fx.chooseCards(cards, 1, 1));
+    },
+  };
+}
+
+/**
+ * CR 10.4.6 "{[engage]}" (this card) as the process of an automatic ability, "when [event],
+ * {[engage]}: [effect]" (10.4.7.4, BP09-092): engage this card if it is on the field reserved.
+ */
+export const engageThis: CustomCost = {
+  canPay: (g, _c, self) => g.card(self)?.zone === "field" && g.card(self)?.engaged === false,
+  *pay(fx) {
+    yield* fx.engage([fx.self]);
+  },
+};
+
+/** "Banish this card from your cemetery" — a cost of an ability valid in the cemetery (BP09-024 / 105, CR 10.3.5). */
+export const banishThisFromCemetery: CustomCost = {
+  canPay: (g, _c, self) => g.card(self)?.zone === "cemetery",
+  *pay(fx) {
+    yield* fx.banish([fx.self]);
+  },
+};
+
+/** "Banish this card from your EX area", with `validIn: ["ex"]` (e.g. BP12-095). */
+export const banishThisFromEx: CustomCost = {
+  canPay: (g, _c, self) => g.card(self)?.zone === "ex",
+  *pay(fx) {
+    yield* fx.banish([fx.self]);
+  },
+};
+
+/**
+ * "Put this card from your hand into your EX area" — a cost of an ability valid in the hand
+ * (BP08-072, BP10-017). Impossible with a full EX area (CR 4.8.3.2, 10.4.2.2; BP10-017 ruling).
+ */
+export const putThisFromHandIntoEx: CustomCost = {
+  canPay: (g, c, self) => g.card(self)?.zone === "hand" && g.cards(c, "ex").length < g.exAreaLimit(c),
+  *pay(fx) {
+    yield* fx.putIntoEx([fx.self]);
+  },
+};
+
+/**
+ * "Bury this card" (this card on the field) as the process of an automatic ability or an option,
+ * e.g. BP10-019 "(4) {[cost04]}, bury this card: ..." (CR 10.4.7.5).
+ */
+export const buryThis: CustomCost = {
+  canPay: (g, _c, self) => g.card(self)?.zone === "field",
+  *pay(fx) {
+    yield* fx.bury([fx.self]);
+  },
+};
+
+/** "Banish this" — this card on the field (BP14-018, 070: an advanced activated ability's cost). */
+export const banishThis: CustomCost = {
+  canPay: (g, _c, self) => g.card(self)?.zone === "field",
+  *pay(fx) {
+    yield* fx.banish([fx.self]);
+  },
+};
+
+/**
+ * CR 14.2.2.3 — the serving part of a serve ability's cost ("{[feed]}" × `times`): serve this follower that many times
+ * (14.2.1.1). Not payable when it is already linked to a race-zone card (14.2.1.2.1) or with too few facedown Carrots.
+ */
+export function serveCost(times: number): CustomCost {
+  return {
+    canPay: (g, _c, self) => g.canServe(self, times),
+    *pay(fx) {
+      yield* fx.serve(fx.self, times);
+    },
+  };
+}
+
+/**
+ * CR 14.4.9.2 — the part every Ride cost has: a Drive Point from your evolve deck into your drive zone, linked to this card;
+ * and it can be activated only if it hasn't been activated for this card this game.
+ */
+export const rideCost: CustomCost = {
+  canPay: (g, _c, self) => g.canRide(self),
+  *pay(fx) {
+    yield* fx.ride(fx.self);
+  },
+};
+
+/** "Discard this card" — a cost of an ability valid in the hand (BP08-037, 105; CR 10.3.5, 5.12). */
+export const discardThis: CustomCost = {
+  canPay: (g, _c, self) => g.card(self)?.zone === "hand",
+  *pay(fx) {
+    yield* fx.discardCards([fx.self]);
+  },
+};
+
+/**
+ * "Discard a [matching] card" from your hand — another card than this one: a card being played is in the
+ * resolution zone when its costs are paid (CR 10.6.2.1, e.g. BP14-119, itself a Goblinoid card).
+ */
+export function discardA(filter: Filter): CustomCost {
+  return {
+    canPay: (g, c, self) => g.cards(c, "hand").some((id) => id !== self && filter(g, id)),
+    *pay(fx) {
+      const cards = fx.game.cards(fx.controller, "hand").filter((id) => id !== fx.self && filter(fx.game, id));
+      yield* fx.discardCards(yield* fx.chooseCards(cards, 1, 1));
+    },
+  };
+}
+
+/**
+ * "Discard N [matching] cards" from your hand, together (CR 5.12), e.g. BP16-037 "Discard 2 Academic cards" —
+ * other cards than this one, as for `discardA`.
+ */
+export function discardMatching(filter: Filter, n: number): CustomCost {
+  const cards = (g: GameReader, c: PlayerId, self: CardId) => g.cards(c, "hand").filter((id) => id !== self && filter(g, id));
+  return {
+    canPay: (g, c, self) => cards(g, c, self).length >= n,
+    *pay(fx) {
+      yield* fx.discardCards(yield* fx.chooseCards(cards(fx.game, fx.controller, fx.self), n, n));
+    },
+  };
+}
+
+/**
+ * "Put N [matching] cards from your field into their owner's cemetery" (may include this card
+ * itself, e.g. BP07-T01), all at once.
+ */
+export function buryFromYourField(filter: Filter, n = 1): CustomCost {
+  return {
+    canPay: (g, c) => g.cards(c, "field").filter((id) => filter(g, id)).length >= n,
+    *pay(fx) {
+      const cards = fx.game.cards(fx.controller, "field").filter((id) => filter(fx.game, id));
+      yield* fx.bury(yield* fx.chooseCards(cards, n, n));
+    },
+  };
+}
+
+/** "Banish N [matching] cards in your EX area". */
+export function banishFromYourEx(filter: Filter, n = 1): CustomCost {
+  return banishFromYour(["ex"], filter, n);
+}
+
+/**
+ * "Banish N [matching] cards from your [field / EX area / cemetery / hand]", e.g. BP07-013 "Banish a
+ * Naterran Great Tree from your field", BP07-104 "... from your field or EX area", BP07-069
+ * "Banish 2 Machina cards from your cemetery", BP18-118 "Banish a card from your hand". All at once;
+ * not a card that can't be banished by abilities (CR 1.3.3, BP18-040 ruling).
+ */
+export function banishFromYour(zones: readonly ("field" | "ex" | "cemetery" | "hand")[], filter: Filter, n = 1): CustomCost {
+  const cards = (g: GameReader, c: PlayerId) =>
+    zones.flatMap((z) => g.cards(c, z)).filter((id) => filter(g, id) && g.banishableByAbilities(id));
+  return {
+    canPay: (g, c) => cards(g, c).length >= n,
+    *pay(fx) {
+      yield* fx.banish(yield* fx.chooseCards(cards(fx.game, fx.controller), n, n));
+    },
+  };
+}
+
+/**
+ * CR 14.3.2.1 — "Lesson (X)": banish X cards named Magical Item from your EX area (a cost, CR 10.4). Magical Items that
+ * nothing tells apart (no effect or counter on them) are interchangeable, so the player chooses only when one differs
+ * (e.g. one that CP02-037 made cost 0 this turn).
+ */
+export function lesson(x: number): CustomCost {
+  const items = (g: GameReader, c: PlayerId) => g.magicalItemsInEx(c).filter((id) => g.banishableByAbilities(id));
+  const plain = (g: GameReader, id: CardId) =>
+    !g.state.effects.some((e) => e.target === id) && Object.values(g.card(id)?.counters ?? {}).every((n) => n === 0);
+  return {
+    canPay: (g, c) => items(g, c).length >= x,
+    *pay(fx) {
+      const all = items(fx.game, fx.controller);
+      yield* fx.banish(all.every((id) => plain(fx.game, id)) ? all.slice(0, x) : yield* fx.chooseCards(all, x, x));
+    },
+  };
+}
+
+/**
+ * "{[engage]} N [matching] cards on your field" (CR 10.4.6: reserved ones), e.g. BP07-020 "2
+ * cards named Naterran Great Tree", BP06-017 "2 Hunter followers".
+ */
+export function engageYourCards(filter: Filter, n = 1): CustomCost {
+  const reserved = (g: GameReader, c: PlayerId) => g.cards(c, "field").filter((id) => g.card(id)?.engaged === false && filter(g, id));
+  return {
+    canPay: (g, c) => reserved(g, c).length >= n,
+    *pay(fx) {
+      yield* fx.engage(yield* fx.chooseCards(reserved(fx.game, fx.controller), n, n));
+    },
+  };
+}
+
+/**
+ * Several costs paid together, in the listed order (CR 10.4.2.1), e.g. BP07-117 "{[cost01]}, banish a
+ * Naterran Great Tree from your field or EX area". Payable only if every part is (CR 10.4.2.2).
+ */
+export function allCosts(...costs: readonly CustomCost[]): CustomCost {
+  return {
+    canPay: (g, c, self) => costs.every((cost) => cost.canPay(g, c, self)),
+    *pay(fx) {
+      for (const cost of costs) yield* cost.pay(fx);
+    },
+  };
+}
+
+/**
+ * CR 13.3.3 — "Earth Rite (N)" as the process of a play option, e.g. BP22-039 "When playing this card, Earth Rite (9): This
+ * card costs 1" (CR 10.4.7.3): remove N Stack counters from one amulet with Stack on your field (13.3.3.2).
+ */
+export function earthRiteCost(count = 1): CustomCost {
+  return {
+    canPay: (g, c) => g.stackCards(c).some((id) => (g.card(id)?.counters.stack ?? 0) >= count),
+    *pay(fx) {
+      yield* fx.payEarthRite(count);
+    },
+  };
+}
+
+/**
+ * CR 10.4.7.3 / 13.3.3 — a play option whose process is "Earth Rite (N)" (BP22-039 "When playing this card, Earth Rite (9):
+ * This card costs 1"). It says so (`earthRite`), so the card counts as one with Earth Rite (GameReader.hasEarthRite).
+ */
+export function earthRiteOption(count: number, option: Omit<PlayOption, "canPay" | "pay" | "earthRite">): PlayOption {
+  const cost = earthRiteCost(count);
+  return { ...option, canPay: cost.canPay, pay: cost.pay, earthRite: count };
+}
+
+/** A play-point cost of an automatic ability, e.g. "{[fanfare]} {[cost03]} ..." (CR 10.4.4, 10.4.7.4). */
+export function playPointsCost(n: number): CustomCost {
+  return {
+    canPay: (g, c) => g.state.players[c].playPoints >= n,
+    *pay(fx) {
+      yield* fx.payPlayPoints(n);
+    },
+  };
+}
+
+/** "Discard N cards" from your hand (CR 5.12), e.g. BP02-089 "Evolve Discard 3 cards". */
+export function discardCardsCost(n: number): CustomCost {
+  return {
+    canPay: (g, c) => g.cards(c, "hand").length >= n,
+    *pay(fx) {
+      yield* fx.discardCards(yield* fx.chooseCards(fx.game.cards(fx.controller, "hand"), n, n));
+    },
+  };
+}
+
+/**
+ * "Reveal N [matching] cards from your hand" (CR 5.21), e.g. BP15-041 "When playing this, reveal 2 Onmyoji
+ * cards from your hand". Other cards than this one: a card being played is in the resolution zone when
+ * its costs are paid (CR 10.6.2.1; BP15-041 is itself an Onmyoji card).
+ */
+export function revealFromHand(filter: Filter, n: number): CustomCost {
+  const cards = (g: GameReader, c: PlayerId, self: CardId) => g.cards(c, "hand").filter((id) => id !== self && filter(g, id));
+  return {
+    canPay: (g, c, self) => cards(g, c, self).length >= n,
+    *pay(fx) {
+      yield* fx.reveal(yield* fx.chooseCards(cards(fx.game, fx.controller, fx.self), n, n));
+    },
+  };
+}
+
+/** "Give your leader -X defense" as a cost (CR 10.4.5: needs at least X; BP01-119 ruling). */
+export function leaderDefenseCost(x: number): CustomCost {
+  return {
+    canPay: (g, c) => g.state.players[c].leaderDefense >= x,
+    *pay(fx) {
+      yield* fx.giveLeaderDefense(fx.controller, -x);
+    },
+  };
+}
+
+/**
+ * CR 12.18 Fuse — "Fuse [n matching cards]: [text]" means "Discard or bury from your EX area [n matching cards]
+ * other than this, put this from your hand into your EX area: [text]" (12.18.2), an activated ability valid in
+ * the hand (BP19-038 rulings). The cards may come from both places (12.18.2.1); this card needs room in the EX
+ * area once the buried cards have left it (CR 4.8.3.2), so only choices that can be completed are offered. For
+ * the text, `fx.memory.fusion` is this card's id in the EX area and `fx.memory.fused` the fused cards' ids in
+ * the cemetery, comma-separated (12.18.4). `upTo`: "Fuse N or less [cards]" (BP20-020): the player chooses how
+ * many, at least 1 (CR 12.18.2.2, 12.18.2.2.1), among the numbers that can be completed.
+ */
+export function fuse(filter: Filter, n = 1, opts: { upTo?: boolean } = {}): CustomCost {
+  const inZone = (g: GameReader, c: PlayerId, self: CardId, zone: "hand" | "ex") =>
+    g.cards(c, zone).filter((id) => id !== self && filter(g, id));
+  // Cards that must come from the EX area so that this card fits there.
+  const mustBury = (g: GameReader, c: PlayerId) => Math.max(0, g.cards(c, "ex").length + 1 - g.exAreaLimit(c));
+  // Can `need` more cards be fused from `hand` + `ex` candidates, `bury` of them at least from the EX area?
+  const feasible = (hand: number, ex: number, need: number, bury: number) => Math.max(bury, need - hand) <= Math.min(ex, need);
+  // The numbers of cards that can be fused now.
+  const counts = (g: GameReader, c: PlayerId, self: CardId): number[] => {
+    const hand = inZone(g, c, self, "hand").length;
+    const ex = inZone(g, c, self, "ex").length;
+    return (opts.upTo ? Array.from({ length: n }, (_, i) => i + 1) : [n]).filter((k) => feasible(hand, ex, k, mustBury(g, c)));
+  };
+  return {
+    canPay: (g, c, self) => g.card(self)?.zone === "hand" && counts(g, c, self).length > 0,
+    *pay(fx) {
+      const g = fx.game;
+      const ks = counts(g, fx.controller, fx.self);
+      let total = ks[0] ?? 0;
+      if (ks.length > 1) {
+        const [pick] = yield* fx.choose(ks.map((k) => ({ id: String(k), label: `Fuse ${k}` })));
+        total = Number(pick ?? total);
+      }
+      const chosen: CardId[] = [];
+      for (let i = 0; i < total; i++) {
+        const hand = inZone(g, fx.controller, fx.self, "hand").filter((id) => !chosen.includes(id));
+        const ex = inZone(g, fx.controller, fx.self, "ex").filter((id) => !chosen.includes(id));
+        const buried = chosen.filter((id) => g.card(id)?.zone === "ex").length;
+        const bury = Math.max(0, mustBury(g, fx.controller) - buried);
+        const need = total - i - 1;
+        const options = [
+          ...(feasible(hand.length - 1, ex.length, need, bury) ? hand : []),
+          ...(feasible(hand.length, ex.length - 1, need, Math.max(0, bury - 1)) ? ex : []),
+        ];
+        const [pick] = yield* fx.chooseCards(options, 1, 1);
+        if (pick === undefined) break;
+        chosen.push(pick);
+      }
+      const done = yield* fx.fuse(fx.self, chosen);
+      fx.memory.fusion = done.card;
+      fx.memory.fused = done.fused.join(",");
+    },
+  };
+}
+
+/** The cards fused by a Fuse cost (`fuse`), as ids in the cemetery (CR 12.18.4.1). */
+export function fusedCards(memory: Readonly<Record<string, string | number | boolean | null>>): CardId[] {
+  const s = memory.fused;
+  return typeof s === "string" && s.length > 0 ? s.split(",") : [];
+}
+
+/** "Remove N [name] counters from this" as a cost, e.g. BP19-038 "Remove a fusion counter from this". */
+export function removeCountersFromThis(counter: string, n = 1): CustomCost {
+  return {
+    canPay: (g, _c, self) => g.counters(self, counter) >= n,
+    *pay(fx) {
+      yield* fx.removeCounters(fx.self, counter, n);
+    },
+  };
+}
+
+/** "Discard this and a [matching] card" from the hand — both at once (CR 5.12), e.g. BP15-074, BP20-042. */
+export function discardThisAnd(filter: Filter): CustomCost {
+  const others = (g: GameReader, self: CardId, p: PlayerId) => g.cards(p, "hand").filter((id) => id !== self && filter(g, id));
+  return {
+    canPay: (g, c, self) => g.card(self)?.zone === "hand" && others(g, self, c).length > 0,
+    *pay(fx) {
+      const [other] = yield* fx.chooseCards(others(fx.game, fx.self, fx.controller), 1, 1);
+      yield* fx.discardCards(other === undefined ? [fx.self] : [fx.self, other]);
+    },
+  };
+}

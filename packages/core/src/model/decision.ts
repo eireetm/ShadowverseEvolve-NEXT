@@ -1,0 +1,185 @@
+import type { DefId } from "./card";
+import type { CardId, PlayerId } from "./ids";
+import type { ManualOp } from "./manual";
+
+/**
+ * Every player input is an answer to a Decision raised by the engine. Bots, the GUI and the
+ * network layer all use this single protocol; a replay is (seed + setup + list of inputs).
+ *
+ * Decisions only ever offer options that can be completed (illegal actions are never
+ * selectable).
+ */
+
+/** CR 8.2–8.4, 7.3.3 — what the active player may do in the main phase. */
+export type MainAction =
+  /** CR 8.2 play a card from hand or EX area. */
+  | { type: "play"; card: CardId }
+  /**
+   * CR 8.3 / 12.2 play an evolve ability. `evolveCard` is the corresponding card revealed from
+   * the evolve deck (12.2.2); `useEvolutionPoint` replaces 1 play point (12.2.3);
+   * `superEvolve` additionally pays 1 super-evolution point (12.2.4). `backFace` (present only
+   * when true): reveal the back face of a double-faced card (CR 4.6.4, 2.14).
+   */
+  | {
+      type: "evolve";
+      card: CardId;
+      ability: number;
+      evolveCard: CardId;
+      useEvolutionPoint: boolean;
+      superEvolve: boolean;
+      backFace?: true;
+    }
+  /**
+   * CR 8.3 play another activated ability. `useEvolutionPoint` (present only when true): for an
+   * advanced activated ability, 1 evolution point replaces 1 play point of its cost (CR 12.16.3).
+   */
+  | { type: "activate"; card: CardId; ability: number; useEvolutionPoint?: true }
+  /** CR 8.4 attack. `target` is an enemy follower or the enemy leader card. */
+  | { type: "attack"; attacker: CardId; target: CardId }
+  /** CR 7.3.3 end the main phase. */
+  | { type: "endMainPhase" }
+  /**
+   * Not a rule: an operation by hand for testing (model/manual.ts). Only in games with
+   * `GameConfig.manualActions`, and never listed among a decision's actions.
+   */
+  | { type: "manual"; op: ManualOp };
+
+/** CR 7.4.5 / 8.4.7 — non-active player's options in a quick window. */
+export type QuickAction =
+  | { type: "play"; card: CardId }
+  | { type: "activate"; card: CardId; ability: number }
+  | { type: "pass" };
+
+export type SelectReason =
+  /** CR 10.6.2.3 target selection while playing a card or ability. */
+  | "target"
+  /** Choosing the cards used to pay a cost (e.g. "return another card on your field"). */
+  | "cost"
+  /** CR 7.4.3 engage any number of followers with Ward. */
+  | "wardEngage"
+  /** CR 12.8.2 (i) followers with Ward just put onto the field that are engaged instead. */
+  | "wardEnterEngaged"
+  /** CR 7.4.7 discard down to the hand limit. */
+  | "handLimitDiscard"
+  /** CR 5.12 discard because an effect says so. */
+  | "discard"
+  /** CR 5.8 search a deck. */
+  | "search"
+  /** CR 11.4.1 choose the cards that stay on an over-full field. */
+  | "fieldLimitKeep"
+  /** CR 11.5.1 choose the cards that stay in an over-full EX area. */
+  | "exLimitKeep"
+  /** CR 4.4.4.2 / 4.8.3.2 choose which cards are moved when the zone would overflow. */
+  | "zoneEntry"
+  /** Any other selection made while an effect resolves ("select"). */
+  | "effect"
+  /** A choice that is not the ability "selecting" a card (costs, which evolve card, ordering). */
+  | "pick";
+
+export type ChooseReason =
+  /** CR 5.18 choose among an ability's options. */
+  | "mode"
+  /** CR 10.6.2.2 / 10.4.7.3 how to play a card (e.g. an alternative cost). */
+  | "playOption"
+  /** Which token(s) to create when a zone limit or the card text leaves a choice. */
+  | "token"
+  /** Top or bottom of the deck. */
+  | "deckPosition"
+  /** How much of divided damage `subject` is dealt (at least 1 each, BP03-007). */
+  | "divideDamage"
+  /**
+   * CR 10.10.2 — the order of the replacement effects on damage `subject` would take, chosen by
+   * its player as the resulting damage (only offered when the order changes it).
+   */
+  | "damageOrder"
+  /** CR 14.5.1.4 — which Union Burst ability of `subject` to execute without paying its cost (CP04-114). */
+  | "unionBurst"
+  /** CR 5.20.2 — keep the die's result (the option's label shows it) or reroll it (ECP02-065 / 066). */
+  | "dieReroll"
+  /** Any other choice made while an effect resolves. */
+  | "effect";
+
+export type ConfirmReason =
+  /** CR 10.4.7 optional "[cost]: [effect]" of an automatic ability. */
+  | "optionalCost"
+  /** CR 13.3.3.2 pay Earth Rite as an optional additional cost. */
+  | "earthRite"
+  /** A yes/no choice made while an effect resolves ("you may ..."). */
+  | "effect"
+  /** CR 14.4.5.1.5 — resolve the Trigger of the card a drive check revealed, or put it on the bottom of the deck. */
+  | "driveTrigger";
+
+/** A card together with its definition, for cards the deciding player is allowed to see. */
+export interface CardRef {
+  id: CardId;
+  def: DefId;
+}
+
+interface DecisionBase {
+  /** The player who must answer. */
+  player: PlayerId;
+}
+
+export type Decision =
+  /** CR 6.2.1.6 the randomly picked player decides who goes first. */
+  | (DecisionBase & { type: "chooseTurnOrder" })
+  /** CR 6.2.1.8 redraw or keep. */
+  | (DecisionBase & { type: "mulligan"; hand: CardId[] })
+  /** CR 7.3.3 main phase action. */
+  | (DecisionBase & { type: "mainPhase"; actions: MainAction[] })
+  /** CR 8.4.7 (after an attack) / 7.4.5 (end phase) quick window. */
+  | (DecisionBase & { type: "quick"; timing: "attack" | "endPhase"; actions: QuickAction[] })
+  /** CR 10.5.2.2 / 10.5.2.3 choose which pending automatic ability to play next. */
+  | (DecisionBase & { type: "selectPending"; options: string[] })
+  /** Choose between `min` and `max` cards among `candidates`. */
+  | (DecisionBase & {
+      type: "selectCards";
+      reason: SelectReason;
+      candidates: CardId[];
+      /** Definitions of the candidates (same order), visible to the deciding player. */
+      candidateDefs: DefId[];
+      min: number;
+      max: number;
+      /** Card whose ability or rule asks for the selection, when there is one. */
+      source: CardId | null;
+      /** CR 5.11 cards the player is currently looking at (e.g. the top cards of a deck). */
+      peek?: CardRef[];
+      /**
+       * Cards the selection must include as far as the count allows (CR 1.3.2.3, BP03-091
+       * "if they can select this card, they must"). Empty / absent when nothing forces a choice.
+       */
+      mandatory?: CardId[];
+    })
+  /** Choose between `min` and `max` of the listed options. */
+  | (DecisionBase & {
+      type: "choose";
+      reason: ChooseReason;
+      options: { id: string; label: string }[];
+      min: number;
+      max: number;
+      source: CardId | null;
+      /** The card the choice is about, when there is one (e.g. the card divided damage goes to). */
+      subject?: CardRef;
+    })
+  /** Put cards in an order (first = topmost), e.g. "on the bottom of your deck in any order". */
+  | (DecisionBase & { type: "orderCards"; reason: "deckBottom" | "deckTop"; cards: CardRef[]; source: CardId | null })
+  /** Yes / no. */
+  | (DecisionBase & { type: "confirm"; reason: ConfirmReason; source: CardId | null; subject?: CardRef });
+
+export type Answer =
+  | { type: "chooseTurnOrder"; goFirst: boolean }
+  /**
+   * CR 6.2.1.8. `bottomOrder` is the order (top to bottom) in which the hand is put on the
+   * bottom of the deck; it must be a permutation of the hand. Omitted = current hand order.
+   */
+  | { type: "mulligan"; redraw: boolean; bottomOrder?: CardId[] }
+  | { type: "mainPhase"; action: MainAction }
+  | { type: "quick"; action: QuickAction }
+  | { type: "selectPending"; id: string }
+  | { type: "selectCards"; cards: CardId[] }
+  | { type: "choose"; ids: string[] }
+  | { type: "orderCards"; order: CardId[] }
+  | { type: "confirm"; yes: boolean };
+
+/** Everything that can advance a game: answers, plus conceding (CR 1.2.3, allowed any time). */
+export type Input = Answer | { type: "concede"; player: PlayerId };
