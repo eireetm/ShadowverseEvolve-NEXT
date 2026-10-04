@@ -74,6 +74,8 @@ npm run dev:gui
 | `npm run bench` | 性能基准：随机对局、复制和抽样一局、Bot 每个决策的耗时 |
 | `npm run bot:arena -- [局数] [A] [B]` | Bot 互打（easy / medium / hard，试验版 medium-beta / hard-beta；sve-fool / sve-good / sve-planner 是模仿 SVE Simulator 三个 AI 的对照组，只用于测试）：示例卡组，两局一组交换座位、轮流打遍所有卡组组合，打印按"对"计分的得分和 95% 区间、先后手、先手胜率、回合数、每副卡组的得分和思考时间。`--decks sd01,sd02` 选卡组（`train` / `holdout` / `legal`：`tools/rl/decksets.json` 的卡组集，按标准赛制和它的禁卡表检查），`--mirror` 双方用同一副，`--workers 8` 多进程一起打，`--seed` 换一批对局，`--independent` 每局单独的种子，`--range a-b` 只打其中一段，`--out 文件夹` 存下每一局（可重放的记录 `games.jsonl.gz`）和报告，`--replays N` 把前 N 局存成对局界面能打开的录像。`medium:identity`（把手写估值从外面传进去，应和 medium 完全一样）和 `medium:negated`（估值反过来，应该几乎全输）用来检查估值接口 |
 | `npm run rl:verify -- 文件夹` | 重放 `bot:arena --out` 存下的对局：每个输入是否合法、结果是否和记录一样 |
+| `npm run release:train -- --zip` | 打"训练数据包"（见"训练数据"）：给帮忙跑对局的朋友 |
+| `npm run rl:ingest -- 文件夹` | 收下朋友们训练数据包里的对局：检查后并进数据集（见"训练数据"） |
 | `npm run rl:coverage -- 文件夹` | `bot:arena --out` 存下的对局里，每种决定 Bot 实际比较了几个答案：重放每一局，对每个决定用引擎列出全部合法答案，和规划型 Bot 会比较的答案数对照；"有好几个合法答案、却只比较一个"的决定类型（盲区）排在前面，写明理由的列为"有意为之"。`--games N` 只看前 N 局 |
 | `npm run rl:behaviour -- 文件夹` | `bot:arena --out` 存下的对局里的行为统计：守护在自己回合横置登场的比例、能用速攻的时机和用了几次、对局结束时先后手各剩多少进化点和超进化点、回合结束时手里还有打得出的随从的比例。用来比较新旧两版 Bot（同门互打的胜率看不出共同的盲区）。`--games N` 只看前 N 局 |
 | `npm run rl:lethal -- 文件夹` | 统计 `bot:arena --out` 存下的对局里漏掉的斩杀：重放每一局，在每个己方主要阶段的决定上用宽搜索找"确保能赢"的斩杀（换 6 个公平抽样都能赢、对手应对也挡不住），找到了那回合却没赢就算漏掉；打印有漏斩杀的局数、漏的一方后来输掉的局数。较慢（每局几秒），`--games N` 只看前 N 局，`--workers N` 多进程 |
@@ -139,7 +141,7 @@ packages/
     scripts/            打安卓 APK、生成示例卡组
     test/               单元测试（随 npm test 运行）
     tests/e2e/          端到端测试（Playwright）
-tools/                  卡牌数据构建、查卡、条款提取和核对、卡牌状态、性能基准、Bot 互打和对局记录的检查（`rl/`：训练和测试用的卡组集）
+tools/                  卡牌数据构建、查卡、条款提取和核对、卡牌状态、性能基准、Bot 互打和对局记录的检查（`rl/`：训练和测试用的卡组集、生成数据的任务 `rl/jobs/`；`train/`：训练数据包）
 ```
 
 依赖方向：`gui` → `bot` → `core`。Core 不知道界面和 Bot 的存在。
@@ -311,6 +313,25 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
   4. 打两个版本；
   5. 自己各打一局试试。
 
+### 训练数据（社区算力）
+
+训练 AI 要很多对局（几万局），一台电脑要跑好几天，所以请朋友们一起跑。
+
+- **打训练数据包**：`npm run release:train -- --zip`（默认任务 `stage1`，`--job <名字>` 换别的；`--out <文件夹>` 换位置）。
+  - 在仓库旁边生成 `SVEN-train-<任务>-<版本>/` 和同名的 zip（约 1 MB）。里面有 `start.bat`、`train.mjs`（引擎和 Bot 打成一个文件）、`job.json`（任务：哪些 Bot、哪些卡组；写着引擎指纹和 Bot 指纹）、中英两种语言的 `README.txt` 和空的 `training/` 文件夹。
+  - 任务在 `tools/rl/jobs/` 里，一个文件一个。
+  - 发包之前先提交代码：包里写着提交号，收数据时要用同一份引擎代码。
+- **朋友怎么用**：装 Node.js 20 以上，双击 `start.bat`。
+  - 它用大约一半的处理器线程（内存不够时更少），优先级较低，电脑可以照常用；窗口里显示每小时下了多少局。
+  - 每下完一局就马上存进 `training/`（一个 `.jsonl.gz` 文件，每次启动一个新文件），关掉窗口就停，只丢正在下的几局。
+  - 不联网、不上传；`training/volunteer.txt` 只是一串随机字母，用来区分不同电脑的对局。
+  - 朋友把 `training/` 里的 `.jsonl.gz` 发给你（网盘、聊天软件都行）。
+- **收数据**：把收到的文件放进一个文件夹，`npm run rl:ingest -- <文件夹>`。
+  - 每一局都检查：是已知任务的对局、引擎指纹和现在的代码一样、每个输入都合法、结果和记录一样、下完了、以前没收过。
+  - 再按种子挑 3%（`--recheck 百分比`）只凭种子重新下一遍，每一步都要一样（Bot 是确定的），防止文件被改过。Bot 的代码后来又改过时，用仓库旁边对应的训练数据包（`SVEN-train-*`，或 `--kit <文件夹>`）来重下，所以发出去的包要留着。
+  - 通过的对局追加进 `rl-runs/<任务>/games.jsonl.gz`（仓库旁边；`--out` 换位置），每次附一份报告：每个人收下几局、没收的原因。
+- 同一个数据集里的对局要用同一份引擎代码：改了 `packages/core/` 就要换一个新任务名、发新的包。
+
 ### 安卓版
 
 - **构建**：装好 Android Studio 后运行 `npm run android:apk`，得到调试版 APK `packages/gui/android/app/build/outputs/apk/debug/app-debug.apk`。
@@ -433,6 +454,8 @@ Run these at the repository root:
 | `npm run bench` | Benchmarks: random games, copying and sampling a game, the bot's time per decision |
 | `npm run bot:arena -- [games] [A] [B]` | Bots against each other (easy / medium / hard, the trial medium-beta / hard-beta, and sve-fool / sve-good / sve-planner, imitations of SVE Simulator's three AIs used only as benchmarks): the sample decks, games in pairs with the seats swapped, going through every matchup of the decks; prints the score by pairs with a 95% interval, going first and second, the first player's win rate, game length, the score per deck and thinking time. `--decks sd01,sd02` picks decks (`train` / `holdout` / `legal`: the deck sets of `tools/rl/decksets.json`, checked against the standard format and its restriction list), `--mirror` gives both players the same deck, `--workers 8` plays on several processes, `--seed` another series of games, `--independent` a seed per game, `--range a-b` only part of the series, `--out folder` keeps every game (replayable records, `games.jsonl.gz`) and the report, `--replays N` saves the first N games as replays the GUI opens. `medium:identity` (the hand-written evaluation passed in from outside: plays exactly as medium) and `medium:negated` (the evaluation turned round: should lose nearly every game) check the evaluation interface |
 | `npm run rl:verify -- folder` | Replays the games `bot:arena --out` kept: is every input legal, does each game end as recorded |
+| `npm run release:train -- --zip` | Builds the training kit for friends who lend their computers (see "Training data") |
+| `npm run rl:ingest -- folder` | Takes the games friends made with the kit: checks them and adds them to the dataset (see "Training data") |
 | `npm run rl:coverage -- folder` | How many answers a bot really compares at each kind of decision, in the games `bot:arena --out` kept: replays each game and, at every decision, sets the legal answers the engine lists against the answers a planner bot would compare. Decision types with several legal answers where only one is compared (blind spots) come first; those blind on purpose are marked with the reason. `--games N` takes the first N |
 | `npm run rl:behaviour -- folder` | Behaviour counts in the games `bot:arena --out` kept: Ward followers entering engaged in their own turn, quick windows with something to play and the Quick plays made, evolution and super-evolution points left at the end of a game for the first and the second player, turns ended with a playable follower in hand. For comparing two versions of a bot (win rates between bots that share a blind spot can't show it). `--games N` takes the first N |
 | `npm run rl:lethal -- folder` | Missed lethal in the games `bot:arena --out` kept: replays each game and, at each main phase decision of the player whose turn it is, looks hard for a sure lethal (it wins in 6 fair samples, whatever the opponent answers); one found in a turn the player didn't win is a miss. Prints the games with a miss and those the player who missed it lost. Slow (seconds a game): `--games N` takes the first N, `--workers N` uses N processes |
@@ -498,7 +521,7 @@ packages/
     scripts/            building the Android APK, generating the sample decks
     test/               unit tests (run by npm test)
     tests/e2e/          end-to-end tests (Playwright)
-tools/                  building card data, card lookup, rules clauses and citation checks, card status, benchmarks, bot matches and checks of recorded games (`rl/`: deck sets for training and testing)
+tools/                  building card data, card lookup, rules clauses and citation checks, card status, benchmarks, bot matches and checks of recorded games (`rl/`: deck sets for training and testing, data jobs in `rl/jobs/`; `train/`: the training kit)
 ```
 
 Dependencies go one way: `gui` → `bot` → `core`. The Core knows nothing about the interface or the bots.
@@ -669,6 +692,25 @@ Come in two kinds: for PCs and for Android.
   3. `npm test`.
   4. Build both.
   5. Play a game with each yourself.
+
+### Training data (community compute)
+
+Training the AI takes tens of thousands of games: days on one computer, so friends help.
+
+- **Build the training kit**: `npm run release:train -- --zip` (job `stage1` by default; `--job <name>` for another, `--out <folder>` elsewhere).
+  - It writes `SVEN-train-<job>-<version>/` beside the repository and a zip of it (about 1 MB): `start.bat`, `train.mjs` (the engine and the bots in one file), `job.json` (the job: which bots, which decks, and the engine and bot fingerprints), `README.txt` in Chinese and English, and an empty `training/` folder.
+  - Jobs are the files in `tools/rl/jobs/`.
+  - Commit first: the kit says which commit it was built from, and the games are taken with the same engine code.
+- **What friends do**: install Node.js 20 or newer and double-click `start.bat`.
+  - It uses about half of the processor threads (fewer when memory is short) at a lower priority, so the computer stays usable, and shows how many games an hour it makes.
+  - Every finished game goes into `training/` at once (one `.jsonl.gz` file per start); closing the window stops it and drops only the games being played.
+  - Nothing goes online; `training/volunteer.txt` is only random letters that tell computers apart.
+  - They send you the `.jsonl.gz` files of `training/`.
+- **Take the games**: put the files in a folder and run `npm run rl:ingest -- <folder>`.
+  - Every game is checked: a game of a known job, the same engine fingerprint as the code here, every input legal, the same end as recorded, finished, not taken before.
+  - 3% of them, chosen by their seeds (`--recheck percent`), are played again from the seed alone and must give the same answers one by one (the bots are deterministic), which catches a changed file. When the bots' code has changed since, the matching kit beside the repository (`SVEN-train-*`, or `--kit <folder>`) plays them again: keep the kits you handed out.
+  - The games taken are added to `rl-runs/<job>/games.jsonl.gz` beside the repository (`--out` elsewhere), with a report: how many games of each computer were taken, and why the others weren't.
+- The games of one dataset need the same engine code: after a change to `packages/core/`, give the job a new name and hand out a new kit.
 
 ### Android app
 

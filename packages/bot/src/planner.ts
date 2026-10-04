@@ -1,6 +1,7 @@
 import {
   defaultAnswer,
   opponentOf,
+  randomInt,
   seedRng,
   validateAnswer,
   type Answer,
@@ -98,6 +99,12 @@ export interface PlannerBotOptions {
    * damage to the leader — among the plans within this many points of the best (0: the best few only).
    */
   planKinds?: number;
+  /**
+   * Training data (stage 1): in this share of its turns the bot doesn't take the best plan it compared but draws one of them,
+   * the better scored the likelier (softmax at `temperature` points of the evaluation), never one already won or lost; the
+   * turns are listed in `explored` (the samples of those turns are marked). Default: never.
+   */
+  explore?: { rate: number; temperature: number };
 }
 
 /** A point of a plan: a copy of the game at one of our decisions in our main phase, or where the plan ends. */
@@ -131,6 +138,8 @@ export class PlannerBot {
    * way (no longer sure), lines found but not sure, and plans that won in the bot's sample but not surely (not taken as won).
    */
   readonly lethalStats = { searches: 0, skipped: 0, played: 0, dropped: 0, rejected: 0, unsurePlans: 0 };
+  /** The turns where it drew a plan instead of taking the best (`explore`). */
+  readonly explored: number[] = [];
   private readonly evaluator: Evaluator;
   private readonly replyEvaluator: Evaluator;
   private readonly modelEvaluator: Evaluator | undefined;
@@ -156,6 +165,11 @@ export class PlannerBot {
   private readonly innerBeam: number;
   private readonly samples: number;
   private readonly planKinds: number;
+  private readonly exploreRate: number;
+  private readonly exploreTemperature: number;
+  private readonly exploreRng: RngState;
+  /** This turn may still explore (decided once per turn). */
+  private exploreTurn: { turn: number; open: boolean } = { turn: -1, open: false };
   private readonly greedy: GreedyBot;
   private plans = 0;
   /** Opponent models made so far (each simulation gets a fresh one: the greedy bot counts actions per turn). */
@@ -202,6 +216,9 @@ export class PlannerBot {
     this.innerBeam = options.innerBeam ?? 4;
     this.samples = options.samples ?? 1;
     this.planKinds = options.planKinds ?? 0;
+    this.exploreRate = options.explore?.rate ?? 0;
+    this.exploreTemperature = Math.max(0.01, options.explore?.temperature ?? 2);
+    this.exploreRng = seedRng(`explore:${this.seed}`);
     // Its own decisions outside its main phase (quick windows, end phase, targets) are scored with its own evaluation.
     this.greedy = new GreedyBot(engine, { seed: `${this.seed}:greedy`, evaluator: this.evaluator });
   }
@@ -339,18 +356,47 @@ export class PlannerBot {
     if (!this.cheat && this.lethalChecks > 0) finished = finished.filter((node) => node.session.result?.winner !== me || this.sureWin(node, game, me, seed));
     if (finished.length === 0) return fastAnswer(game.decision!, lookupFromReader(game.reader()));
     const candidates = this.kinds(finished, root, me, this.replyPlans);
-    if (this.lookahead >= 2 && candidates.length > 1) return this.carryOut(this.lookAhead(candidates, game, me, turn, seed, world), turn, me);
+    if (this.lookahead >= 2 && candidates.length > 1) {
+      const values = this.lookAhead(candidates, game, me, turn, seed, world, this.explores(turn));
+      return this.carryOut(this.pick(candidates, values, turn), turn, me);
+    }
+    if (this.replyPlans <= 0) return this.carryOut(finished[0]!, turn, me);
     // The plans by the position they leave, then by the position after the opponent's reply.
-    let choice: Node = finished[0]!;
-    let choiceValue = -Infinity;
-    for (const node of this.replyPlans > 0 ? candidates : []) {
-      const value = node.done ? this.finalValue(node, me) : this.afterReply(node, me, turn, world);
-      if (value > choiceValue) {
-        choice = node;
-        choiceValue = value;
+    const values = candidates.map((node) => (node.done ? this.finalValue(node, me) : this.afterReply(node, me, turn, world)));
+    return this.carryOut(this.pick(candidates, values, turn), turn, me);
+  }
+
+  /** Whether this turn still explores (`explore`): drawn once per turn, at its first plan; a draw spends it. */
+  private explores(turn: number): boolean {
+    if (this.exploreTurn.turn !== turn) this.exploreTurn = { turn, open: this.exploreRate > 0 && randomInt(this.exploreRng, 1_000_000) < this.exploreRate * 1_000_000 };
+    return this.exploreTurn.open;
+  }
+
+  /**
+   * The plan to carry out among those compared: the best (the first of the best on a tie), or in a turn that explores
+   * (`explore`, decided at the turn's first plan) one drawn by softmax over the values, among those not already won or lost
+   * (a decided value is far beyond any position's: half the evaluation's win) — unless the best is won: then the best.
+   */
+  private pick(candidates: Node[], values: number[], turn: number): Node {
+    let best = 0;
+    for (let i = 1; i < values.length; i++) if (values[i]! > values[best]!) best = i;
+    // A plan already won is never given up to explore.
+    if (!this.explores(turn) || values[best]! >= DEFAULT_WEIGHTS.win / 2) return candidates[best]!;
+    const open = values.map((v, i) => ({ v, i })).filter(({ v }) => Number.isFinite(v) && Math.abs(v) < DEFAULT_WEIGHTS.win / 2);
+    if (open.length < 2) return candidates[best]!;
+    this.exploreTurn.open = false;
+    const top = Math.max(...open.map(({ v }) => v));
+    const weights = open.map(({ v }) => Math.exp((v - top) / this.exploreTemperature));
+    let r = (randomInt(this.exploreRng, 1_000_000) / 1_000_000) * weights.reduce((a, b) => a + b, 0);
+    for (const [k, w] of weights.entries()) {
+      r -= w;
+      if (r <= 0) {
+        this.explored.push(turn);
+        return candidates[open[k]!.i]!;
       }
     }
-    return this.carryOut(choice, turn, me);
+    this.explored.push(turn);
+    return candidates[open[open.length - 1]!.i]!;
   }
 
   /**
@@ -440,12 +486,13 @@ export class PlannerBot {
    * us first, then a beam search of their own) are compared by the worst for us; after each of those our plans of the turn
    * after are searched the same way and scored where that turn ends (alpha-beta: a line already worse than one found is cut).
    * A fair bot does this in `samples` samples of the hidden cards (our plans played again in each by matching their cards)
-   * and takes the average. Returns the plan to carry out.
+   * and takes the average. Returns each plan's value (a plan cut by alpha-beta: a bound below the best's; `exact`, for a turn
+   * that explores and draws by these values: no cuts).
    */
-  private lookAhead(candidates: Node[], game: GameSession, me: PlayerId, turn: number, seed: string, world: () => GameSession): Node {
+  private lookAhead(candidates: Node[], game: GameSession, me: PlayerId, turn: number, seed: string, world: () => GameSession, exact = false): number[] {
     const worlds = this.cheat ? 1 : Math.max(1, this.samples);
-    let best = 0;
     let bestTotal = -Infinity;
+    const totals: number[] = [];
     for (const [i, plan] of candidates.entries()) {
       let total = 0;
       for (let w = 0; w < worlds; w++) {
@@ -453,7 +500,7 @@ export class PlannerBot {
         try {
           const session = w === 0 ? this.copy(plan, world) : this.replayPlan(plan, this.cheat ? game.clone() : game.determinized(me, `${seed}:w${w}`), me, turn);
           // The last world may stop as soon as the plan can't reach the best total any more (a cut returns a bound at most that).
-          const alpha = w === worlds - 1 ? bestTotal - total : -Infinity;
+          const alpha = w === worlds - 1 && !exact ? bestTotal - total : -Infinity;
           value = this.turnValue(session, me, opponentOf(me), turn, 1, alpha, Infinity, null, `${seed}:w${w}:p${i}`);
         } catch (e) {
           this.stats.simulationFailures += 1;
@@ -462,12 +509,10 @@ export class PlannerBot {
         }
         total += value;
       }
-      if (total > bestTotal) {
-        best = i;
-        bestTotal = total;
-      }
+      totals.push(total / worlds);
+      bestTotal = Math.max(bestTotal, total);
     }
-    return candidates[best]!;
+    return totals;
   }
 
   /**

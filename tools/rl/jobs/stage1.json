@@ -1,0 +1,21 @@
+{
+  "id": "stage1-v1",
+  "description": "Stage 1 data: every pairing of the train decks (mirrors too), independent seeds; 80% Medium against Medium, 20% Medium against Easy; Medium searches two turns ahead and explores 15% of its turns.",
+  "format": "standard",
+  "restrictionList": "10_26_JPN",
+  "decks": "train",
+  "mirror": true,
+  "games": [
+    {
+      "weight": 8,
+      "bots": [
+        { "level": "medium", "options": { "lookahead": 2, "samples": 2, "explore": { "rate": 0.15, "temperature": 2 } } },
+        { "level": "medium", "options": { "lookahead": 2, "samples": 2, "explore": { "rate": 0.15, "temperature": 2 } } }
+      ]
+    },
+    {
+      "weight": 2,
+      "bots": [{ "level": "medium", "options": { "lookahead": 2, "samples": 2, "explore": { "rate": 0.15, "temperature": 2 } } }, { "level": "easy" }]
+    }
+  ]
+}

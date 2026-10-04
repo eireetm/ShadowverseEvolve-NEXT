@@ -85,3 +85,39 @@ describe("two turns ahead", () => {
     }
   });
 });
+
+describe("exploring (training data)", () => {
+  /** The cards played and the turns explored, by the bot of this seed. */
+  function explored(options: PlannerBotOptions, seed: string, spec: DriveSpec = combo) {
+    const t = drive(cards, spec);
+    const bot = new PlannerBot(cards, { ...options, seed });
+    const turn = t.game.state.turn;
+    for (let i = 0; i < 20 && t.game.decision?.player === 0 && t.game.state.turn === turn && t.game.state.phase === "main"; i++) t.game.act(bot.decide(t.game));
+    expect(bot.stats.fallbacks).toBe(0);
+    return { field: t.zone("me", "field").join(","), explored: bot.explored, turn, winner: t.game.result?.winner };
+  }
+  const seeds = Array.from({ length: 12 }, (_, i) => `x${i}`);
+
+  it("draws among the plans compared in a turn that explores, one turn ahead or two, and lists the turn", () => {
+    // The combo position with the opponent out of reach (nothing wins): PIECE now or not are both open.
+    const open: DriveSpec = { ...combo, opp: { ...combo.opp, leaderDefense: 20 } };
+    for (const lookahead of [{}, { lookahead: 2 as const, samples: 2 }]) {
+      const runs = seeds.map((s) => explored({ ...MEDIUM_OPTIONS, lethalSearch: 0, ...lookahead, explore: { rate: 1, temperature: 1e6 } }, s, open));
+      expect(new Set(runs.map((r) => r.field)).size).toBeGreaterThan(1);
+      for (const r of runs) expect(r.explored).toEqual([r.turn]);
+      // Never: the best plan, nothing listed.
+      const plain = seeds.map((s) => explored({ ...MEDIUM_OPTIONS, lethalSearch: 0, ...lookahead, explore: { rate: 0, temperature: 2 } }, s, open));
+      expect(new Set(plain.map((r) => r.field)).size).toBe(1);
+      for (const r of plain) expect(r.explored).toEqual([]);
+    }
+  });
+
+  it("never gives up a plan already won (this turn, or two turns ahead)", () => {
+    // 2 play points and STORM44 (Storm 4/4) in hand, the opponent at 4: playing and attacking wins this turn.
+    const spec: DriveSpec = { me: { hand: ["STORM44", "BODY"], deck: many(10, "FILLER"), playPoints: 2, maxPlayPoints: 2 }, opp: { deck: many(10, "FILLER"), leaderDefense: 4 } };
+    for (const options of [MEDIUM_OPTIONS, HARD_OPTIONS])
+      for (const s of seeds.slice(0, 6)) expect(explored({ ...options, lethalSearch: 0, explore: { rate: 1, temperature: 1e6 } }, s, spec).winner).toBe(0);
+    // Holding the combo piece wins next turn: two turns ahead, exploring still holds it.
+    for (const s of seeds.slice(0, 6)) expect(explored({ ...MEDIUM_OPTIONS, lethalSearch: 0, lookahead: 2, samples: 2, explore: { rate: 1, temperature: 1e6 } }, s).field).toBe("");
+  });
+});

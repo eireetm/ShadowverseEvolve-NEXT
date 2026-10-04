@@ -28,6 +28,8 @@
     "rl:coverage": "tsx tools/rl-coverage.ts",
     "rl:behaviour": "tsx tools/rl-behaviour.ts",
     "rl:lethal": "tsx tools/rl-lethal.ts",
+    "rl:ingest": "tsx tools/rl-ingest.ts",
+    "release:train": "tsx tools/build-train-kit.ts",
     "rl:verify": "tsx tools/rl-verify.ts"
   },
   "devDependencies": {
