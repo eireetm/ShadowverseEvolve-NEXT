@@ -62,6 +62,9 @@ export function DeckBuilder({ onBack, onTextEditor, initialFile }: Props) {
   const [file, setFile] = useState<string | null>(null);
   const [deck, setDeck] = useState<DeckFile>(() => emptyDeck(t("builder.newName")));
   const [saved, setSaved] = useState<string>(() => JSON.stringify(emptyDeck(t("builder.newName"))));
+  // The first load, until it has settled (loaded or not): the list of deck files, then the deck the builder opens with
+  // (`file`; null: none). Until then `deck` is only the empty placeholder.
+  const [opening, setOpening] = useState<{ file: string | null } | null>(() => ({ file: initialFile ?? settings.builderDeck }));
   const [saveAs, setSaveAs] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [filters, setFilters] = useState<PoolFilters>(NO_FILTERS);
@@ -122,10 +125,11 @@ export function DeckBuilder({ onBack, onTextEditor, initialFile }: Props) {
     );
 
   useEffect(() => {
-    void refresh().then((list) => {
-      const first = initialFile ?? settings.builderDeck;
-      if (first && list.some((d) => d.file === first)) void load(first);
-    });
+    const first = opening?.file;
+    // Loaded or not (`refresh` and `load` report what went wrong), the first load settles.
+    void refresh()
+      .then((list) => (first && list.some((d) => d.file === first) ? load(first) : undefined))
+      .finally(() => setOpening(null));
     // Once, when the builder opens.
   }, []);
 
@@ -181,10 +185,15 @@ export function DeckBuilder({ onBack, onTextEditor, initialFile }: Props) {
   };
   /** The deck's problems in the chosen format (none in unlimited: anything goes). */
   const problems = async (): Promise<FormatProblem[]> => (format === "unlimited" ? [] : checkDeck(deck, format, list, catalog));
-  /** Leave the builder (back, or its text editor), telling first what the deck doesn't meet. */
   useBack(true, () => void leave(() => discardChanges() && onBack()));
   useBack(drawer, () => setDetailsOpen(false));
+  /**
+   * Leave the builder (back, or its text editor), telling first what the deck doesn't meet. Until the first load has
+   * settled, `deck` is only the placeholder, no deck the person has seen, so they leave at once, unchecked: holding Back
+   * and "edit as text" until the load is done would make them look broken (Android's back key can't even look disabled).
+   */
   const leave = async (go: () => void) => {
+    if (opening) return go();
     const found = await problems();
     if (found.length > 0) setTold({ problems: found, then: go });
     else go();
@@ -296,7 +305,8 @@ export function DeckBuilder({ onBack, onTextEditor, initialFile }: Props) {
 
   const back = () => void leave(() => discardChanges() && onBack());
   return (
-    <div className={`sve-builder${compact ? " sve-builder-compact" : ""}`} data-tab={compact ? tab : undefined} ref={rootRef}>
+    // data-loading: the first load is still on its way (the deck shown is only the placeholder).
+    <div className={`sve-builder${compact ? " sve-builder-compact" : ""}`} data-tab={compact ? tab : undefined} data-loading={opening ? "" : undefined} ref={rootRef}>
       {compact ? (
         <nav className="sve-builder-tabs">
           <button type="button" onClick={back} data-testid="builder-back">
@@ -409,7 +419,8 @@ export function DeckBuilder({ onBack, onTextEditor, initialFile }: Props) {
             <button type="button" onClick={() => (cardCount(deck.main) + cardCount(deck.evolve) === 0 || window.confirm(t("builder.confirmClear"))) && setDeck(clearDeck)}>
               {t("builder.clear")}
             </button>
-            <button type="button" onClick={() => void leave(() => discardChanges() && onTextEditor(file))}>
+            {/* The text editor opens the deck shown or, while the first load is on its way, the deck being opened. */}
+            <button type="button" onClick={() => void leave(() => discardChanges() && onTextEditor(file ?? opening?.file ?? null))}>
               {t("builder.textEditor")}
             </button>
             <button type="button" onClick={() => setCodeOpen(true)} data-testid="builder-deck-code">

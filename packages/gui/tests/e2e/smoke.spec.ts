@@ -48,13 +48,14 @@ test("a person plays a whole game against the random bot by clicking", async ({ 
 
 test("the deck editor opens a sample deck with card names, and the engine checks it", async ({ page }) => {
   await openSetup(page);
-  // The setup opens the deck builder; its "Edit as text" opens the text editor.
+  // The setup opens the deck builder on its first deck, SD01; once it is there, "Edit as text" opens it in the text editor.
   await page.getByRole("button", { name: /^Edit decks…$/ }).click();
+  await expect(page.getByTestId("builder-name")).toHaveValue(/^SD01 —/);
   await page.getByRole("button", { name: /^Edit as text$/ }).click();
-  await page.locator(".sve-decks-files li button", { hasText: /^SD01 —/ }).click();
   const text = page.locator(".sve-deck-text");
   await expect(text).toHaveValue(/leader: SD01-LD01 {2}; \S/);
   await expect(text).toHaveValue(/\[evolve\]/);
+  await expect(page.locator(".sve-decks-files li button.sve-tab-active")).toHaveText(/^SD01 —/);
   await page.getByRole("button", { name: /^Check$/ }).click();
   await expect(page.getByText("Legal in Standard.")).toBeVisible();
   // A card from the search goes into the text; more than three copies make the deck illegal (CR 6.1.1.4).
@@ -62,6 +63,10 @@ test("the deck editor opens a sample deck with card names, and the engine checks
   for (let i = 0; i < 4; i++) await page.locator(".sve-search-result").first().getByRole("button").click();
   await page.getByRole("button", { name: /^Check$/ }).click();
   await expect(page.locator(".sve-decks-editor .sve-problems")).toBeVisible();
+  // Another deck from the list: its text, not checked yet.
+  await page.locator(".sve-decks-files li button", { hasText: /^SD02 —/ }).click();
+  await expect(text).toHaveValue(/leader: SD02-LD01 {2}; \S/);
+  await expect(page.locator(".sve-decks-editor .sve-problems")).toHaveCount(0);
   await expect(page.locator(".sve-toast")).toHaveCount(0);
 });
 
