@@ -606,6 +606,8 @@ export const en = {
   "online.publicRoom": "List the room in the lobby",
   "online.allowUndo": "Allow taking back answers",
   "online.rulesUndo": "taking back allowed",
+  "online.adSpace": "广告位招租",
+  "online.thanksSponsor": "感谢熊爸卡牌",
   "online.lobby": "Lobby",
   "online.lobbyEmpty": "No public room right now: make one, or join one by its code.",
   "online.lobbyRoom": "{name}'s room",

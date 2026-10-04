@@ -107,6 +107,7 @@ interface Props {
 
 export function OnlineScreen({ onBack, onGame, onEditDecks }: Props) {
   const t = useT();
+  const { uiLang } = useSettings();
   const online = useOnline();
   const catalog = useApp((s) => s.catalog);
   const going = useGameGoing();
@@ -139,7 +140,20 @@ export function OnlineScreen({ onBack, onGame, onEditDecks }: Props) {
         <button type="button" onClick={back} data-testid="online-back">
           {t("common.back")}
         </button>
+        {uiLang === "zh" ? <ThanksBoxes /> : null}
       </div>
+    </div>
+  );
+}
+
+/** Three boxes under the online screen, in the Chinese interface only: two for sponsors to come, one thanking a sponsor. */
+function ThanksBoxes() {
+  const t = useT();
+  return (
+    <div className="sve-online-thanks" data-testid="online-thanks">
+      <div className="sve-online-thanks-ad">{t("online.adSpace")}</div>
+      <div className="sve-online-thanks-ad">{t("online.adSpace")}</div>
+      <div className="sve-online-thanks-sponsor">{t("online.thanksSponsor")}</div>
     </div>
   );
 }

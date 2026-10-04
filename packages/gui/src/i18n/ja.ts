@@ -610,6 +610,8 @@ export const ja: Record<MessageKey, string> = {
   "online.publicRoom": "ロビーに公開する",
   "online.allowUndo": "待ったを許可",
   "online.rulesUndo": "待ったあり",
+  "online.adSpace": "广告位招租",
+  "online.thanksSponsor": "感谢熊爸卡牌",
   "online.lobby": "ロビー",
   "online.lobbyEmpty": "公開中のルームはありません：ルームを作るか、コードで参加してください。",
   "online.lobbyRoom": "{name}のルーム",

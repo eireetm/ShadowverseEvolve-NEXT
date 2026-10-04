@@ -3117,6 +3117,35 @@ option {
   white-space: nowrap;
 }
 
+/* The online screen's three boxes at the bottom (the Chinese interface only): sponsors' places, and thanks. */
+.sve-online-thanks {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sve-thanks-gap, 8px);
+  margin-top: 4px;
+}
+
+.sve-online-thanks > div {
+  height: var(--sve-thanks-height, 56px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.sve-online-thanks-ad {
+  border: 1px dashed var(--sve-border);
+  color: var(--sve-muted);
+}
+
+.sve-online-thanks-sponsor {
+  border: 1px solid var(--sve-accent);
+  color: var(--sve-accent);
+  font-weight: 700;
+}
+
 .sve-server-config-backdrop {
   inset: 0;
 }

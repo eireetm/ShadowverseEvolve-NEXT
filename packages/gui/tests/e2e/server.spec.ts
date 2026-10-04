@@ -244,6 +244,13 @@ test("a room that allows taking answers back: the debug tab's undo, on both side
   expect(problems).toEqual([]);
 });
 
+test("the Chinese online screen has the three boxes at its bottom; the other languages don't", async ({ browser }) => {
+  const zh = await openOnline(browser, SERVER, { uiLang: "zh" });
+  await expect(zh.getByTestId("online-thanks").locator("div")).toHaveText(["广告位招租", "广告位招租", "感谢熊爸卡牌"]);
+  const en = await openOnline(browser, SERVER);
+  await expect(en.getByTestId("online-thanks")).toHaveCount(0);
+});
+
 test("the server's configuration: none, pasted in the settings' window, tested; a wrong key is said", async ({ browser }) => {
   test.setTimeout(120_000);
   const page = await openOnline(browser, "");
