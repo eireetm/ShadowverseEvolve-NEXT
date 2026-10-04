@@ -1,5 +1,5 @@
 // The online server's configuration on this side ("使用服务器" in the online screen): the server's address and the key its
-// owner gave, as a short text (README "联机服务器"):
+// owner gave, as a short text (sve-server client prints it on the server):
 //   [server]
 //   name = 北京
 //   address = wss://203.0.113.7

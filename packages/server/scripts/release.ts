@@ -1,5 +1,5 @@
 /**
- * The online server's package (README "联机服务器"): npm run release:server -- [--out <folder>]
+ * The online server's package: npm run release:server -- [--out <folder>]
  * SVEN-server-<version>/ beside the repository, and SVEN-server-<version>.tar.gz of it (tar is on every Linux server; zip
  * isn't always): server.mjs (src/main.ts with the ws library, in one file: the server needs nothing else but Node.js),
  * setup.sh (installs or updates it: sudo bash setup.sh <IP>) and README.txt. The version is packages/server/package.json's.

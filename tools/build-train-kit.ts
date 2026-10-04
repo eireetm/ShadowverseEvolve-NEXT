@@ -1,5 +1,5 @@
 /**
- * Build the training kit (README "训练数据"): npm run release:train -- [--job stage1] [--out <folder>] [--zip]
+ * Build the training kit: npm run release:train -- [--job stage1] [--out <folder>] [--zip]
  * A folder for friends who lend their computers: start.bat runs train.mjs (tools/train/kit.ts with the engine and bots in one
  * file), which plays games of the job and saves them in training/ until the window is closed. job.json is the job of
  * tools/rl/jobs/<job>.json with its decks written out and the engine and bot fingerprints of the code built (npm run
