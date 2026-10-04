@@ -1,6 +1,7 @@
 import { opponentOf, seedRng, validateAnswer, type Answer, type CardId, type Decision, type DefId, type GameSession, type PlayerId, type PlayerView } from "./core";
 import { planBranches } from "./branches";
 import { evaluate } from "./evaluate";
+import { positionKey } from "./keys";
 import { fastAnswer, lookupFromReader } from "./policy";
 
 // Sure lethal first. A won game is the best position there is (the evaluation's win), so a planner always takes a plan that
@@ -40,6 +41,8 @@ export interface LethalSearchOptions {
   /** Winning lines checked at most; the search goes on after one that isn't sure. */
   maxLines: number;
   seed: string;
+  /** The key positions are told apart by (default positionKey; a throwaway search can use a cheaper exact one). */
+  key?: (view: PlayerView) => string;
 }
 
 export interface LethalResult {
@@ -56,7 +59,7 @@ export interface LethalResult {
  * attack now (on anything: a Ward in the way counts, CR 12.8.2 — its attacks are declarable on the Ward), plus the Storm
  * followers in hand it can play (CR 12.9.2), plus a margin for what spells, evolutions and abilities may add.
  */
-export function lethalWithinReach(view: PlayerView, d: Decision, me: PlayerId): boolean {
+export function lethalWithinReach(view: PlayerView, d: Decision, me: PlayerId, margin = 8, low = 12): boolean {
   if (d.type !== "mainPhase") return false;
   const attackers = new Set<CardId>();
   for (const a of d.actions) if (a.type === "attack") attackers.add(a.attacker);
@@ -67,7 +70,7 @@ export function lethalWithinReach(view: PlayerView, d: Decision, me: PlayerId): 
     if (!card.hidden && card.type === "follower" && card.keywords.includes("storm") && (card.cost ?? 99) <= side.playPoints) attack += Math.max(0, card.attack ?? 0);
   }
   const defense = view.players[opponentOf(me)].leaderDefense;
-  return defense <= 12 || defense <= attack + 8;
+  return defense <= low || defense <= attack + margin;
 }
 
 /** The face damage of the attacks on the opponent's leader that can be declared at this main phase decision (each attacker once). */
@@ -118,15 +121,17 @@ export function stepOf(s: GameSession, answer: Answer): LethalStep {
 }
 
 /**
- * The step's answer at this decision of another world (another sample, the real game): as it is if legal, else with its cards
- * matched by card definition — a card searched from the deck, or one that moved, has another id there (CR 4.1.4); null if
- * nothing matches.
+ * The step's answer at this decision of another world (another sample, the real game): as it is if it is legal and every card
+ * it names is still the same card there, else with its cards matched by card definition — a hidden card's id holds another
+ * card in another sample (determinize keeps the ids and deals the cards again), and a card that moved has a new id (CR 4.1.4);
+ * null if nothing matches.
  */
 export function adaptStep(s: GameSession, step: LethalStep): Answer | null {
   const d = s.decision;
   if (!d || d.type !== step.answer.type) return null;
-  if (validateAnswer(d, step.answer) === null) return step.answer;
   const lookup = lookupFromReader(s.reader());
+  const same = cardIds(step.answer).every((id) => !step.defs[id] || lookup(id)?.def === step.defs[id]);
+  if (same && validateAnswer(d, step.answer) === null) return step.answer;
   const signature = (x: unknown, defOf: (id: string) => string) => JSON.stringify(replaceIds(x, defOf));
   if (d.type === "mainPhase" || d.type === "quick") {
     const want = signature((step.answer as { action: unknown }).action, (id) => step.defs[id] || id);
@@ -137,12 +142,26 @@ export function adaptStep(s: GameSession, step: LethalStep): Answer | null {
     const used = new Set<CardId>();
     const cards: CardId[] = [];
     for (const id of step.answer.cards) {
-      const pick = d.candidates.includes(id) && !used.has(id) ? id : d.candidates.find((c) => !used.has(c) && lookup(c)?.def === step.defs[id]);
+      const sameCard = (c: CardId) => !step.defs[id] || lookup(c)?.def === step.defs[id];
+      const pick = d.candidates.includes(id) && !used.has(id) && sameCard(id) ? id : d.candidates.find((c) => !used.has(c) && sameCard(c));
       if (pick === undefined) return null;
       used.add(pick);
       cards.push(pick);
     }
     const answer: Answer = { type: "selectCards", cards };
+    return validateAnswer(d, answer) === null ? answer : null;
+  }
+  if (d.type === "orderCards" && step.answer.type === "orderCards") {
+    // The same cards by what they are, in the step's order; the others after them.
+    const left = d.cards.map((c) => c.id);
+    const order: CardId[] = [];
+    for (const id of step.answer.order) {
+      const pick = left.find((c) => lookup(c)?.def === step.defs[id]);
+      if (pick === undefined) continue;
+      order.push(pick);
+      left.splice(left.indexOf(pick), 1);
+    }
+    const answer: Answer = { type: "orderCards", order: [...order, ...left] };
     return validateAnswer(d, answer) === null ? answer : null;
   }
   return null;
@@ -189,12 +208,13 @@ export function searchSureLethal(me: PlayerId, o: LethalSearchOptions): LethalRe
   const root = o.world(0);
   const turn = root.state.turn;
   const searchResponder = o.searchResponder;
+  const keyOf = o.key ?? positionKey;
   const node = (session: GameSession, parent: Node | null, step: LethalStep | null): Node => {
     const view = session.view(me);
     const r = faceReach(view, session.decision!, me);
     const reach = r >= 0 ? r : (parent?.reach ?? 0);
     const defense = view.players[opponentOf(me)].leaderDefense;
-    return { session, parent, step, rank: (defense - reach) * 10 + defense, value: evaluate(view, me), reach, key: JSON.stringify(view) };
+    return { session, parent, step, rank: (defense - reach) * 10 + defense, value: evaluate(view, me), reach, key: keyOf(view) };
   };
   // A sample made in the middle of an action can't be copied until its next main phase (GameSession.determinized): rebuilt.
   const copy = (n: Node): GameSession => {
@@ -258,4 +278,58 @@ export function searchSureLethal(me: PlayerId, o: LethalSearchOptions): LethalRe
     frontier = children.slice(0, o.beam);
   }
   return { line: null, seen, simulations, rejected };
+}
+
+/** Something that answers a player's decisions (a bot used as a model of a player). */
+export interface Model {
+  decide(session: GameSession): Answer;
+}
+
+/**
+ * `model`, playing first a lethal it finds at its first main phase decision of a turn: an opponent model that sees our coming
+ * loss (the greedy model alone missed about one in four of the winning turns that beat Medium). The search (`budget`
+ * answers) runs in the session it is given — in a simulation the world being simulated — and its line must also win in a
+ * sample of what that player can't see there (our hand, the decks' order), so it doesn't rest on luck. Only when its attackers,
+ * Storm followers and a small margin reach the defense. Otherwise, and once the line is off, `model` answers. `spent` is told
+ * the answers each search tried.
+ */
+export function lethalFirstModel(model: Model, budget: number, maxBranches: number, seed: string, spent: (simulations: number) => void = () => {}): Model {
+  let line: { turn: number; steps: LethalStep[]; given: number } | null = null;
+  let searched = -1;
+  return {
+    decide(s) {
+      const d = s.decision!;
+      const st = s.state;
+      if (line && line.turn === st.turn && line.given < line.steps.length) {
+        const answer = adaptStep(s, line.steps[line.given]!);
+        if (answer) {
+          line.given += 1;
+          return answer;
+        }
+        line = null;
+      }
+      if (budget > 0 && d.type === "mainPhase" && st.activePlayer === d.player && st.phase === "main" && searched !== st.turn && lethalWithinReach(s.view(d.player), d, d.player, 3, 0)) {
+        searched = st.turn;
+        const found = searchSureLethal(d.player, {
+          budget,
+          beam: 12,
+          maxBranches,
+          world: (i) => (i === 0 ? s.clone() : s.determinized(d.player, `${seed}:${st.turn}:check`)),
+          checks: 1,
+          searchResponder: () => null,
+          checkResponder: () => null,
+          maxLines: 2,
+          seed: `${seed}:${st.turn}`,
+          key: (view) => JSON.stringify(view),
+        });
+        spent(found.simulations);
+        const first = found.line ? adaptStep(s, found.line[0]!) : null;
+        if (found.line && first) {
+          line = { turn: st.turn, steps: found.line, given: 1 };
+          return first;
+        }
+      }
+      return model.decide(s);
+    },
+  };
 }

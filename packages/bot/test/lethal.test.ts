@@ -16,6 +16,9 @@ const cards = createEngine({
     testFollower("STORMER", 0, 6, 1),
     testSpell("DRAW", 0, { text: "Draw a card." }),
     testSpell("FETCH", 0, { text: "Search your deck for a STORMER and put it into your hand." }),
+    testSpell("SEEK", 1, { text: "Search your deck for a follower and put it into your hand." }),
+    testFollower("STORM1", 1, 6, 1),
+    testFollower("BIG", 2, 5, 5),
   ],
   scripts: {
     WALL: defineCard({ keywords: ["ward"] }),
@@ -39,6 +42,16 @@ const cards = createEngine({
         }),
       ],
     }),
+    SEEK: defineCard({
+      abilities: [
+        spell({
+          *resolve(fx) {
+            yield* fx.search((id) => fx.game.info(id).type === "follower", { max: 1 });
+          },
+        }),
+      ],
+    }),
+    STORM1: defineCard({ keywords: ["storm"] }),
   },
 });
 const fillers = (n: number) => Array<string>(n).fill("FILLER");
@@ -95,6 +108,14 @@ describe("sure lethal first", () => {
     const spec: DriveSpec = { me: { hand: ["FETCH"], deck: [...fillers(9), "STORMER"], playPoints: 1 }, opp: { deck: fillers(10), leaderDefense: 6 } };
     const r = ourTurn(spec, MEDIUM_OPTIONS);
     expect([r.first.played, r.won]).toEqual([1, true]);
+  });
+
+  it("a search that can take any follower: in another sample the card picked must be the same card, not the same id", () => {
+    // SEEK (1) takes the 1-cost 6/1 Storm follower from a deck of nine others, at 6 defense, with 2 play points; BIG (2) is
+    // the other way to spend them. The id the search picked holds another card in the other samples (determinize deals the
+    // hidden cards again): matched by what the card is, the line is sure.
+    const spec: DriveSpec = { me: { hand: ["SEEK", "BIG"], deck: ["STORM1", ...fillers(9)], playPoints: 2 }, opp: { deck: fillers(10), leaderDefense: 6 } };
+    for (const seed of ["a", "b", "c"]) expect(ourTurn(spec, { ...MEDIUM_OPTIONS, seed }).won).toBe(true);
   });
 
   it("is off in a planner made without it (the opponent models)", () => {

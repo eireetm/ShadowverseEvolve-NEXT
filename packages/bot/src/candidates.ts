@@ -6,10 +6,12 @@ import { fastAnswer, type CardLookup } from "./policy";
  * wins a tie). Main phase: every action but ending the main phase (the bot compares against
  * ending it), playing one of several identical cards only once. Selections and choices: every
  * answer when there are few, otherwise the fast answer, the smallest ones and random samples,
- * because "any number of cards" can have millions. Decisions with nothing to compare in the
- * short run (ordering cards, engaging Ward followers) get the fast answer only.
+ * because "any number of cards" can have millions. A Ward follower entering gets the fast answer only: reserved in its
+ * controller's own turn before the end phase (entering engaged is never better there, the end phase can engage it,
+ * CR 12.8.2 ii), engaged in the opponent's turn (it protects at once). Which Ward followers to engage at the end phase is compared like any
+ * selection. Ordering cards gets the fast answer only.
  */
-export function candidateAnswers(d: Decision, lookup: CardLookup, rng: RngState, max: number): Answer[] {
+export function candidateAnswers(d: Decision, lookup: CardLookup, rng: RngState, max: number, attacksFirst = false): Answer[] {
   const out: Answer[] = [];
   const seen = new Set<string>();
   const add = (a: Answer, key = JSON.stringify(a)) => {
@@ -25,7 +27,7 @@ export function candidateAnswers(d: Decision, lookup: CardLookup, rng: RngState,
   };
   switch (d.type) {
     case "mainPhase":
-      for (const action of d.actions) {
+      for (const action of attacksFirst ? attacksFirstOrder(d.actions, lookup, max) : d.actions) {
         if (action.type === "endMainPhase") continue;
         let key = JSON.stringify(action);
         if (action.type === "play") {
@@ -47,7 +49,7 @@ export function candidateAnswers(d: Decision, lookup: CardLookup, rng: RngState,
       break;
     case "selectCards":
       add(fastAnswer(d, lookup));
-      if (d.reason !== "wardEngage" && d.reason !== "wardEnterEngaged") sampled(max);
+      if (d.reason !== "wardEnterEngaged") sampled(max);
       break;
     case "choose":
       add(fastAnswer(d, lookup));
@@ -64,4 +66,19 @@ export function candidateAnswers(d: Decision, lookup: CardLookup, rng: RngState,
       break;
   }
   return out;
+}
+
+type MainAction = Extract<Decision, { type: "mainPhase" }>["actions"][number];
+
+/**
+ * A model of a player with few candidates keeps its attacks (the engine lists them last): attacks on the leader first, at most
+ * `max` − 4 of them, then the other actions (plays, evolutions, abilities: an evolution before an attack, a removal), then
+ * the remaining attacks.
+ */
+function attacksFirstOrder(actions: readonly MainAction[], lookup: CardLookup, max: number): MainAction[] {
+  const isAttack = (a: MainAction) => a.type === "attack";
+  const atLeader = actions.filter((a) => a.type === "attack" && lookup(a.target)?.zone === "leader");
+  const first = atLeader.slice(0, Math.max(1, max - 4));
+  const rest = actions.filter((a) => !first.includes(a));
+  return [...first, ...rest.filter((a) => !isAttack(a)), ...rest.filter(isAttack)];
 }

@@ -22,6 +22,8 @@ export interface GreedyBotOptions {
   evaluator?: Evaluator;
   /** Most answers compared per decision; each costs one simulation. */
   maxCandidates?: number;
+  /** Main phase attacks first among the candidates (a model with few candidates then never leaves an attack out). */
+  attacksFirst?: boolean;
   /** Most inputs one simulation plays before the position is scored where it stands. */
   maxSimulationSteps?: number;
   /**
@@ -68,6 +70,7 @@ export class GreedyBot {
   private readonly evaluator: Evaluator;
   private readonly seed: string;
   private readonly maxCandidates: number;
+  private readonly attacksFirst: boolean;
   private readonly maxSimulationSteps: number;
   private readonly maxActionsPerTurn: number;
   private readonly maxDecisionsPerTurn: number;
@@ -87,6 +90,7 @@ export class GreedyBot {
     this.evaluator = exactResults(options.evaluator ?? weightsEvaluator(weights), weights.win);
     this.seed = String(options.seed ?? "greedy");
     this.maxCandidates = options.maxCandidates ?? 32;
+    this.attacksFirst = options.attacksFirst ?? false;
     this.maxSimulationSteps = options.maxSimulationSteps ?? 200;
     this.maxActionsPerTurn = options.maxActionsPerTurn ?? 40;
     this.maxDecisionsPerTurn = options.maxDecisionsPerTurn ?? 300;
@@ -138,7 +142,7 @@ export class GreedyBot {
       default:
         break;
     }
-    const candidates = candidateAnswers(d, lookup, this.rng, this.maxCandidates);
+    const candidates = candidateAnswers(d, lookup, this.rng, this.maxCandidates, this.attacksFirst);
     // In the main phase every action is compared with ending it (the position as it is now).
     const baseline = d.type === "mainPhase" ? defaultAnswer(d) : null;
     if (baseline ? candidates.length === 0 : candidates.length <= 1) return candidates[0] ?? baseline ?? fastAnswer(d, lookup);

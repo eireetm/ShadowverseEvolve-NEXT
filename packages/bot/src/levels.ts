@@ -14,7 +14,8 @@ export type BotLevel = "easy" | "medium" | "hard" | "medium-beta" | "hard-beta";
 
 export const BOT_LEVELS: readonly BotLevel[] = ["easy", "medium", "hard", "medium-beta", "hard-beta"];
 
-export const MEDIUM_OPTIONS: PlannerBotOptions = { replyPlans: 4, beamWidth: 6, maxSimulations: 600, lethalSearch: 800 };
+// The opponent answers its quick windows in Medium's plans too (a greedy model in Medium's sample of their hand: fair).
+export const MEDIUM_OPTIONS: PlannerBotOptions = { replyPlans: 4, beamWidth: 6, maxSimulations: 600, lethalSearch: 800, opponentQuick: true, replyLethal: 80 };
 
 export const HARD_OPTIONS: PlannerBotOptions = {
   cheat: true,
@@ -24,6 +25,7 @@ export const HARD_OPTIONS: PlannerBotOptions = {
   beamWidth: 8,
   maxSimulations: 900,
   lethalSearch: 800,
+  replyLethal: 80,
 };
 
 /**
@@ -67,5 +69,6 @@ export function createBot(engine: Engine, level: BotLevel, seed: string, effort 
     maxSimulations: scaled(options.maxSimulations, 100),
     replyPlans: scaled(options.replyPlans, 2),
     ...(options.lethalSearch ? { lethalSearch: scaled(options.lethalSearch, 100) } : {}),
+    ...(options.replyLethal ? { replyLethal: scaled(options.replyLethal, 30) } : {}),
   });
 }

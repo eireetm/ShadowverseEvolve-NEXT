@@ -25,7 +25,11 @@ export interface CardFacts {
   value: number;
 }
 
-export type CardLookup = (id: CardId) => CardFacts | undefined;
+/**
+ * Card facts by id, and whose turn and which phase it is where the lookup was made (some fixed answers depend on it: a Ward
+ * follower entering in its controller's own main phase stays reserved).
+ */
+export type CardLookup = ((id: CardId) => CardFacts | undefined) & { turn?: { active: PlayerId; phase: string } };
 
 /** A rough, card-agnostic worth of a card from its current numbers. */
 export function staticValue(type: CardType, attack: number | null, defense: number | null, cost: number | null, keywords: readonly Keyword[]): number {
@@ -66,13 +70,13 @@ export function lookupFromView(view: PlayerView, decision: Decision | null, db: 
   } else if (decision?.type === "orderCards") {
     for (const c of decision.cards) fromDef(c.id, c.def);
   }
-  return (id) => facts.get(id);
+  return Object.assign((id: CardId) => facts.get(id), { turn: { active: view.activePlayer, phase: view.phase } });
 }
 
 /** Card facts read from a (determinized) simulation, where everything may be looked at. */
 export function lookupFromReader(reader: GameReader): CardLookup {
   const memo = new Map<CardId, CardFacts | undefined>();
-  return (id) => {
+  const lookup = (id: CardId) => {
     if (memo.has(id)) return memo.get(id);
     const c = reader.card(id);
     let facts: CardFacts | undefined;
@@ -83,6 +87,7 @@ export function lookupFromReader(reader: GameReader): CardLookup {
     memo.set(id, facts);
     return facts;
   };
+  return Object.assign(lookup, { turn: { active: reader.state.activePlayer, phase: reader.state.phase } });
 }
 
 /**
@@ -120,19 +125,24 @@ function fastSelection(d: Extract<Decision, { type: "selectCards" }>, lookup: Ca
     // CR 7.4.3: engaging Ward followers at the end phase only protects.
     case "wardEngage":
       return legalSelection(d.candidates, mandatory, d.max);
-    // CR 12.8.2 (i): enter engaged unless the follower could attack this turn.
+    // CR 12.8.2 (i): a Ward follower may enter engaged (reserved is the default). In its controller's own turn reserved is
+    // never worse — it can still evolve and attack (8.4.2.1) or pay an [engage] cost (10.4.6.1), and its controller may engage
+    // it in their end phase (12.8.2 ii, 7.4.3; a token made at the start of the end phase is still in time) — so it stays
+    // reserved, and the bots don't even consider engaging it then. In the opponent's turn (a Quick follower, one brought back
+    // by Last Words) there is no end phase of its controller before the attacks, so it enters engaged.
     case "wardEnterEngaged": {
-      const canAttack = (id: CardId) => (lookup(id)?.keywords ?? []).some((k) => k === "rush" || k === "storm");
-      const calm = d.candidates.filter((id) => !canAttack(id));
-      const n = Math.max(d.min, Math.min(d.max, calm.length));
-      return legalSelection([...calm, ...d.candidates.filter((id) => canAttack(id))], mandatory, n);
+      if (lookup.turn && lookup.turn.active === d.player) return legalSelection(d.candidates, mandatory, d.min);
+      return legalSelection(d.candidates, mandatory, d.max);
     }
     // Pay and discard as little, and as little worth, as possible.
     case "cost":
     case "discard":
     case "handLimitDiscard":
       return legalSelection(byValue(false), mandatory, d.min);
-    // Targets and choices: the most valuable enemy cards first, then own ones, as many as allowed.
+    // Targets and choices: the most valuable enemy cards first, then own ones, as many as allowed. (Whether a choice among
+    // one's own cards that the opponent's effect asks for is a loss — a sacrifice, CP04-088 — or a gain — the one kept,
+    // BP06-107 — can't be told from the decision: in a planner's simulations the opponent's decisions go to a model that
+    // compares them.)
     default: {
       const sorted = byValue(true);
       const enemies = sorted.filter((id) => lookup(id)?.controller !== d.player);

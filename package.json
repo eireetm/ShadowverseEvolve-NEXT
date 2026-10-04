@@ -25,6 +25,8 @@
     "bench": "tsx tools/bench.ts",
     "bot:arena": "tsx tools/bot-arena.ts",
     "bench:throughput": "tsx tools/throughput.ts",
+    "rl:coverage": "tsx tools/rl-coverage.ts",
+    "rl:behaviour": "tsx tools/rl-behaviour.ts",
     "rl:lethal": "tsx tools/rl-lethal.ts",
     "rl:verify": "tsx tools/rl-verify.ts"
   },

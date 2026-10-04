@@ -1,5 +1,6 @@
 import {
   defaultAnswer,
+  opponentOf,
   seedRng,
   validateAnswer,
   type Answer,
@@ -8,12 +9,15 @@ import {
   type Engine,
   type GameSession,
   type PlayerId,
+  type PlayerView,
   type RngState,
 } from "./core";
 import { planBranches } from "./branches";
+import { candidateAnswers } from "./candidates";
 import { DEFAULT_WEIGHTS, exactResults, weightsEvaluator, type EvalWeights, type Evaluator } from "./evaluate";
 import { GreedyBot, type BotStats } from "./greedy";
-import { adaptStep, lethalWithinReach, lineWins, searchSureLethal, stepOf, type LethalStep, type Responder } from "./lethal";
+import { positionKey } from "./keys";
+import { adaptStep, lethalFirstModel, lethalWithinReach, lineWins, searchSureLethal, stepOf, type LethalStep, type Model, type Responder } from "./lethal";
 import { redrawByExpectation, redrawKnowingDeck } from "./mulligan";
 import { fastAnswer, lookupFromReader } from "./policy";
 
@@ -36,8 +40,8 @@ export interface PlannerBotOptions {
    */
   replyEvaluator?: Evaluator;
   /**
-   * The evaluation of the opponent models (the opponent's turn after a plan, their quick windows) and of the greedy bot that
-   * answers outside our main phase. Default: the hand-written one with the default weights.
+   * The evaluation of the models of a player: the opponent in our plans and in their simulated turn, and us in that turn.
+   * Default: the hand-written one with the default weights. (The bot's own decisions outside its main phase use `evaluator`.)
    */
   modelEvaluator?: Evaluator;
   /** Plans kept at each step of the search. */
@@ -52,8 +56,13 @@ export interface PlannerBotOptions {
   maxSimulations?: number;
   /** Who plays the opponent's next turn when plans are scored after it: the greedy bot, or a smaller planner. */
   replyModel?: "greedy" | "planner";
-  /** During our turn the opponent's quick windows are answered by the greedy bot instead of passing (for a bot that knows their hand). */
+  /**
+   * During our turn the opponent's decisions (quick windows, choices our effects give them) are answered by a greedy model
+   * instead of the fast answers (it passes, it buries its best follower ...).
+   */
   opponentQuick?: boolean;
+  /** The opponent model in the simulated reply first looks for a lethal on us with this many answers at most (0: doesn't). */
+  replyLethal?: number;
   /** Main phase actions per turn; after that the bot ends its main phase (CR 15.2.1.1: the player decides how often they repeat). */
   maxActionsPerTurn?: number;
   /** Decisions per turn in its main phase; after that it gives default answers, which stop any cycle it can stop. */
@@ -70,6 +79,25 @@ export interface PlannerBotOptions {
   lethalChecks?: number;
   /** "curve": keep or redraw by the curve of the first turns (mulligan.ts); "greedy" (default): the greedy bot's rule. */
   mulligan?: "greedy" | "curve";
+  /**
+   * How far a turn's plans are compared (2026-10-03: the owner wants two turns): 1 — each after the opponent's simulated
+   * reply (a model's one line); 2 — a search over whole turns, our plans, then the opponent's plans of their next turn (the
+   * worst for us), then our plans of the turn after, scored there (lookAhead).
+   */
+  lookahead?: 1 | 2;
+  /** Two turns: the plans kept at the opponent's turn and at our next one (ours now: `replyPlans`). */
+  innerPlans?: [number, number];
+  /** Two turns: the answers tried for each plan search of a later turn, and the plans kept at each of its steps. */
+  innerSimulations?: number;
+  innerBeam?: number;
+  /** Two turns, a fair bot: the samples of the hidden cards each choice is averaged over. */
+  samples?: number;
+  /**
+   * The plans compared at the end are of different kinds, not only the best few by the position: besides the best, the one
+   * keeping the most cards, the most play points (a Quick card), attacking least, spending evolution points, dealing the most
+   * damage to the leader — among the plans within this many points of the best (0: the best few only).
+   */
+  planKinds?: number;
 }
 
 /** A point of a plan: a copy of the game at one of our decisions in our main phase, or where the plan ends. */
@@ -83,6 +111,7 @@ interface Node {
   value: number;
   /** The game ended, or our turn did: nothing left to plan. */
   done: boolean;
+  /** The position however it was reached (positionKey): one position, one plan. */
   key: string;
 }
 
@@ -119,7 +148,14 @@ export class PlannerBot {
   private readonly opponentQuick: boolean;
   private readonly lethalSearch: number;
   private readonly lethalChecks: number;
+  private readonly replyLethal: number;
   private readonly mulliganMode: "greedy" | "curve";
+  private readonly lookahead: 1 | 2;
+  private readonly innerPlans: [number, number];
+  private readonly innerSimulations: number;
+  private readonly innerBeam: number;
+  private readonly samples: number;
+  private readonly planKinds: number;
   private readonly greedy: GreedyBot;
   private plans = 0;
   /** Opponent models made so far (each simulation gets a fresh one: the greedy bot counts actions per turn). */
@@ -128,7 +164,7 @@ export class PlannerBot {
   private actionsThisTurn = 0;
   private decisionsThisTurn = 0;
   /** The plan being carried out: its positions from the first answer on, and how many answers of it were given. */
-  private current: { path: Node[]; given: number; turn: number } | null = null;
+  private current: { path: Node[]; exact: string[]; given: number; turn: number } | null = null;
   /** The sure lethal being played: its steps, how many were given. */
   private lethal: { turn: number; steps: LethalStep[]; given: number } | null = null;
   /** This turn's positions where a lethal search found nothing (a search there again would find nothing new). */
@@ -158,8 +194,16 @@ export class PlannerBot {
     this.opponentQuick = options.opponentQuick ?? false;
     this.lethalSearch = options.lethalSearch ?? 0;
     this.lethalChecks = options.lethalChecks ?? 3;
+    this.replyLethal = options.replyLethal ?? 0;
     this.mulliganMode = options.mulligan ?? "greedy";
-    this.greedy = new GreedyBot(engine, { seed: `${this.seed}:greedy`, evaluator: this.modelEvaluator });
+    this.lookahead = options.lookahead ?? 1;
+    this.innerPlans = options.innerPlans ?? [2, 3];
+    this.innerSimulations = options.innerSimulations ?? 300;
+    this.innerBeam = options.innerBeam ?? 4;
+    this.samples = options.samples ?? 1;
+    this.planKinds = options.planKinds ?? 0;
+    // Its own decisions outside its main phase (quick windows, end phase, targets) are scored with its own evaluation.
+    this.greedy = new GreedyBot(engine, { seed: `${this.seed}:greedy`, evaluator: this.evaluator });
   }
 
   decide(session: GameSession): Answer {
@@ -186,6 +230,7 @@ export class PlannerBot {
     const me = d.player;
     const state = session.state;
     if (d.type === "mulligan" && this.mulliganMode === "curve") return this.mulligan(session, d);
+    if (d.type === "selectCards" && d.reason === "wardEngage" && this.replyPlans > 0) return this.wardAtEnd(session, d, me);
     if (state.activePlayer !== me || state.phase !== "main" || d.type === "chooseTurnOrder" || d.type === "mulligan") return this.greedy.decide(session);
     if (state.turn !== this.turn) {
       this.turn = state.turn;
@@ -223,7 +268,7 @@ export class PlannerBot {
     if (d.type !== "mainPhase") return null;
     const view = game.view(me);
     if (!lethalWithinReach(view, d, me)) return null;
-    if (this.lethalSeen?.turn === turn && this.lethalSeen.keys.has(JSON.stringify(view))) {
+    if (this.lethalSeen?.turn === turn && this.lethalSeen.keys.has(positionKey(view))) {
       this.lethalStats.skipped += 1;
       return null;
     }
@@ -276,7 +321,7 @@ export class PlannerBot {
   private followPlan(game: GameSession, me: PlayerId): Answer | null {
     const plan = this.current;
     if (!plan || plan.turn !== game.state.turn || plan.given === 0) return null;
-    if (plan.path[plan.given - 1]!.key !== JSON.stringify(game.view(me))) return null;
+    if (plan.exact[plan.given - 1] !== JSON.stringify(game.view(me))) return null;
     const next = plan.given < plan.path.length ? plan.path[plan.given]!.answer! : canEnd(game.decision!) ? endMainPhase() : null;
     if (!next || validateAnswer(game.decision!, next) !== null) return null;
     plan.given += 1;
@@ -289,10 +334,33 @@ export class PlannerBot {
     const seed = `${this.seed}:${this.plans++}`;
     const world = () => (this.cheat ? game.clone() : game.determinized(me, seed));
     const root = this.node(world(), null, null, me, turn, "decide");
-    let finished: Node[] = [];
+    let finished = this.beam(root, me, turn, world, this.maxSimulations, this.beamWidth);
+    // A plan that wins in our sample only because of what was sampled (a card drawn, the opponent passing) isn't a won one.
+    if (!this.cheat && this.lethalChecks > 0) finished = finished.filter((node) => node.session.result?.winner !== me || this.sureWin(node, game, me, seed));
+    if (finished.length === 0) return fastAnswer(game.decision!, lookupFromReader(game.reader()));
+    const candidates = this.kinds(finished, root, me, this.replyPlans);
+    if (this.lookahead >= 2 && candidates.length > 1) return this.carryOut(this.lookAhead(candidates, game, me, turn, seed, world), turn, me);
+    // The plans by the position they leave, then by the position after the opponent's reply.
+    let choice: Node = finished[0]!;
+    let choiceValue = -Infinity;
+    for (const node of this.replyPlans > 0 ? candidates : []) {
+      const value = node.done ? this.finalValue(node, me) : this.afterReply(node, me, turn, world);
+      if (value > choiceValue) {
+        choice = node;
+        choiceValue = value;
+      }
+    }
+    return this.carryOut(choice, turn, me);
+  }
+
+  /**
+   * The plans `actor` can make from `root` for the rest of this turn: a beam search over its answers, every plan scored where
+   * its turn would end there. Returns the finished plans, best first, one per position.
+   */
+  private beam(root: Node, actor: PlayerId, turn: number, world: () => GameSession, budget: number, width: number, score: Evaluator = this.evaluator, inner = false): Node[] {
+    const finished: Node[] = [];
     const seen = new Set<string>([root.key]);
     let frontier = [root];
-    let budget = this.maxSimulations;
     for (let depth = 0; depth < this.maxDepth && frontier.length > 0 && budget > 0; depth++) {
       const children: Node[] = [];
       for (const node of frontier) {
@@ -300,7 +368,7 @@ export class PlannerBot {
         if (canEnd(d)) finished.push(node);
         for (const answer of this.branches(d, lookupFromReader(node.session.reader()))) {
           if (budget-- <= 0) break;
-          const child = this.expand(node, answer, me, turn, world);
+          const child = this.expand(node, answer, actor, turn, world, score, inner);
           if (!child) continue;
           if (child.done) finished.push(child);
           else if (!seen.has(child.key)) {
@@ -310,33 +378,218 @@ export class PlannerBot {
         }
       }
       children.sort((a, b) => b.value - a.value);
-      frontier = children.slice(0, this.beamWidth);
+      frontier = children.slice(0, width);
     }
     for (const node of frontier) if (canEnd(node.session.decision!)) finished.push(node);
-    // A plan that wins in our sample only because of what was sampled (a card drawn, the opponent passing) isn't a won one.
-    if (!this.cheat && this.lethalChecks > 0) finished = finished.filter((node) => node.session.result?.winner !== me || this.sureWin(node, game, me, seed));
-    if (finished.length === 0) return fastAnswer(game.decision!, lookupFromReader(game.reader()));
-    // The best plans by the position they leave, then by the position after the opponent's reply.
     finished.sort((a, b) => b.value - a.value);
-    const best = new Map<string, Node>();
-    for (const node of finished) if (!best.has(node.key) && best.size < this.replyPlans) best.set(node.key, node);
-    let choice: Node = finished[0]!;
-    let choiceValue = -Infinity;
-    for (const node of this.replyPlans > 0 ? best.values() : []) {
-      const value = node.done ? this.finalValue(node, me) : this.afterReply(node, me, turn, world);
-      if (value > choiceValue) {
-        choice = node;
-        choiceValue = value;
+    const one = new Map<string, Node>();
+    for (const node of finished) if (!one.has(node.key)) one.set(node.key, node);
+    return [...one.values()];
+  }
+
+  /**
+   * At most `k` of the finished plans (best first), of different kinds (`planKinds`): the best two, and among the plans within
+   * `planKinds` points of the best, the one keeping the most cards in hand, the most play points, attacking least, spending
+   * evolution points, dealing the most damage to the opponent's leader; the rest by the position. A turn's best plan by the
+   * position it leaves is often only the one that commits most: holding a combo piece, keeping play points for a Quick card
+   * or not attacking into a trade never reached the comparison after the opponent's reply.
+   */
+  private kinds(finished: Node[], root: Node, actor: PlayerId, k: number, pad = true): Node[] {
+    if (this.planKinds <= 0 || (pad && finished.length <= k)) return finished.slice(0, k);
+    const start = root.session.view(actor);
+    const trait = new Map<Node, { kept: number; pp: number; attacks: number; ep: number; face: number }>();
+    for (const node of finished) {
+      const view = node.session.view(actor);
+      let attacks = 0;
+      for (let n: Node | null = node; n && n.parent; n = n.parent) if (n.answer?.type === "mainPhase" && n.answer.action.type === "attack") attacks += 1;
+      const mine = (v: PlayerView) => v.players[actor];
+      const theirs = (v: PlayerView) => v.players[opponentOf(actor)];
+      trait.set(node, {
+        kept: mine(view).hand.length,
+        pp: mine(view).playPoints,
+        attacks,
+        ep: mine(start).evolutionPoints + mine(start).superEvolutionPoints - mine(view).evolutionPoints - mine(view).superEvolutionPoints,
+        face: theirs(start).leaderDefense - theirs(view).leaderDefense,
+      });
+    }
+    const near = finished.filter((n) => n.value >= finished[0]!.value - this.planKinds);
+    const out: Node[] = [];
+    const take = (n: Node | undefined) => {
+      if (n && out.length < k && !out.includes(n)) out.push(n);
+    };
+    /** The plan with the most of something (the better position first among equals), if any has more than the best plan. */
+    const most = (score: (n: Node) => number) => {
+      let best: Node | undefined;
+      for (const n of near) if (score(n) > score(finished[0]!) && (!best || score(n) > score(best))) best = n;
+      return best;
+    };
+    take(finished[0]);
+    take(most((n) => trait.get(n)!.kept));
+    take(finished[1]);
+    take(most((n) => trait.get(n)!.pp));
+    take(most((n) => -trait.get(n)!.attacks));
+    take(most((n) => trait.get(n)!.ep));
+    take(most((n) => trait.get(n)!.face));
+    // Inner levels of a two-turn search aren't padded with plans like the best (each costs a search of the next turn).
+    if (pad) for (const n of finished) take(n);
+    return out;
+  }
+
+  /**
+   * Two turns ahead (`lookahead` 2): each of our plans is played to the opponent's next turn, where their plans (a lethal on
+   * us first, then a beam search of their own) are compared by the worst for us; after each of those our plans of the turn
+   * after are searched the same way and scored where that turn ends (alpha-beta: a line already worse than one found is cut).
+   * A fair bot does this in `samples` samples of the hidden cards (our plans played again in each by matching their cards)
+   * and takes the average. Returns the plan to carry out.
+   */
+  private lookAhead(candidates: Node[], game: GameSession, me: PlayerId, turn: number, seed: string, world: () => GameSession): Node {
+    const worlds = this.cheat ? 1 : Math.max(1, this.samples);
+    let best = 0;
+    let bestTotal = -Infinity;
+    for (const [i, plan] of candidates.entries()) {
+      let total = 0;
+      for (let w = 0; w < worlds; w++) {
+        let value: number;
+        try {
+          const session = w === 0 ? this.copy(plan, world) : this.replayPlan(plan, this.cheat ? game.clone() : game.determinized(me, `${seed}:w${w}`), me, turn);
+          // The last world may stop as soon as the plan can't reach the best total any more (a cut returns a bound at most that).
+          const alpha = w === worlds - 1 ? bestTotal - total : -Infinity;
+          value = this.turnValue(session, me, opponentOf(me), turn, 1, alpha, Infinity, null, `${seed}:w${w}:p${i}`);
+        } catch (e) {
+          this.stats.simulationFailures += 1;
+          this.stats.lastError = e instanceof Error ? e.message : String(e);
+          value = this.finalValue(plan, me) - 1_000;
+        }
+        total += value;
+      }
+      if (total > bestTotal) {
+        best = i;
+        bestTotal = total;
       }
     }
-    return this.carryOut(choice, turn);
+    return candidates[best]!;
+  }
+
+  /**
+   * Our plan's answers given again in another sample (cards matched by what they are). Where a step doesn't fit, the plan goes
+   * on: a decision the plan didn't have there (a choice inside an action) gets the fast answer and the step waits for the next
+   * one; a main phase action that can't be taken there is left out.
+   */
+  private replayPlan(plan: Node, session: GameSession, me: PlayerId, turn: number): GameSession {
+    const steps: LethalStep[] = [];
+    for (let n: Node | null = plan; n && n.parent; n = n.parent) steps.unshift(stepOf(n.parent.session, n.answer!));
+    for (let i = 0, guard = 0; i < steps.length && guard < 200; guard++) {
+      const d = session.decision;
+      if (d?.player !== me || session.state.turn !== turn || session.state.phase !== "main") break;
+      const answer = adaptStep(session, steps[i]!);
+      if (answer) {
+        session.act(answer);
+        i += 1;
+      } else if (d.type !== "mainPhase") session.act(fastAnswer(d, lookupFromReader(session.reader())));
+      else {
+        i += 1;
+        continue;
+      }
+      this.advance(session, me, turn);
+    }
+    return session;
+  }
+
+  /**
+   * The value for us of a position where a turn is over (a plan's end): it ends, the next player's turn is played to their
+   * first main phase decision, and then — `level` 1, the opponent's turn — the worst for us of their plans, or — `level` 2,
+   * our turn after — the best of ours, each scored where its turn ends (a turn without a main phase decision of its own counts
+   * as passed: the level goes on). Past level 2, or once the game is over, the position is scored as it stands. A loss is
+   * told apart from another by the position when the opponent began their turn (`before`), so the plan conceding least is kept.
+   */
+  private turnValue(session: GameSession, me: PlayerId, next: PlayerId, turn: number, level: number, alpha: number, beta: number, before: number | null, seed: string): number {
+    this.toNextMainPhase(session, turn, seed);
+    const leaf = () => {
+      const value = this.replyEvaluator(session.view(me), me);
+      const result = session.result;
+      return result && result.winner !== me && result.winner !== null && before !== null ? value + Math.max(-1_000, Math.min(1_000, before)) : value;
+    };
+    if (session.isOver) return leaf();
+    const d = session.decision!;
+    const actor = d.player;
+    if (d.type !== "mainPhase") return leaf();
+    if (actor !== next) level += 1;
+    if (level > 2) return leaf();
+    const nextTurn = session.state.turn;
+    const start = session.clone();
+    const world = () => start.clone();
+    if (actor !== me && before === null) before = this.replyEvaluator(start.view(me), me);
+    // Their lethal (or ours) first: found and still winning with the other player answering (a Quick card) and in a sample of
+    // what the attacker can't see, the turn's value is the game's.
+    if (this.replyLethal > 0 && lethalWithinReach(start.view(actor), d, actor, 3, 0)) {
+      const found = searchSureLethal(actor, {
+        budget: this.replyLethal,
+        beam: 12,
+        maxBranches: this.maxBranches,
+        world: (i) => (i === 0 ? start.clone() : start.determinized(actor, `${seed}:lethal-check`)),
+        checks: 1,
+        searchResponder: () => null,
+        checkResponder: () => this.responder(true),
+        maxLines: 2,
+        seed: `${seed}:lethal`,
+        key: (view) => JSON.stringify(view),
+      });
+      this.stats.simulations += found.simulations;
+      if (found.line) {
+        const decided = this.replyEvaluator({ ...start.view(me), result: { winner: actor, losses: [] } } as PlayerView, me);
+        return actor === me || before === null ? decided : decided + Math.max(-1_000, Math.min(1_000, before));
+      }
+    }
+    const score = actor === me ? this.evaluator : this.modelScore();
+    const root = this.node(world(), null, null, actor, nextTurn, "decide", score);
+    const finished = this.beam(root, actor, nextTurn, world, this.innerSimulations, this.innerBeam, score, true);
+    const plans = this.kinds(finished, root, actor, level === 1 ? this.innerPlans[0] : this.innerPlans[1], false);
+    if (plans.length === 0) return leaf();
+    let value = actor === me ? -Infinity : Infinity;
+    for (const [i, plan] of plans.entries()) {
+      let v: number;
+      try {
+        v = this.turnValue(this.copy(plan, world), me, opponentOf(actor), nextTurn, level + 1, alpha, beta, before, `${seed}:${level}:${i}`);
+      } catch (e) {
+        this.stats.simulationFailures += 1;
+        this.stats.lastError = e instanceof Error ? e.message : String(e);
+        continue;
+      }
+      if (actor === me) {
+        value = Math.max(value, v);
+        alpha = Math.max(alpha, v);
+      } else {
+        value = Math.min(value, v);
+        beta = Math.min(beta, v);
+      }
+      if (alpha >= beta) break;
+    }
+    return Number.isFinite(value) ? value : leaf();
+  }
+
+  /**
+   * Play on from where a turn's plan stopped (in its main phase, or already past it) to the next player's first main phase
+   * decision of a later turn, or the game's end: the main phase is ended, and every other decision (end phase, quick windows,
+   * the start phase) is a greedy model's, a fresh one per player.
+   */
+  private toNextMainPhase(session: GameSession, turn: number, seed: string): void {
+    const models: [Model, Model] = [this.model("greedy", `${seed}:m0`), this.model("greedy", `${seed}:m1`)];
+    for (let steps = 0; steps < 3000; steps++) {
+      const d = session.decision;
+      if (!d) return;
+      if (session.state.turn > turn && d.type === "mainPhase" && d.player === session.state.activePlayer) return;
+      if (session.state.turn === turn && d.type === "mainPhase" && d.player === session.state.activePlayer && canEnd(d)) session.act(endMainPhase());
+      else session.act(models[d.player]!.decide(session));
+    }
   }
 
   /** Take the plan that ends at `choice` as the current one: its first answer now, the next ones while the game goes as planned. */
-  private carryOut(choice: Node, turn: number): Answer {
+  private carryOut(choice: Node, turn: number, me: PlayerId): Answer {
     const path: Node[] = [];
     for (let n: Node | null = choice; n && n.parent; n = n.parent) path.unshift(n);
-    this.current = { path, given: path.length > 0 ? 1 : 0, turn };
+    // The views exactly, ids too: following the plan in the real game needs the same cards under the same ids.
+    const exact = path.map((n) => JSON.stringify(n.session.view(me)));
+    this.current = { path, exact, given: path.length > 0 ? 1 : 0, turn };
     return path[0]?.answer ?? endMainPhase();
   }
 
@@ -347,6 +600,38 @@ export class PlannerBot {
     const sure = this.sureFrom(game, me, steps, `${seed}:won`, this.lethalChecks);
     if (!sure) this.lethalStats.unsurePlans += 1;
     return sure;
+  }
+
+  /**
+   * CR 7.4.3: which reserved Ward followers to engage at our end phase. Engaged, a Ward follower protects (12.8.2 iii) but can
+   * be attacked, by Rush followers too (8.4.3.1): each choice is played through the opponent's turn in the same sample, the
+   * opponent played by the same model, and scored at our next main phase. Ties keep the fast answer (all of them).
+   */
+  private wardAtEnd(game: GameSession, d: Extract<Decision, { type: "selectCards" }>, me: PlayerId): Answer {
+    const answers = candidateAnswers(d, lookupFromReader(game.reader()), this.rng, Math.max(2, this.replyPlans));
+    if (answers.length <= 1) return answers[0] ?? fastAnswer(d, lookupFromReader(game.reader()));
+    const seed = `${this.seed}:ward:${this.plans++}`;
+    const turn = game.state.turn;
+    let best = answers[0]!;
+    let bestValue = -Infinity;
+    for (const answer of answers) {
+      this.stats.simulations += 1;
+      let value: number;
+      try {
+        const session = this.cheat ? game.clone() : game.determinized(me, seed);
+        session.act(answer);
+        value = this.playReply(session, me, turn, `${seed}:reply`);
+      } catch (e) {
+        this.stats.simulationFailures += 1;
+        this.stats.lastError = e instanceof Error ? e.message : String(e);
+        continue;
+      }
+      if (value > bestValue) {
+        best = answer;
+        bestValue = value;
+      }
+    }
+    return best;
   }
 
   /**
@@ -371,13 +656,13 @@ export class PlannerBot {
   }
 
   /** Give `answer` in a copy of `node` and play on to our next decision (the opponent passes in their quick windows). */
-  private expand(node: Node, answer: Answer, me: PlayerId, turn: number, world: () => GameSession): Node | null {
+  private expand(node: Node, answer: Answer, me: PlayerId, turn: number, world: () => GameSession, score: Evaluator = this.evaluator, inner = false): Node | null {
     this.stats.simulations += 1;
     try {
       const session = this.copy(node, world);
       session.act(answer);
-      const stop = this.advance(session, me, turn);
-      return this.node(session, node, answer, me, turn, stop);
+      const stop = this.advance(session, me, turn, inner);
+      return this.node(session, node, answer, me, turn, stop, score);
     } catch (e) {
       this.stats.simulationFailures += 1;
       const message = `${e instanceof Error ? e.name : "Error"}: ${e instanceof Error ? e.message : String(e)}`.slice(0, 300);
@@ -403,38 +688,61 @@ export class PlannerBot {
     }
   }
 
-  /** Answer the decisions that aren't ours to plan (the opponent's quick windows) until we decide again. */
-  private advance(session: GameSession, me: PlayerId, turn: number): Stop {
+  /**
+   * Answer the decisions that aren't ours to plan (the opponent's, during our turn) until we decide again: a greedy model
+   * (`opponentQuick`), or the fast answers. In the later turns of a two-turn search (`inner`) a cheaper model, at quick windows
+   * with something to play only.
+   */
+  private advance(session: GameSession, me: PlayerId, turn: number, inner = false): Stop {
     for (let steps = 0; steps < 300; steps++) {
       const d = session.decision;
       if (!d) return "gameOver";
       if (session.state.turn !== turn || session.state.phase !== "main") return "turnOver";
       if (d.player === me) return "decide";
-      session.act(this.opponentQuick && d.type === "quick" ? this.model("greedy").decide(session) : fastAnswer(d, lookupFromReader(session.reader())));
+      // A quick window where passing is all they can do needs no model.
+      const real = this.opponentQuick && !(d.type === "quick" && d.actions.length === 1) && (!inner || d.type === "quick");
+      session.act(real ? this.model("greedy", undefined, inner ? 4 : 12).decide(session) : fastAnswer(d, lookupFromReader(session.reader())));
     }
     return "turnOver";
   }
 
-  private node(session: GameSession, parent: Node | null, answer: Answer | null, me: PlayerId, turn: number, stop: Stop): Node {
+  private node(session: GameSession, parent: Node | null, answer: Answer | null, me: PlayerId, turn: number, stop: Stop, score: Evaluator = this.evaluator): Node {
     const view = session.view(me);
     return {
       session,
       parent,
       answer,
       depth: parent ? parent.depth + 1 : 0,
-      value: this.evaluator(view, me),
+      value: score(view, me),
       done: stop !== "decide",
-      key: JSON.stringify(view),
+      key: positionKey(view),
     };
   }
 
-  /** A fresh model of the opponent (a fair one: it plans with what the opponent can see). */
-  private model(kind: "greedy" | "planner"): { decide(session: GameSession): Answer } {
-    const seed = `${this.seed}:model:${this.models++}`;
+  /**
+   * A fresh model of a player (a fair one: it plans with what that player can see): the opponent in our simulations, or us in
+   * the opponent's simulated turn. Attacks come first among the greedy model's candidates, so none is left out.
+   */
+  private model(kind: "greedy" | "planner", seed = `${this.seed}:model:${this.models++}`, maxCandidates = 12): Model {
     const evaluator = this.modelEvaluator;
-    return kind === "planner"
-      ? new PlannerBot(this.engine, { seed, replyPlans: 0, beamWidth: 4, maxBranches: 12, maxSimulations: 150, evaluator, modelEvaluator: evaluator })
-      : new GreedyBot(this.engine, { seed, maxCandidates: 12, evaluator });
+    const bot =
+      kind === "planner"
+        ? new PlannerBot(this.engine, { seed, replyPlans: 0, beamWidth: 4, maxBranches: 12, maxSimulations: 150, evaluator, modelEvaluator: evaluator })
+        : new GreedyBot(this.engine, { seed, maxCandidates, evaluator, attacksFirst: true });
+    // Its simulations are this bot's work too (the arena reports them).
+    return {
+      decide: (session) => {
+        const before = bot.stats.simulations;
+        const answer = bot.decide(session);
+        this.stats.simulations += bot.stats.simulations - before;
+        return answer;
+      },
+    };
+  }
+
+  /** How the models score a position (the opponent's plans in a two-turn search are ranked as their model would). */
+  private modelScore(): Evaluator {
+    return exactResults(this.modelEvaluator ?? weightsEvaluator(DEFAULT_WEIGHTS));
   }
 
   /** A plan's position scored as plans are finally compared (where the game or our turn already ended, or a reply failed). */
@@ -447,19 +755,41 @@ export class PlannerBot {
     this.stats.simulations += 1;
     try {
       const session = this.copy(node, world);
-      const opponent = this.model(this.replyModel);
       session.act(endMainPhase());
-      for (let steps = 0; steps < 3000; steps++) {
-        const d = session.decision;
-        if (!d || (d.player === me && d.type === "mainPhase" && session.state.turn > turn)) break;
-        session.act(d.player === me ? fastAnswer(d, lookupFromReader(session.reader())) : opponent.decide(session));
-      }
-      return this.replyEvaluator(session.view(me), me);
+      return this.playReply(session, me, turn, `${this.seed}:model:${this.models++}`);
     } catch (e) {
       this.stats.simulationFailures += 1;
       this.stats.lastError = e instanceof Error ? e.message : String(e);
       return this.finalValue(node, me) - 1_000;
     }
+  }
+
+  /**
+   * Play on from the end of our turn to our next main phase and score it there. The opponent is a model that plays a lethal
+   * on us first if it finds one (lethal.ts); our own decisions in their turn (quick windows, Ward, choices) are a greedy
+   * model's too, so a plan that keeps play points for a Quick card gets the credit (they used to pass). A plan that loses this
+   * way is still told apart from another that loses: by the position when the opponent begins their main phase, so that when
+   * every plan loses the one that concedes least is kept.
+   */
+  private playReply(session: GameSession, me: PlayerId, turn: number, seed: string): number {
+    const opponent = lethalFirstModel(this.model(this.replyModel, `${seed}:opponent`), this.replyLethal, this.maxBranches, `${seed}:lethal`, (n) => {
+      this.stats.simulations += n;
+    });
+    const ours = this.model("greedy", `${seed}:ours`);
+    let before = 0;
+    let seen = false;
+    for (let steps = 0; steps < 3000; steps++) {
+      const d = session.decision;
+      if (!d || (d.player === me && d.type === "mainPhase" && session.state.turn > turn)) break;
+      if (!seen && d.player !== me && d.type === "mainPhase") {
+        seen = true;
+        before = this.replyEvaluator(session.view(me), me);
+      }
+      session.act(d.player === me ? ours.decide(session) : opponent.decide(session));
+    }
+    const value = this.replyEvaluator(session.view(me), me);
+    const result = session.result;
+    return result && result.winner !== me && result.winner !== null ? value + Math.max(-1_000, Math.min(1_000, before)) : value;
   }
 }
 
