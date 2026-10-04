@@ -36,8 +36,11 @@ export interface ReadyDeck {
 /** What a program joining a room asks for: the other player's seat, or a spectator's (watching only). */
 export type JoinAs = "player" | "watch";
 
-/** Spectators a room takes besides its two players. */
+/** Spectators a room takes besides its two players (on the public networks: the host sends them everything itself). */
 export const SPECTATOR_SEATS = 2;
+
+/** The most spectator seats a room can have: an online server says how many its rooms have (packages/server, at most 100). */
+export const MAX_SPECTATOR_SEATS = 100;
 
 /**
  * A game, for a spectator's program to play along: what its engine needs to start it (both seats are
@@ -202,7 +205,7 @@ export function parseMessage(value: unknown): NetMessage | null {
       if (typeof m.text !== "string" || !(m.seat === undefined || isSeat(m.seat))) return null;
       return { t: "chat", text: m.text.slice(0, CHAT_MAX), ...(m.seat !== undefined ? { seat: m.seat } : {}) };
     case "watchers":
-      return isIndex(m.n) && m.n <= SPECTATOR_SEATS ? { t: "watchers", n: m.n } : null;
+      return isIndex(m.n) && m.n <= MAX_SPECTATOR_SEATS ? { t: "watchers", n: m.n } : null;
     case "watch": {
       if (m.game === null) return { t: "watch", game: null };
       const game = watchedGame(m.game);

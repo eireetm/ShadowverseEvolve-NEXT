@@ -7,5 +7,7 @@ test-results/
 playwright-report/
 dist-android/
 dist-ios/
+# The online server to build releases with (its address and key): never published.
+/online-server.ini
 # The project's notes (docs/) stay on the developer's machine: the README says what a user needs.
 docs/

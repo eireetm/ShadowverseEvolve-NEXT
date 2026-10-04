@@ -81,6 +81,8 @@ function readBody(req: IncomingMessage): Promise<string> {
  *  DELETE /api/replays/<file>              delete a replay
  *  GET  /api/settings-file                 { path, text }: the settings file (HostConfig.settingsFile; path null: none)
  *  PUT  /api/settings-file                 write the settings file (text body)
+ *  GET  /api/online-server                 { path, text }: the online server file (HostConfig.serverFile; path null: none)
+ *  PUT  /api/online-server                 write it (text body)
  */
 export function hostPlugin(cfg: HostConfig = hostConfig()): Plugin {
   const handle = async (req: IncomingMessage, res: ServerResponse, next: Next): Promise<void> => {
@@ -165,6 +167,14 @@ export function hostPlugin(cfg: HostConfig = hostConfig()): Plugin {
         if (req.method === "GET" && cfg.settingsFile) return sendJson(res, 200, { path: cfg.settingsFile, text: readSettingsText(cfg.settingsFile) });
         if (req.method === "PUT" && cfg.settingsFile) {
           writeSettingsText(cfg.settingsFile, await readBody(req));
+          return sendJson(res, 200, { ok: true });
+        }
+      }
+      if (path === "online-server") {
+        // None unless SVE_SERVER_FILE names one: the app keeps the online server's configuration in the browser.
+        if (req.method === "GET") return sendJson(res, 200, cfg.serverFile ? { path: cfg.serverFile, text: readSettingsText(cfg.serverFile) } : { path: null, text: null });
+        if (req.method === "PUT" && cfg.serverFile) {
+          writeSettingsText(cfg.serverFile, await readBody(req));
           return sendJson(res, 200, { ok: true });
         }
       }

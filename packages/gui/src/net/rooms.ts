@@ -198,7 +198,7 @@ function roomLink(r: RoomState, peerId: string, closed: () => void): RoomLink {
     send: (message) => {
       if (!done) void r.action.send(message as unknown as JsonValue, { target: peerId }).catch(() => undefined);
     },
-    route: () => routeOf(r.room.getPeers()[peerId]),
+    route: () => (r.via === "server" ? Promise.resolve("server" as const) : routeOf(r.room.getPeers()[peerId])),
     close: () => {
       finish();
     },

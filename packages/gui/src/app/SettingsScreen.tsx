@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { hostApi, type ImportResult } from "../host/api";
 import { useT } from "../i18n";
 import { engine } from "./store";
@@ -8,6 +8,8 @@ import { settingsFilePath } from "./settings-file";
 import { useApp } from "./store";
 import { changedTokens } from "./token-art";
 import { TokenArtWindow } from "./TokenArtWindow";
+import { ServerConfigWindow } from "./ServerConfigWindow";
+import { loadServerConfig, useServerConfig } from "../net/server-config";
 import { APP_VERSION } from "./version";
 
 type ResourceStatus =
@@ -93,6 +95,12 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
   const file = settingsFilePath();
   const catalog = useApp((s) => s.catalog);
   const [tokenArt, setTokenArt] = useState(false);
+  // The online server ("使用服务器" in the online screen): which one is set, and its window.
+  const server = useServerConfig().server;
+  const [serverWindow, setServerWindow] = useState(false);
+  useEffect(() => {
+    void loadServerConfig();
+  }, []);
   return (
     <div className="sve-menu">
       <div className="sve-menu-panel sve-settings">
@@ -219,6 +227,17 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
             </label>
           ))}
           <p className="sve-hint">{t("settings.turnHelp")}</p>
+          <div className="sve-settings-row">
+            <span>{t("settings.server")}</span>
+            <span className="sve-settings-server">
+              <span data-testid="settings-server">{server ? server.name : t("settings.serverNone")}</span>
+              <button type="button" onClick={() => setServerWindow(true)} data-testid="settings-server-edit">
+                {t("settings.serverEdit")}
+              </button>
+            </span>
+          </div>
+          <p className="sve-hint">{t("settings.serverHelp")}</p>
+          {serverWindow ? <ServerConfigWindow onClose={() => setServerWindow(false)} /> : null}
         </section>
         <button type="button" className="sve-menu-button" onClick={onBack}>
           {t("common.back")}

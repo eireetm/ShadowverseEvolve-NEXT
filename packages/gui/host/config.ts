@@ -30,6 +30,11 @@ export interface HostConfig {
    * keeps none unless the environment variable SVE_SETTINGS_FILE names one (the settings stay in the browser).
    */
   settingsFile?: string;
+  /**
+   * The online server's configuration file (online-server.ini, src/net/server-config.ts): the PC release's is next to
+   * server.mjs. The dev server keeps none unless SVE_SERVER_FILE names one (the browser keeps it).
+   */
+  serverFile?: string;
 }
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -44,5 +49,6 @@ export function hostConfig(root: string = packageRoot): HostConfig {
     assetsDir,
     miscDir: join(assetsDir, "Misc"),
     ...(process.env.SVE_SETTINGS_FILE ? { settingsFile: resolve(process.env.SVE_SETTINGS_FILE) } : {}),
+    ...(process.env.SVE_SERVER_FILE ? { serverFile: resolve(process.env.SVE_SERVER_FILE) } : {}),
   };
 }

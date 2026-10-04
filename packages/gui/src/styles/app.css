@@ -2952,6 +2952,80 @@ option {
   font-size: 12px;
 }
 
+/* The online screen's parts: on the online server ("使用服务器"), and on the public networks (P2P). */
+.sve-online-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--sve-border);
+  border-radius: 8px;
+}
+
+.sve-online-section h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.sve-online-server {
+  border-color: var(--sve-accent);
+}
+
+/* The rules before a room is made: as the room's own (.sve-online-prep), labels on one line, selects within the panel. */
+.sve-online-server .sve-online-rules,
+.sve-online-server .sve-format-picker,
+.sve-online-server .sve-field {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.sve-online-server .sve-field > span {
+  white-space: nowrap;
+}
+
+.sve-online-server .sve-field select {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.sve-settings-server {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sve-settings-server > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The online server's configuration window (settings, online screen). */
+/* Over the whole screen: it opens from menus, which have no left column. */
+.sve-server-config-backdrop {
+  inset: 0;
+}
+
+.sve-server-config {
+  width: min(560px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sve-server-config textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 13px;
+}
+
+.sve-server-config p {
+  margin: 0;
+  word-break: break-all;
+}
+
 .sve-online-ok {
   font-size: 18px;
   font-weight: 700;

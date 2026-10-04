@@ -1,10 +1,10 @@
-// Online play, in the online screen's module: making the connection (a room code on the public networks,
-// or codes passed by hand), preparing a game (the host's rules, each player's locked deck, a seed both players make), and
-// the game itself: this program's answers go to the other program, the other's come to this engine worker, each with the
+// Online play, in the online screen's module: making the connection (a room code on the public networks or on the online
+// server, or codes passed by hand), preparing a game (the host's rules, each player's locked deck, a seed both players make),
+// and the game itself: this program's answers go to the other program, the other's come to this engine worker, each with the
 // sender's state (engine/game-host.ts). After a lost connection, the same room connects again and the answers the other side
-// is missing are sent again. Spectators ("观战", up to two) join the host's room: the host tells them the game (its options
-// and its inputs so far) and passes on both players' answers and the chat; they can't do anything else. The state lives
-// in net/state.ts.
+// is missing are sent again. Spectators ("观战": two seats a room on the public networks, as many as the online server says
+// on it) join the host's room: the host tells them the game (its options and its inputs so far) and passes on both players'
+// answers and the chat; they can't do anything else. The state lives in net/state.ts.
 import type { Catalog } from "../app/catalog";
 import { getSettings } from "../app/settings";
 import { engine, getApp } from "../app/store";
@@ -17,9 +17,12 @@ import { RESTRICTION_LISTS, restrictionList } from "../formats/lists";
 import { newRoomCode } from "./codes";
 import type { PeerLink } from "./link";
 import { answerConnection, BadCodeError, offerConnection, type ManualAttempt } from "./manual";
-import { BACKLOG_PIECE, SPECTATOR_SEATS, watchedOptions, type Hello, type JoinAs, type NetMessage, type ReadyDeck, type Rules, type WatchedGame } from "./messages";
+import type { MessageKey } from "../i18n";
+import { BACKLOG_PIECE, MAX_SPECTATOR_SEATS, SPECTATOR_SEATS, watchedOptions, type Hello, type JoinAs, type NetMessage, type ReadyDeck, type Rules, type WatchedGame } from "./messages";
 import type { TurnServer } from "./relays";
-import { meet, type Admission, type Meeting } from "./rooms";
+import { meet, type Admission, type Meeting, type MeetingHandlers } from "./rooms";
+import { serverNetwork, type JoinMode, type ServerProblem } from "./server";
+import { currentServer } from "./server-config";
 import { currentLink, gameStarted, getOnline, NO_PREP, setChatRelay, setLink, setOnline, type OnlineRole, type Prep } from "./state";
 
 export { sendChat, useOnline, getOnline, canChat, type OnlinePhase } from "./state";
@@ -457,7 +460,13 @@ let watcherTimer: number | null = null;
 /** The host: whether it takes in a program asking for a seat (rooms.ts): the other player's while it has none, or a spectator's. */
 function admit(as: JoinAs): Admission {
   if (as === "player") return currentLink() ? "full" : "yes";
-  return watchers.length < SPECTATOR_SEATS ? "yes" : "full";
+  return watchers.length < roomSeats() ? "yes" : "full";
+}
+
+/** The spectator seats of this program's room: as many as the online server says, or the public networks' two. */
+function roomSeats(): number {
+  const { room, seats } = getOnline();
+  return room?.server ? seats : SPECTATOR_SEATS;
 }
 
 function toWatchers(message: NetMessage): void {
@@ -557,7 +566,7 @@ function watching(peer: PeerLink): void {
     setOnline({ phase: { kind: "closed", reason: "lost" } });
     // A spectator only watches: it comes back by itself (the host sends the game again).
     const room = getOnline().room;
-    if (room?.role === "spectator") rewatch = window.setTimeout(() => watchRoom(room.code, true), 2000);
+    if (room?.role === "spectator") rewatch = window.setTimeout(() => watchRoom(room.code, true, room.server), 2000);
   };
   peer.onMessage = (message) => hear(message);
   peer.onClose = lost;
@@ -622,18 +631,21 @@ function startWatching(): void {
   if (!continuing) gameStarted();
 }
 
-/** Watch the games in room `code` (a spectator's seat); `again`: after a lost connection (the game shown stays). */
-export function watchRoom(code: string, again = false): void {
+/**
+ * Watch the games in room `code` (a spectator's seat), on the online server (`server`) or the public networks; `again`: after
+ * a lost connection (the game shown stays).
+ */
+export function watchRoom(code: string, again = false, server = false): void {
   stopLooking();
   disconnect();
   dropWatchers();
   setOnline({
     phase: { kind: "joining", code, as: "watch" },
     error: null,
-    room: { code, role: "spectator" },
+    room: { code, role: "spectator", server },
     ...(again ? {} : { game: null, chat: [], watchers: 0, prep: NO_PREP }),
   });
-  meeting = meet(code, "watch", turn(), {
+  meeting = meetRoom(code, "watch", server, again ? "any" : "join", {
     onLink: (peer) => watching(peer),
     onFull: () => {
       stopLooking();
@@ -650,28 +662,80 @@ export function spectatorSide(perspective: 0 | 1): void {
 // ---- Rooms, codes by hand, leaving ----
 
 /**
- * Make a room: its code, to pass to the other player; wait for them (and spectators). `again`: the same room once more after
- * a lost connection (its spectators aren't told to go: they come back by themselves).
+ * Meet in room `code`: on the public networks, or on the online server (`server`) — making the room, joining one that is
+ * there, or either (coming back after a lost connection). Without a server configured, nothing (the error says so).
  */
-export function hostRoom(code = newRoomCode(), again = false): void {
+function meetRoom(code: string, role: "host" | JoinAs, server: boolean, mode: JoinMode, handlers: MeetingHandlers): Meeting | null {
+  if (!server) return meet(code, role, turn(), handlers);
+  const settings = currentServer();
+  if (!settings) {
+    setOnline({ phase: { kind: "idle" }, error: "online.server.none", room: null });
+    return null;
+  }
+  return meet(code, role, null, handlers, undefined, [
+    serverNetwork(settings, mode, {
+      onWelcome: (seats) => setOnline({ seats: Math.max(0, Math.min(MAX_SPECTATOR_SEATS, seats)) }),
+      onProblem: (problem) => serverProblem(problem, role, mode),
+    }),
+  ]);
+}
+
+/** A host's tries at a room code the server doesn't have yet (another host may have just made the code drawn). */
+let hostTries = 0;
+
+/**
+ * Something went wrong with the online server. No such room, or no seat: said as on the public networks. Its code taken: the
+ * host draws another. Otherwise (the server refused this program, couldn't be reached, or closed the connection) the attempt
+ * ends with what went wrong; a connection made ends by itself through its link, and a game in progress waits for a new one.
+ */
+function serverProblem(problem: ServerProblem, role: "host" | JoinAs, mode: JoinMode): void {
+  const { phase } = getOnline();
+  if (problem === "exists" && role === "host" && mode === "create" && phase.kind === "hosting" && hostTries < 5) {
+    hostTries += 1;
+    return hostRoom(undefined, false, true);
+  }
+  if (problem === "missing" || problem === "full") {
+    stopLooking();
+    setOnline({ phase: { kind: "closed", reason: problem === "missing" ? "missing" : role === "watch" ? "watchFull" : "full" }, error: null });
+    return;
+  }
+  const error: MessageKey = `online.server.${problem}`;
+  if (phase.kind === "connected") {
+    if (problem !== "closed") setOnline({ error });
+    return;
+  }
+  stopLooking();
+  setOnline({ phase: playing() ? { kind: "closed", reason: "lost" } : { kind: "idle" }, error });
+}
+
+/**
+ * Make a room — on the online server (`server`) or the public networks: its code, to pass to the other player; wait for them
+ * (and spectators). `again`: the same room once more after a lost connection (its spectators aren't told to go: they come
+ * back by themselves).
+ */
+export function hostRoom(code = newRoomCode(), again = false, server = false): void {
   stopLooking();
   disconnect();
   dropWatchers(!again);
-  setOnline({ phase: { kind: "hosting", code }, error: null, room: { code, role: "host" } });
-  meeting = meet(code, "host", turn(), {
+  if (getOnline().phase.kind !== "hosting") hostTries = 0;
+  setOnline({ phase: { kind: "hosting", code }, error: null, room: { code, role: "host", server } });
+  meeting = meetRoom(code, "host", server, again ? "any" : "create", {
     onLink: (peer, as) => (as === "player" ? connected("host", peer) : addWatcher(peer)),
     onFull: () => undefined,
     admit,
   });
 }
 
-/** Join the room of this code (already normalized: codes.ts normalizeRoomCode). */
-export function joinRoom(code: string): void {
+/**
+ * Join the room of this code (already normalized: codes.ts normalizeRoomCode), on the online server (`server`) or the public
+ * networks; `again`: after a lost connection (on the server, the room is waited for if it isn't there).
+ */
+export function joinRoom(code: string, server = false, again = false): void {
   stopLooking();
   disconnect();
   dropWatchers();
-  setOnline({ phase: { kind: "joining", code, as: "player" }, error: null, room: { code, role: "guest" } });
-  meeting = meet(code, "player", turn(), {
+  setOnline({ phase: { kind: "joining", code, as: "player" }, error: null, room: { code, role: "guest", server } });
+  meeting = meetRoom(code, "player", server, again ? "any" : "join", {
     onLink: (peer) => connected("guest", peer),
     onFull: () => {
       stopLooking();
@@ -681,15 +745,15 @@ export function joinRoom(code: string): void {
 }
 
 /**
- * After losing the connection: the same room again, in the same role. The host makes its room again (its own network may
- * have dropped); until then the other player can come back to the room it stayed in.
+ * After losing the connection: the same room again, in the same role, the same way. The host makes its room again (its own
+ * network may have dropped); until then the other player can come back to the room it stayed in.
  */
 export function reconnect(): void {
   const room = getOnline().room;
   if (!room) return;
-  if (room.role === "host") hostRoom(room.code, true);
-  else if (room.role === "spectator") watchRoom(room.code, true);
-  else joinRoom(room.code);
+  if (room.role === "host") hostRoom(room.code, true, room.server);
+  else if (room.role === "spectator") watchRoom(room.code, true, room.server);
+  else joinRoom(room.code, room.server, true);
 }
 
 /** Codes by hand, the host: make the connection code. */

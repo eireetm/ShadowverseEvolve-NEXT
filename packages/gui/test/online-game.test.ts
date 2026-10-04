@@ -96,7 +96,8 @@ describe("online play: two programs, one game", () => {
       expect(b.host.replay()!.inputs).toEqual(a.host.replay()!.inputs);
       expect([a, b].flatMap((s) => s.messages.filter((m) => m.kind === "error"))).toEqual([]);
     }
-  });
+    // Three whole games: about two seconds alone, more while the whole suite runs.
+  }, 30_000);
 
   it("waits for answers that come late and in batches", () => {
     const a = side(0, options("online-late", "sd02", "sd03"), true);

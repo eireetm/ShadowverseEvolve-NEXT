@@ -1,9 +1,10 @@
-// Online play. Make a room (a code to pass to the other player) or join one; or pass connection codes by
-// hand when the public networks can't be reached. Connected, it shows how (which network, direct or through a relay), the
-// round trip, whether both programs are the same, a chat, and the next game's preparation: the host's rules, each player's
-// deck, ready. Both ready, the game starts (on the game screen); after it, the next one is prepared here. A lost connection
-// can be made again, and the game goes on where it was. A room's games can also be watched (a spectator's seat, "观战"):
-// the spectator sees them, and the chat, and does nothing else.
+// Online play. Make a room (a code to pass to the other player) or join one — on the online server ("使用服务器", when one
+// is configured: the rules are chosen before the room is made) or on the public networks; or pass connection codes by hand
+// when the public networks can't be reached. Connected, it shows how (which network, direct or through a relay or the
+// server), the round trip, whether both programs are the same, a chat, and the next game's preparation: the host's rules,
+// each player's deck, ready. Both ready, the game starts (on the game screen); after it, the next one is prepared here. A
+// lost connection can be made again, and the game goes on where it was. A room's games can also be watched (a spectator's
+// seat, "观战"): the spectator sees them, and the chat, and does nothing else.
 import { useEffect, useState } from "react";
 import { errorText } from "../app/errors";
 import { updateSettings, useSettings } from "../app/settings";
@@ -39,8 +40,11 @@ import {
   watchRoom,
   type OnlinePhase,
 } from "../net/online";
+import type { OnlineState } from "../net/state";
 import { Chat } from "./Chat";
 import { useBack } from "../app/back";
+import { ServerConfigWindow } from "../app/ServerConfigWindow";
+import { loadServerConfig, useServerConfig } from "../net/server-config";
 
 /** Who goes first, as the game setup offers it (the rules' way first). */
 const TURN_ORDERS: readonly TurnOrder[] = ["choose", "random", "player1", "player2"];
@@ -107,6 +111,9 @@ export function OnlineScreen({ onBack, onGame, onEditDecks }: Props) {
   useEffect(() => {
     if (catalog) void identify(catalog).then(() => setIdentified(true));
   }, [catalog]);
+  useEffect(() => {
+    void loadServerConfig();
+  }, []);
   // Back to the menu: looking stops; a connection stays (the menu says so), and so does a game waiting for its connection.
   const back = () => {
     const kind = getOnline().phase.kind;
@@ -221,14 +228,95 @@ function Phase({ phase, since, identified, going, onGame, onEditDecks }: PhasePr
   }
 }
 
-/** Make a room, join one, or pass codes by hand. */
+/**
+ * Make a room, join one, or pass codes by hand: on the online server when one is configured (its part first then), and on
+ * the public networks.
+ */
 function Start() {
+  const server = useServerConfig().server;
+  // Keyed: a server saved in the window moves its part up without making it again (the window stays open).
+  const parts = [<ServerStart key="server" />, <PublicStart key="public" titled={server !== null} />];
+  return <div className="sve-online-step">{server ? parts : parts.reverse()}</div>;
+}
+
+/** Who goes first, as a select (the online screen's rules: here before a room is made, and in the room for its host). */
+function TurnOrderField({ testId }: { testId: string }) {
+  const t = useT();
+  const settings = useSettings();
+  return (
+    <label className="sve-field">
+      <span>{t("setup.turnOrder")}</span>
+      <select value={settings.setupTurnOrder} onChange={(e) => updateSettings({ setupTurnOrder: e.target.value as TurnOrder })} data-testid={testId}>
+        {TURN_ORDERS.map((order) => (
+          <option key={order} value={order}>
+            {t(`turnOrder.${order}`)}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+/**
+ * The online server: the rules of the room to make (the host's settings, as in the room), make it, or join one by its code,
+ * to play or to watch. Without a server configured: what it is, and the configuration's window.
+ */
+function ServerStart() {
+  const t = useT();
+  const server = useServerConfig().server;
+  const [code, setCode] = useState("");
+  const [editing, setEditing] = useState(false);
+  const room = normalizeRoomCode(code);
+  return (
+    <section className="sve-online-section sve-online-server" data-testid="online-server">
+      <h3>{server ? t("online.server.title", { name: server.name }) : t("online.server.titleNone")}</h3>
+      {server ? (
+        <>
+          <p className="sve-hint">{t("online.server.rules")}</p>
+          <fieldset className="sve-online-rules">
+            <FormatPicker />
+            <TurnOrderField testId="online-server-turn-order" />
+          </fieldset>
+          <button type="button" className="sve-primary sve-menu-button" onClick={() => hostRoom(undefined, false, true)} data-testid="online-server-host">
+            {t("online.host")}
+          </button>
+          <form
+            className="sve-online-join"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (room) joinRoom(room, true);
+            }}
+          >
+            <input value={code} onChange={(e) => setCode(e.target.value)} placeholder={t("online.codePlaceholder")} maxLength={12} data-testid="online-server-code" />
+            <button type="submit" disabled={!room} data-testid="online-server-join">
+              {t("online.join")}
+            </button>
+            <button type="button" disabled={!room} onClick={() => room && watchRoom(room, false, true)} data-testid="online-server-watch">
+              {t("online.watch")}
+            </button>
+          </form>
+          <p className="sve-hint">{t("online.server.watchHint")}</p>
+        </>
+      ) : (
+        <p className="sve-hint">{t("online.server.noneHelp")}</p>
+      )}
+      <button type="button" className="sve-link-button" onClick={() => setEditing(true)} data-testid="online-server-configure">
+        {t("settings.serverEdit")}
+      </button>
+      {editing ? <ServerConfigWindow onClose={() => setEditing(false)} /> : null}
+    </section>
+  );
+}
+
+/** The public networks: make a room, join one, or pass codes by hand; and the network check. */
+function PublicStart({ titled }: { titled: boolean }) {
   const t = useT();
   const [code, setCode] = useState("");
   const [offer, setOffer] = useState("");
   const room = normalizeRoomCode(code);
   return (
-    <div className="sve-online-step">
+    <section className="sve-online-section" data-testid="online-p2p">
+      {titled ? <h3>{t("online.p2p.title")}</h3> : null}
       <button type="button" className="sve-primary sve-menu-button" onClick={() => hostRoom()} data-testid="online-host">
         {t("online.host")}
       </button>
@@ -261,7 +349,7 @@ function Start() {
         </button>
       </details>
       <NetworkCheckPanel />
-    </div>
+    </section>
   );
 }
 
@@ -269,9 +357,10 @@ function Start() {
  * The connection ended. A game in progress waits: connect again (the same room, or any other way) and it goes on. A
  * spectator connects again by itself.
  */
-function Closed({ reason, going, onGame }: { reason: "left" | "lost" | "full" | "watchFull"; going: boolean; onGame: () => void }) {
+function Closed({ reason, going, onGame }: { reason: Extract<OnlinePhase, { kind: "closed" }>["reason"]; going: boolean; onGame: () => void }) {
   const t = useT();
-  const room = useOnline().room;
+  const online = useOnline();
+  const room = online.room;
   if (room?.role === "spectator" && reason === "lost") {
     return (
       <div className="sve-online-step">
@@ -292,7 +381,7 @@ function Closed({ reason, going, onGame }: { reason: "left" | "lost" | "full" | 
   return (
     <div className="sve-online-step">
       <p className="sve-problem" data-testid="online-closed">
-        {t(`online.closed.${reason}` as const)}
+        {t(`online.closed.${reason}` as const, { max: roomSeats(online) })}
       </p>
       {going ? (
         <>
@@ -319,15 +408,21 @@ function Closed({ reason, going, onGame }: { reason: "left" | "lost" | "full" | 
   );
 }
 
+/** The room's spectator seats: as many as the online server says, or the public networks' two. */
+function roomSeats(online: OnlineState): number {
+  return online.room?.server ? online.seats : SPECTATOR_SEATS;
+}
+
 /** How many spectators the room has (the host counts them). */
 function WatchersFact() {
   const t = useT();
-  const { watchers, room } = useOnline();
+  const online = useOnline();
+  const { watchers, room } = online;
   if (!room) return null;
   return (
     <p className="sve-hint" data-testid="online-watchers" data-n={watchers}>
       {t("online.watchersLabel")}
-      {t("online.watchersCount", { n: watchers, max: SPECTATOR_SEATS })}
+      {t("online.watchersCount", { n: watchers, max: roomSeats(online) })}
     </p>
   );
 }
@@ -588,16 +683,7 @@ function Prep({ role, same, onEditDecks }: { role: "host" | "guest"; same: boole
           // Taking the rules back needs "not ready" first: they are the ones the other player's deck was checked under.
           <fieldset className="sve-online-rules" disabled={isReady}>
             <FormatPicker />
-            <label className="sve-field">
-              <span>{t("setup.turnOrder")}</span>
-              <select value={settings.setupTurnOrder} onChange={(e) => updateSettings({ setupTurnOrder: e.target.value as TurnOrder })} data-testid="online-turn-order">
-                {TURN_ORDERS.map((order) => (
-                  <option key={order} value={order}>
-                    {t(`turnOrder.${order}`)}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <TurnOrderField testId="online-turn-order" />
           </fieldset>
         ) : (
           <>

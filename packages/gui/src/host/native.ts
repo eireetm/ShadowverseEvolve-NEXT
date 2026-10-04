@@ -300,6 +300,8 @@ export async function createNativeHost(platform: AppPlatform): Promise<Host> {
     // No settings file in the apps: the settings stay in the app's own storage.
     readSettingsFile: async () => null,
     writeSettingsFile: () => Promise.reject(new Error("the apps keep no settings file")),
+    readServerFile: async () => null,
+    writeServerFile: () => Promise.reject(new Error("the apps keep no online server file")),
 
     importResources: importZip,
   };

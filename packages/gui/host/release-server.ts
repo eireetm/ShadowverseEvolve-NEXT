@@ -22,6 +22,9 @@ const root = dirname(fileURLToPath(import.meta.url));
 const appDir = join(root, "app");
 // The settings the app keeps here as well as in the browser (src/app/settings-file.ts): a person can edit them by hand.
 const settingsFile = join(root, "settings.ini");
+// The online server to use ("使用服务器"; src/net/server-config.ts): put here when the release was built with one, or
+// written from the app's settings.
+const serverFile = join(root, "online-server.ini");
 const cfg: HostConfig = {
   root,
   publicDir: join(root, "public"),
@@ -190,6 +193,13 @@ async function api(req: IncomingMessage, res: ServerResponse, url: URL): Promise
       const text = await readBody(req);
       JSON.parse(text); // refuse what isn't JSON
       writeReplayText(full, text);
+      return sendJson(res, 200, { ok: true });
+    }
+  }
+  if (path === "online-server") {
+    if (req.method === "GET") return sendJson(res, 200, { path: serverFile, text: readSettingsText(serverFile) });
+    if (req.method === "PUT") {
+      writeSettingsText(serverFile, await readBody(req));
       return sendJson(res, 200, { ok: true });
     }
   }

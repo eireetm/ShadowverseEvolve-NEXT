@@ -116,7 +116,9 @@ describe("messages", () => {
     expect(parseMessage({ t: "join", as: "player" })).toEqual({ t: "join", as: "player" });
     expect(parseMessage({ t: "join", as: "referee" })).toBeNull();
     expect(parseMessage({ t: "watchers", n: 2 })).toEqual({ t: "watchers", n: 2 });
-    expect(parseMessage({ t: "watchers", n: 3 })).toBeNull();
+    // A room on the online server has as many spectator seats as the server says (at most 100).
+    expect(parseMessage({ t: "watchers", n: 10 })).toEqual({ t: "watchers", n: 10 });
+    expect(parseMessage({ t: "watchers", n: 101 })).toBeNull();
     expect(parseMessage({ t: "chat", text: "gl", seat: 1 })).toEqual({ t: "chat", text: "gl", seat: 1 });
     expect(parseMessage({ t: "chat", text: "gl", seat: 2 })).toBeNull();
     const deck = { leader: "SD01-LD01", main: ["SD01-001"], evolve: [] };

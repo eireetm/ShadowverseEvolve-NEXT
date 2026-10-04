@@ -76,6 +76,12 @@ export interface Host {
   readSettingsFile(): Promise<SettingsFile | null>;
   /** Write the settings file (all of its text). */
   writeSettingsFile(text: string): Promise<void>;
+  /**
+   * The PC release's online server configuration (online-server.ini next to its program; net/server-config.ts), or null
+   * when this host keeps none (the dev server, the apps: the browser keeps it).
+   */
+  readServerFile(): Promise<SettingsFile | null>;
+  writeServerFile(text: string): Promise<void>;
   /** The Android app: the folder the player copies their own files into (null elsewhere: public/ of the project). */
   readonly resourceFolder: string | null;
   /** The Android app: how many resources are built into it (a release with resources; host/bundled.ts). */
@@ -162,6 +168,16 @@ export const serverHost: Host = {
     const res = await fetch("/api/settings-file", { method: "PUT", headers: { "Content-Type": "text/plain; charset=utf-8" }, body: text, keepalive: true });
     if (!res.ok) throw new Error(`saving the settings file: ${res.status} ${await res.text()}`);
   },
+
+  readServerFile: async () => {
+    const file = await getJson<{ path: string | null; text: string | null }>("/api/online-server");
+    return file.path === null ? null : { path: file.path, text: file.text };
+  },
+
+  writeServerFile: async (text) => {
+    const res = await fetch("/api/online-server", { method: "PUT", headers: { "Content-Type": "text/plain; charset=utf-8" }, body: text });
+    if (!res.ok) throw new Error(`saving the online server file: ${res.status} ${await res.text()}`);
+  },
 };
 
 let current: Host = serverHost;
@@ -199,6 +215,8 @@ export const hostApi: Host = {
   copyText: (text) => current.copyText(text),
   readSettingsFile: () => current.readSettingsFile(),
   writeSettingsFile: (text) => current.writeSettingsFile(text),
+  readServerFile: () => current.readServerFile(),
+  writeServerFile: (text) => current.writeServerFile(text),
   importResources: (file, progress) => {
     if (!current.importResources) throw new Error("importing resources is only in the Android app");
     return current.importResources(file, progress);

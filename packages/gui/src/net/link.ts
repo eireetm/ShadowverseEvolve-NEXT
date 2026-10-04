@@ -4,13 +4,16 @@
 import { parseMessage, type NetMessage } from "./messages";
 
 /**
- * How the connection was set up: the public network whose relays passed its setup messages, codes passed by hand, or the
- * tests' channel in the browser (local-network.ts).
+ * How the connection was set up: the public network whose relays passed its setup messages, codes passed by hand, the
+ * online server (server.ts), or the tests' channel in the browser (local-network.ts).
  */
-export type Via = "nostr" | "mqtt" | "torrent" | "manual" | "local";
+export type Via = "nostr" | "mqtt" | "torrent" | "manual" | "server" | "local";
 
-/** Direct between the two programs, or through a TURN relay (unknown until the connection's stats say). */
-export type Route = "direct" | "relay" | "unknown";
+/**
+ * Direct between the two programs, or through a TURN relay (unknown until the connection's stats say); or through the
+ * online server (all of a server room's messages go through it).
+ */
+export type Route = "direct" | "relay" | "server" | "unknown";
 
 export interface PeerLink {
   readonly via: Via;

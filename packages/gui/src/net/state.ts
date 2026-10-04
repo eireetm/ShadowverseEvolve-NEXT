@@ -6,7 +6,7 @@ import { useSyncExternalStore } from "react";
 import type { FormatProblem } from "../formats/formats";
 import type { MessageKey } from "../i18n";
 import type { PeerLink, Route, Via } from "./link";
-import { CHAT_MAX, type Hello, type JoinAs, type ReadyDeck, type Rules } from "./messages";
+import { CHAT_MAX, SPECTATOR_SEATS, type Hello, type JoinAs, type ReadyDeck, type Rules } from "./messages";
 
 export type OnlinePhase =
   | { kind: "idle" }
@@ -19,8 +19,11 @@ export type OnlinePhase =
   /** Codes by hand, the guest's side: its reply code (null: being made), then waiting for the connection. */
   | { kind: "manualGuest"; reply: string | null }
   | { kind: "connected"; role: OnlineRole; via: Via; route: Route; rtt: number | null; peer: Hello | null }
-  /** The connection ended: the other side left, it was lost, or the room had no seat left (a player's, or a spectator's). */
-  | { kind: "closed"; reason: "left" | "lost" | "full" | "watchFull" };
+  /**
+   * The connection ended: the other side left, it was lost, the room had no seat left (a player's, or a spectator's), or
+   * (the online server says so) there is no room of that code.
+   */
+  | { kind: "closed"; reason: "left" | "lost" | "full" | "watchFull" | "missing" };
 
 /** The host (player 1), the other player (player 2), or a spectator (connected to the host, watching only). */
 export type OnlineRole = "host" | "guest" | "spectator";
@@ -60,15 +63,20 @@ export interface OnlineState {
   error: MessageKey | null;
   prep: Prep;
   game: OnlineGame | null;
-  /** The room of the last connection, to connect again the same way after losing it (null: codes by hand). */
-  room: { code: string; role: OnlineRole } | null;
+  /**
+   * The room of the last connection, to connect again the same way after losing it (null: codes by hand); `server`: on the
+   * online server (else on the public networks).
+   */
+  room: { code: string; role: OnlineRole; server: boolean } | null;
   /** Spectators watching the room's games (the host counts them and tells the others). */
   watchers: number;
+  /** The room's spectator seats: the online server says how many its rooms have; the public networks' rooms have 2. */
+  seats: number;
 }
 
 export const NO_PREP: Prep = { rules: null, mine: null, theirs: null, theirsProblems: null, starting: false };
 
-let state: OnlineState = { phase: { kind: "idle" }, since: Date.now(), chat: [], error: null, prep: NO_PREP, game: null, room: null, watchers: 0 };
+let state: OnlineState = { phase: { kind: "idle" }, since: Date.now(), chat: [], error: null, prep: NO_PREP, game: null, room: null, watchers: 0, seats: SPECTATOR_SEATS };
 const listeners = new Set<() => void>();
 
 export function setOnline(change: Partial<OnlineState>): void {

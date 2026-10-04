@@ -27,7 +27,7 @@
   - 牌桌按场地图摆放，点击或拖拽操作，有动画、箭头和音效；
   - 组卡界面：筛选、异画、赛制和禁卡表、卡组码；
   - 录像、复现包（逐字节重现一局）、撤销 / 倒回、手动调试；
-  - P2P 联机，不需要自己的服务器；
+  - 联机：P2P（不需要服务器），或者经过自己架的联机服务器（`@sve/server`，见"联机服务器"）；
   - 界面和卡牌文本都可以切换中文、英文、日文；
   - 外观、声音、字体都可以换成自己的文件（见"自定义资源"）；衍生物在对局里显示哪个印刷版本的卡图，可以在设置页的"衍生物卡图"里选。
 - **安卓版**：同一个界面装进安卓 WebView（Capacitor），手机横屏使用。
@@ -70,6 +70,7 @@ npm run dev:gui
 | `npm run android:apk` | 打安卓 APK（见"安卓版"） |
 | `npm run ios:ipa` | 打 iOS 的 IPA（见"iOS 版"，要在 Mac 上） |
 | `npm run release:pc -- --zip` | 打 PC 发行版（见"发行版"） |
+| `npm run release:server` | 打联机服务器的安装包（见"联机服务器"） |
 | `npm run card -- <卡号>` | 查一张卡：各语言文本、日文类型、相关卡、官方 QA、脚本状态 |
 | `npm run bench` | 性能基准：随机对局、复制和抽样一局、Bot 每个决策的耗时 |
 | `npm run bot:arena -- [局数] [A] [B]` | Bot 互打（easy / medium / hard，试验版 medium-beta / hard-beta；sve-fool / sve-good / sve-planner 是模仿 SVE Simulator 三个 AI 的对照组，只用于测试）：示例卡组，两局一组交换座位、轮流打遍所有卡组组合，打印按"对"计分的得分和 95% 区间、先后手、先手胜率、回合数、每副卡组的得分和思考时间。`--decks sd01,sd02` 选卡组（`train` / `holdout` / `legal`：`tools/rl/decksets.json` 的卡组集，按标准赛制和它的禁卡表检查），`--mirror` 双方用同一副，`--workers 8` 多进程一起打，`--seed` 换一批对局，`--independent` 每局单独的种子，`--range a-b` 只打其中一段，`--out 文件夹` 存下每一局（可重放的记录 `games.jsonl.gz`）和报告，`--replays N` 把前 N 局存成对局界面能打开的录像。`medium:identity`（把手写估值从外面传进去，应和 medium 完全一样）和 `medium:negated`（估值反过来，应该几乎全输）用来检查估值接口 |
@@ -116,6 +117,7 @@ packages/
     data/               卡牌数据（<卡包>.json，由 build:cards 生成，不要手改）
     test/               规则测试、卡牌测试、整局测试
   bot/                  Bot（@sve/bot），只用 Core 的公开 API
+  server/               联机服务器（@sve/server）：按房间号转发消息、密钥、上限；scripts/ 里是安装脚本和打包
   gui/                  界面（@sve/gui）
     index.html
     vite.config.ts
@@ -264,16 +266,41 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 
 ### 联机
 
-主菜单"联机对战"，不需要自己的服务器。
-- **房间号**：一方创建房间，把 6 位房间号发给对方。双方借用公共的免费服务（Nostr、MQTT、BitTorrent）找到对方，然后用 WebRTC 直连。
-- **手动连接**：房间号连不上时，双方互相发送连接码（`SVE1-O-…` / `SVE1-A-…`）。
-- **连不上时**：可以在设置里填自己的 TURN 中转；"检测网络"会显示这台电脑的网络情况。
+主菜单"联机对战"。两种方式：
+
+- **使用服务器**：有人架了联机服务器（见"联机服务器"）、并且给了你配置时，联机界面最上面是"使用服务器（服务器的名字）"。
+  - 先选好赛制、禁卡表、先后手，再"创建房间"，把 6 位房间号发给对方；对方在同一栏输入房间号，点"加入"或"观战"。进房间以后房主还能改规则。
+  - 所有消息都经过服务器：不用打洞，也不用国外的公共服务；房间号输错会马上提示"房间不存在"；对方看不到你的 IP。
+  - 配置：设置 → 联机 →"修改服务器配置"（联机界面里也有这个按钮），粘贴服务器的主人给你的文字，可以先"测试连接"。
+- **不用服务器（P2P）**：
+  - **房间号**：一方创建房间，把 6 位房间号发给对方。双方借用公共的免费服务（Nostr、MQTT、BitTorrent）找到对方，然后用 WebRTC 直连。
+  - **手动连接**：房间号连不上时，双方互相发送连接码（`SVE1-O-…` / `SVE1-A-…`）。
+  - **连不上时**：可以在设置里填自己的 TURN 中转；"检测网络"会显示这台电脑的网络情况。
 - **版本**：两边的联机协议、卡牌（定义、实现状态和禁卡表）和规则代码的指纹都相同才能开始，联机界面会显示是否相同；版本号本身不比。各自 `public/` 里的资源（卡图、音效、背景、字体、`theme.css`）、设置、界面语言、卡组都不用一样。同一版本的电脑版和安卓版可以互相联机；设置页最下面和联机界面都显示版本号，连不上时先确认双方的版本一样。
 - **对局**：双方各自运行同一局，只同步每一步的回答。断线后可以重连，接着打。
-- **观战**：知道房间号的人点"观战"进房间看对局，每个房间最多 2 人。
+- **观战**：知道房间号的人点"观战"进房间看对局。P2P 的房间最多 2 人；用服务器时由服务器决定（默认 10 人）。
   - 只能看双方都看得到的信息（看不到手牌），可以换边；不能操作，也不能发言（能看到聊天）。
   - 对局中途进来的马上追上进度；断线后自动重连。
   - 只有用房间号连接时才能观战（手动连接不行）。
+
+### 联机服务器
+
+给"使用服务器"用的服务器程序（`packages/server`），装在一台有公网 IP 的 Linux 服务器（Ubuntu）上。它只按房间号转发双方的消息（两边的程序各自运行同一局），不运行游戏，所以 2 核 2 GB、3 Mbps 的轻量服务器就绰绰有余（一局只传大约 100 KB）。
+
+- **打包**：`npm run release:server`，在仓库旁边生成 `SVEN-server-<版本>/` 和 `SVEN-server-<版本>.tar.gz`：`server.mjs`（程序，一个文件）、安装脚本 `setup.sh`、中英文的 `README.txt`。版本号在 `packages/server/package.json`。
+- **安装和更新**（详细步骤在包里的 README.txt）：
+  1. 云服务器的防火墙放行 TCP 80（证书机构验证用）和 443（玩家连接用）；
+  2. 把 tar.gz 上传到服务器；
+  3. `tar xzf SVEN-server-<版本>.tar.gz`，然后 `sudo bash SVEN-server-<版本>/setup.sh <服务器的公网 IP>`。
+  - 脚本会装好 Node.js（国内镜像）、向 Let's Encrypt 申请这个 IP 的免费证书（6 天有效，certbot 每隔几天自动续）、注册成系统服务（开机自动启动、崩溃自动重启），最后打印"客户端配置"。直接用 IP 连接，不需要域名。
+  - 更新时原来的配置和密钥都保留；更新会断开正在进行的对局。
+- **客户端配置**：几行文字（名字、地址 `wss://<IP>`、密钥）。
+  - 放进仓库根目录的 `online-server.ini`（在 `.gitignore` 里，不会上传）：之后打的电脑版和安卓版都带着它，电脑版的文件夹里另有一份 `online-server.ini`。没有这个文件，打出的发行版就没有服务器——发给谁带服务器的版本，由你决定。
+  - iOS 版在 GitHub 上打包，拿不到这个文件（仓库公开时，打出的 IPA 谁都能下载，也不应该带），iOS 的朋友在设置里粘贴一次。
+  - App 里"修改服务器配置"改的优先：电脑版写回 `online-server.ini`，手机上存在 App 里；"恢复成程序自带的"回到打包时的配置。
+- **密钥**（在服务器的终端里，`sudo sve-server …`）：`newkey <名字>` 新建一把并打印它的客户端配置、`revoke <名字>` 作废（用它的连接几秒内断开）、`keys` 列出、`client <名字>` 再打印一次、`status` 看现在的在线人数和每把密钥这个小时的用量。可以给不同的群、不同的人不同的密钥：哪把泄露了，只作废那一把，持有它的人在设置里换上新的配置就行。
+- **上限**（`/etc/sve-server/server.ini`，改了几秒内生效）：每个房间的观战席（默认 10）、房间总数、连接数（同一个 IP 默认最多 20 条：手机网络常常很多人共用一个 IP）、每条消息的大小、每秒的条数和流量。拿到密钥的人也只能拿它下棋。
+- **注意**：和 P2P 一样，改过的程序能看到对方的手牌（两边的程序都运行整局）；服务器只负责见面和转发。
 
 ### 录像和复现包
 
@@ -295,6 +322,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
     - 示例卡组、空的 `replays/` 和 `public/` 文件夹结构；
     - 三语的 `README.txt`，以及写着版本、提交和引擎指纹的 `VERSION.txt`。
   - `--public <文件夹>`：把这个文件夹里的资源一起放进 `public/`（默认不放）。
+  - 仓库根目录有 `online-server.ini` 时一起放进去（见"联机服务器"）。
   - 需要 Node.js 20 以上。
   - **设置文件 `settings.ini`**：第一次启动时在这个文件夹里生成（带着浏览器里原有的设置）。
     - 里面是设置页的各项（语言、界面透明度、音量、快速提示、TURN 中转）和调试页的几项（动画、Bot 速度、手动选择卡片位置、手动调试），每项上面有三语的说明。
@@ -303,6 +331,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 - **安卓版**：`npm run android:apk -- --release --public <资源文件夹> --out <APK 路径>`（选项见"安卓版"）。
   - 每次都要用同一个密钥签名（默认是仓库旁边的 `SVE-signing/`），换了密钥就不能覆盖安装。
   - 密钥要备份，不要给别人。
+  - 仓库根目录有 `online-server.ini` 时，App 带着这个服务器（见"联机服务器"）。
 - **联机**：双方的引擎指纹一样才能对局（`VERSION.txt` 和联机界面里都能看到）。
   - 改了 `packages/core/` 或 `packages/gui/src/engine/` 的代码（只改注释也算），指纹就会变，大家都要换新版。
   - 联机协议（`packages/gui/src/net/` 的 `PROTOCOL`）变了也一样；只改了界面的版本可以和旧版互相联机。
@@ -364,6 +393,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 - **设备上的文件**：在"文件"App 的"我的 iPhone（iPad）› SVE NEXT"里：`public/`（资源：用"文件"App 拷进去，或者在设置页导入 zip）、`decks/`、`replays/`、`exports/`。
 - **要求**：iOS / iPadOS 16.4 以上。横屏全屏，屏幕常亮；iPad 用宽屏排版、手指操作（见"安卓版"的平板）。
 - 和同一版本的电脑版、安卓版可以互相联机。
+- 联机服务器的配置不在 IPA 里：在设置 → 联机 →"修改服务器配置"里粘贴（见"联机服务器"）。
 
 ### 在代码里使用 Core
 
@@ -407,7 +437,7 @@ An unofficial rules engine, AI and client for the *Shadowverse: Evolve* trading 
   - A table laid out on the playmat picture, played by clicking and dragging, with animations, arrows and sounds.
   - A deck builder with filters, alternate arts, formats and restriction lists, and deck codes.
   - Replays, bug report files that replay a game exactly, undo and rewind, and manual debugging.
-  - Peer-to-peer online play with no server of its own.
+  - Online play: peer to peer (no server needed), or through an online server of your own (`@sve/server`, see "Online server").
   - The interface and the card text can each be English, Chinese or Japanese.
   - Pictures, sounds and fonts can be replaced with your own files (see "Custom resources"); which printing a token shows in games is chosen in the settings ("Token art").
 - **Android app**: the same interface in the Android WebView (Capacitor), played with the phone held sideways.
@@ -450,6 +480,7 @@ Run these at the repository root:
 | `npm run android:apk` | Build the Android APK (see "Android app") |
 | `npm run ios:ipa` | Build the iOS IPA (see "iOS app"; on a Mac) |
 | `npm run release:pc -- --zip` | Build the PC release (see "Releases") |
+| `npm run release:server` | Build the online server's package (see "Online server") |
 | `npm run card -- <card number>` | Show a card: its text in each language, Japanese traits, related cards, official Q&A, script status |
 | `npm run bench` | Benchmarks: random games, copying and sampling a game, the bot's time per decision |
 | `npm run bot:arena -- [games] [A] [B]` | Bots against each other (easy / medium / hard, the trial medium-beta / hard-beta, and sve-fool / sve-good / sve-planner, imitations of SVE Simulator's three AIs used only as benchmarks): the sample decks, games in pairs with the seats swapped, going through every matchup of the decks; prints the score by pairs with a 95% interval, going first and second, the first player's win rate, game length, the score per deck and thinking time. `--decks sd01,sd02` picks decks (`train` / `holdout` / `legal`: the deck sets of `tools/rl/decksets.json`, checked against the standard format and its restriction list), `--mirror` gives both players the same deck, `--workers 8` plays on several processes, `--seed` another series of games, `--independent` a seed per game, `--range a-b` only part of the series, `--out folder` keeps every game (replayable records, `games.jsonl.gz`) and the report, `--replays N` saves the first N games as replays the GUI opens. `medium:identity` (the hand-written evaluation passed in from outside: plays exactly as medium) and `medium:negated` (the evaluation turned round: should lose nearly every game) check the evaluation interface |
@@ -496,6 +527,7 @@ packages/
     data/               card data (<set>.json, generated by build:cards: don't edit by hand)
     test/               rules tests, card tests, whole-game tests
   bot/                  the bot (@sve/bot), on the Core's public API only
+  server/               the online server (@sve/server): messages passed by room code, keys, limits; scripts/: the install script and the package
   gui/                  the interface (@sve/gui)
     index.html
     vite.config.ts
@@ -644,16 +676,41 @@ Sound effects (26):
 
 ### Online play
 
-"Online play" on the main menu, with no server of its own.
-- **Room code**: one player creates a room and sends the 6-letter code to the other. Both find each other through free public services (Nostr, MQTT, BitTorrent), then connect directly with WebRTC.
-- **Manual connection**: when a room code doesn't connect, the players exchange connection codes (`SVE1-O-…` / `SVE1-A-…`).
-- **If you can't connect**: set your own TURN relay in the settings; "Check the network" shows what this computer can reach.
+"Online play" on the main menu, two ways:
+
+- **Use the server**: when someone runs an online server (see "Online server") and gave you its configuration, the online screen begins with "Use the server (its name)".
+  - Choose the format, the restriction list and who goes first, then "Make a room", and send the 6-letter code to the other player, who types it in the same part and clicks "Join" or "Watch". The host can still change the rules in the room.
+  - Every message goes through the server: no hole punching, no public services abroad; a wrong code is said at once ("no room of that code"); the other player doesn't see your IP.
+  - Configuration: Settings > Online > "Edit the server configuration" (the online screen has the button too): paste the text the server's owner gave you; "Test the connection" first if you like.
+- **Without the server (P2P)**:
+  - **Room code**: one player creates a room and sends the 6-letter code to the other. Both find each other through free public services (Nostr, MQTT, BitTorrent), then connect directly with WebRTC.
+  - **Manual connection**: when a room code doesn't connect, the players exchange connection codes (`SVE1-O-…` / `SVE1-A-…`).
+  - **If you can't connect**: set your own TURN relay in the settings; "Check the network" shows what this computer can reach.
 - **Versions**: a game starts only when both programs have the same online protocol and the same fingerprints of the cards (definitions, implementation status, restriction lists) and of the rules code; the online screen says whether they do. The version number itself isn't compared. The resources in each one's `public/` (card pictures, sounds, backgrounds, fonts, `theme.css`), the settings, the interface language and the decks can all differ. The PC program and the Android app of one version play each other; the bottom of the settings page and the online screen show the version: when two can't connect, check that both have the same one.
 - **The game**: each program runs the same game and only the answers are exchanged. After a lost connection, reconnect and play on.
-- **Watching**: anyone with the room code can click "Watch" to watch the room's games, 2 spectators a room at most.
+- **Watching**: anyone with the room code can click "Watch" to watch the room's games: 2 spectators a room at most without the server; with it, as many as the server says (10 by default).
   - Spectators see only what both players can see (no hands) and can swap sides; they can't play or chat (they read the chat).
   - One who comes in the middle of a game catches up at once; a lost connection connects again by itself.
   - Watching needs a room code (not a manual connection).
+
+### Online server
+
+The server of "use the server" (`packages/server`), for a Linux server (Ubuntu) with a public IP. It only passes the two players' messages by room code (both programs play the same game themselves); it doesn't run the game, so a small cloud server (2 cores, 2 GB, 3 Mbps) is plenty: a game is about 100 KB.
+
+- **Build**: `npm run release:server` writes `SVEN-server-<version>/` and `SVEN-server-<version>.tar.gz` beside the repository: `server.mjs` (the program, one file), the install script `setup.sh`, and `README.txt` in Chinese and English. The version is `packages/server/package.json`'s.
+- **Install and update** (step by step in the package's README.txt):
+  1. Let TCP 80 (the certificate authority's check) and 443 (the players) through the cloud server's firewall.
+  2. Upload the tar.gz to the server.
+  3. `tar xzf SVEN-server-<version>.tar.gz`, then `sudo bash SVEN-server-<version>/setup.sh <the server's public IP>`.
+  - It installs Node.js (from a mirror in China), gets a free certificate for the IP from Let's Encrypt (6 days, renewed every few days by certbot), makes it a system service (starts with the server, restarts after a crash), and prints the "client config". The apps connect to the IP: no domain needed.
+  - An update keeps the configuration and the keys; it ends the games being played.
+- **Client config**: a few lines (a name, the address `wss://<IP>`, a key).
+  - Put it in `online-server.ini` at the repository's root (in `.gitignore`: never uploaded): the PC and Android builds made after that have it, and the PC folder has its own `online-server.ini`. Without the file a build has no server: you decide who gets a build with it.
+  - The iOS app is built on GitHub, which doesn't have the file (and while the repository is public anyone can download the IPA it builds, so it shouldn't): iOS players paste it in the settings once.
+  - What "Edit the server configuration" saves comes first: written back to `online-server.ini` on a PC, kept in the app on a phone; "Back to the built-in one" returns to the build's.
+- **Keys** (in the server's terminal, `sudo sve-server …`): `newkey <name>` makes one and prints its client config, `revoke <name>` revokes one (its connections close within seconds), `keys` lists them, `client <name>` prints a config again, `status` shows who is connected and each key's use this hour. Give different groups or people different keys: when one leaks, revoke that one only; its holders paste a new config in the settings.
+- **Limits** (`/etc/sve-server/server.ini`, read again within seconds): spectator seats per room (10 by default), rooms, connections (20 from one address by default: many people share one address on mobile networks), message size, messages and bytes per second. A key that leaks can't do more than play.
+- **Note**: as with P2P, a changed program can see the other player's hand (both programs run the whole game); the server only lets them meet and passes the messages.
 
 ### Replays and bug report files
 
@@ -675,6 +732,7 @@ Come in two kinds: for PCs and for Android.
     - the sample decks, an empty `replays/`, and the `public/` folder structure;
     - `README.txt` in three languages, and `VERSION.txt` with the version, the commit and the engine fingerprint.
   - `--public <folder>`: copies that folder's resources into `public/` (none by default).
+  - With `online-server.ini` at the repository's root, the release has it too (see "Online server").
   - Requires Node.js 20 or newer.
   - **Settings file `settings.ini`**: written into the folder at the first start (with the settings the browser had).
     - It holds the settings page's settings (languages, interface transparency, volumes, the Quick pause, the TURN relay) and a few of the debug panel's (animations, bot speed, choosing card spots by hand, manual debugging), each with a comment in three languages.
@@ -683,6 +741,7 @@ Come in two kinds: for PCs and for Android.
 - **Android**: `npm run android:apk -- --release --public <resource folder> --out <APK path>` (options under "Android app").
   - Always sign with the same key (by default `SVE-signing/` next to the repository). With another key, the APK can't be installed over the old one.
   - Back the key up, and keep it to yourself.
+  - With `online-server.ini` at the repository's root, the app has that server (see "Online server").
 - **Online play**: both sides need the same engine fingerprint (shown in `VERSION.txt` and in the online screen).
   - Changing code in `packages/core/` or `packages/gui/src/engine/` (even only comments) changes it, and everyone needs the new release.
   - So does a new online protocol (`PROTOCOL` in `packages/gui/src/net/`); a release that only changes the interface plays with the older one.
@@ -744,6 +803,7 @@ Training the AI takes tens of thousands of games: days on one computer, so frien
 - **Files on the device**: in the Files app, On My iPhone (iPad) > SVE NEXT: `public/` (resources: copied with the Files app, or a zip imported in the settings), `decks/`, `replays/`, `exports/`.
 - **Requirements**: iOS / iPadOS 16.4 or later. Played sideways on the whole screen, which stays on; an iPad has the wide layout used with fingers (see the tablets under "Android app").
 - It plays online with the PC program and the Android app of the same version.
+- The online server's configuration isn't in the IPA: paste it in Settings > Online > "Edit the server configuration" (see "Online server").
 
 ### Using the Core in code
 

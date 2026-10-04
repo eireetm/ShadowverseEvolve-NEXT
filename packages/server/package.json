@@ -1,0 +1,13 @@
+{
+  "name": "@sve/server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The online server for the app's \"use the server\" online mode: rooms by code, messages passed between the programs in a room.",
+  "dependencies": {
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.2"
+  }
+}

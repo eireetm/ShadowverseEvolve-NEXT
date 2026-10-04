@@ -104,6 +104,14 @@ for (const keep of filesUnder(join(gui, "public")).filter((path) => basename(pat
 }
 if (ownPublic) cpSync(ownPublic, join(out, "public"), { recursive: true });
 
+// The online server's configuration, when the project has one (online-server.ini at the repository's root, not in the
+// repository): next to the program, where the app reads and writes it (host/release-server.ts).
+const serverConfig = join(repo, "online-server.ini");
+if (existsSync(serverConfig)) {
+  writeWindowsText(join(out, "online-server.ini"), readFileSync(serverConfig, "utf8").replace(/^\uFEFF/, ""), true);
+  console.log("online-server.ini: the release has the project's online server");
+}
+
 // 4. How to start it, what it is, and which version.
 const fill = (template: string) => readFileSync(join(gui, "release", template), "utf8").replaceAll("{{version}}", version);
 writeWindowsText(join(out, "start.bat"), fill("start.bat"), false);

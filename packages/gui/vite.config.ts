@@ -1,5 +1,5 @@
 import react from "@vitejs/plugin-react";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig, type Plugin } from "vite";
@@ -9,6 +9,16 @@ import { hostPlugin } from "./host/plugin.ts";
 const here = fileURLToPath(new URL(".", import.meta.url));
 /** The program's version (package.json), shown in the main menu and told to the other program online (src/app/version.ts). */
 const version = (JSON.parse(readFileSync(join(here, "package.json"), "utf8")) as { version: string }).version;
+
+/**
+ * The online server this build uses unless the person sets another (src/net/server-config.ts): the project's
+ * online-server.ini at the repository's root, which isn't in the repository (.gitignore) — whoever builds a release decides
+ * whether it has one. Read when the dev server starts or a build is made.
+ */
+function onlineServer(): string {
+  const file = join(here, "..", "..", "online-server.ini");
+  return existsSync(file) ? readFileSync(file, "utf8").replace(/^\uFEFF/, "").replace(/\r\n/g, "\n") : "";
+}
 
 /** Every file under `dir` ("images/cards/BP01-001.webp"), hidden files left out. */
 function filesUnder(dir: string, prefix = ""): string[] {
@@ -55,7 +65,11 @@ export default defineConfig(({ mode }) => {
     worker: { format: "es" },
     publicDir: app ? (bundle ?? false) : "public",
     build: { target: "es2022", chunkSizeWarningLimit: 10_000, outDir: app ? `dist-${mode}` : "dist" },
-    define: { __ENGINE_FINGERPRINT__: JSON.stringify(engineFingerprint(here)), __APP_VERSION__: JSON.stringify(version) },
+    define: {
+      __ENGINE_FINGERPRINT__: JSON.stringify(engineFingerprint(here)),
+      __APP_VERSION__: JSON.stringify(version),
+      __ONLINE_SERVER__: JSON.stringify(onlineServer()),
+    },
     // Online play loads when first opened (src/online): its libraries are prepared when the server starts, else the dev
     // server finds them only then and reloads every open page. The libraries are found from the app's page only, not from
     // the pages of the builds' output (dist-android/, android/).
