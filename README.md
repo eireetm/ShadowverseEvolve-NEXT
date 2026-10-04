@@ -665,7 +665,7 @@ Sound effects (26):
 Come in two kinds: for PCs and for Android.
 
 - **Version**: the `version` in `packages/gui/package.json`, used by both. Change it before building a new release.
-  - Android's versionCode comes from it (0.1.2 → 102, 0.2.0 → 200). It must grow every time, so people can install the new APK over the old one and keep their data.
+  - Android's versionCode comes from it (0.1.2 → 102, 0.2.0 → 200). It must grow every time for the new APK to install over the old one and keep the data.
 - **PC**: `npm run release:pc -- --zip`
   - It writes a folder `SVEN-<version>-pc/` next to the repository, and a zip of it.
   - It never writes into an existing folder: pass another `--out <folder>`, or delete the old one first.
