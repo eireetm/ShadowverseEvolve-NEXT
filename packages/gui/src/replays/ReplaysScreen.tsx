@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { errorText } from "../app/errors";
 import { engine, reportError, useApp } from "../app/store";
-import type { Replay } from "../engine/protocol";
+import { knownController, type Replay } from "../engine/protocol";
 import { readReplayFile } from "../game/replay-files";
 import { hostApi, type ReplayFileEntry } from "../host/api";
 import { htmlLang, useT } from "../i18n";
@@ -106,7 +106,7 @@ function ReplayRow({ entry, ready, onWatch, onDelete }: { entry: ReplayFileEntry
   const side = (i: 0 | 1) => {
     const deck = entry.deckNames?.[i] ?? "?";
     const controller = entry.controllers?.[i];
-    return controller ? t("replays.side", { deck, controller: t(`controller.${controller}` as const) }) : deck;
+    return controller ? t("replays.side", { deck, controller: t(`controller.${knownController(controller)}` as const) }) : deck;
   };
   const result = entry.info?.result as { winner: 0 | 1 | null } | null | undefined;
   const outcome = !entry.info

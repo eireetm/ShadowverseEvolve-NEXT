@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createEngine, script } from "../src/core";
-import { HARD_OPTIONS, MEDIUM_OPTIONS, PlannerBot, type PlannerBotOptions } from "../src";
+import { createBot, HARD_OPTIONS, MEDIUM_OPTIONS, PlannerBot, type PlannerBotOptions } from "../src";
 import { drive, testFollower, testSpell, type DriveSpec } from "../../core/src/testing";
 
 // Two turns ahead (PlannerBotOptions.lookahead 2): a whole turn's plans compared by the opponent's next turn and our turn
@@ -67,9 +67,22 @@ function played(options: PlannerBotOptions, spec: DriveSpec = combo): string[] {
 describe("two turns ahead", () => {
   it("keeps a combo piece for next turn's lethal, where one turn's plans play it now", () => {
     for (const options of [MEDIUM_OPTIONS, HARD_OPTIONS]) {
-      expect(played({ ...options, lethalSearch: 0 })).toEqual(["PIECE"]);
+      expect(played({ ...options, lethalSearch: 0, lookahead: 1 })).toEqual(["PIECE"]);
       expect(played({ ...options, lethalSearch: 0, lookahead: 2, samples: 2 })).toEqual([]);
     }
+  });
+
+  it("the levels: Hard looks two turns ahead, one on a slower device (effort below 1); Medium one turn", () => {
+    const fieldAfter = (level: "medium" | "hard", effort: number) => {
+      const t = drive(cards, combo);
+      const bot = createBot(cards, level, "l", effort);
+      const turn = t.game.state.turn;
+      for (let i = 0; i < 20 && t.game.decision?.player === 0 && t.game.state.turn === turn && t.game.state.phase === "main"; i++) t.game.act(bot.decide(t.game));
+      return t.zone("me", "field");
+    };
+    expect(fieldAfter("hard", 1)).toEqual([]);
+    expect(fieldAfter("hard", 0.5)).toEqual(["PIECE"]);
+    expect(fieldAfter("medium", 1)).toEqual(["PIECE"]);
   });
 
   it("keeps the play points for a Quick removal when the opponent's Storm follower would be lethal (the defender answers)", () => {
@@ -80,12 +93,13 @@ describe("two turns ahead", () => {
       opp: { hand: ["STORM44"], deck: many(10, "STORM44"), maxPlayPoints: 1 },
     };
     for (const options of [MEDIUM_OPTIONS, HARD_OPTIONS]) {
-      expect(played(options, spec)).toEqual([]);
+      expect(played({ ...options, lookahead: 1 }, spec)).toEqual([]);
       expect(played({ ...options, lookahead: 2, samples: 2, planKinds: 6 }, spec)).toEqual([]);
     }
   });
 });
 
+// Many plans each (two turns ahead too): seconds alone, much longer while the whole suite runs.
 describe("exploring (training data)", () => {
   /** The cards played and the turns explored, by the bot of this seed. */
   function explored(options: PlannerBotOptions, seed: string, spec: DriveSpec = combo) {
@@ -110,7 +124,7 @@ describe("exploring (training data)", () => {
       expect(new Set(plain.map((r) => r.field)).size).toBe(1);
       for (const r of plain) expect(r.explored).toEqual([]);
     }
-  });
+  }, 60_000);
 
   it("never gives up a plan already won (this turn, or two turns ahead)", () => {
     // 2 play points and STORM44 (Storm 4/4) in hand, the opponent at 4: playing and attacking wins this turn.
@@ -119,5 +133,5 @@ describe("exploring (training data)", () => {
       for (const s of seeds.slice(0, 6)) expect(explored({ ...options, lethalSearch: 0, explore: { rate: 1, temperature: 1e6 } }, s, spec).winner).toBe(0);
     // Holding the combo piece wins next turn: two turns ahead, exploring still holds it.
     for (const s of seeds.slice(0, 6)) expect(explored({ ...MEDIUM_OPTIONS, lethalSearch: 0, lookahead: 2, samples: 2, explore: { rate: 1, temperature: 1e6 } }, s).field).toBe("");
-  });
+  }, 60_000);
 });

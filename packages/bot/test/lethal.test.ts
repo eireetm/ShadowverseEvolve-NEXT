@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createEngine, script, type PlayerView } from "../src/core";
-import { HARD_BETA_OPTIONS, HARD_OPTIONS, MEDIUM_BETA_OPTIONS, MEDIUM_OPTIONS, PlannerBot, exactResults, lethalWithinReach, type PlannerBotOptions } from "../src";
+import { HARD_OPTIONS, MEDIUM_BETA_OPTIONS, MEDIUM_OPTIONS, PlannerBot, exactResults, lethalWithinReach, type PlannerBotOptions } from "../src";
 import { drive, testFollower, testSpell, type DriveSpec } from "../../core/src/testing";
 
 // Sure lethal first (lethal.ts): a line that surely wins this turn is played before the turn is planned.
@@ -81,8 +81,8 @@ describe("sure lethal first", () => {
     expect(ourTurn(wardAt8, { beamWidth: 2, lethalSearch: 300 })).toMatchObject({ won: true, opponent: 0 });
   });
 
-  it("Medium and Hard play it, and so do the beta levels", () => {
-    for (const options of [MEDIUM_OPTIONS, HARD_OPTIONS, MEDIUM_BETA_OPTIONS, HARD_BETA_OPTIONS]) expect(ourTurn(wardAt8, options).won).toBe(true);
+  it("Medium and Hard play it, and so does the beta level", () => {
+    for (const options of [MEDIUM_OPTIONS, HARD_OPTIONS, MEDIUM_BETA_OPTIONS]) expect(ourTurn(wardAt8, options).won).toBe(true);
   });
 
   it("looks for it behind a Ward at more than 10 defense: the attacks on the Ward count toward the reach", () => {

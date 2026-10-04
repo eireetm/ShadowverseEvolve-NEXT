@@ -1,7 +1,7 @@
 // Per-viewer settings, remembered in the browser (localStorage). Everything works without it (private windows, blocked
 // storage): the defaults are used. The PC release also keeps most of them in its settings.ini (settings-file.ts).
 import { useSyncExternalStore } from "react";
-import type { FormatId, SeatController, TurnOrder } from "../engine/protocol";
+import { knownController, type FormatId, type SeatController, type TurnOrder } from "../engine/protocol";
 import type { TurnServer } from "../net/relays";
 
 export type UiLang = "en" | "zh" | "ja";
@@ -80,10 +80,19 @@ export const DEFAULT_SETTINGS: Settings = {
   allowUndo: false,
 };
 
-/** Settings saved by an older version, brought up to date: "deck restrictions" off became the unlimited format. */
+/**
+ * Settings saved by an older version, brought up to date: "deck restrictions" off became the unlimited format; Bot-Hard
+ * beta, removed, became Bot-Hard.
+ */
 export function migrateSettings(saved: Partial<Settings> & { setupRestrictions?: boolean }): Settings {
   const { setupRestrictions, ...rest } = saved;
-  return { ...DEFAULT_SETTINGS, ...(setupRestrictions === false && rest.format === undefined ? { format: "unlimited" as const } : {}), ...rest };
+  const controllers = rest.setupControllers;
+  return {
+    ...DEFAULT_SETTINGS,
+    ...(setupRestrictions === false && rest.format === undefined ? { format: "unlimited" as const } : {}),
+    ...rest,
+    ...(Array.isArray(controllers) && controllers.length === 2 ? { setupControllers: [knownController(controllers[0]), knownController(controllers[1])] } : {}),
+  };
 }
 
 function load(): Settings {

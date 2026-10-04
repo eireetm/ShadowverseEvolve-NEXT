@@ -147,4 +147,10 @@ describe("deck files and settings", () => {
     expect(migrateSettings({ setupRestrictions: false, format: "crossCraft" } as never).format).toBe("crossCraft");
     expect("setupRestrictions" in migrateSettings({ setupRestrictions: false } as never)).toBe(false);
   });
+
+  it("turn the removed Bot-Hard beta, saved by an older version, into Bot-Hard", () => {
+    expect(migrateSettings({ setupControllers: ["human", "hard-beta"] } as never).setupControllers).toEqual(["human", "hard"]);
+    expect(migrateSettings({ setupControllers: ["hard-beta", "medium"] } as never).setupControllers).toEqual(["hard", "medium"]);
+    expect(migrateSettings({}).setupControllers).toEqual(["human", "medium"]);
+  });
 });

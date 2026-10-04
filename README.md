@@ -17,12 +17,11 @@
   - 按综合规则（v1.26.1）逐条实现，规则判断都注明条款编号。
   - 支持 57 个卡包的 3,689 个卡牌定义，共 7,564 个印刷版本，异画共用同一个定义。
   - BP22 是先行测试版：只有日文和中文数据（仓库旁边的 `BP22.json`，官方日文卡表），按日文实现、中文对照；英文卡名和文本暂时显示为 `unavailable`。等英文数据出来后补齐。
-- **Bot（`@sve/bot`）**：界面上有四个难度，只用 Core 的公开 API：
+- **Bot（`@sve/bot`）**：界面上有三个难度，只用 Core 的公开 API：
   - Bot-简单：贪心，每个决策都模拟所有候选回答，评估局面后选最好的；
   - Bot-中等：规划整个回合，再模拟对手的下一回合，只用玩家看得到的信息；规划之前先找"确保能赢"的斩杀：在几个对手手牌和牌序的抽样里都能赢、对手应对也挡不住才执行；
-  - Bot-困难：同样规划（同样先找斩杀），但作弊，直接透过引擎读完整的局面（对手的手牌、双方牌组的顺序）；
-  - Bot-困难 beta：在困难的基础上加了按费用曲线换牌、主战者体力的价值曲线，同样读对手信息。
-  - 另有试验版 medium-beta（中等加上同样两项，不作弊），只在 `npm run bot:arena` 里。
+  - Bot-困难：同样规划（同样先找斩杀），但作弊，直接透过引擎读完整的局面（对手的手牌、双方牌组的顺序）；而且看得更远：每种打法都接着模拟对手的回合和自己的下一回合，再比较（手机上只模拟到对手的回合，想得快些）。
+  - 另有试验版 medium-beta（中等加上按费用曲线换牌、主战者体力的价值曲线，不作弊），只在 `npm run bot:arena` 里。
 - **GUI（`@sve/gui`）**：Web 界面（Vite + React），引擎和 Bot 在 Web Worker 里运行。
   - 牌桌按场地图摆放，点击或拖拽操作，有动画、箭头和音效；
   - 组卡界面：筛选、异画、赛制和禁卡表、卡组码；
@@ -73,7 +72,7 @@ npm run dev:gui
 | `npm run release:server` | 打联机服务器的安装包 |
 | `npm run card -- <卡号>` | 查一张卡：各语言文本、日文类型、相关卡、官方 QA、脚本状态 |
 | `npm run bench` | 性能基准：随机对局、复制和抽样一局、Bot 每个决策的耗时 |
-| `npm run bot:arena -- [局数] [A] [B]` | Bot 互打（easy / medium / hard，试验版 medium-beta / hard-beta；sve-fool / sve-good / sve-planner 是模仿 SVE Simulator 三个 AI 的对照组，只用于测试）：示例卡组，两局一组交换座位、轮流打遍所有卡组组合，打印按"对"计分的得分和 95% 区间、先后手、先手胜率、回合数、每副卡组的得分和思考时间。`--decks sd01,sd02` 选卡组（`train` / `holdout` / `legal`：`tools/rl/decksets.json` 的卡组集，按标准赛制和它的禁卡表检查），`--mirror` 双方用同一副，`--workers 8` 多进程一起打，`--seed` 换一批对局，`--independent` 每局单独的种子，`--range a-b` 只打其中一段，`--out 文件夹` 存下每一局（可重放的记录 `games.jsonl.gz`）和报告，`--replays N` 把前 N 局存成对局界面能打开的录像。`medium:identity`（把手写估值从外面传进去，应和 medium 完全一样）和 `medium:negated`（估值反过来，应该几乎全输）用来检查估值接口 |
+| `npm run bot:arena -- [局数] [A] [B]` | Bot 互打（easy / medium / hard，试验版 medium-beta；sve-fool / sve-good / sve-planner 是模仿 SVE Simulator 三个 AI 的对照组，只用于测试）：示例卡组，两局一组交换座位、轮流打遍所有卡组组合，打印按"对"计分的得分和 95% 区间、先后手、先手胜率、回合数、每副卡组的得分和思考时间。`--decks sd01,sd02` 选卡组（`train` / `holdout` / `legal`：`tools/rl/decksets.json` 的卡组集，按标准赛制和它的禁卡表检查），`--mirror` 双方用同一副，`--workers 8` 多进程一起打，`--seed` 换一批对局，`--independent` 每局单独的种子，`--range a-b` 只打其中一段，`--out 文件夹` 存下每一局（可重放的记录 `games.jsonl.gz`）和报告，`--replays N` 把前 N 局存成对局界面能打开的录像。`medium:identity`（把手写估值从外面传进去，应和 medium 完全一样）和 `medium:negated`（估值反过来，应该几乎全输）用来检查估值接口 |
 | `npm run rl:verify -- 文件夹` | 重放 `bot:arena --out` 存下的对局：每个输入是否合法、结果是否和记录一样 |
 | `npm run release:train -- --zip` | 打"训练数据包"：给帮忙跑对局的朋友 |
 | `npm run rl:ingest -- 文件夹` | 收下朋友们训练数据包里的对局：检查后并进数据集 |
@@ -387,12 +386,11 @@ An unofficial rules engine, AI and client for the *Shadowverse: Evolve* trading 
   - It implements the Comprehensive Rules (v1.26.1) clause by clause, and every rules decision cites its clause number.
   - It supports 3,689 card definitions from 57 sets, 7,564 printings in all; alternate arts share one definition.
   - BP22 is a pre-release set: only Japanese and Chinese data exist (`BP22.json` next to the repository, the official Japanese card list). It is implemented from the Japanese text, checked against the Chinese; English names and texts show `unavailable` for now. They will be filled in once the English data is out.
-- **Bot (`@sve/bot`)**: four levels in the interface, on the Core's public API only:
+- **Bot (`@sve/bot`)**: three levels in the interface, on the Core's public API only:
   - Bot-Easy: greedy. For each decision it simulates every candidate answer and picks the best-scoring result.
   - Bot-Medium: plans its whole turn, then plays out the opponent's next turn. It uses only what its player can see. Before planning it looks for a sure lethal: one that wins in several samples of the opponent's hand and the deck order, whatever the opponent answers.
-  - Bot-Hard: plans the same way (lethal first too), but cheats: reads the whole game (the opponent's hand, both decks in order).
-  - Bot-Hard beta: Bot-Hard with a mulligan by the cost curve and the leader's defense valued on a curve: also reads the whole game.
-  - A trial medium-beta (Bot-Medium with the same two, fair) is only in `npm run bot:arena`.
+  - Bot-Hard: plans the same way (lethal first too), but cheats: reads the whole game (the opponent's hand, both decks in order). It also looks further: each way to play its turn is followed through the opponent's turn and its own next turn before they are compared (on phones only through the opponent's turn, to think faster).
+  - A trial medium-beta (Bot-Medium with a mulligan by the cost curve and the leader's defense valued on a curve, fair) is only in `npm run bot:arena`.
 - **GUI (`@sve/gui`)**: a web interface (Vite + React). The engine and the bots run in a Web Worker.
   - A table laid out on the playmat picture, played by clicking and dragging, with animations, arrows and sounds.
   - A deck builder with filters, alternate arts, formats and restriction lists, and deck codes.
@@ -443,7 +441,7 @@ Run these at the repository root:
 | `npm run release:server` | Build the online server's package |
 | `npm run card -- <card number>` | Show a card: its text in each language, Japanese traits, related cards, official Q&A, script status |
 | `npm run bench` | Benchmarks: random games, copying and sampling a game, the bot's time per decision |
-| `npm run bot:arena -- [games] [A] [B]` | Bots against each other (easy / medium / hard, the trial medium-beta / hard-beta, and sve-fool / sve-good / sve-planner, imitations of SVE Simulator's three AIs used only as benchmarks): the sample decks, games in pairs with the seats swapped, going through every matchup of the decks; prints the score by pairs with a 95% interval, going first and second, the first player's win rate, game length, the score per deck and thinking time. `--decks sd01,sd02` picks decks (`train` / `holdout` / `legal`: the deck sets of `tools/rl/decksets.json`, checked against the standard format and its restriction list), `--mirror` gives both players the same deck, `--workers 8` plays on several processes, `--seed` another series of games, `--independent` a seed per game, `--range a-b` only part of the series, `--out folder` keeps every game (replayable records, `games.jsonl.gz`) and the report, `--replays N` saves the first N games as replays the GUI opens. `medium:identity` (the hand-written evaluation passed in from outside: plays exactly as medium) and `medium:negated` (the evaluation turned round: should lose nearly every game) check the evaluation interface |
+| `npm run bot:arena -- [games] [A] [B]` | Bots against each other (easy / medium / hard, the trial medium-beta, and sve-fool / sve-good / sve-planner, imitations of SVE Simulator's three AIs used only as benchmarks): the sample decks, games in pairs with the seats swapped, going through every matchup of the decks; prints the score by pairs with a 95% interval, going first and second, the first player's win rate, game length, the score per deck and thinking time. `--decks sd01,sd02` picks decks (`train` / `holdout` / `legal`: the deck sets of `tools/rl/decksets.json`, checked against the standard format and its restriction list), `--mirror` gives both players the same deck, `--workers 8` plays on several processes, `--seed` another series of games, `--independent` a seed per game, `--range a-b` only part of the series, `--out folder` keeps every game (replayable records, `games.jsonl.gz`) and the report, `--replays N` saves the first N games as replays the GUI opens. `medium:identity` (the hand-written evaluation passed in from outside: plays exactly as medium) and `medium:negated` (the evaluation turned round: should lose nearly every game) check the evaluation interface |
 | `npm run rl:verify -- folder` | Replays the games `bot:arena --out` kept: is every input legal, does each game end as recorded |
 | `npm run release:train -- --zip` | Builds the training kit for friends who lend their computers |
 | `npm run rl:ingest -- folder` | Takes the games friends made with the kit: checks them and adds them to the dataset |
