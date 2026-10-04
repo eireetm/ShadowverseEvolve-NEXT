@@ -31,9 +31,16 @@ else
     aarch64) ARCH=arm64 ;;
     *) die "不支持的 CPU unsupported CPU: $(uname -m)" ;;
   esac
-  BASE=https://npmmirror.com/mirrors/node/latest-v24.x
-  SUMS="$(curl -fsSL "$BASE/SHASUMS256.txt")" || die "下载失败 download failed: $BASE/SHASUMS256.txt"
-  LINE="$(printf '%s\n' "$SUMS" | grep -E " node-v[0-9.]+-linux-$ARCH\.tar\.xz$" | head -n 1)"
+  # The newest 24.x the mirror has (its index, newest first; its latest-v24.x folder can lag behind).
+  MIRROR=https://npmmirror.com/mirrors/node
+  INDEX="$(curl -fsSL --retry 3 "$MIRROR/index.tab")" || die "下载失败 download failed: $MIRROR/index.tab"
+  VERSION="$(printf '%s\n' "$INDEX" | awk -F'\t' '$1 ~ /^v24\./ && !found { print $1; found = 1 }' || true)"
+  [ -n "$VERSION" ] || die "镜像上找不到 Node.js 24 not found on the mirror"
+  BASE="$MIRROR/$VERSION"
+  SUMS="$(curl -fsSL --retry 3 "$BASE/SHASUMS256.txt")" || die "下载失败 download failed: $BASE/SHASUMS256.txt"
+  # (No pipeline that can fail here: with pipefail, a failing grep would end the script without saying why.)
+  LINE="$(printf '%s\n' "$SUMS" | grep -E " node-v[0-9.]+-linux-$ARCH\.tar\.xz$" || true)"
+  LINE="${LINE%%$'\n'*}"
   [ -n "$LINE" ] || die "镜像上找不到 Node.js not found on the mirror"
   FILE="${LINE##* }"
   curl -fSL --retry 3 -o /tmp/sve-node.tar.xz "$BASE/$FILE" || die "下载失败 download failed: $BASE/$FILE"
