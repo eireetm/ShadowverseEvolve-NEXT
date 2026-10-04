@@ -1,11 +1,13 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type Route } from "@playwright/test";
 import { useSettings } from "./helpers";
 
 // The deck builder (stage 5): filters, adding by click and drag, removing by right-click and by dragging back to the pool,
 // the leader window, save as / delete; the format (Cross Craft: two leaders) and what a deck doesn't meet, told on saving
-// and leaving.
+// and leaving; leaving before the first deck has come, and a deck that can't be loaded.
 const FILE = "e2e-builder-test.json";
 const CROSS_FILE = "e2e-cross-test.json";
+/** The host's deck files: their list (/api/decks) and each deck (/api/decks/<file>). */
+const DECK_FILES = /\/api\/decks(\/|$)/;
 
 async function openBuilder(page: Page): Promise<void> {
   await page.goto("/");
@@ -13,6 +15,28 @@ async function openBuilder(page: Page): Promise<void> {
   await expect(decks).toBeEnabled({ timeout: 120_000 });
   await decks.click();
   await expect(page.locator(".sve-pool-tile").first()).toBeVisible();
+}
+
+/**
+ * The requests for deck files, held from `hold` until `release` as by a very slow disk. (One route for the whole test:
+ * removing a route lets the requests it holds go by itself, and their handler's own `continue` then fails.)
+ */
+async function slowDeckFiles(page: Page): Promise<{ hold: () => void; release: () => void }> {
+  let held: Promise<void> | null = null;
+  let open = () => {};
+  await page.route(DECK_FILES, async (route: Route) => {
+    if (held) await held;
+    await route.continue();
+  });
+  return {
+    hold: () => {
+      held = new Promise<void>((resolve) => (open = resolve));
+    },
+    release: () => {
+      held = null;
+      open();
+    },
+  };
 }
 
 const count = (page: Page, section: "main" | "evolve") => page.locator(`[data-section=${section}] .sve-deck-tile`).count();
@@ -210,5 +234,57 @@ test("deck codes: a deck's code, imported back as a new deck; a code copied wron
   expect(await count(page, "main")).toBe(main);
   expect(await count(page, "evolve")).toBe(evolve);
   await expect(page.getByTestId("builder-leader")).not.toHaveText(/none/);
+  expect(problems).toEqual([]);
+});
+
+test("leaving before the first deck has come goes at once, unchecked; edit as text gets the deck being loaded", async ({ page }) => {
+  const problems: string[] = [];
+  page.on("pageerror", (e) => problems.push(e.message));
+  await useSettings(page, { uiLang: "en", builderDeck: "samples/sd01.json" });
+  await page.goto("/");
+  const decks = page.getByTestId("menu-decks");
+  await expect(decks).toBeEnabled({ timeout: 120_000 });
+
+  // The builder opens on SD01, which doesn't come yet: it shows the empty placeholder.
+  const deckFiles = await slowDeckFiles(page);
+  deckFiles.hold();
+  await decks.click();
+  const builder = page.locator(".sve-builder");
+  await expect(builder).toHaveAttribute("data-loading", "");
+  await expect(page.getByTestId("builder-file")).toHaveValue("");
+  // "Edit as text" goes to the text editor at once, with nothing told about the placeholder; it opens SD01.
+  await page.getByRole("button", { name: /^Edit as text$/ }).click();
+  const text = page.locator(".sve-deck-text");
+  await expect(text).toBeVisible();
+  deckFiles.release();
+  await expect(text).toHaveValue(/leader: SD01-LD01 {2}; \S/);
+
+  // Back in the builder, SD01 held again: "Back" goes to the menu at once.
+  deckFiles.hold();
+  await page.getByRole("button", { name: /^Back$/ }).click();
+  await expect(builder).toHaveAttribute("data-loading", "");
+  await page.getByTestId("builder-back").click();
+  await expect(decks).toBeVisible();
+  deckFiles.release();
+  // The requests let go finish before the page closes.
+  await page.unrouteAll({ behavior: "wait" });
+  expect(problems).toEqual([]);
+});
+
+test("a deck that can't be loaded is told, and the builder goes on with a new deck, checked on leaving", async ({ page }) => {
+  const problems: string[] = [];
+  page.on("pageerror", (e) => problems.push(e.message));
+  await useSettings(page, { uiLang: "en", builderDeck: "samples/sd01.json" });
+  await page.route("**/api/decks/samples/sd01.json", (route) => route.fulfill({ status: 500, body: "unreadable" }));
+  await openBuilder(page);
+  // (The dev server's React runs the first load twice, StrictMode: told twice.)
+  await expect(page.locator(".sve-toast").first()).toContainText("samples/sd01.json");
+  await expect(page.locator(".sve-builder")).not.toHaveAttribute("data-loading");
+  await expect(page.getByTestId("builder-file")).toHaveValue("");
+  // The first load is over: the new deck is the one the person is building, and leaving tells what it doesn't meet.
+  await page.getByTestId("builder-back").click();
+  await expect(page.getByTestId("format-problems")).toContainText("The main deck has 0 cards");
+  await page.getByTestId("format-problems-leave").click();
+  await expect(page.getByTestId("menu-decks")).toBeVisible();
   expect(problems).toEqual([]);
 });
