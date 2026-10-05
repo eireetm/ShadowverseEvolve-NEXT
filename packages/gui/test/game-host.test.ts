@@ -80,14 +80,14 @@ describe("GameHost (engine worker logic)", () => {
   it("plays an older file's Bot-Hard beta (removed) as Bot-Hard, and shows and saves it so", () => {
     const h = harness(["hard-beta" as SeatController, "random"]);
     h.host.handle({ kind: "start", options: h.options });
-    h.scheduler.run(10);
+    // A bot plays that seat (no seat waits for a person): it answers. Step by step until it has (its mulligan comes first).
+    const byHard = () => h.host.replay()!.inputs.some((i) => i.by === 0);
+    for (let i = 0; i < 20 && !byHard(); i++) h.scheduler.run(1);
     expect(h.errors()).toEqual([]);
     expect(h.last().controllers).toEqual(["hard", "random"]);
-    const replay = h.host.replay()!;
-    expect(replay.options.controllers).toEqual(["hard", "random"]);
-    // A bot plays that seat (no seat waits for a person): it has answered.
-    expect(replay.inputs.some((i) => i.by === 0)).toBe(true);
-  });
+    expect(h.host.replay()!.options.controllers).toEqual(["hard", "random"]);
+    expect(byHard()).toBe(true);
+  }, 60_000);
 
   it("gives a person their decisions with the cards they name, and hides the opponent's hand", () => {
     const h = harness(["human", "random"]);

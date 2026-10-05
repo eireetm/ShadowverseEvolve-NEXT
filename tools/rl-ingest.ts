@@ -1,40 +1,45 @@
 /**
  * Take the games friends made with the training kit (npm run release:train): npm run rl:ingest -- <folder> [--out <folder>]
- * [--recheck P] [--kit <folder>]
+ * [--recheck P] [--kit <folder>] [--workers N]
  * Reads every *.jsonl.gz under <folder> (the files of their training folders). A game is taken when it is a game of a job
- * in tools/rl/jobs made with the rules code this repository runs (the engine fingerprint: the games are replayed with it),
- * its inputs replay as recorded (each legal, the same end), it finished, and it isn't already in the dataset (its seed).
+ * in tools/rl/jobs made with the rules code this repository runs (the engine fingerprint: the games are replayed with it;
+ * an older kit's own kind of fingerprint is read as the core's it stood for, tools/train/code.ts), it is the game its seed
+ * draws (the kind of game, the decks, the seats and the job's settings: tools/train/job.ts jobSetup), its inputs replay as
+ * recorded (each legal, the same end), it finished, and it isn't already in the dataset (its seed).
  * P percent of the games (default 3), chosen by their seeds, are also played again from the seed alone with the job's bots:
- * the answers must be the same one by one (the bots are deterministic), which catches a file that was changed. With this
- * repository's bots when they are the kit's (the bot fingerprint); otherwise with the kit itself — the folder given with
- * --kit, or a SVEN-train-* folder beside the repository whose job.json has the games' bot fingerprint — since the bots go
- * on changing while friends play an older kit. Without such a kit, those games are taken unchecked (said in the report).
- * Games taken are
- * appended to <out>/games.jsonl.gz (default: rl-runs/<job> beside the repository, one folder per job); a report
- * (<out>/ingest-<time>.json, and printed) says how many of each volunteer's games were taken and why the others weren't.
+ * the answers must be the same one by one (the bots are deterministic), which catches a file that was changed. With a kit
+ * of the same job, rules code and bots — the folder given with --kit, or a SVEN-train-* folder beside the repository — on N
+ * processes at once (default: half the processor threads, fewer when memory is short), since the bots go on changing while
+ * friends play an older kit; without such a kit, with this repository's bots when they are the games' (one process); and
+ * otherwise not at all (said in the report, as are games whose check failed to run). Games taken are appended to
+ * <out>/games.jsonl.gz (default: rl-runs/<job> beside the repository, one folder per job); a report (<out>/ingest-<time>.json,
+ * and printed) says how many games of each volunteer and of each file were taken and why the others weren't.
  */
-import { execFileSync } from "node:child_process";
-import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { spawn } from "node:child_process";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { availableParallelism, freemem, tmpdir } from "node:os";
 import { createHash } from "node:crypto";
-import { join, resolve } from "node:path";
-import { constants, gunzipSync, gzipSync } from "node:zlib";
+import { join, relative, resolve } from "node:path";
+import { gunzipSync, gzipSync } from "node:zlib";
 import { createEngine, validateAnswer } from "../packages/core/src";
 import { ALL_CARDS, ALL_SCRIPTS } from "../packages/core/src/sets";
 import { rulesFingerprint } from "../packages/gui/fingerprint";
 import { ROOT, deckSet, sampleDeck } from "./rl/series";
-import { botFingerprint } from "./train/code";
-import { playJobGame, type Job, type JobFile, type JobGame } from "./train/job";
+import { botFingerprint, rulesOfRecorded } from "./train/code";
+import { JOB_CONFIG, jobSetup, playJobGame, type Job, type JobFile, type JobGame } from "./train/job";
 
 const args = process.argv.slice(2);
 const option = (name: string) => {
   const at = args.indexOf(name);
   return at >= 0 ? (args[at + 1] ?? null) : null;
 };
-const source = args.find((a, i) => !a.startsWith("--") && !(i > 0 && ["--out", "--recheck", "--kit"].includes(args[i - 1]!)));
+const source = args.find((a, i) => !a.startsWith("--") && !(i > 0 && ["--out", "--recheck", "--kit", "--workers"].includes(args[i - 1]!)));
 const recheck = option("--recheck") === null ? 3 : Number(option("--recheck"));
-if (!source || !existsSync(source) || !(recheck >= 0 && recheck <= 100)) {
-  console.error("usage: npm run rl:ingest -- <folder> [--out <folder>] [--recheck percent]");
+// A kit's recheck process takes about 500 MB: leave the system 1.5 GB, as the kit itself does.
+const memoryWorkers = Math.max(1, Math.floor((freemem() - 1.5 * 2 ** 30) / (600 * 2 ** 20)));
+const workers = option("--workers") === null ? Math.max(1, Math.min(Math.floor(availableParallelism() / 2), memoryWorkers)) : Number(option("--workers"));
+if (!source || !existsSync(source) || !(recheck >= 0 && recheck <= 100) || !(Number.isInteger(workers) && workers >= 1)) {
+  console.error("usage: npm run rl:ingest -- <folder> [--out <folder>] [--recheck percent] [--kit <folder>] [--workers N]");
   process.exit(1);
 }
 
@@ -55,17 +60,39 @@ function filesIn(path: string): string[] {
   if (!statSync(path).isDirectory()) return path.endsWith(".jsonl.gz") ? [path] : [];
   return readdirSync(path).flatMap((name) => filesIn(join(path, name)));
 }
-/** The games of a file of gzip pieces; a file cut short gives what it has. */
+/**
+ * The games of a file of gzip pieces (one per game), read piece by piece: a damaged piece is counted and skipped, the others
+ * read — a file cut short, or ending in zeros after a crash, gives what it has, and zeros between pieces don't hide the pieces
+ * after them (as they would from one gunzip of the whole file). A piece starts with the gzip magic; the magic may also turn up
+ * inside a piece's compressed bytes, so a piece that doesn't decode up to the next start is tried up to the ones after it.
+ */
 function gamesOf(file: string): { games: JobGame[]; broken: number } {
   const games: JobGame[] = [];
   let broken = 0;
-  let text = "";
-  try {
-    text = gunzipSync(readFileSync(file), { finishFlush: constants.Z_SYNC_FLUSH }).toString("utf8");
-  } catch {
-    return { games, broken: 1 };
+  const bytes = readFileSync(file);
+  const magic = Buffer.from([0x1f, 0x8b, 0x08]);
+  const starts: number[] = [];
+  for (let at = bytes.indexOf(magic); at >= 0; at = bytes.indexOf(magic, at + 1)) starts.push(at);
+  starts.push(bytes.length);
+  const texts: string[] = [];
+  for (let i = 0; i < starts.length - 1; ) {
+    let next = -1;
+    for (let j = i + 1; j < starts.length && j <= i + 16 && next < 0; j++) {
+      try {
+        texts.push(gunzipSync(bytes.subarray(starts[i], starts[j])).toString("utf8"));
+        next = j;
+      } catch {
+        // not a whole piece yet: up to the next start
+      }
+    }
+    if (next < 0) {
+      broken += 1;
+      next = i + 1;
+    }
+    i = next;
   }
-  for (const line of text.split("\n")) {
+  if (bytes.subarray(0, starts[0]).some((b) => b !== 0)) broken += 1;
+  for (const line of texts.join("").split("\n")) {
     if (!line.trim()) continue;
     try {
       games.push(JSON.parse(line) as JobGame);
@@ -76,113 +103,238 @@ function gamesOf(file: string): { games: JobGame[]; broken: number } {
   return { games, broken };
 }
 
+/** JSON with the keys of every object in order: the same value gives the same text, whatever order it was written in. */
+function canonical(value: unknown): string {
+  return JSON.stringify(value, (_, v: unknown) =>
+    v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : v,
+  );
+}
+const isGame = (g: unknown): g is JobGame =>
+  typeof g === "object" &&
+  g !== null &&
+  typeof (g as JobGame).job === "string" &&
+  jobs.has((g as JobGame).job) &&
+  typeof (g as JobGame).seed === "string" &&
+  Array.isArray((g as JobGame).inputs) &&
+  Array.isArray((g as JobGame).decks);
+
+/**
+ * The jobs a recorded game can be checked against: this repository's, and the job.json of each kit of the same job and rules
+ * code beside the repository (a kit carries the decks as they were when it was built: a sample deck edited since doesn't make
+ * its games look changed by hand). Edit a job's decks or bots only under a new job id.
+ */
+const kitJobs: Job[] = (option("--kit") ? [resolve(option("--kit")!)] : readdirSync(join(ROOT, "..")).filter((n) => n.startsWith("SVEN-train-")).map((n) => join(ROOT, "..", n))).flatMap((dir) => {
+  try {
+    const kitJob = JSON.parse(readFileSync(join(dir, "job.json"), "utf8")) as Job;
+    return jobs.has(kitJob.id) && rulesOfRecorded(kitJob.engine) === fingerprint ? [kitJob] : [];
+  } catch {
+    return [];
+  }
+});
+const referencesOf = (jobId: string): Job[] => [jobs.get(jobId)!, ...kitJobs.filter((k) => k.id === jobId)];
+
 /** Why the game can't be taken, or null. */
 function problem(g: JobGame): string | null {
-  const job = jobs.get(g.job);
-  if (g.format !== "sve-arena-game" || g.version !== 1 || !job) return `not a game of a known job (${String(g.job)})`;
-  if (g.engine?.fingerprint !== fingerprint) return "other rules code (a kit of an older or newer engine)";
-  if (g.error || g.result.winner === "?") return "unfinished";
-  const game = engine.newGame({ seed: g.seed, players: [g.decks[0]!.deck, g.decks[1]!.deck], config: g.config });
-  for (const [player, input] of g.inputs) {
-    const d = game.decision;
-    if (!d || d.player !== player || validateAnswer(d, input) !== null) return "an input that doesn't fit";
-    game.act(input);
+  const job = jobs.get(g.job)!;
+  if (g.format !== "sve-arena-game" || g.version !== 1) return `not a game of a known job (${String(g.job)})`;
+  if (rulesOfRecorded(String(g.engine?.fingerprint)) !== fingerprint) return "other rules code (a kit of an older or newer engine)";
+  // The game its seed draws, under the job's settings: a kit changed by hand would play others.
+  const recorded = canonical([g.bots, g.decks, g.config, g.rules]);
+  const drawn = (ref: Job) => {
+    const setup = jobSetup(ref, g.seed);
+    return canonical([setup.specs, setup.decks, JOB_CONFIG, { format: ref.format, restrictionList: ref.restrictionList }]);
+  };
+  if (!referencesOf(job.id).some((ref) => drawn(ref) === recorded)) return "not the game its seed draws (bots, decks or settings)";
+  if (g.error || !g.result || g.result.winner === "?") return "unfinished";
+  try {
+    const game = engine.newGame({ seed: g.seed, players: [g.decks[0]!.deck, g.decks[1]!.deck], config: g.config });
+    for (const [player, input] of g.inputs) {
+      const d = game.decision;
+      if (!d || d.player !== player || validateAnswer(d, input) !== null) return "an input that doesn't fit";
+      game.act(input);
+    }
+    if (!game.result || game.result.winner !== g.result.winner || game.state.turn !== g.result.turns) return "doesn't end as recorded";
+  } catch (e) {
+    return `the engine threw (${e instanceof Error ? e.message : String(e)})`;
   }
-  if (!game.result || game.result.winner !== g.result.winner || game.state.turn !== g.result.turns) return "doesn't end as recorded";
   return null;
 }
 
-/** Played again from the seed with the job's bots: the same answers? (P percent, chosen by the seed's hash.) */
+/** Played again from the seed with the job's bots (P percent, chosen by the seed's hash). */
 const chosen = (seed: string) => parseInt(createHash("sha256").update(seed).digest("hex").slice(0, 8), 16) % 10_000 < recheck * 100;
-function playsAgain(g: JobGame): boolean {
-  const again = playJobGame(engine, jobs.get(g.job)!, g.seed, g.volunteer);
-  return JSON.stringify(again.inputs) === JSON.stringify(g.inputs) && JSON.stringify(again.decks) === JSON.stringify(g.decks);
-}
+/** A seed's inputs played again: by seed, the inputs as JSON. */
+type Again = Map<string, string>;
 
-/** A kit folder whose bots are of this fingerprint: --kit, or a SVEN-train-* folder beside the repository. */
-function kitOf(bot: string): string | null {
+/** A kit folder of this job, rules code and bots: --kit, or a SVEN-train-* folder beside the repository. */
+function kitOf(jobId: string, bot: string): string | null {
   const candidates = option("--kit") ? [resolve(option("--kit")!)] : readdirSync(join(ROOT, "..")).filter((n) => n.startsWith("SVEN-train-")).map((n) => join(ROOT, "..", n));
   for (const dir of candidates) {
     try {
       const kitJob = JSON.parse(readFileSync(join(dir, "job.json"), "utf8")) as Job;
-      if (kitJob.bot === bot && existsSync(join(dir, "train.mjs"))) return dir;
+      if (kitJob.id === jobId && kitJob.bot === bot && rulesOfRecorded(kitJob.engine) === fingerprint && existsSync(join(dir, "train.mjs"))) return dir;
     } catch {
       // not a kit
     }
   }
   return null;
 }
-/** Games of other bots' code played again by their kit: the seeds whose answers differ (null: no kit for them). */
-function kitRecheck(bot: string, games: JobGame[]): Set<string> | null {
-  const kit = kitOf(bot);
-  if (!kit) return null;
-  const list = join(tmpdir(), `sve-recheck-${process.pid}-${bot}.json`);
-  writeFileSync(list, JSON.stringify(games.map((g) => ({ seed: g.seed, volunteer: g.volunteer }))));
-  const output = execFileSync(process.execPath, [join(kit, "train.mjs"), "--recheck", list], { encoding: "utf8", maxBuffer: 2 ** 30 });
-  const again = new Map(output.split("\n").filter((l) => l.trim()).map((l) => JSON.parse(l) as { seed: string; inputs: unknown }).map((r) => [r.seed, JSON.stringify(r.inputs)]));
-  return new Set(games.filter((g) => again.get(g.seed) !== JSON.stringify(g.inputs)).map((g) => g.seed));
+/**
+ * Games played again by their kit, shared among `workers` processes (a game takes seconds to a minute, so one process would
+ * take hours for a few hundred). A process that fails leaves its games out of the result (unchecked, not rejected).
+ */
+async function kitAgain(kit: string, games: JobGame[]): Promise<{ again: Again; failed: string[] }> {
+  const n = Math.min(workers, games.length);
+  const parts = Array.from({ length: n }, (_, k) => games.filter((_, i) => i % n === k));
+  const results = await Promise.allSettled(
+    parts.map(
+      (part, k) =>
+        new Promise<string>((done, fail) => {
+          const list = join(tmpdir(), `sve-recheck-${process.pid}-${createHash("sha256").update(kit).digest("hex").slice(0, 8)}-${k}.json`);
+          writeFileSync(list, JSON.stringify(part.map((g) => ({ seed: g.seed, volunteer: g.volunteer }))));
+          const child = spawn(process.execPath, [join(kit, "train.mjs"), "--recheck", list], { stdio: ["ignore", "pipe", "inherit"] });
+          let out = "";
+          child.stdout.setEncoding("utf8").on("data", (d: string) => (out += d));
+          child.on("error", (e) => {
+            rmSync(list, { force: true });
+            fail(e);
+          });
+          child.on("close", (code) => {
+            rmSync(list, { force: true });
+            if (code === 0) done(out);
+            else fail(new Error(`train.mjs --recheck ended with ${code}`));
+          });
+        }),
+    ),
+  );
+  const again: Again = new Map();
+  const failed: string[] = [];
+  for (const r of results) {
+    if (r.status === "rejected") {
+      failed.push(r.reason instanceof Error ? r.reason.message : String(r.reason));
+      continue;
+    }
+    for (const l of r.value.split("\n").filter((x) => x.trim())) {
+      const { seed, inputs } = JSON.parse(l) as { seed: string; inputs: unknown };
+      again.set(seed, JSON.stringify(inputs));
+    }
+  }
+  return { again, failed };
 }
 
+type Counts = { taken: number; rejected: Record<string, number> };
 const taken = new Map<string, JobGame[]>();
 const seen = new Map<string, Set<string>>();
-const report: Record<string, { taken: number; rejected: Record<string, number> }> = {};
-const reject = (volunteer: string, why: string) => {
-  const r = (report[volunteer] ??= { taken: 0, rejected: {} });
-  r.rejected[why] = (r.rejected[why] ?? 0) + 1;
+// By volunteer, and by file: a kit folder passed on after it ran keeps its volunteer word, so friends can share one.
+// No prototype: a volunteer word written by hand ("constructor", "__proto__") is a key like any other.
+const report = Object.create(null) as Record<string, Counts>;
+const byFile = Object.create(null) as Record<string, Counts>;
+const fileOf = new Map<JobGame, string>();
+const count = (g: JobGame | null, file: string, why: string | null, n = 1) => {
+  const fresh = (): Counts => ({ taken: 0, rejected: Object.create(null) as Record<string, number> });
+  for (const r of [(report[g ? String(g.volunteer ?? "?") : "?"] ??= fresh()), (byFile[file] ??= fresh())]) {
+    if (why === null) r.taken += n;
+    else r.rejected[why] = (r.rejected[why] ?? 0) + n;
+  }
+};
+const take = (g: JobGame, file: string) => {
+  seen.get(g.job)!.add(g.seed);
+  fileOf.set(g, file);
+  if (!taken.has(g.job)) taken.set(g.job, []);
+  taken.get(g.job)!.push(g);
 };
 const outOf = (jobId: string) => resolve(option("--out") ?? join(ROOT, "..", "rl-runs", jobId));
 const files = filesIn(source);
 let rechecked = 0;
 let unchecked = 0;
-/** Games of other bots' code chosen for the check, by bot fingerprint (checked by their kit at the end). */
-const byKit = new Map<string, JobGame[]>();
+const failures: string[] = [];
+/** The games chosen for the check, by job and bots (played again at the end). */
+const toCheck = new Map<string, JobGame[]>();
+/** Other copies of a seed taken in this run that differ from the copy taken (and replay): one of them may be the true one. */
+const alternates = new Map<string, JobGame[]>();
+const firstOf = new Map<string, JobGame>();
 for (const file of files) {
+  const name = relative(resolve(source), resolve(file)) || file;
   const { games, broken } = gamesOf(file);
-  if (broken > 0) reject("?", `a broken piece of ${file}`);
+  if (broken > 0) count(null, name, "a broken piece of a file", broken);
   for (const g of games) {
-    const volunteer = String(g.volunteer ?? "?");
-    // Seeds already in the dataset, or taken from another file.
+    if (!isGame(g)) {
+      count(null, name, "not a game of a known job");
+      continue;
+    }
+    // Seeds already in the dataset (a dataset that can't be read whole would let them in twice: stop), or taken from another file.
     if (!seen.has(g.job)) {
       const known = new Set<string>();
       const existing = join(outOf(g.job), "games.jsonl.gz");
-      if (existsSync(existing)) for (const old of gamesOf(existing).games) known.add(old.seed);
+      if (existsSync(existing)) {
+        const old = gamesOf(existing);
+        if (old.broken > 0) {
+          console.error(`${existing} can't be read whole (${old.broken} broken pieces): mend or move it first.`);
+          process.exit(1);
+        }
+        for (const o of old.games) known.add(o.seed);
+      }
       seen.set(g.job, known);
     }
-    const known = seen.get(g.job)!;
-    let why = known.has(g.seed) ? "already taken" : problem(g);
-    if (!why && chosen(g.seed)) {
-      if (g.engine.bot === bots) {
-        rechecked += 1;
-        if (!playsAgain(g)) why = "played again from its seed, the answers differ";
-      } else {
-        if (!byKit.has(g.engine.bot)) byKit.set(g.engine.bot, []);
-        byKit.get(g.engine.bot)!.push(g);
+    const first = firstOf.get(g.seed);
+    if (seen.get(g.job)!.has(g.seed)) {
+      // A copy that isn't the same game as the one taken, kept in case that one is found changed.
+      if (first && JSON.stringify(first.inputs) !== JSON.stringify(g.inputs) && chosen(g.seed) && problem(g) === null) {
+        alternates.set(g.seed, [...(alternates.get(g.seed) ?? []), g]);
+        fileOf.set(g, name);
       }
-    }
-    if (why) {
-      reject(volunteer, why);
+      count(g, name, "already taken");
       continue;
     }
-    known.add(g.seed);
-    (report[volunteer] ??= { taken: 0, rejected: {} }).taken += 1;
-    if (!taken.has(g.job)) taken.set(g.job, []);
-    taken.get(g.job)!.push(g);
+    const why = problem(g);
+    count(g, name, why);
+    if (why) continue;
+    take(g, name);
+    firstOf.set(g.seed, g);
+    if (chosen(g.seed)) {
+      const key = `${g.job}\n${g.engine.bot}`;
+      toCheck.set(key, [...(toCheck.get(key) ?? []), g]);
+    }
   }
 }
-// The games of other bots' code chosen for the check, played again by their kit; the ones that differ are taken back out.
-for (const [bot, games] of byKit) {
-  const differ = kitRecheck(bot, games);
-  if (differ === null) {
+// The games chosen for the check, played again from their seeds; the ones that differ are taken back out (and another copy
+// of the seed that is the game played again, if any, taken instead).
+for (const [key, games] of toCheck) {
+  const [jobId, bot] = key.split("\n") as [string, string];
+  const kit = kitOf(jobId, bot);
+  let again: Again;
+  if (kit) {
+    console.log(`playing ${games.length} games of ${jobId} again with ${kit} on ${Math.min(workers, games.length)} processes…`);
+    const result = await kitAgain(kit, games);
+    again = result.again;
+    failures.push(...result.failed.map((f) => `${kit}: ${f}`));
+  } else if (bot === bots) {
+    console.log(`playing ${games.length} games of ${jobId} again with this repository's bots…`);
+    again = new Map(games.map((g) => [g.seed, JSON.stringify(playJobGame(engine, jobs.get(jobId)!, g.seed, g.volunteer).inputs)]));
+  } else {
     unchecked += games.length;
     continue;
   }
-  rechecked += games.length;
-  for (const g of games.filter((x) => differ.has(x.seed))) {
+  for (const g of games) {
+    const replayed = again.get(g.seed);
+    if (replayed === undefined) {
+      unchecked += 1;
+      continue;
+    }
+    rechecked += 1;
+    if (replayed === JSON.stringify(g.inputs)) continue;
     const list = taken.get(g.job)!;
     list.splice(list.indexOf(g), 1);
     seen.get(g.job)!.delete(g.seed);
-    report[String(g.volunteer ?? "?")]!.taken -= 1;
-    reject(String(g.volunteer ?? "?"), "played again from its seed by its kit, the answers differ");
+    const file = fileOf.get(g)!;
+    count(g, file, null, -1);
+    count(g, file, "played again from its seed, the answers differ");
+    const instead = (alternates.get(g.seed) ?? []).find((a) => JSON.stringify(a.inputs) === replayed);
+    if (instead) {
+      const altFile = fileOf.get(instead)!;
+      count(instead, altFile, "already taken", -1);
+      count(instead, altFile, null);
+      take(instead, altFile);
+    }
   }
 }
 const stamp = new Date().toISOString().replace(/[:.]/g, "-");
@@ -190,12 +342,18 @@ for (const [jobId, games] of taken) {
   const dir = outOf(jobId);
   mkdirSync(dir, { recursive: true });
   for (const g of games) appendFileSync(join(dir, "games.jsonl.gz"), gzipSync(JSON.stringify(g) + "\n"));
-  writeFileSync(join(dir, `ingest-${stamp}.json`), JSON.stringify({ source: resolve(source), files: files.length, recheckPercent: recheck, rechecked, unchecked, engine: fingerprint, bots, report }, null, 1));
+  writeFileSync(join(dir, `ingest-${stamp}.json`), JSON.stringify({ source: resolve(source), files: files.length, recheckPercent: recheck, rechecked, unchecked, failures, engine: fingerprint, bots, report, byFile }, null, 1));
   console.log(`${jobId}: ${games.length} games taken into ${join(dir, "games.jsonl.gz")}`);
 }
-console.log(`${files.length} files; engine ${fingerprint}, bots ${bots}; played again from the seed: ${rechecked}${unchecked > 0 ? `; ${unchecked} chosen but not checked (no kit of their bots' code beside the repository: --kit)` : ""}`);
-for (const [volunteer, r] of Object.entries(report)) {
-  const rejected = Object.entries(r.rejected).map(([why, n]) => `${n} ${why}`).join(", ");
-  console.log(`  ${volunteer}: ${r.taken} taken${rejected ? `; not taken: ${rejected}` : ""}`);
-}
+console.log(`${files.length} files; engine ${fingerprint}, bots ${bots}; played again from the seed: ${rechecked}${unchecked > 0 ? `; ${unchecked} chosen but not checked (no kit of their job, rules and bots beside the repository: --kit; or its check failed)` : ""}`);
+for (const f of failures) console.log(`  a check that failed to run: ${f}`);
+const line = (r: Counts) => {
+  const rejected = Object.entries(r.rejected)
+    .filter(([, n]) => n !== 0)
+    .map(([why, n]) => `${n} ${why}`)
+    .join(", ");
+  return `${r.taken} taken${rejected ? `; not taken: ${rejected}` : ""}`;
+};
+for (const [volunteer, r] of Object.entries(report)) console.log(`  volunteer ${volunteer}: ${line(r)}`);
+for (const [file, r] of Object.entries(byFile)) console.log(`    ${file}: ${line(r)}`);
 if (taken.size === 0) console.log("nothing taken");

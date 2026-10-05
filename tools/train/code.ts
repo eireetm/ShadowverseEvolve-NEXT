@@ -3,6 +3,18 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
 /**
+ * Engine fingerprints older kits recorded in their games, with the core's fingerprint (packages/gui/fingerprint.ts
+ * rulesFingerprint) each stood for. The first stage1-v1 kit (commit 70ff0bc, handed out on 2026-10-04) recorded the app's
+ * engine fingerprint (the core and the app's worker host) instead of the core's; both were computed at that commit.
+ */
+const RECORDED_ENGINES: Readonly<Record<string, string>> = { b9dc4777f8bda25c: "fd673f23fa8ecdbc" };
+
+/** The core's fingerprint a recorded game was made with: what it says, or what an older kit's fingerprint stood for. */
+export function rulesOfRecorded(recorded: string): string {
+  return RECORDED_ENGINES[recorded] ?? recorded;
+}
+
+/**
  * A fingerprint of the bots' code (packages/bot/src), like the engine's (packages/gui/fingerprint.ts): the same seed gives the
  * same game only with the same rules code and the same bots, so recorded games carry both and npm run rl:ingest takes only
  * games of the code it runs. Line endings don't count.
