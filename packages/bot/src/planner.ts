@@ -728,7 +728,8 @@ export class PlannerBot {
     } catch {
       const session = this.copy(node.parent, world);
       session.act(node.answer!);
-      this.advance(session, node.session.decision!.player, node.session.state.turn);
+      // A node whose game has ended has no decision: advance stops at once, whoever it is asked for.
+      this.advance(session, node.session.decision?.player ?? 0, node.session.state.turn);
       return session;
     }
   }

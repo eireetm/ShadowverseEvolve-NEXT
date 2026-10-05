@@ -71,8 +71,11 @@ export function makeJobBot(engine: Engine, spec: BotSpec, seed: string): { decid
   return new PlannerBot(engine, { ...base, ...spec.options, seed });
 }
 
-/** Plays the game of `seed`: the kind of game, the decks and the seats drawn from it. */
-export function playJobGame(engine: Engine, job: Job, seed: string, volunteer: string): JobGame {
+/**
+ * What the seed draws for a game of the job: the kind of game, the decks and which bot sits where. npm run rl:ingest checks
+ * a recorded game against it (a kit changed by hand would play other games).
+ */
+export function jobSetup(job: Pick<Job, "games" | "deckLists" | "mirror">, seed: string): { decks: Job["deckLists"]; specs: [BotSpec, BotSpec] } {
   const rng = seedRng(`job:${seed}`);
   const total = job.games.reduce((s, g) => s + g.weight, 0);
   let roll = randomInt(rng, total);
@@ -85,6 +88,12 @@ export function playJobGame(engine: Engine, job: Job, seed: string, volunteer: s
   // Which spec sits where: the first spec in seat 0 or 1 at random.
   const swap = randomInt(rng, 2) === 1;
   const specs: [BotSpec, BotSpec] = swap ? [kind.bots[1], kind.bots[0]] : [kind.bots[0], kind.bots[1]];
+  return { decks, specs };
+}
+
+/** Plays the game of `seed`: the kind of game, the decks and the seats drawn from it (jobSetup). */
+export function playJobGame(engine: Engine, job: Job, seed: string, volunteer: string): JobGame {
+  const { decks, specs } = jobSetup(job, seed);
   const record: JobGame = {
     format: "sve-arena-game",
     version: 1,
