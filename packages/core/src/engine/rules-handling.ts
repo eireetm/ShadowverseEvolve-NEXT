@@ -7,6 +7,7 @@ import { characteristics, hasKeyword } from "./state/characteristics";
 import { exAreaLimit, fieldLimit } from "./state/limits";
 import { eliminateTokens, moveCards, type MoveSpec } from "./state/zones";
 import { cannotLose, endGame } from "./flow/end-game";
+import { cannotBeDestroyedByAbilities } from "./actions/cards";
 
 /**
  * CR 11 — rules handling. Each process inspects the same state and adds to a shared plan;
@@ -70,10 +71,13 @@ export const RULES_PROCESSES: readonly RulesProcess[] = [
           if (ch.type === "follower" && ch.defense !== null && ch.defense <= 0) plan.destroy.add(id); // 11.3.1
         }
       }
-      // 11.3.2 — fought with a follower that has Bane since the previous rules handling.
+      // 11.3.2 — fought with a follower that has Bane since the previous rules handling. This
+      // counts as destruction by a Bane ability (11.3.2.1), so "can't be destroyed by abilities"
+      // prohibits it (CR 1.3.3; BP08-037). Defense 0 still destroys such a card (11.3.1).
+      const destroyable = (id: CardId) => g.state.cards[id]?.zone === "field" && !cannotBeDestroyedByAbilities(g, id);
       for (const f of g.state.fights) {
-        if (f.bHasBane && g.state.cards[f.a]?.zone === "field") plan.destroy.add(f.a);
-        if (f.aHasBane && g.state.cards[f.b]?.zone === "field") plan.destroy.add(f.b);
+        if (f.bHasBane && destroyable(f.a)) plan.destroy.add(f.a);
+        if (f.aHasBane && destroyable(f.b)) plan.destroy.add(f.b);
       }
     },
   },
