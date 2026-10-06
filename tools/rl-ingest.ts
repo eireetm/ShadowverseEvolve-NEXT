@@ -20,10 +20,11 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSyn
 import { availableParallelism, freemem, tmpdir } from "node:os";
 import { createHash } from "node:crypto";
 import { join, relative, resolve } from "node:path";
-import { gunzipSync, gzipSync } from "node:zlib";
+import { gzipSync } from "node:zlib";
 import { createEngine, validateAnswer } from "../packages/core/src";
 import { ALL_CARDS, ALL_SCRIPTS } from "../packages/core/src/sets";
 import { rulesFingerprint } from "../packages/gui/fingerprint";
+import { gamesOf } from "./rl/records";
 import { ROOT, deckSet, sampleDeck } from "./rl/series";
 import { botFingerprint, rulesOfRecorded } from "./train/code";
 import { JOB_CONFIG, jobSetup, playJobGame, type Job, type JobFile, type JobGame } from "./train/job";
@@ -59,48 +60,6 @@ for (const name of readdirSync(join(ROOT, "tools", "rl", "jobs")).filter((f) => 
 function filesIn(path: string): string[] {
   if (!statSync(path).isDirectory()) return path.endsWith(".jsonl.gz") ? [path] : [];
   return readdirSync(path).flatMap((name) => filesIn(join(path, name)));
-}
-/**
- * The games of a file of gzip pieces (one per game), read piece by piece: a damaged piece is counted and skipped, the others
- * read — a file cut short, or ending in zeros after a crash, gives what it has, and zeros between pieces don't hide the pieces
- * after them (as they would from one gunzip of the whole file). A piece starts with the gzip magic; the magic may also turn up
- * inside a piece's compressed bytes, so a piece that doesn't decode up to the next start is tried up to the ones after it.
- */
-function gamesOf(file: string): { games: JobGame[]; broken: number } {
-  const games: JobGame[] = [];
-  let broken = 0;
-  const bytes = readFileSync(file);
-  const magic = Buffer.from([0x1f, 0x8b, 0x08]);
-  const starts: number[] = [];
-  for (let at = bytes.indexOf(magic); at >= 0; at = bytes.indexOf(magic, at + 1)) starts.push(at);
-  starts.push(bytes.length);
-  const texts: string[] = [];
-  for (let i = 0; i < starts.length - 1; ) {
-    let next = -1;
-    for (let j = i + 1; j < starts.length && j <= i + 16 && next < 0; j++) {
-      try {
-        texts.push(gunzipSync(bytes.subarray(starts[i], starts[j])).toString("utf8"));
-        next = j;
-      } catch {
-        // not a whole piece yet: up to the next start
-      }
-    }
-    if (next < 0) {
-      broken += 1;
-      next = i + 1;
-    }
-    i = next;
-  }
-  if (bytes.subarray(0, starts[0]).some((b) => b !== 0)) broken += 1;
-  for (const line of texts.join("").split("\n")) {
-    if (!line.trim()) continue;
-    try {
-      games.push(JSON.parse(line) as JobGame);
-    } catch {
-      broken += 1;
-    }
-  }
-  return { games, broken };
 }
 
 /** JSON with the keys of every object in order: the same value gives the same text, whatever order it was written in. */
