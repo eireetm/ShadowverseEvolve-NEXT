@@ -505,6 +505,13 @@ export function groupPrintings(printings: readonly NormalizedPrinting[], support
     if (canonical.textSource === "preview") previewDefinitions.push(canonical.printing);
     if (canonical.officialMismatch) officialMismatches.push(canonical.printing);
     const def: CardDefinition = { id: canonical.printing, printings: list.map((p) => p.printing), ...canonical.def, traits: [...traits] };
+    // The Chinese name and text of another printing when the canonical one's data lacks them (EBD01-007's are missing,
+    // its reprint SP01-001 has them): only printings under the card's own name and with the same Japanese text.
+    const ownName = list.filter((p) => p.alternateName === null);
+    const cnName = def.names.cn || ownName.find((p) => p.def.names.cn)?.def.names.cn;
+    if (cnName && cnName !== def.names.cn) def.names = { ...def.names, cn: cnName };
+    const cnText = def.text.ja ? def.text.cn || ownName.find((p) => p.def.text.cn && p.jaKey === canonical.jaKey)?.def.text.cn : null;
+    if (cnText && cnText !== def.text.cn) def.text = { ...def.text, cn: cnText };
     // CR 2.12.2.1 — the universe of the printings from universe sets (reprints elsewhere carry none); they must agree.
     const universes = [...new Set(list.flatMap((p) => (p.def.universe ? [p.def.universe] : [])))];
     if (universes.length > 1) throw new CardDataError(`${canonical.printing}: printings in different universes ${universes.join(", ")}`);

@@ -10,6 +10,8 @@ export type DataFix = Partial<Omit<RawCardJson, "back">> & { back?: Partial<RawC
  * transcribed from the printed back face (assets/<card>/<card>_back.webp, Japanese card; decided
  * by the project owner). They agree with the scraped English traits and text. The Chinese names
  * are the ones the front and base cards' Chinese texts use (e.g. BP09-004 "进化为『真红羁绊·宝菈』").
+ * The Chinese texts are translated from the Japanese ones (asked by the project owner), worded as
+ * the scraped Chinese texts word the same things (e.g. the fronts' Chinese texts).
  * Alternate-art printings carry the same back face.
  */
 const BP09_005_BACK: Partial<RawCardBack> = {
@@ -17,6 +19,7 @@ const BP09_005_BACK: Partial<RawCardBack> = {
   name_cn: "真红羁绊·宝菈",
   effect_ja:
     "【攻撃時】【コンボ_3】相手の場のフォロワー1体を選ぶ。それに3ダメージ。\n【進化時】自分の場の他のカード2枚まで選ぶ。それをEXエリアに置く。",
+  effect_cn: "【攻击时】【连击_3】选择敌方场上的1个从者。给予其3点伤害。\n【进化时】选择自己场上的其他的卡片最多2张。将其置于EX区域。",
 };
 const BP09_019_BACK: Partial<RawCardBack> = {
   traits_ja: "指揮官・キラー",
@@ -25,16 +28,22 @@ const BP09_019_BACK: Partial<RawCardBack> = {
     "【疾走】\n【進化時】『スティールナイト』1体と『ナイト』1体を出す。\n―――――――――――――――\n" +
     "『スティールナイト』{[swordcraft]}兵士・フォロワー{[cost02]}{[attack]}2/{[defense]}2\n" +
     "『ナイト』{[swordcraft]}兵士・フォロワー{[cost01]}{[attack]}1/{[defense]}1",
+  effect_cn:
+    "【疾驰】\n【进化时】将1个『铁甲骑士』与1个『骑士』召唤。\n―――――――――――――――\n" +
+    "『铁甲骑士』《皇家护卫职业》士兵类型·从者《消费2》《攻击力》2/《生命值》2\n" +
+    "『骑士』《皇家护卫职业》士兵类型·从者《消费1》《攻击力》1/《生命值》1",
 };
 const BP09_039_BACK: Partial<RawCardBack> = {
   traits_ja: "学院・キラー",
   name_cn: "马纳历亚黑龙",
   effect_ja: "【指定攻撃】\n【進化時】相手のリーダーすべてに3ダメージ。",
+  effect_cn: "【指定攻击】\n【进化时】给予敌方的全体主战者各3点伤害。",
 };
 const BP09_056_BACK: Partial<RawCardBack> = {
   traits_ja: "竜族・キラー",
   name_cn: "邪龙·林德沃姆",
   effect_ja: "【疾走】\nこれは【守護】を無視して攻撃できる。",
+  effect_cn: "【疾驰】\n这张卡可以无视【守护】能力进行攻击。",
 };
 const BP09_070_BACK: Partial<RawCardBack> = {
   traits_ja: "吸血鬼・プリンセス・キラー",
@@ -42,16 +51,21 @@ const BP09_070_BACK: Partial<RawCardBack> = {
   effect_ja:
     "【疾走】\nこれがいる限り、自分が『フォレストバット』をプレイする際、コストを-1する。\n" +
     "自分の場に『フォレストバット』が出たとき、相手の場のフォロワー1体を選ぶ。それに3ダメージ。",
+  effect_cn:
+    "【疾驰】\n只要有这张卡存在，自己将『丛林蝙蝠』卡使用之际，将其消费-1。\n" +
+    "当『丛林蝙蝠』召唤到自己的场上时，选择敌方场上的1个从者。给予其3点伤害。",
 };
 const BP09_090_BACK: Partial<RawCardBack> = {
   traits_ja: "信仰・獣・キラー",
   name_cn: "夜幕神鹿·刻律涅",
   effect_ja: "【必殺】\n【進化時】場のアミュレット1つを墓場に置く：相手のリーダー1人か相手の場のフォロワー1体を選ぶ。それに4ダメージ。",
+  effect_cn: "【必杀】\n【进化时】将场上的1个护符置于墓场：选择敌方的1位主战者或敌方场上的1个从者。给予其4点伤害。",
 };
 
 // BP08-003 Orchis, Vengeful Puppet. The scraped back repeats the front's Japanese text and lacks
 // Japanese traits / Chinese name. Transcribed from assets/BP08-003/BP08-003_back.webp; the same
-// printed back is used by BP08-SL03. The Chinese name is used by the front/base Chinese text.
+// printed back is used by BP08-SL03. The Chinese name is used by the front/base Chinese text; the
+// Chinese text is translated, worded as the front's.
 const BP08_003_BACK: Partial<RawCardBack> = {
   traits_ja: "人形・キラー",
   name_cn: "复仇的人偶·奥契丝",
@@ -59,6 +73,10 @@ const BP08_003_BACK: Partial<RawCardBack> = {
     "これがいる限り、自分の場の『操り人形』すべては【指定攻撃】を持つ。\n" +
     "自分の『操り人形』が場を離れたとき、相手のリーダー1人か相手の場のフォロワー1体を選ぶ。それに2ダメージ。\n" +
     "【進化時】『操り人形』4体を出す。",
+  effect_cn:
+    "只要有这张卡存在，使自己场上的全体『悬丝傀儡』各获得【指定攻击】能力。\n" +
+    "当自己的『悬丝傀儡』离开场上时，选择敌方的1位主战者或敌方场上的1个从者。给予其2点伤害。\n" +
+    "【进化时】将4个『悬丝傀儡』召唤。",
 };
 
 /**
@@ -281,6 +299,8 @@ export const DATA_FIXES: Readonly<Record<string, DataFix>> = {
   "BP09-SL14": { back: BP09_070_BACK },
   "BP09-090": { back: BP09_090_BACK },
   "BP09-P27": { back: BP09_090_BACK },
+  // 天后 (a token, no other printing) has no Chinese text; its Japanese text is 【オーラ】, which the Chinese texts write 【灵气】.
+  "BP06-T01": { effect_cn: "【灵气】" },
   // BP22 (pre-release data, data/preview.ts): Chinese texts missing a word. BP22-051's Chinese text is empty and its Japanese
   // text is only 【疾走】, which this set's Chinese texts write 【疾驰】 (BP22-034, 117). BP22-085's lacks the Fanfare icon its
   // Japanese text starts with (ファンファーレ, 《入场曲》 in this set's Chinese texts, e.g. BP22-090).

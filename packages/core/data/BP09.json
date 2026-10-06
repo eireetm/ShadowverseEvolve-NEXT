@@ -166,7 +166,7 @@
    "defense": 3,
    "text": {
     "en": "On Evolve - Select up to 2 other cards on your field and put them into their owners' EX areas.\nStrike, Combo (3) - Select an enemy follower on the field and deal it 3 damage.",
-    "cn": null,
+    "cn": "【攻击时】【连击_3】选择敌方场上的1个从者。给予其3点伤害。\n【进化时】选择自己场上的其他的卡片最多2张。将其置于EX区域。",
     "ja": "【攻撃時】【コンボ_3】相手の場のフォロワー1体を選ぶ。それに3ダメージ。\n【進化時】自分の場の他のカード2枚まで選ぶ。それをEXエリアに置く。"
    },
    "traits": [
@@ -595,7 +595,7 @@
    "defense": 4,
    "text": {
     "en": "Storm.\nOn Evolve - Summon a Steelclad Knight and Knight token.",
-    "cn": null,
+    "cn": "【疾驰】\n【进化时】将1个『铁甲骑士』与1个『骑士』召唤。\n―――――――――――――――\n『铁甲骑士』《皇家护卫职业》士兵类型·从者《消费2》《攻击力》2/《生命值》2\n『骑士』《皇家护卫职业》士兵类型·从者《消费1》《攻击力》1/《生命值》1",
     "ja": "【疾走】\n【進化時】『スティールナイト』1体と『ナイト』1体を出す。\n―――――――――――――――\n『スティールナイト』{[swordcraft]}兵士・フォロワー{[cost02]}{[attack]}2/{[defense]}2\n『ナイト』{[swordcraft]}兵士・フォロワー{[cost01]}{[attack]}1/{[defense]}1"
    },
    "traits": [
@@ -1196,7 +1196,7 @@
    "defense": 5,
    "text": {
     "en": "Assail.\nOn Evolve - Deal 3 damage to each enemy leader.",
-    "cn": null,
+    "cn": "【指定攻击】\n【进化时】给予敌方的全体主战者各3点伤害。",
     "ja": "【指定攻撃】\n【進化時】相手のリーダーすべてに3ダメージ。"
    },
    "traits": [
@@ -1707,7 +1707,7 @@
    "defense": 10,
    "text": {
     "en": "Storm.\nThis follower ignores Ward.",
-    "cn": null,
+    "cn": "【疾驰】\n这张卡可以无视【守护】能力进行攻击。",
     "ja": "【疾走】\nこれは【守護】を無視して攻撃できる。"
    },
    "traits": [
@@ -2133,7 +2133,7 @@
    "defense": 6,
    "text": {
     "en": "Storm.\nWhile this card is on your field, any Forest Bat you play costs 1 less.\nWhenever a Forest Bat is put onto your field, select an enemy follower on the field and deal it 3 damage.",
-    "cn": null,
+    "cn": "【疾驰】\n只要有这张卡存在，自己将『丛林蝙蝠』卡使用之际，将其消费-1。\n当『丛林蝙蝠』召唤到自己的场上时，选择敌方场上的1个从者。给予其3点伤害。",
     "ja": "【疾走】\nこれがいる限り、自分が『フォレストバット』をプレイする際、コストを-1する。\n自分の場に『フォレストバット』が出たとき、相手の場のフォロワー1体を選ぶ。それに3ダメージ。"
    },
    "traits": [
@@ -2741,7 +2741,7 @@
    "defense": 5,
    "text": {
     "en": "Bane.\nOn Evolve - Bury an amulet: Select an enemy leader or enemy follower on the field and deal it 4 damage.",
-    "cn": null,
+    "cn": "【必杀】\n【进化时】将场上的1个护符置于墓场：选择敌方的1位主战者或敌方场上的1个从者。给予其4点伤害。",
     "ja": "【必殺】\n【進化時】場のアミュレット1つを墓場に置く：相手のリーダー1人か相手の場のフォロワー1体を選ぶ。それに4ダメージ。"
    },
    "traits": [
