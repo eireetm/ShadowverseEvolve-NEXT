@@ -39,6 +39,11 @@ describe("BP08 Runecraft", () => {
     expect(d({ me: { hand: ["BP08-037"], cemetery: COSTS_1_TO_10.slice(1), playPoints: 9 } }).canPlay("BP08-037")).toBe(false);
     const sac = d({ me: { field: ["BP08-037"], hand: ["QUICK-SAC"] } }).play("QUICK-SAC");
     expect(sac.field()).toEqual(["BP08-037"]);
+    // Bane's destruction is destruction by an ability (CR 11.3.2.1), whichever side attacks.
+    const baned = d({ me: { field: ["BANE"] }, opp: { field: [{ card: "BP08-037", engaged: true }] } }).attack("BANE", "opp:BP08-037");
+    expect([baned.field("opp"), baned.stats("opp:BP08-037")]).toEqual([["BP08-037"], [10, 9]]);
+    const attacking = d({ me: { field: ["BP08-037"] }, opp: { field: [{ card: "BANE", engaged: true }] } }).attack("BP08-037", "opp:BANE");
+    expect([attacking.field(), attacking.field("opp")]).toEqual([["BP08-037"], []]);
     const act = d({ me: { hand: ["BP08-037", "V1"], deck: ["V3"] } }).activate("BP08-037").pick("V1");
     expect([act.hand(), act.cemetery()]).toEqual([["V3"], ["BP08-037", "V1"]]);
   });
