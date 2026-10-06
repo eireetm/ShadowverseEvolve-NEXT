@@ -22,6 +22,11 @@ export interface JobFile {
   decks: "train" | "holdout" | "legal";
   /** Both seats may get the same deck. */
   mirror: boolean;
+  /**
+   * Every game has at least one of these decks (names of `decks`): one is drawn from them, the other from all of `decks`,
+   * and which takes which seat at random — the holdout decks' data, each against anything. Without it, two decks of `decks`.
+   */
+  withOne?: string[];
   /** The kinds of game, by weight. */
   games: { weight: number; bots: [BotSpec, BotSpec] }[];
 }
@@ -75,16 +80,27 @@ export function makeJobBot(engine: Engine, spec: BotSpec, seed: string): { decid
  * What the seed draws for a game of the job: the kind of game, the decks and which bot sits where. npm run rl:ingest checks
  * a recorded game against it (a kit changed by hand would play other games).
  */
-export function jobSetup(job: Pick<Job, "games" | "deckLists" | "mirror">, seed: string): { decks: Job["deckLists"]; specs: [BotSpec, BotSpec] } {
+export function jobSetup(job: Pick<Job, "games" | "deckLists" | "mirror" | "withOne">, seed: string): { decks: Job["deckLists"]; specs: [BotSpec, BotSpec] } {
   const rng = seedRng(`job:${seed}`);
   const total = job.games.reduce((s, g) => s + g.weight, 0);
   let roll = randomInt(rng, total);
   const kind = job.games.find((g) => (roll -= g.weight) < 0) ?? job.games[0]!;
   const n = job.deckLists.length;
-  const first = randomInt(rng, n);
-  let second = randomInt(rng, job.mirror ? n : n - 1);
-  if (!job.mirror && second >= first) second += 1;
-  const decks = [job.deckLists[first]!, job.deckLists[second]!];
+  let decks: Job["deckLists"];
+  if (job.withOne && job.withOne.length > 0) {
+    // One of the listed decks, and any deck (itself too when mirrors are allowed), in seats drawn at random.
+    const listed = job.deckLists.filter((d) => job.withOne!.includes(d.name));
+    if (listed.length === 0) throw new Error(`withOne names no deck of the job: ${job.withOne.join(", ")}`);
+    const one = listed[randomInt(rng, listed.length)]!;
+    const others = job.mirror ? job.deckLists : job.deckLists.filter((d) => d !== one);
+    const other = others[randomInt(rng, others.length)]!;
+    decks = randomInt(rng, 2) === 1 ? [other, one] : [one, other];
+  } else {
+    const first = randomInt(rng, n);
+    let second = randomInt(rng, job.mirror ? n : n - 1);
+    if (!job.mirror && second >= first) second += 1;
+    decks = [job.deckLists[first]!, job.deckLists[second]!];
+  }
   // Which spec sits where: the first spec in seat 0 or 1 at random.
   const swap = randomInt(rng, 2) === 1;
   const specs: [BotSpec, BotSpec] = swap ? [kind.bots[1], kind.bots[0]] : [kind.bots[0], kind.bots[1]];
