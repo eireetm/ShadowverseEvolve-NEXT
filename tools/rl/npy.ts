@@ -23,3 +23,17 @@ export function npyBytes(data: Int16Array | Float32Array, shape: readonly number
 export function writeNpy(path: string, data: Int16Array | Float32Array, shape: readonly number[]): void {
   writeFileSync(path, npyBytes(data, shape));
 }
+
+/** A .npy file of int16 or float32 values (as npyBytes writes them): its shape and values. */
+export function readNpy(bytes: Buffer): { shape: number[]; data: Int16Array | Float32Array } {
+  if (bytes.subarray(0, 6).toString("latin1") !== "\x93NUMPY") throw new Error("not a .npy file");
+  const length = bytes.readUInt16LE(8);
+  const header = bytes.subarray(10, 10 + length).toString("latin1");
+  const descr = /'descr': '([^']+)'/.exec(header)?.[1];
+  const shape = (/'shape': \(([^)]*)\)/.exec(header)?.[1] ?? "").split(",").map((s) => s.trim()).filter(Boolean).map(Number);
+  const body = bytes.subarray(10 + length);
+  const copy = body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength);
+  if (descr === "<i2") return { shape, data: new Int16Array(copy) };
+  if (descr === "<f4") return { shape, data: new Float32Array(copy) };
+  throw new Error(`a .npy of ${descr}: only int16 and float32 are read`);
+}

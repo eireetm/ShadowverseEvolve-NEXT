@@ -4,7 +4,7 @@ import { createEngine, randomAnswer, seedRng, type PlayerId } from "../../packag
 import { ALL_CARDS, ALL_SCRIPTS } from "../../packages/core/src/sets";
 import { DEFAULT_WEIGHTS } from "../../packages/bot/src";
 import { dotTerms, evalTerms, termWeights, W1_TERMS } from "../rl/eval-terms";
-import { npyBytes } from "../rl/npy";
+import { npyBytes, readNpy as readNpyFile } from "../rl/npy";
 import { bucketOf, labelOf, replaySamples, splitOf } from "../rl/sampling";
 import { sampleDeck } from "../rl/series";
 import { JOB_CONFIG } from "../train/job";
@@ -108,6 +108,9 @@ describe(".npy files", () => {
     const b = readNpy(npyBytes(floats, [3]));
     expect(b).toEqual({ descr: "<f4", shape: [3], values: [0.5, 1, 0] });
     expect(() => npyBytes(ints, [4, 2])).toThrow();
+    // The tools' own reader (rl:encode reads its shards back with it).
+    expect(readNpyFile(npyBytes(ints, [2, 3]))).toEqual({ shape: [2, 3], data: ints });
+    expect(readNpyFile(npyBytes(floats, [3]))).toEqual({ shape: [3], data: floats });
   });
 });
 

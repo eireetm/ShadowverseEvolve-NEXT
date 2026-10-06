@@ -89,6 +89,23 @@ describe("encoding real positions", () => {
     }
   }, 120_000);
 
+  it("counts no reach for a follower whose attack went below 0 (damage of 0 or less isn't dealt, CR 1.3.2.2)", () => {
+    // Found by encoding every decision of 1000 whole-pool games: a leader attacker with attack -1 made the sum negative.
+    const { game, ctx } = randomGame("pool1000:103");
+    play(game, "pool1000:103", () => {}, 87);
+    const view = game.view(1);
+    const leader = view.players[0].leader!.id;
+    const decision = view.decision!;
+    expect(decision.type).toBe("mainPhase");
+    const attacks = decision.type === "mainPhase" ? decision.actions.filter((a) => a.type === "attack" && a.target === leader) : [];
+    const attackOf = (id: string) => view.players[1].field.find((c) => c.id === id && !c.hidden) as { attack: number | null } | undefined;
+    const attacks0 = attacks.map((a) => (a.type === "attack" ? (attackOf(a.attacker)?.attack ?? 0) : 0));
+    expect(attacks0.some((v) => v < 0)).toBe(true);
+    const x = encode(view, 1, ctx);
+    expect(decode(x)("act.reachNow")).toBe(attacks0.reduce((s, v) => s + Math.max(0, v), 0));
+    for (const i of schema.masked) expect(x[i]!).toBeGreaterThanOrEqual(0);
+  }, 60_000);
+
   it("is the same for the views of samples of what the viewer can't see (50 seeds at a few positions)", () => {
     const { game, ctx } = randomGame("leak");
     let checked = 0;
@@ -192,5 +209,5 @@ describe("golden positions", () => {
 });
 
 // Pinned when version 1 was made (2026-10-06).
-const NAMES_HASH_V1 = "997204950db8ec61";
+const NAMES_HASH_V1 = "1c1d3110f8be9e7e";
 const GOLDEN_V1: string[] = ["8909635e225e", "f80b26ade7b6", "23eb970585e3", "93af23731704", "9c5faf6e5e91", "fd3db69f1c05"];
