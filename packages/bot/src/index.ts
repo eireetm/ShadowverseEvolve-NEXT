@@ -12,3 +12,5 @@ export { positionKey } from "./keys";
 export { planBranches } from "./branches";
 export { fastAnswer, lookupFromView, lookupFromReader, staticValue, type CardFacts, type CardLookup } from "./policy";
 export { candidateAnswers } from "./candidates";
+export { CARD_FEATURES_VERSION, CARD_FEATURE_COLUMNS, POOLED_COLUMNS, BRIEF_COLUMNS, KNOWN_SCRIPT_KEYS, cardFeatureRow, cardFeatureTable, buildCardFeatureFile, cardFeatureFileText, type CardFeatureFile, type CardFeatureTable } from "./card-features";
+export { ENCODER_VERSION, ENCODER_LAYOUT, PLAYER_TYPES_V1, COUNTER_KINDS, encode, decode, encoderSchema, infoDefOf, knownDeck, type EncoderContext, type EncoderSchema, type EncodeDiagnostics, type KnownDeck, type PlayerType } from "./encoder";
