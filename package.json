@@ -30,6 +30,8 @@
     "rl:behaviour": "tsx tools/rl-behaviour.ts",
     "rl:lethal": "tsx tools/rl-lethal.ts",
     "rl:ingest": "tsx tools/rl-ingest.ts",
+    "rl:encode": "tsx tools/rl-encode.ts",
+    "rl:features": "tsx tools/rl-card-features.ts",
     "release:train": "tsx tools/build-train-kit.ts",
     "rl:verify": "tsx tools/rl-verify.ts"
   },

@@ -59,9 +59,16 @@ describe("a job with withOne (the holdout decks' data)", () => {
     expect(seats[0]).toBeGreaterThan(60);
     expect(seats[1]).toBeGreaterThan(60);
     expect([...others].sort()).toEqual(["sd01", "sd02", "sd03", "sd07"]);
-    // Without withOne the draw is the one stage1-v1's games were played with (a seed of the community data).
-    const stage1Like: Job = { ...job, deckLists: decks, mirror: true };
-    expect(jobSetup(stage1Like, "x").decks).toEqual(jobSetup({ ...stage1Like, withOne: [] }, "x").decks);
+    // Without withOne the draw is the one stage1-v1's games were played with: three of the community's games, as recorded.
+    const file = JSON.parse(readFileSync(join(ROOT, "tools", "rl", "jobs", "stage1.json"), "utf8")) as JobFile;
+    const stage1: Job = { ...file, deckLists: (deckSet(file.decks) ?? []).map((n) => sampleDeck(n)!), engine: "e", bot: "b", commit: "c", version: "v" };
+    const drawn = (seed: string) => {
+      const s = jobSetup(stage1, seed);
+      return { decks: s.decks.map((d) => d.name), bots: s.specs.map((b) => b.level) };
+    };
+    expect(drawn("stage1-v1:2d789972:20261004-040626:4:0")).toEqual({ decks: ["sd02", "sd02"], bots: ["medium", "easy"] });
+    expect(drawn("stage1-v1:2d789972:20261004-203507:10:285")).toEqual({ decks: ["sd03", "csd02b"], bots: ["medium", "medium"] });
+    expect(drawn("stage1-v1:dad4b0c2:20261005-053451:13:54")).toEqual({ decks: ["sd02", "sd03"], bots: ["medium", "medium"] });
   });
 });
 
