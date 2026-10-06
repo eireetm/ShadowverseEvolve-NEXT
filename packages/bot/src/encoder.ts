@@ -149,7 +149,7 @@ const SIDE_STATS = [
 const CLASSES = CARD_FEATURE_COLUMNS.filter((c) => c.startsWith("cls."));
 const UNIVERSES = CARD_FEATURE_COLUMNS.filter((c) => c.startsWith("uni."));
 const PHASES = ["setup", "start", "main", "end", "over"] as const;
-const ACT = ["act.nPlay", "act.nAttackers", "act.nAttackLeader", "act.reachNow", "act.nEvolve", "act.canSuperEvolve", "act.nActivate"];
+const ACT = ["nPlay", "nAttackers", "nAttackLeader", "reachNow", "nEvolve", "canSuperEvolve", "nActivate"];
 
 /** A group of the vector: plain values, or a zone's cards pooled (each pool a copy of the row's columns). */
 interface Group {
@@ -529,7 +529,8 @@ export function encode(view: PlayerView, me: PlayerId, ctx: EncoderContext, out?
   let reach = 0;
   for (const id of leaderAttackers) {
     const c = mine.field.find((x) => x.id === id);
-    if (c && visible(c)) reach += c.attack ?? 0;
+    // Attack can go below 0, but damage of 0 or less isn't dealt (CR 1.3.2.2): such a follower reaches nothing.
+    if (c && visible(c)) reach += Math.max(0, c.attack ?? 0);
   }
   for (const v of [nPlay, attackers.size, leaderAttackers.size, reach, evolvers.size, canSuperEvolve, nActivate]) w.put(v);
 
@@ -620,4 +621,92 @@ export function decode(vec: ArrayLike<number>): (name: string) => number {
     if (i === undefined) throw new Error(`no feature ${name}`);
     return vec[i]!;
   };
+}
+
+const PLAYER_NAMES: Record<PlayerType, string> = { medium: "中等 Bot", easy: "简单 Bot" };
+
+/** Names for the print: a card's (by definition), a keyword's and a counter's, in the reader's language; ids and keys when not given. */
+export interface DescribeNames {
+  card?(def: DefId): string;
+  keyword?(keyword: string): string;
+  counter?(kind: string): string;
+}
+
+/**
+ * The position as encoder v1 reads it, in Chinese, for a person to check against the game (the user check of stage 1): the
+ * numbers come from the vector itself (decode), the cards are listed from the view with what the vector counts of them.
+ */
+export function describe(view: PlayerView, me: PlayerId, ctx: EncoderContext, names: DescribeNames = {}): string {
+  const x = encode(view, me, ctx);
+  const get = decode(x);
+  const schema = encoderSchema();
+  const cardName = (def: DefId) => names.card?.(def) ?? def;
+  const kwName = (k: string) => names.keyword?.(k) ?? k;
+  const opp = opponentOf(me);
+  const deciding = get("mask.decides") === 1;
+  const who = (p: PlayerId | null) => (p === null ? "未定" : p === me ? "我" : "对手");
+  const lines: string[] = [];
+  lines.push(
+    `编码器 v${ENCODER_VERSION} · 第 ${get("g.turn")} 回合 · 行动方：${who(view.activePlayer)} · 先手：${who(view.firstPlayer)} · 执棋者：我=${PLAYER_NAMES[ctx.players[me]]} 对手=${PLAYER_NAMES[ctx.players[opp]]} · 维度 ${schema.dims} · 现在能做什么：${deciding ? "知道（我在决定）" : "不知道（不是我在决定）"}`,
+  );
+  const sideLine = (label: string, s: "me" | "opp") =>
+    `${label}：体力 ${get(`g.${s}.leaderDefense`)}  PP ${get(`g.${s}.pp`)}/${get(`g.${s}.maxPp`)}  EP ${get(`g.${s}.ep`)}  SEP ${get(`g.${s}.sep`)}  已过回合 ${get(`g.${s}.turnsPassed`)}  牌组 ${get(`g.${s}.deckCount`)}  手牌 ${get(`g.${s}.hand.count`)}${get(`g.${s}.hand.hidden`) ? `（看不到 ${get(`g.${s}.hand.hidden`)}）` : ""}  场上 ${get(`g.${s}.field.count`)}  EX ${get(`g.${s}.ex.count`)}  墓场 ${get(`g.${s}.cemetery.count`)}  除外 ${get(`g.${s}.banished.count`)}  进化牌组 背面 ${get(`g.${s}.evolveDeck.faceDown`)} / 正面 ${get(`g.${s}.evolveDeck.faceUp`)}  进化区 ${get(`g.${s}.evolveZone.count`)}`;
+  lines.push(`[全局] ${sideLine("我", "me")}`);
+  lines.push(`       ${sideLine("对手", "opp")}`);
+  if (deciding) {
+    lines.push(
+      `[现在能做什么] 能出 ${get("act.nPlay")} · 能攻击的 ${get("act.nAttackers")} 张 · 能打主战者的 ${get("act.nAttackLeader")} 张（攻击力合计 ${get("act.reachNow")}）· 能进化 ${get("act.nEvolve")} 张 · 能超进化 ${get("act.canSuperEvolve") ? "是" : "否"} · 能启动 ${get("act.nActivate")} 次`,
+    );
+  }
+  const keywordsOf = (c: CardView) => (c.keywords.length ? ` 关键词 ${c.keywords.map(kwName).join("、")}` : "");
+  const countersOf = (c: CardView) => {
+    const entries = Object.entries(c.counters).filter(([, v]) => v > 0);
+    return entries.length ? ` 指示物 ${entries.map(([k, v]) => `${names.counter?.(k) ?? k}×${v}`).join("、")}` : "";
+  };
+  const fieldList = (label: string, s: PlayerSideView, mine: boolean) => {
+    const cards = s.field.filter(visible);
+    const hidden = s.field.length - cards.length;
+    lines.push(`[${label} ${s.field.length} 张${hidden ? `（背面 ${hidden}）` : ""}]`);
+    for (const [i, c] of cards.entries()) {
+      const info = infoDefOf(view, c, ctx.table);
+      const evolved = c.evolvedWith !== null ? (c.superEvolved ? "（已超进化）" : "（已进化）") : "";
+      const stats = c.type === "follower" ? ` 攻 ${c.attack ?? 0} / 守 ${c.defense ?? 0}${c.damage ? `（已扣掉受到的 ${c.damage} 点伤害）` : ""}` : ` ${c.type === "amulet" ? "护符" : c.type}`;
+      lines.push(`  ${i + 1}. ${cardName(info)}${evolved}${stats}  ${c.engaged ? "横置" : "未横置"}${keywordsOf(c)}${countersOf(c)}`);
+    }
+    const pre = mine ? "field.me" : "field.opp";
+    if (cards.length) {
+      lines.push(
+        `  合计 / 最大：攻 ${get(`${pre}.sum.atk.now`)}/${get(`${pre}.max.atk.now`)} · 守 ${get(`${pre}.sum.def.now`)}/${get(`${pre}.max.def.now`)} · 随从 ${get(`${pre}.sum.follower.now`)} · 横置 ${get(`${pre}.sum.engaged`)} · 守护 ${get(`${pre}.sum.kw.now.ward`)}（未横置 ${get(`${pre}.sum.ward.standing`)}）· 已进化 ${get(`${pre}.sum.evolved.now`)}`,
+      );
+    }
+    if (mine && deciding && cards.length) lines.push(`  能做（合计）：打主战者 ${get("field.me.sum.a.attackLeader")} · 攻击随从 ${get("field.me.sum.a.attackFollowers")} · 进化 ${get("field.me.sum.a.evolve")} · 用进化点进化 ${get("field.me.sum.a.evolveEp")} · 超进化 ${get("field.me.sum.a.superEvolve")} · 启动 ${get("field.me.sum.a.activate")}`);
+  };
+  fieldList("我方场上", view.players[me], true);
+  fieldList("对方场上", view.players[opp], false);
+  const hand = view.players[me].hand.filter(visible);
+  lines.push(`[我方手牌 ${hand.length} 张] ${hand.map((c) => `${cardName(infoDefOf(view, c, ctx.table))}（${c.cost ?? "-"} 费）`).join(" · ") || "无"}${deciding ? `  · 能出 ${get("hand.me.sum.a.play")} 张` : ""}`);
+  const ex = view.players[me].ex;
+  if (ex.length) lines.push(`[我方 EX ${ex.length} 张] ${ex.map((c) => cardName(infoDefOf(view, c, ctx.table))).join(" · ")}`);
+  if (view.players[opp].ex.length) lines.push(`[对方 EX ${view.players[opp].ex.length} 张] ${view.players[opp].ex.map((c) => cardName(infoDefOf(view, c, ctx.table))).join(" · ")}`);
+  const poolLine = (label: string, pre: string) => {
+    const costs = ["le1", "2", "3", "4", "5", "6", "ge7"].map((b) => `${b === "le1" ? "≤1" : b === "ge7" ? "≥7" : b}:${get(`${pre}.sum.cost.${b}`)}`).join(" ");
+    const kinds = `随从 ${get(`${pre}.sum.type.follower`)} 法术 ${get(`${pre}.sum.type.spell`)} 护符 ${get(`${pre}.sum.type.amulet`)}`;
+    const kws = ["ward", "storm", "rush", "bane", "drain", "aura", "intimidate", "assail", "quick"].map((k) => [k, get(`${pre}.sum.kw.${k}`)] as const).filter(([, v]) => v > 0).map(([k, v]) => `${kwName(k)} ${v}`).join(" ");
+    lines.push(`[${label} ${get(`${pre}.count`)} 张] 费用 ${costs} · ${kinds}${kws ? ` · ${kws}` : ""}`);
+  };
+  poolLine("我方剩余牌组", "pool.me.deck");
+  poolLine("对手手牌+牌组（看不到的）", "pool.opp.handDeck");
+  lines.push(`[剩余进化牌] 我 ${get("pool.me.evolveLeft.count")} 张 / 对手 ${get("pool.opp.evolveLeft.count")} 张`);
+  lines.push(`[墓场] 我 ${get("g.me.cemetery.count")} 张（随从 ${get("cemetery.me.sum.type.follower")}、法术 ${get("cemetery.me.sum.type.spell")}）/ 对手 ${get("g.opp.cemetery.count")} 张（随从 ${get("cemetery.opp.sum.type.follower")}、法术 ${get("cemetery.opp.sum.type.spell")}）`);
+  const counterLine = (s: "me" | "opp") =>
+    [...COUNTER_KINDS, "other"]
+      .map((k) => [k, get(`counters.${s}.${k}`)] as const)
+      .filter(([, v]) => v !== 0)
+      .map(([k, v]) => `${k === "other" ? "其他" : (names.counter?.(k) ?? k)}×${v}`)
+      .join("、") || "无";
+  lines.push(`[指示物] 我：${counterLine("me")} / 对手：${counterLine("opp")}`);
+  const nonzero = schema.names.map((n, i) => [n, x[i]!] as const).filter(([, v]) => v !== 0);
+  lines.push(`[非零特征 ${nonzero.length} 个]`);
+  for (let i = 0; i < nonzero.length; i += 6) lines.push(`  ${nonzero.slice(i, i + 6).map(([n, v]) => `${n}=${v}`).join("  ")}`);
+  return lines.join("\n") + "\n";
 }
