@@ -165,6 +165,15 @@ describe("groupPrintings", () => {
     ]);
   });
 
+  it("takes a missing Chinese name and text from another printing with the same Japanese text (EBD01-007 / SP01-001)", () => {
+    const bare = normalizePrinting(raw({ card_no: "XX01-001", name_cn: null, effect_ja: "1枚引く。", effect_ja_sve: null, effect_cn: null }));
+    // PR-001 comes first but says something else in Japanese: its Chinese text is not this card's.
+    const other = normalizePrinting(raw({ card_no: "PR-001", set: "PR", effect_ja: "2枚引く。", effect_ja_sve: null, effect_cn: "抽取2张卡。" }));
+    const reprint = normalizePrinting(raw({ card_no: "PR-002", set: "PR", effect_ja: "1枚引く。", effect_ja_sve: null, effect_cn: "抽取1张卡。" }));
+    const [card] = groupPrintings([bare, reprint, other], ["XX01"]).cards;
+    expect([card!.id, card!.names.cn, card!.text.cn]).toEqual(["XX01-001", "测试", "抽取1张卡。"]);
+  });
+
   it("keeps a base card and its evolved card apart even though they share a name", () => {
     const base = normalizePrinting(raw({ card_no: "XX01-001" }));
     const evo = normalizePrinting(raw({ card_no: "XX01-002", name_en: "Test (Evolved)", card_type: ["Follower", "Evolved"], cost: null }));

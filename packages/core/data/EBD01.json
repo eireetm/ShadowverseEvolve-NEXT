@@ -16,7 +16,7 @@
    "name": "Spinaria, Wavering Will",
    "names": {
     "en": "Spinaria, Wavering Will",
-    "cn": null,
+    "cn": "漂浮的意志·丝碧涅",
     "ja": "揺蕩う意志・スピネ"
    },
    "class": "Forestcraft",
@@ -28,7 +28,7 @@
    "defense": 3,
    "text": {
     "en": "Whenever a follow on your field evolves, give your leader {[defense]}+2.\n{[fanfare]} Select a {[forestcraft]} follower in your cemetery that originally costs 2 or less and put it into your EX area. This turn, it costs 2 less to play.",
-    "cn": null,
+    "cn": "当自己场上的从者进化时，使自己的主战者《生命值》+2。\n《入场曲》选择自己的墓场中的原始消费为2及以下的1张《精灵职业》从者卡。将其置于EX区域。这个回合，将其使用之际，将其消费-2。",
     "ja": "自分の場のフォロワーが進化したとき、自分のリーダーは{[defense]}+2する。\n\n{[fanfare]}自分の墓場の元のコスト2以下の{[forestcraft]}フォロワー1枚を選ぶ。それをEXエリアに置く。このターン、それをプレイする際、コストを-2する。"
    },
    "traits": [

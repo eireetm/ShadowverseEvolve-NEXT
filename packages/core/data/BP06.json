@@ -3543,7 +3543,7 @@
    "defense": 5,
    "text": {
     "en": "Aura.",
-    "cn": "",
+    "cn": "【灵气】",
     "ja": "【オーラ】"
    },
    "traits": [
@@ -3572,7 +3572,7 @@
    "defense": 2,
    "text": {
     "en": "{[lastwords]} Draw a card. Discard a card.",
-    "cn": "",
+    "cn": "《谢幕曲》抽取1张卡。将自己的1张手牌舍弃。",
     "ja": "ラストワード1枚引く。自分の手札1枚を捨てる。"
    },
    "traits": [
@@ -3601,7 +3601,7 @@
    "defense": 3,
    "text": {
     "en": "Rush. Ward.",
-    "cn": "",
+    "cn": "【突进】【守护】",
     "ja": "【突進】【守護】"
    },
    "traits": [

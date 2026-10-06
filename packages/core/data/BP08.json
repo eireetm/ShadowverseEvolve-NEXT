@@ -113,7 +113,7 @@
    "defense": 4,
    "text": {
     "en": "On Evolve - Summon 4 Puppet tokens.\nWhile this card is on your field, each Puppet on your field has Assail.\nWhenever a Puppet you control leaves the field, select an enemy leader or enemy follower on the field and deal it 2 damage.",
-    "cn": null,
+    "cn": "只要有这张卡存在，使自己场上的全体『悬丝傀儡』各获得【指定攻击】能力。\n当自己的『悬丝傀儡』离开场上时，选择敌方的1位主战者或敌方场上的1个从者。给予其2点伤害。\n【进化时】将4个『悬丝傀儡』召唤。",
     "ja": "これがいる限り、自分の場の『操り人形』すべては【指定攻撃】を持つ。\n自分の『操り人形』が場を離れたとき、相手のリーダー1人か相手の場のフォロワー1体を選ぶ。それに2ダメージ。\n【進化時】『操り人形』4体を出す。"
    },
    "traits": [

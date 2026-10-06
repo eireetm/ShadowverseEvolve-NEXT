@@ -18,6 +18,11 @@ describe("card pool (all supported sets)", () => {
     expect(Object.keys(ALL_SCRIPTS).length).toBe(SUPPORTED_SETS.reduce((n, s) => n + Object.keys(SETS[s].scripts).length, 0));
   });
 
+  it("every card with a text has a Chinese text (else the Chinese interface shows English; fixed in data/fixes.ts)", () => {
+    const missing = ALL_CARDS.filter((c) => c.text.ja && !c.text.cn).map((c) => c.id);
+    expect(missing).toEqual([]);
+  });
+
   it("printings of other sets join their card: reprinted tokens, starter decks, promos", () => {
     expect(db.ofPrinting("BP02-T11").id).toBe("BP01-T03"); // Fairy
     expect(db.ofPrinting("SD01-007").id).toBe("BP01-017"); // Elf Metallurgist
