@@ -56,6 +56,11 @@ if (!names) {
   console.error(`no deck set ${file.decks}`);
   process.exit(1);
 }
+const strangers = (file.withOne ?? []).filter((name) => !names.includes(name));
+if (strangers.length > 0) {
+  console.error(`withOne names decks that aren't in ${file.decks}: ${strangers.join(", ")}`);
+  process.exit(1);
+}
 const job: Job = {
   ...file,
   deckLists: names.map((name) => sampleDeck(name)!),

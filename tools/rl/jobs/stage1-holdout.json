@@ -1,0 +1,18 @@
+{
+  "id": "stage1-holdout-v1",
+  "description": "Stage 1 test data: every game has a holdout deck (sd07, dsd01a, csd02c) against any legal sample deck (mirrors too), Medium against Medium only, as in stage1-v1: two turns ahead, exploring 15% of its turns. Never used for training: it measures how the value network does on cards it hasn't seen.",
+  "format": "standard",
+  "restrictionList": "10_26_JPN",
+  "decks": "legal",
+  "mirror": true,
+  "withOne": ["sd07", "dsd01a", "csd02c"],
+  "games": [
+    {
+      "weight": 1,
+      "bots": [
+        { "level": "medium", "options": { "lookahead": 2, "samples": 2, "explore": { "rate": 0.15, "temperature": 2 } } },
+        { "level": "medium", "options": { "lookahead": 2, "samples": 2, "explore": { "rate": 0.15, "temperature": 2 } } }
+      ]
+    }
+  ]
+}

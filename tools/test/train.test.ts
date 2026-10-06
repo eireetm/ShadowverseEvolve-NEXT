@@ -42,6 +42,29 @@ describe("job games", () => {
   }, 60_000);
 });
 
+describe("a job with withOne (the holdout decks' data)", () => {
+  it("draws one listed deck into every game, the other from all, in either seat; a job without it draws as before", () => {
+    const decks = ["sd01", "sd02", "sd03", "sd07"].map((n) => sampleDeck(n)!);
+    const withOne: Job = { ...job, deckLists: decks, mirror: true, withOne: ["sd07"] };
+    const seats = [0, 0];
+    const others = new Set<string>();
+    for (let i = 0; i < 200; i++) {
+      const { decks: d } = jobSetup(withOne, `w:${i}`);
+      const at = d.findIndex((x) => x.name === "sd07");
+      expect(at).toBeGreaterThanOrEqual(0);
+      seats[at]! += 1;
+      others.add(d[1 - at]!.name);
+      expect(jobSetup(withOne, `w:${i}`)).toEqual(jobSetup(withOne, `w:${i}`));
+    }
+    expect(seats[0]).toBeGreaterThan(60);
+    expect(seats[1]).toBeGreaterThan(60);
+    expect([...others].sort()).toEqual(["sd01", "sd02", "sd03", "sd07"]);
+    // Without withOne the draw is the one stage1-v1's games were played with (a seed of the community data).
+    const stage1Like: Job = { ...job, deckLists: decks, mirror: true };
+    expect(jobSetup(stage1Like, "x").decks).toEqual(jobSetup({ ...stage1Like, withOne: [] }, "x").decks);
+  });
+});
+
 describe("recorded engine fingerprints", () => {
   it("read the first kit's (the app's engine) as the core's it stood for, any other as it is", () => {
     expect(rulesOfRecorded("b9dc4777f8bda25c")).toBe("fd673f23fa8ecdbc");
