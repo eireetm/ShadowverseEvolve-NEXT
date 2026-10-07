@@ -1,14 +1,15 @@
 import { CARD_CLASSES, type AbilityDef, type CardDefinition, type CardScript, type DefId } from "./core";
 
 /**
- * The card feature table (version 1): what a card is, as numbers a value network can read without knowing the card — its
- * definition (type, class, cost, stats, special types) and the fields its script declares (keywords, abilities by kind and
- * timing, their costs and limits, choices, play options, passive rules). Never the card's id or name, never what its
- * effects do (the script's code is not looked into: a field that is a function only counts as present, it is never called).
- * Every value is a small whole number. A new card gets its row from the same rules; a card's row changes only when its
- * definition or declared fields do (npm run rl:features reports it). The table is generated into card-features.json.
+ * The card feature table: what a card is, as numbers a value network can read without knowing the card — its definition
+ * (type, class, cost, stats, special types) and the fields its script declares (keywords, abilities by kind and timing, their
+ * costs and limits, choices, play options, passive rules). Never the card's id or name. Every value is a small whole number.
+ * A new card gets its row from the same rules; a card's row changes only when its definition or declared fields do (npm run
+ * rl:features reports it). The table is generated into card-features.json.
+ * Version 2 keeps version 1's 119 columns first, in order (encoder v1 reads only those), and adds per definition its traits
+ * (CR 2.4, as indices into the file's trait list) and the evolve cards that can evolve it (evolvePartners).
  */
-export const CARD_FEATURES_VERSION = 1;
+export const CARD_FEATURES_VERSION = 2;
 
 const CLASS_COLUMNS = ["cls.neutral", "cls.forest", "cls.sword", "cls.rune", "cls.dragon", "cls.abyss", "cls.haven"] as const;
 const UNIVERSES = ["umamusume", "cinderellaGirls", "vanguard", "princessConnect"] as const;
@@ -27,8 +28,8 @@ const FP_OTHER = [
   "dieRerolls",
 ] as const;
 
-/** The columns, in order (119). */
-export const CARD_FEATURE_COLUMNS: readonly string[] = [
+/** Version 1's columns, in order (119): the first columns of every later version. */
+export const CARD_FEATURE_COLUMNS_V1: readonly string[] = [
   ...["follower", "amulet", "spell", "crest", "equipment"].map((t) => `type.${t}`),
   ...CLASS_COLUMNS,
   ...UNIVERSES.map((u) => `uni.${u}`),
@@ -118,8 +119,11 @@ export const CARD_FEATURE_COLUMNS: readonly string[] = [
   "script.none",
 ];
 
-/** The columns pooled over a zone's cards (class and universe are the leader's and the side's, not each card's): 108. */
-export const POOLED_COLUMNS: readonly string[] = CARD_FEATURE_COLUMNS.filter((c) => !c.startsWith("cls.") && !c.startsWith("uni."));
+/** The columns, in order: version 1's, then the ones version 2 adds. */
+export const CARD_FEATURE_COLUMNS: readonly string[] = [...CARD_FEATURE_COLUMNS_V1];
+
+/** Encoder v1's columns pooled over a zone's cards (class and universe are the leader's and the side's, not each card's): 108. */
+export const POOLED_COLUMNS: readonly string[] = CARD_FEATURE_COLUMNS_V1.filter((c) => !c.startsWith("cls.") && !c.startsWith("uni."));
 
 /** A short row for the zones read only in summary (cemetery, banished, equipment, a revealed hand): 40. */
 export const BRIEF_COLUMNS: readonly string[] = [
@@ -326,6 +330,16 @@ export interface CardFeatureFile {
   rulesFingerprint: string;
   /** A double-faced card's back face (CR 2.14), by front. */
   backFace: Record<DefId, DefId>;
+  /** Every trait of the definitions (CR 2.4: the Japanese strings, the only trait identity), sorted. */
+  traits: string[];
+  /** A definition's traits, as indices into `traits` (definitions without traits are left out). */
+  cardTraits: Record<DefId, number[]>;
+  /**
+   * The evolved cards that can evolve a follower (CR 5.16.1.1.1 / 12.2.2: the same name, or what its evolve ability says:
+   * "with [text] in its name", "into X or Y"; either face of a double-faced card, 4.6.4), by the follower's definition. From
+   * the printed names: an effect that renames a card on the field is not seen here.
+   */
+  evolvePartners: Record<DefId, DefId[]>;
   rows: Record<DefId, [number, number][]>;
 }
 
@@ -334,6 +348,10 @@ export interface CardFeatureTable {
   readonly file: CardFeatureFile;
   row(def: DefId): Int16Array;
   known(def: DefId): boolean;
+  /** Its traits (indices into file.traits). */
+  traitsOf(def: DefId): readonly number[];
+  /** The evolved cards that can evolve it (none for a card that isn't a follower). */
+  partnersOf(def: DefId): readonly DefId[];
 }
 
 /** Reads a card-features.json (its version and columns must be these). Rows are expanded once, when first asked for. */
@@ -343,9 +361,12 @@ export function cardFeatureTable(file: CardFeatureFile): CardFeatureTable {
   }
   const dense = new Map<DefId, Int16Array>();
   const zero = new Int16Array(CARD_FEATURE_COLUMNS.length);
+  const none: readonly never[] = [];
   return {
     file,
     known: (def) => file.rows[def] !== undefined,
+    traitsOf: (def) => file.cardTraits[def] ?? none,
+    partnersOf: (def) => file.evolvePartners[def] ?? none,
     row(def) {
       let r = dense.get(def);
       if (!r) {
@@ -379,7 +400,20 @@ export function buildCardFeatureFile(
     rows[id] = cardFeatureRow(def, scripts[id]).flatMap((v, i) => (v !== 0 ? [[i, v] as [number, number]] : []));
     if (def.backFace) backFace[id] = def.backFace;
   }
-  const rowText = ids.map((id) => `${id}:${rows[id]!.map(([i, v]) => `${i}=${v}`).join(",")}`).join("\n");
+  const traits = [...new Set(definitions.flatMap((d) => d.traits))].sort();
+  const traitIndex = new Map(traits.map((t, i) => [t, i]));
+  const cardTraits: Record<DefId, number[]> = {};
+  for (const id of ids) {
+    const own = [...new Set(byId.get(id)!.traits)].map((t) => traitIndex.get(t)!).sort((a, b) => a - b);
+    if (own.length > 0) cardTraits[id] = own;
+  }
+  const evolvePartners = partnersByFollower(definitions, scripts);
+  const rowText = [
+    ...ids.map((id) => `${id}:${rows[id]!.map(([i, v]) => `${i}=${v}`).join(",")}`),
+    `traits:${traits.join(",")}`,
+    ...Object.keys(cardTraits).sort().map((id) => `t:${id}:${cardTraits[id]!.join(",")}`),
+    ...Object.keys(evolvePartners).sort().map((id) => `e:${id}:${evolvePartners[id]!.join(",")}`),
+  ].join("\n");
   return {
     format: "sve-card-features",
     version: CARD_FEATURES_VERSION,
@@ -388,16 +422,57 @@ export function buildCardFeatureFile(
     hash: sha256(rowText).slice(0, 16),
     rulesFingerprint,
     backFace,
+    traits,
+    cardTraits,
+    evolvePartners,
     rows,
   };
 }
 
+/**
+ * Every follower's evolve cards (CardFeatureFile.evolvePartners), as Core's correspondingEvolveCards finds them on the field
+ * (engine/abilities/evolve.ts; CR 5.16.1.1.1, 4.6.4) but from printed names: evolved cards with its name, plus for each of its
+ * evolve abilities the cards that ability names ("with [text] in its name", "into X or Y").
+ */
+function partnersByFollower(definitions: readonly CardDefinition[], scripts: Readonly<Record<DefId, CardScript>>): Record<DefId, DefId[]> {
+  const byId = new Map(definitions.map((d) => [d.id, d]));
+  // An evolved card answers to its own name and, double-faced, to its back face's (CR 4.6.4).
+  const evolved = definitions
+    .filter((d) => d.evolved && d.frontFace === undefined)
+    .map((d) => ({ id: d.id, names: [d.name, ...(d.backFace !== undefined && byId.has(d.backFace) ? [byId.get(d.backFace)!.name] : [])] }));
+  const out: Record<DefId, DefId[]> = {};
+  for (const d of definitions) {
+    if (d.type !== "follower" || d.evolved) continue;
+    const matches: ((name: string) => boolean)[] = [(name) => name === d.name];
+    for (const a of (scripts[d.id]?.abilities ?? []) as readonly AbilityDef[]) {
+      if (a.kind !== "activated" || !a.evolve) continue;
+      const includes = a.evolveNameIncludes;
+      const into = a.evolveInto;
+      if (into !== undefined) matches.push((name) => into.includes(name));
+      else if (includes !== undefined) matches.push((name) => name.includes(includes));
+    }
+    const partners = evolved.filter((e) => e.names.some((n) => matches.some((m) => m(n)))).map((e) => e.id);
+    if (partners.length > 0) out[d.id] = partners.sort();
+  }
+  return out;
+}
+
 /** The file's text: one definition a line, so a change of a card shows as a change of its line. */
 export function cardFeatureFileText(file: CardFeatureFile): string {
-  const head = { format: file.format, version: file.version, columns: file.columns, columnsHash: file.columnsHash, hash: file.hash, rulesFingerprint: file.rulesFingerprint, backFace: file.backFace };
-  const rows = Object.keys(file.rows)
-    .sort()
-    .map((id) => `  ${JSON.stringify(id)}: ${JSON.stringify(file.rows[id])}`)
-    .join(",\n");
-  return `${JSON.stringify(head).slice(0, -1)},\n "rows": {\n${rows}\n }\n}\n`;
+  const head = {
+    format: file.format,
+    version: file.version,
+    columns: file.columns,
+    columnsHash: file.columnsHash,
+    hash: file.hash,
+    rulesFingerprint: file.rulesFingerprint,
+    backFace: file.backFace,
+    traits: file.traits,
+  };
+  const lines = (record: Record<string, unknown>) =>
+    Object.keys(record)
+      .sort()
+      .map((id) => `  ${JSON.stringify(id)}: ${JSON.stringify(record[id])}`)
+      .join(",\n");
+  return `${JSON.stringify(head).slice(0, -1)},\n "cardTraits": {\n${lines(file.cardTraits)}\n },\n "evolvePartners": {\n${lines(file.evolvePartners)}\n },\n "rows": {\n${lines(file.rows)}\n }\n}\n`;
 }
