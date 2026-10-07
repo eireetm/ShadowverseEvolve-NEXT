@@ -1,25 +1,19 @@
-import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ALL_CARDS, ALL_SCRIPTS } from "../../core/src/sets";
-import { rulesFingerprint } from "../../gui/fingerprint";
-import { buildCardFeatureFile, CARD_FEATURE_COLUMNS, cardFeatureFileText, cardFeatureTable, KNOWN_SCRIPT_KEYS, type CardFeatureFile } from "../src";
+import { CARD_FEATURE_COLUMNS, cardFeatureTable, KNOWN_SCRIPT_KEYS, type CardFeatureFile } from "../src";
 
-// The card feature table (card-features.json): it is what the code builds from the card data and scripts, every field a
-// script declares is either read or left out on purpose, and its values are small whole numbers.
+// The card feature table (card-features.json): its columns, every field a script declares is either read or left out on
+// purpose, and its values are small whole numbers.
 const JSON_PATH = join(__dirname, "..", "src", "card-features.json");
-const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");
 
 describe("card-features.json", () => {
-  it("is what the code builds (else: npm run rl:features), with its hashes", () => {
-    const built = buildCardFeatureFile(ALL_CARDS, ALL_SCRIPTS, rulesFingerprint(join(__dirname, "..", "..", "gui")), sha256);
-    const committed = readFileSync(JSON_PATH, "utf8").replace(/\r\n/g, "\n");
-    expect(committed).toBe(cardFeatureFileText(built));
-    const file = JSON.parse(committed) as CardFeatureFile;
+  it("has these columns (what the code builds from the scripts is checked by the tools' tests: tools/test/card-features.test.ts)", () => {
+    const file = JSON.parse(readFileSync(JSON_PATH, "utf8")) as CardFeatureFile;
     expect(file.columns).toEqual([...CARD_FEATURE_COLUMNS]);
     expect(Object.keys(file.rows).sort()).toEqual(ALL_CARDS.map((d) => d.id).sort());
-  }, 60_000);
+  });
 
   it("holds whole numbers from 0 to 2047, a row for every definition and back face, read back densely", () => {
     const file = JSON.parse(readFileSync(JSON_PATH, "utf8")) as CardFeatureFile;
