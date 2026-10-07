@@ -1,6 +1,7 @@
 /**
  * The card feature table (packages/bot/src/card-features.ts): npm run rl:features [--check]
- * Builds every definition's row from the card data and the scripts and writes packages/bot/src/card-features.json, then
+ * Builds every definition's row from the card data, the scripts' declared fields and what their code does and counts
+ * (tools/rl/script-analysis.ts) and writes packages/bot/src/card-features.json, then
  * tells which rows were added, changed or removed since the file there, and per column how many definitions use it in the
  * whole pool and in the sample decks of the training sets (a column no deck uses can't be learned yet). With --check it
  * writes nothing and fails when the file isn't what the code builds (a script's declared fields changed: the definitions in
@@ -13,12 +14,14 @@ import { buildCardFeatureFile, CARD_FEATURE_COLUMNS, cardFeatureFileText, type C
 import { createEngine } from "../packages/core/src";
 import { ALL_CARDS, ALL_SCRIPTS } from "../packages/core/src/sets";
 import { rulesFingerprint } from "../packages/gui/fingerprint";
+import { analyzeScripts } from "./rl/script-analysis";
 import { DECK_SETS, ROOT, sampleDeck } from "./rl/series";
 
 const check = process.argv.includes("--check");
 const target = join(ROOT, "packages", "bot", "src", "card-features.json");
 const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");
-const file = buildCardFeatureFile(ALL_CARDS, ALL_SCRIPTS, rulesFingerprint(join(ROOT, "packages", "gui")), sha256);
+const analyses = analyzeScripts(ALL_SCRIPTS);
+const file = buildCardFeatureFile(ALL_CARDS, ALL_SCRIPTS, rulesFingerprint(join(ROOT, "packages", "gui")), sha256, (def) => analyses.get(def));
 const text = cardFeatureFileText(file);
 const old = existsSync(target) ? (JSON.parse(readFileSync(target, "utf8")) as CardFeatureFile) : null;
 

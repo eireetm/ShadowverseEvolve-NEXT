@@ -33,11 +33,13 @@
     "rl:encode": "tsx tools/rl-encode.ts",
     "rl:certify": "tsx tools/rl-certify.ts",
     "rl:features": "tsx tools/rl-card-features.ts",
+    "rl:review": "tsx tools/rl-card-review.ts",
     "release:train": "tsx tools/build-train-kit.ts",
     "rl:verify": "tsx tools/rl-verify.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.2",
+    "rolldown": "^1.2.9",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^5.0.1"
