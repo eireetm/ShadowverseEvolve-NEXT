@@ -10,6 +10,7 @@ import { dirname, extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { HostConfig } from "./config.ts";
 import { deckPath, deleteDeckFile, listDecks, readDeckText, writeDeckText } from "./decks.ts";
+import { browserHasFile, fileTag } from "./file-cache.ts";
 import { deleteReplayFile, listReplays, readReplayText, replayPath, writeReplayText } from "./replays.ts";
 import { listResources, ownCardArt } from "./resources.ts";
 import { readSettingsText, writeSettingsText } from "./settings-file.ts";
@@ -94,22 +95,22 @@ function readBody(req: IncomingMessage): Promise<string> {
 }
 
 /**
- * A file: the app's hashed files are kept by the browser, everything else is asked again (a changed file of public/ is
- * picked up on reload). Byte ranges for music and sounds.
+ * A file: the app's hashed files are kept by the browser, everything else is asked again (file-cache.ts: a changed file of
+ * public/ is picked up on reload). Byte ranges for music and sounds.
  */
 function sendFile(req: IncomingMessage, res: ServerResponse, file: string, immutable: boolean): void {
   const stat = statSync(file);
-  const modified = stat.mtime;
-  modified.setMilliseconds(0);
   res.setHeader("Content-Type", TYPES[extname(file).toLowerCase()] ?? "application/octet-stream");
-  res.setHeader("Last-Modified", modified.toUTCString());
   res.setHeader("Cache-Control", immutable ? "public, max-age=31536000, immutable" : "no-cache");
   res.setHeader("Accept-Ranges", "bytes");
-  const since = req.headers["if-modified-since"];
-  if (!immutable && since && new Date(since).getTime() >= modified.getTime()) {
-    res.statusCode = 304;
-    res.end();
-    return;
+  if (!immutable) {
+    const tag = fileTag(stat);
+    res.setHeader("ETag", tag);
+    if (browserHasFile(req, tag)) {
+      res.statusCode = 304;
+      res.end();
+      return;
+    }
   }
   const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? "");
   if (range && (range[1] !== "" || range[2] !== "")) {
