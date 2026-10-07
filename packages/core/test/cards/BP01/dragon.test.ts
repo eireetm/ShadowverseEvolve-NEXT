@@ -45,6 +45,14 @@ describe("BP01 Dragoncraft", () => {
     expect(t.hand("opp")).toEqual(["V5"]);
   });
 
+  it("083 Phoenix Roost — a top card that isn't a follower is looked at all the same (CR 5.11.1)", () => {
+    const t = d({ me: { field: ["BP01-083"] }, opp: { deck: ["V5", "KILL2", "V1"] } });
+    const looked = t.events.length;
+    t.end(); // the opponent draws V5, then looks at the spell KILL2 (nothing more to do)
+    expect(t.events.slice(looked).some((e) => e.type === "cardsLookedAt" && e.player === 1)).toBe(true);
+    expect(t.field("opp")).toEqual([]);
+  });
+
   it("084 Wyvern Cavalier — top card into EX, it costs 2 less to play", () => {
     const t = d({ me: { hand: ["BP01-084"], deck: ["V3"], playPoints: 6 } }).play("BP01-084");
     expect(t.ex()).toEqual(["V3"]);

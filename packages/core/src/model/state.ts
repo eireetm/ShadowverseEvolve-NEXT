@@ -119,6 +119,13 @@ export interface CardInstance {
   raced?: number;
   /** Timestamp of its first race: the Rush racing gives is lost by a later "loses all abilities" (CR 10.9.1.6). */
   raceSeq?: number;
+  /**
+   * The players who were shown this card (revealed, CR 5.21.1; looked at, 5.11.1; or seen in a public zone, 4.1.2) and
+   * still know which card it is although it is now hidden from them, in order. Bookkeeping no rule reads: determinize() keeps
+   * it, and the view shows it to them in the zones it lists card by card (not the deck, a count). engine/state/knowledge.ts
+   * says when it is forgotten. Absent when nobody does.
+   */
+  knownBy?: PlayerId[];
 }
 
 export interface PlayerState {

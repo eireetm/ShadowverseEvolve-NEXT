@@ -42,6 +42,7 @@ import type { G } from "../runtime/context";
 import { cardRefs, chooseOptions, confirm, orderCards, selectCards } from "../runtime/decide";
 import type { Proc } from "../runtime/proc";
 import { getCard, nextSeq, recordUse } from "../state/access";
+import { noteKnown } from "../state/knowledge";
 import { activeScript, characteristics, isFollowerOnField, passiveSources } from "../state/characteristics";
 import { exAreaLimit } from "../state/limits";
 import { createCards, moveCards } from "../state/zones";
@@ -454,7 +455,9 @@ export function makeEffectContext(g: G, init: EffectInit): EffectContext {
    */
   const looked = new Set<string>();
   const look = (cards: readonly CardId[], player: PlayerId): void => {
-    const fresh = cards.filter((id) => g.state.cards[id] !== undefined && !looked.has(`${player}:${id}`));
+    const present = cards.filter((id) => g.state.cards[id] !== undefined);
+    for (const id of present) noteKnown(g.state, g.state.cards[id]!, player); // they remember it (engine/state/knowledge.ts)
+    const fresh = present.filter((id) => !looked.has(`${player}:${id}`));
     for (const id of fresh) looked.add(`${player}:${id}`);
     if (fresh.length > 0) g.emit({ type: "cardsLookedAt", player, cards: cardRefs(g, fresh) });
   };
