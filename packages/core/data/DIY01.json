@@ -1,0 +1,58 @@
+{
+ "format": 1,
+ "set": "DIY01",
+ "printings": 3,
+ "cards": [
+  {
+   "id": "DIY01-006",
+   "printings": [
+    "DIY01-006",
+    "DIY01-008"
+   ],
+   "name": "Haishee",
+   "names": {
+    "en": "Haishee",
+    "cn": "海曦",
+    "ja": "カイヒ"
+   },
+   "class": "Runecraft",
+   "type": "leader",
+   "evolved": false,
+   "token": false,
+   "cost": null,
+   "attack": null,
+   "defense": null,
+   "text": {
+    "en": "",
+    "cn": "",
+    "ja": ""
+   },
+   "traits": []
+  },
+  {
+   "id": "DIY01-009",
+   "printings": [
+    "DIY01-009"
+   ],
+   "name": "Maiya Shiori",
+   "names": {
+    "en": "Maiya Shiori",
+    "cn": "莓野诗织",
+    "ja": "莓野しおり"
+   },
+   "class": "Forestcraft",
+   "type": "leader",
+   "evolved": false,
+   "token": false,
+   "cost": null,
+   "attack": null,
+   "defense": null,
+   "text": {
+    "en": "",
+    "cn": "",
+    "ja": ""
+   },
+   "traits": []
+  }
+ ]
+}

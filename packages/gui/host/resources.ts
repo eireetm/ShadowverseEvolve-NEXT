@@ -53,7 +53,9 @@ export function ownCardArt(publicDir: string, printing: string, def: string | nu
 /**
  * The image file to show for a card, or null (the GUI then draws a text placeholder). In order:
  *  1. the player's own image in public/images/cards/, named by printing (`BP01-001.png`), then by definition id;
- *  2. the printing's scraped image in the assets folder (`<assets>/BP01-001/BP01-001.webp`).
+ *  2. the printing's scraped image in the assets folder (`<assets>/BP01-001/BP01-001.webp`);
+ *  3. a custom (community-made) set's picture, in a folder named after the set beside the assets folder
+ *     (`<assets>/../DIY01/DIY01-001.png`; the core's data/custom.ts lists those sets).
  * `back`: the back face of a double-faced card (CR 2.14): `<id>_back.*`, and the scraped `<printing>_back.webp`.
  */
 export function findCardArt(cfg: HostConfig, printing: string, def: string | null, back = false): string | null {
@@ -61,9 +63,12 @@ export function findCardArt(cfg: HostConfig, printing: string, def: string | nul
   if (own) return own;
   const suffix = back ? "_back" : "";
   if (!isSafeId(printing)) return null;
-  for (const ext of [".webp", ".png", ".jpg"]) {
-    const file = join(cfg.assetsDir, printing, printing + suffix + ext);
-    if (existsSync(file)) return file;
+  const set = printing.split("-")[0]!;
+  for (const dir of [join(cfg.assetsDir, printing), join(cfg.assetsDir, "..", set)]) {
+    for (const ext of [".webp", ".png", ".jpg"]) {
+      const file = join(dir, printing + suffix + ext);
+      if (existsSync(file)) return file;
+    }
   }
   return null;
 }

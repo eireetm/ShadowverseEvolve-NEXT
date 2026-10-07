@@ -1,7 +1,7 @@
 {
  "format": 1,
  "set": "BP06",
- "printings": 248,
+ "printings": 250,
  "cards": [
   {
    "id": "BP06-001",
@@ -3526,7 +3526,8 @@
   {
    "id": "BP06-T01",
    "printings": [
-    "BP06-T01"
+    "BP06-T01",
+    "DIY01-002"
    ],
    "name": "Celestial Shikigami",
    "names": {
@@ -3555,7 +3556,8 @@
    "printings": [
     "BP06-T02",
     "BP15-T05",
-    "BP15-P33"
+    "BP15-P33",
+    "DIY01-005"
    ],
    "name": "Paper Shikigami",
    "names": {

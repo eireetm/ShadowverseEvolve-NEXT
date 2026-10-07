@@ -31,6 +31,16 @@ describe("card pool (all supported sets)", () => {
     expect(db.ofPrinting("ETD02-007").id).toBe("BP01-116");
   });
 
+  it("custom sets (data/custom.ts): DIY01's alternate arts join their cards, its leaders are new cards", () => {
+    const of = ["DIY01-001", "DIY01-002", "DIY01-003", "DIY01-004", "DIY01-005", "DIY01-007", "DIY01-008"].map((p) => db.ofPrinting(p).id);
+    expect(of).toEqual(["BP05-T03", "BP06-T01", "BP01-T03", "BP01-T02", "BP06-T02", "BP01-T15", "DIY01-006"]);
+    const leaders = ["DIY01-006", "DIY01-009"].map((id) => db.get(id)).map((c) => [c.type, c.class, c.names]);
+    expect(leaders).toEqual([
+      ["leader", "Runecraft", { en: "Haishee", cn: "海曦", ja: "カイヒ" }],
+      ["leader", "Forestcraft", { en: "Maiya Shiori", cn: "莓野诗织", ja: "莓野しおり" }],
+    ]);
+  });
+
   it("CR 2.13 — alternate-name printings belong to the card they are treated as", () => {
     const vania = db.ofPrinting("BP02-070");
     expect([vania.id, vania.name]).toEqual(["BP02-069", "Vania, Vampire Princess"]);

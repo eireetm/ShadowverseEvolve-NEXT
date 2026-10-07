@@ -48,6 +48,11 @@ export interface RawCardJson {
    */
   preview?: true;
   /**
+   * Set only by data/custom.ts: a printing of a custom (community-made) set, whose picture is in the set's folder beside
+   * the assets folder (D:\SVE\DIY01\DIY01-001.png).
+   */
+  custom?: true;
+  /**
    * Set only by data/preview.ts: the printing's universe (CR 2.12.2.1), which the pre-release data doesn't give; otherwise
    * it comes from the set (data/universes.ts).
    */
