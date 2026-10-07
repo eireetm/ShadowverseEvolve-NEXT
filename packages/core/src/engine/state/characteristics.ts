@@ -198,7 +198,8 @@ export function characteristics(env: Env, id: CardId): Characteristics {
       type = e.change.type;
     } else if (e.change.kind === "maneuver") {
       // CR 5.32.1 — an amulet with printed attack and defense becomes a follower with those
-      // values; changes from before it (an earlier maneuver's) don't carry over (rulings).
+      // values; changes from before it (an earlier maneuver's) don't carry over (rulings). Its
+      // damage from then is cleared when it is maneuvered (fx.maneuver).
       if (def.attack !== null && def.defense !== null) {
         type = "follower";
         attack = def.attack;
