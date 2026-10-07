@@ -13,7 +13,9 @@ import { cardVisibleTo } from "../view/visibility";
  *  - an opponent's facedown evolve deck cards (4.6.2), and their facedown banished cards (4.10.2);
  *  - the viewer's own deck, whose order nobody knows (4.5.2).
  * The multiset of each pool stays the real one: the opponent's deck list counts as known. Cards the
- * viewer has been shown (`keep`, the revealed cards) keep their identity. Only `def` and `printing`
+ * viewer has been shown (`keep`, the revealed cards, and the hidden cards they remember: CardInstance.knownBy,
+ * engine/state/knowledge.ts) keep their identity; what the other player remembered of a card dealt again is dropped (it was
+ * about the real card, and which of them they remember could tell the viewer something). Only `def` and `printing`
  * move; everything else (effects on the card, counters) stays with the slot, which is what the
  * viewer knows ("the second card in their hand costs 1 less").
  */
@@ -28,6 +30,7 @@ export function resampleHidden(state: GameState, viewer: PlayerId, rng: RngState
       const card = state.cards[id]!;
       card.def = identities[i]!.def;
       card.printing = identities[i]!.printing;
+      delete card.knownBy;
     });
   }
 }
@@ -35,7 +38,10 @@ export function resampleHidden(state: GameState, viewer: PlayerId, rng: RngState
 const POOL_ZONES: readonly (readonly PlayerZone[])[] = [["hand", "deck"], ["evolveDeck"], ["banished"]];
 
 function hiddenPools(state: GameState, viewer: PlayerId, keep: ReadonlySet<CardId>): CardId[][] {
-  const hidden = (id: CardId) => !keep.has(id) && !state.revealed.includes(id) && !cardVisibleTo(state.cards[id]!, viewer);
+  const hidden = (id: CardId) => {
+    const card = state.cards[id]!;
+    return !keep.has(id) && !state.revealed.includes(id) && !cardVisibleTo(card, viewer) && !card.knownBy?.includes(viewer);
+  };
   const pools: CardId[][] = [];
   for (const p of [0, 1] as const) {
     const zones = state.players[p].zones;

@@ -9,6 +9,7 @@ import type { Proc } from "../runtime/proc";
 import { getCard } from "../state/access";
 import { hasKeyword, isFollowerOnField } from "../state/characteristics";
 import { exAreaLimit, fieldLimit } from "../state/limits";
+import { forgetKnown, forgetZone, noteKnown } from "../state/knowledge";
 import { createCards, crestNames, moveCards } from "../state/zones";
 import { makeReader } from "../query";
 
@@ -31,12 +32,20 @@ export function shuffleToBottom(g: G, cards: readonly CardId[]): void {
   if (present.length === 0) return;
   const order = [...present];
   shuffleInPlace(g.state.rng, order);
-  moveCards(g, order.map((card) => ({ card, to: "deck" as const, position: "bottom" as const })), "effect");
+  const placed = moveCards(g, order.map((card) => ({ card, to: "deck" as const, position: "bottom" as const })), "effect");
+  // Shuffled, nobody knows their order (as when a deck is shuffled, CR 5.9.1; a single card keeps its place, 5.9.1.1).
+  if (placed.length >= 2) for (const id of placed) if (g.state.cards[id]) forgetKnown(g.state.cards[id]!);
 }
 
 /** CR 5.9 — shuffle a deck (5.9.1.1: with 0–1 cards nothing changes but it still counts). */
 export function shuffleDeck(g: G, p: PlayerId): void {
-  shuffleInPlace(g.state.rng, g.state.players[p].zones.deck);
+  const deck = g.state.players[p].zones.deck;
+  shuffleInPlace(g.state.rng, deck);
+  if (deck.length >= 2) {
+    forgetZone(g.state, p, "deck"); // CR 5.9.1: nobody knows the order
+    // CR 5.21.1.1 — a revealed card moved to another position of its non-public zone is no longer revealed.
+    if (g.state.revealed.some((id) => deck.includes(id))) g.state.revealed = g.state.revealed.filter((id) => !deck.includes(id));
+  }
   g.emit({ type: "deckShuffled", player: p });
 }
 
@@ -150,7 +159,11 @@ export function discardRandomCards(g: G, p: PlayerId, count: number, cause?: Mov
 /** CR 5.21 — reveal cards to all players until the current effect has been resolved. */
 export function revealCards(g: G, player: PlayerId, cards: readonly CardId[]): void {
   if (cards.length === 0) return;
-  for (const id of cards) if (!g.state.revealed.includes(id)) g.state.revealed.push(id);
+  for (const id of cards) {
+    // Everyone has seen it, and remembers it once it is hidden again (5.21.1.1; engine/state/knowledge.ts).
+    for (const p of [0, 1] as const) noteKnown(g.state, getCard(g.state, id), p);
+    if (!g.state.revealed.includes(id)) g.state.revealed.push(id);
+  }
   g.emit({ type: "cardsRevealed", player, cards: cards.map((id) => ({ id, def: getCard(g.state, id).def })) });
 }
 

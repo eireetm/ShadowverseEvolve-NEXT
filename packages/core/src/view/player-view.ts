@@ -41,6 +41,13 @@ export interface CardView {
 export interface HiddenCardView {
   id: CardId;
   hidden: true;
+  /**
+   * The card, when the viewer was shown it before and remembers which it is (CardInstance.knownBy: a card searched and
+   * revealed into a hand, a follower returned to its owner's hand). Only the zones the view lists card by card can carry it;
+   * a remembered deck card is not listed (the deck is a count, CR 4.1.2.1): determinize() keeps it, and it shows here once
+   * it is in one of those zones (e.g. drawn: it was the top card, CR 5.10.1).
+   */
+  known?: { def: DefId; printing: PrintingId };
 }
 
 export interface PlayerSideView {
@@ -117,8 +124,10 @@ function cardView(env: Env, id: CardId): CardView {
 
 /** Visible if the zone allows it (CR 4.1.2) or it is currently revealed (CR 5.21). */
 function viewFor(env: Env, viewer: PlayerId, id: CardId): CardView | HiddenCardView {
-  const visible = cardVisibleTo(env.state.cards[id]!, viewer) || env.state.revealed.includes(id);
-  return visible ? cardView(env, id) : { id, hidden: true };
+  const card = env.state.cards[id]!;
+  const visible = cardVisibleTo(card, viewer) || env.state.revealed.includes(id);
+  if (visible) return cardView(env, id);
+  return card.knownBy?.includes(viewer) ? { id, hidden: true, known: { def: card.def, printing: card.printing } } : { id, hidden: true };
 }
 
 function sideView(env: Env, viewer: PlayerId, p: PlayerId): PlayerSideView {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createEngine, randomAnswer, seedRng, type PlayerId } from "@sve/core";
+import { createEngine, randomAnswer, seedRng, type PlayerId, type PlayerView } from "@sve/core";
 import { ALL_CARDS, ALL_SCRIPTS } from "@sve/core/sets";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -435,3 +435,22 @@ describe("GameHost (engine worker logic)", () => {
     expect(h.errors().length).toBe(1);
   });
 });
+
+describe("what a player only remembers (HiddenCardView.known)", () => {
+  const remembered = (view: PlayerView) =>
+    view.players.flatMap((side) => [...side.hand, ...side.field, ...side.banished, ...side.evolveDeck]).filter((c) => c.hidden && "known" in c).length;
+  it("stays in the engine's thread: the views sent to the GUI show such cards as hidden only", () => {
+    let inEngine = 0;
+    for (const seed of ["memory-a", "memory-b", "memory-c", "memory-d"]) {
+      const h = harness(["random", "random"], seed);
+      h.host.handle({ kind: "settings", settings: { botDelayMs: 0 } });
+      h.host.handle({ kind: "start", options: { ...h.options, decks: [deck("sd08"), deck("sd08")], deckNames: ["SD08", "SD08"] } });
+      for (let i = 0; i < 5000 && h.scheduler.run(1) > 0; i++) {
+        for (const p of [0, 1] as PlayerId[]) inEngine += remembered(h.host.session!.view(p));
+      }
+      for (const m of h.messages) if (m.kind === "update" && m.update.view) expect(remembered(m.update.view), seed).toBe(0);
+    }
+    expect(inEngine, "the engine did remember cards in these games").toBeGreaterThan(0);
+  }, 120_000);
+});
+

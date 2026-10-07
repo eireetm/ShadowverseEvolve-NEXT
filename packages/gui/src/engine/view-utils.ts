@@ -17,6 +17,16 @@ export const SIDE_ZONES = [
 
 export type SideZone = (typeof SIDE_ZONES)[number];
 
+/**
+ * The view without what its player only remembers (HiddenCardView.known: a hidden card they were shown before). The engine
+ * keeps that for the bots; the GUI shows a hidden card as hidden, so it never leaves the engine's thread.
+ */
+export function withoutMemory(view: PlayerView): PlayerView {
+  const forget = <T extends CardView | HiddenCardView>(cards: readonly T[]): T[] => cards.map((c) => (c.hidden && c.known ? ({ id: c.id, hidden: true } as T) : c));
+  const side = (s: PlayerSideView): PlayerSideView => ({ ...s, hand: forget(s.hand), field: forget(s.field), banished: forget(s.banished), evolveDeck: forget(s.evolveDeck) });
+  return { ...view, players: [side(view.players[0]), side(view.players[1])] };
+}
+
 /** Every card of a view the viewer may see (leaders and the resolution zone included). */
 export function forEachCard(view: PlayerView, fn: (card: CardView) => void): void {
   const visit = (card: CardView | HiddenCardView | null): void => {

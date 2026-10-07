@@ -46,7 +46,7 @@ import type {
   WatchState,
 } from "./protocol";
 import { knownController } from "./protocol";
-import { forEachCard } from "./view-utils";
+import { forEachCard, withoutMemory } from "./view-utils";
 
 export interface Scheduler {
   /** Run `fn` after `ms` milliseconds; the returned function cancels it. */
@@ -928,12 +928,12 @@ export class GameHost {
     const game = this.game!;
     if (this.spectating) return this.publicView(viewer);
     const view = game.view(viewer);
-    if (!this.seesAll()) return view;
+    if (!this.seesAll()) return withoutMemory(view);
     // Each side as its own player sees it (CR 4.1.2): hands and evolve decks become visible; decks stay unknown.
     const other = opponentOf(viewer);
     const players: [PlayerSideView, PlayerSideView] = [view.players[0], view.players[1]];
     players[other] = game.view(other).players[other];
-    return { ...view, players };
+    return withoutMemory({ ...view, players });
   }
 
   /**
@@ -944,7 +944,7 @@ export class GameHost {
     const game = this.game!;
     const view = game.view(viewer);
     const players: [PlayerSideView, PlayerSideView] = [game.view(1).players[0], game.view(0).players[1]];
-    return { ...view, players, decision: null };
+    return withoutMemory({ ...view, players, decision: null });
   }
 
   private decisionInfo(): DecisionInfo | null {

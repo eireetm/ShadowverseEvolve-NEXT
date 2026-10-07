@@ -14,6 +14,8 @@ import { EngineError } from "../errors";
 import type { G } from "./context";
 import type { Proc } from "./proc";
 import { activeScript } from "../state/characteristics";
+import { noteKnown } from "../state/knowledge";
+import { cardsInDecision } from "../determinize";
 
 /**
  * The only way engine code asks a player something. If the decision has exactly one legal
@@ -24,6 +26,11 @@ export function* decide(g: G, decision: Decision): Proc<Answer> {
   if ((g.state.config.autoResolve as readonly string[]).includes(decision.type)) {
     const forced = forcedAnswer(decision);
     if (forced) return forced;
+  }
+  // What it shows its player (candidates, cards looked at, cards to order) they have seen (engine/state/knowledge.ts).
+  for (const id of cardsInDecision(decision)) {
+    const card = g.state.cards[id];
+    if (card) noteKnown(g.state, card, decision.player);
   }
   const answer = yield { kind: "decision", decision };
   if (!answer) throw new EngineError(`no answer supplied for ${decision.type}`);

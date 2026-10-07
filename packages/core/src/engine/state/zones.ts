@@ -9,7 +9,9 @@ import type { G } from "../runtime/context";
 import { getCard, nextSeq } from "./access";
 import { activeScript, characteristics, grantedAbilitiesOf, passiveSources } from "./characteristics";
 import { effectInForce } from "./effects";
+import { forgetZone, seenBy } from "./knowledge";
 import { thisTurn } from "./turn-counts";
+import { cardVisibleTo } from "../../view/visibility";
 
 /**
  * Low-level zone movement. No decisions, no limit checks: callers that need CR 4.4.4.2 /
@@ -237,6 +239,25 @@ export function moveCards(g: G, allSpecs: readonly MoveSpec[], reason: MoveReaso
   if (specs.length === 0) return [];
   // Look-back information is captured before anything moves (CR 10.7.4.1).
   const olds = specs.map((s) => getCard(state, s.card));
+  // Who can tell which card each one is (knowledge.ts): it is in their sight now, or they know it and it is taken by its place
+  // (a draw takes the top card, CR 5.10.1) or out of their own zone (they handle their own cards).
+  const PLAYERS = [0, 1] as const;
+  const follows = olds.map((c, i) =>
+    PLAYERS.map((p) => seenBy(state, c, p) || (c.knownBy?.includes(p) === true && ((specs[i]!.reason ?? reason) === "draw" || c.controller === p))),
+  );
+  // CR 4.1.5, 4.1.5.1 — several cards put into one deck at once: their order is decided, unseen by the others, by the
+  // deck's owner, or by the cards' controller when they come from a public zone. Only a player who controlled every one of
+  // them keeps knowing which is where (a batch of several players' cards: nobody).
+  const intoDeck = new Map<PlayerId, { count: number; controllers: Set<PlayerId> }>();
+  specs.forEach((s, i) => {
+    if (s.to !== "deck") return;
+    const deck = s.player ?? olds[i]!.owner;
+    const entry = intoDeck.get(deck) ?? { count: 0, controllers: new Set<PlayerId>() };
+    entry.count += 1;
+    entry.controllers.add(olds[i]!.controller);
+    intoDeck.set(deck, entry);
+  });
+  const visibleAfter: boolean[][] = [];
   const fieldInfos = olds.map((c) => (c.zone === "field" ? characteristics(g, c.id) : null));
   const fieldTypes = fieldInfos.map((info) => info?.type ?? null);
   const befores = olds.map((c) => {
@@ -310,6 +331,13 @@ export function moveCards(g: G, allSpecs: readonly MoveSpec[], reason: MoveReaso
       if (spec.cause) card.enteredBy = spec.cause; // ECP01-006
     }
     attach(state, card, spec.position);
+    visibleAfter.push(PLAYERS.map((p) => cardVisibleTo(card, p)));
+    for (const p of PLAYERS) {
+      if (!follows[i]![p] || visibleAfter[i]![p]) continue;
+      const batch = spec.to === "deck" ? intoDeck.get(toPlayer)! : null;
+      if (batch && batch.count >= 2 && !(batch.controllers.size === 1 && batch.controllers.has(p))) continue;
+      card.knownBy = [...(card.knownBy ?? []), p];
+    }
 
     if (spec.keepEffects || exToField) {
       for (const e of state.effects) if (e.target === old.id) e.target = card.id;
@@ -359,6 +387,15 @@ export function moveCards(g: G, allSpecs: readonly MoveSpec[], reason: MoveReaso
     }
   });
 
+  // A card that left a zone hidden from a player who couldn't tell which it was (not a draw: a draw takes the known top card):
+  // they forget the cards of that zone it could have been (knowledge.ts).
+  specs.forEach((spec, i) => {
+    const old = olds[i]!;
+    if (old.zone === "resolution" || (spec.reason ?? reason) === "draw") return;
+    for (const p of PLAYERS) {
+      if (!follows[i]![p]) forgetZone(state, old.controller, old.zone, p, visibleAfter[i]![p] ? old.def : undefined);
+    }
+  });
   g.emit({ type: "cardsMoved", moves });
   if (eliminated.length > 0) eliminateTokens(g, eliminated);
   // CR 9.2.2 — an advanced card moved anywhere else (a cemetery, hand, deck, banished) is put

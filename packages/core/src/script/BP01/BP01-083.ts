@@ -11,7 +11,9 @@ export default defineCard({
       *resolve(fx) {
         const player = fx.data!.player!;
         const [top] = fx.topCards(1, player);
-        if (top === undefined || !isFollower(fx.game, top)) return;
+        if (top === undefined) return;
+        yield* fx.lookAt([top], player); // CR 5.11.1 — they look at it whatever it is
+        if (!isFollower(fx.game, top)) return;
         if (yield* fx.confirm(player, top)) yield* fx.putOntoField([top], player);
       },
     }),
