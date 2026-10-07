@@ -80,7 +80,7 @@ npm run dev:gui
 | `npm run rl:behaviour -- 文件夹` | `bot:arena --out` 存下的对局里的行为统计：守护在自己回合横置登场的比例、能用速攻的时机和用了几次、对局结束时先后手各剩多少进化点和超进化点、回合结束时手里还有打得出的随从的比例。用来比较新旧两版 Bot（同门互打的胜率看不出共同的盲区）。`--games N` 只看前 N 局 |
 | `npm run rl:lethal -- 文件夹` | 统计 `bot:arena --out` 存下的对局里漏掉的斩杀：重放每一局，在每个己方主要阶段的决定上用宽搜索找"确保能赢"的斩杀（换 6 个公平抽样都能赢、对手应对也挡不住），找到了那回合却没赢就算漏掉；打印有漏斩杀的局数、漏的一方后来输掉的局数。较慢（每局几秒），`--games N` 只看前 N 局，`--workers N` 多进程 |
 | `npm run bench:throughput -- [random\|easy\|medium\|hard]` | 整台电脑一分钟能打多少局：多个进程同时开始（`--workers N`，默认 CPU 线程数），各打 `--seconds` 秒 |
-| `npm run build:cards` | 从抓取的卡牌数据（仓库旁边的 `assets/`，先行测试版的卡包读仓库旁边的 `BP22.json` 这类卡表）重新生成 `packages/core/data/*.json` |
+| `npm run build:cards` | 从抓取的卡牌数据（仓库旁边的 `assets/`，先行测试版的卡包读仓库旁边的 `BP22.json` 这类卡表，社区 DIY 卡包的卡表在 `packages/core/src/data/custom.ts`）重新生成 `packages/core/data/*.json` |
 | `npm run scripts:index` | 新增卡牌脚本后，重新生成脚本注册表（`packages/core/src/script/<卡包>/index.ts`） |
 | `npm run cards:status` | 生成每张卡的实现和测试状态表（写到 `docs/card-status*.md`） |
 | `npm run rules:clauses` | 从综合规则的 PDF（仓库旁边的 `rules/`）提取条款编号表 `tools/data/cr-clauses.json` |
@@ -155,6 +155,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 1. `packages/gui/public/` 里你自己的文件；
 2. 本机素材文件夹：默认是仓库旁边的 `assets/`，`SVE_ASSETS_DIR` 可改。
    - 卡图是 `<卡号>/<卡号>.webp`，双面卡的背面是 `<卡号>_back.webp`；
+   - 社区 DIY 卡包（例如 DIY01）的卡图放在 `assets/` 旁边、以卡包命名的文件夹里：`DIY01/DIY01-001.png`；
    - `Misc/` 里放场地、卡背等图片（见本节最后）；
 3. 内置的样子（纯色和文字）。声音没有内置的，没有文件就不响。
 
@@ -449,7 +450,7 @@ Run these at the repository root:
 | `npm run rl:behaviour -- folder` | Behaviour counts in the games `bot:arena --out` kept: Ward followers entering engaged in their own turn, quick windows with something to play and the Quick plays made, evolution and super-evolution points left at the end of a game for the first and the second player, turns ended with a playable follower in hand. For comparing two versions of a bot (win rates between bots that share a blind spot can't show it). `--games N` takes the first N |
 | `npm run rl:lethal -- folder` | Missed lethal in the games `bot:arena --out` kept: replays each game and, at each main phase decision of the player whose turn it is, looks hard for a sure lethal (it wins in 6 fair samples, whatever the opponent answers); one found in a turn the player didn't win is a miss. Prints the games with a miss and those the player who missed it lost. Slow (seconds a game): `--games N` takes the first N, `--workers N` uses N processes |
 | `npm run bench:throughput -- [random\|easy\|medium\|hard]` | How many games the whole computer plays in a minute: several processes start together (`--workers N`, default: CPU threads), each plays for `--seconds` |
-| `npm run build:cards` | Rebuild `packages/core/data/*.json` from the scraped card data (the `assets/` folder next to the repository; a pre-release set from its card list next to the repository, such as `BP22.json`) |
+| `npm run build:cards` | Rebuild `packages/core/data/*.json` from the scraped card data (the `assets/` folder next to the repository; a pre-release set from its card list next to the repository, such as `BP22.json`; a community-made set from its list in `packages/core/src/data/custom.ts`) |
 | `npm run scripts:index` | Regenerate the card script registries (`packages/core/src/script/<set>/index.ts`) after adding scripts |
 | `npm run cards:status` | Write each card's implementation and test status (to `docs/card-status*.md`) |
 | `npm run rules:clauses` | Extract the clause table `tools/data/cr-clauses.json` from the Comprehensive Rules PDF (the `rules/` folder next to the repository) |
@@ -524,6 +525,7 @@ The game's look and sound can be replaced or extended with your own files, with 
 1. Your own files in `packages/gui/public/`.
 2. The local assets folder: by default `assets/` next to the repository, or set `SVE_ASSETS_DIR`.
    - Card images are `<card>/<card>.webp`, and the back of a double-faced card is `<card>_back.webp`.
+   - A community-made (DIY) set's card images, such as DIY01's, are in a folder named after the set next to `assets/`: `DIY01/DIY01-001.png`.
    - `Misc/` holds the playmat, card backs and other pictures (see the end of this section).
 3. The built-in look (plain colors and text). There are no built-in sounds: without a file, nothing plays.
 

@@ -10,7 +10,8 @@
  * canonical printing's set. Also writes docs/card-data-report.md.
  *
  * Pre-release sets (data/preview.ts, e.g. BP22) are read from their Japanese data file next to the assets folder
- * (D:\SVE\BP22.json) instead.
+ * (D:\SVE\BP22.json) instead. Custom (community-made) sets (data/custom.ts, e.g. DIY01) are listed in the repository;
+ * their pictures are in a folder named after the set beside the assets folder (D:\SVE\DIY01).
  *
  * The core package never reads the file system; this tool is the only place that does.
  */
@@ -20,6 +21,7 @@ import { fileURLToPath } from "node:url";
 import { CardDataError, groupPrintings, normalizePrinting, type NormalizedPrinting } from "../packages/core/src/data/normalize";
 import { applyDataFixes, DATA_FIXES } from "../packages/core/src/data/fixes";
 import { PREVIEW_SETS, previewRawCards, type PreviewKind, type PreviewSetFile } from "../packages/core/src/data/preview";
+import { CUSTOM_SETS, customRawCards } from "../packages/core/src/data/custom";
 import type { RawCardJson } from "../packages/core/src/data/raw";
 import { CardDatabase } from "../packages/core/src/data/database";
 import { CARD_SET_FORMAT, type CardSetFile } from "../packages/core/src/data/set-file";
@@ -113,6 +115,17 @@ for (const [set, preview] of Object.entries(PREVIEW_SETS)) {
   previews.push(summary);
 }
 
+// Custom sets (data/custom.ts, e.g. DIY01): listed in the repository, alternate arts copy the printing they are of.
+for (const [set, list] of Object.entries(CUSTOM_SETS)) {
+  if (!supported.has(set)) continue;
+  for (const converted of customRawCards(set, list, (no) => raws.get(no))) {
+    if (raws.has(converted.card_no)) throw new Error(`${converted.card_no} is in ${assetsDir} too (data/custom.ts)`);
+    const raw = applyDataFixes(converted);
+    raws.set(raw.card_no, raw);
+    printings.push(normalizePrinting(raw));
+  }
+}
+
 const { cards, setOf, textVariants, noEnglishText, officialMismatches, japaneseVariants, previewDefinitions } = groupPrintings(
   printings,
   SUPPORTED_SETS,
@@ -124,8 +137,10 @@ for (const c of cards) {
   for (const p of c.printings) {
     const raw = raws.get(p)!;
     if (raw.preview) continue; // no images yet (the report's pre-release section)
-    if (!existsSync(join(assetsDir, p, raw.image))) warnings.push(`${p}: image file ${raw.image} missing`);
-    if (raw.back && !existsSync(join(assetsDir, p, raw.back.image))) warnings.push(`${p}: image file ${raw.back.image} missing`);
+    // A custom set's pictures: in its folder beside the assets folder (data/custom.ts).
+    const folder = raw.custom ? join(assetsDir, "..", raw.set) : join(assetsDir, p);
+    if (!existsSync(join(folder, raw.image))) warnings.push(`${p}: image file ${raw.image} missing`);
+    if (raw.back && !existsSync(join(folder, raw.back.image))) warnings.push(`${p}: image file ${raw.back.image} missing`);
   }
   // The definition shows the canonical printing's texts, so only its gaps matter.
   const raw = raws.get(c.id)!;

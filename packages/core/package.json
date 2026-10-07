@@ -64,6 +64,7 @@
     "./sets/scs01": "./src/sets/scs01.ts",
     "./sets/pr": "./src/sets/pr.ts",
     "./sets/bp22": "./src/sets/bp22.ts",
+    "./sets/diy01": "./src/sets/diy01.ts",
     "./testing": "./src/testing/index.ts"
   }
 }

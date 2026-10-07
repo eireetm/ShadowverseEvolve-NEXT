@@ -86,6 +86,11 @@ describe("card images", () => {
     const cfg = { root: dir, publicDir: join(dir, "public"), decksDir: "", replaysDir: "", assetsDir: join(dir, "assets"), miscDir: "" };
     expect(findCardArt(cfg, "BP06-LDⓈ01", "BP06-LD01")).toBe(join(dir, "assets", "BP06-LDⓈ01", "BP06-LDⓈ01.webp"));
     expect(findCardArt(cfg, "../BP06-LDⓈ01", null)).toBeNull();
+    // A custom set's pictures: in its folder beside the assets folder (D:\SVE\DIY01).
+    mkdirSync(join(dir, "DIY01"), { recursive: true });
+    writeFileSync(join(dir, "DIY01", "DIY01-003.jpg"), "");
+    expect(findCardArt(cfg, "DIY01-003", "BP01-T03")).toBe(join(dir, "assets", "..", "DIY01", "DIY01-003.jpg"));
+    expect(findCardArt(cfg, "DIY01-004", "BP01-T02")).toBeNull();
   });
 
   it("are found in the Android app's files the same way", () => {

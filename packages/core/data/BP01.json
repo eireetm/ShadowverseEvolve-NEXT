@@ -1,7 +1,7 @@
 {
  "format": 1,
  "set": "BP01",
- "printings": 541,
+ "printings": 544,
  "cards": [
   {
    "id": "BP01-001",
@@ -5436,7 +5436,8 @@
     "ETD03-T01",
     "EBD01-T01",
     "PR-187",
-    "BP22-T04"
+    "BP22-T04",
+    "DIY01-004"
    ],
    "name": "Fairy Wisp",
    "names": {
@@ -5480,7 +5481,8 @@
     "EBD01-T02",
     "SP01-T01",
     "PR-108",
-    "BP22-T05"
+    "BP22-T05",
+    "DIY01-003"
    ],
    "name": "Fairy",
    "names": {
@@ -5875,7 +5877,8 @@
     "BP18-T13",
     "SD05-T02",
     "PR-115",
-    "PR-346"
+    "PR-346",
+    "DIY01-007"
    ],
    "name": "Forest Bat",
    "names": {
