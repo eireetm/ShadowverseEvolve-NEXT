@@ -132,6 +132,11 @@ describe("options of choices", () => {
     expect(cardName(catalog.def("BP01-T03"), "en")).toBe("Fairy");
   });
 
+  it("show a card without a Chinese name by its Japanese name in Chinese, not the English one", () => {
+    const leader = catalog.def("PR-405")!;
+    expect([leader.names.cn, cardName(leader, "cn"), cardName(leader, "en")]).toEqual([null, "森の弓使い・アリサ", leader.name]);
+  });
+
   it("word the engine's own options in the interface language", () => {
     expect(say(choose("playOption", ["normal", "Play normally"], ["banish10", "Banish 10 spells in your cemetery: costs 7"]), "cn")).toEqual([
       "正常使用",
