@@ -1011,6 +1011,10 @@ export function makeEffectContext(g: G, init: EffectInit): EffectContext {
       if (g.state.cards[card]?.zone !== "field") return;
       const info = characteristics(g, card);
       if (info.type !== "amulet" || info.def.attack === null || info.def.defense === null) return;
+      // Its attack and defense become the printed values (5.32.1): damage is only a lower defense (2.8.2, 5.14.1),
+      // so damage taken in an earlier maneuver no longer counts (earlier changes don't carry over: rulings); damage
+      // after this does. An amulet takes no damage (5.14.1.2), so there is none from before that maneuver.
+      getCard(g.state, card).damage = 0;
       addEffect(card, "endOfTurn", { kind: "maneuver" });
     },
     *box(card, until) {

@@ -115,6 +115,22 @@ describe("BP11 / BP12 mechanics", () => {
     expect(t.stats("CAR")).toEqual([3, 3]);
   });
 
+  it("CR 5.32.1 — a new maneuver gives the printed numbers: damage taken in an earlier maneuver doesn't carry over (2.8.2, 5.14.1; rulings), damage after it does", () => {
+    const t = d({
+      me: { field: ["CAR"], hand: ["PUMP", "BOX"], deck: ["V1", "V1", "V1"], playPoints: 1 },
+      opp: { field: [{ card: "V3", engaged: true }, "V2"], deck: ["V1", "V1", "V1"] },
+    });
+    t.activate("CAR").play("PUMP").attack("CAR", "opp:V3");
+    expect([t.stats("CAR"), t.field("opp")]).toEqual([[4, 1], ["V2"]]); // 3 damage from the 3/4
+    t.end();
+    endOpponentTurn(t);
+    // 3/3 again, not 3/3 minus the 3 damage of last turn (which would destroy it).
+    t.activate("CAR");
+    expect([t.field(), t.stats("CAR")]).toEqual([["CAR"], [3, 3]]);
+    t.play("BOX").attack("CAR", "opp:V2");
+    expect([t.stats("CAR"), t.field("opp")]).toEqual([[3, 1], []]);
+  });
+
   it("CR 5.32 — maneuvered on the turn it entered, it attacks only as its keywords allow; abilities given stay; no numbers, no maneuver", () => {
     const fresh = d({ me: { field: [{ card: "SLOW-CAR", enteredThisTurn: true }] }, opp: { field: ["V1"] } }).activate("SLOW-CAR");
     expect([type(fresh, "SLOW-CAR"), fresh.attackTargets("SLOW-CAR")]).toEqual(["follower", []]);

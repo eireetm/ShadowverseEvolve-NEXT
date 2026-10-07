@@ -367,8 +367,9 @@ export type EffectChange =
   | { kind: "noFanfare" }
   /**
    * CR 5.32 "Maneuver" (BP11-T01/T02): for the rest of the turn the amulet is a follower with the
-   * attack and defense printed on it (5.32.1). Numbers changed before it doesn't carry over: a
-   * second maneuver starts again from the printed values (rulings); abilities it was given stay.
+   * attack and defense printed on it (5.32.1). Numbers changed before it don't carry over, damage
+   * included (fx.maneuver clears it): a second maneuver starts again from the printed values
+   * (rulings); abilities it was given stay.
    */
   | { kind: "maneuver" }
   /**
