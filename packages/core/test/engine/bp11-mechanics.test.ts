@@ -15,6 +15,8 @@ const CARDS: CardDefinition[] = [
   testAmulet("SHED", 1), // no attack or defense: can't be maneuvered (CR 5.32.1.1)
   testSpell("BOX", 0), // select an enemy follower, engage it, Box it until the end of its controller's next turn
   testSpell("PUMP", 0), // select a follower on your field, +1/+1
+  testSpell("SHARPEN", 0), // select a follower on your field, +2/+0
+  testSpell("BLUNT", 0), // select a follower on your field, -2/-0
   testSpell("WARD-IT", 0), // select an enemy follower, give it Ward
   testFollower("PUMPED", 1, 1, 1), // whenever this follower gains attack or defense, give it Storm
   testSpell("OVERFLOW-QUICK", 1), // has Quick while Overflow is active; draw a card
@@ -52,6 +54,8 @@ const SCRIPTS: Record<string, CardScript> = {
     ],
   }),
   PUMP: defineCard({ abilities: [spell({ targets: [yourFollower()], *resolve(fx) { yield* fx.giveStats(fx.targets[0]![0]!, 1, 1); } })] }),
+  SHARPEN: defineCard({ abilities: [spell({ targets: [yourFollower()], *resolve(fx) { yield* fx.giveStats(fx.targets[0]![0]!, 2, 0); } })] }),
+  BLUNT: defineCard({ abilities: [spell({ targets: [yourFollower()], *resolve(fx) { yield* fx.giveStats(fx.targets[0]![0]!, -2, 0); } })] }),
   "WARD-IT": defineCard({ abilities: [spell({ targets: [enemyFollower()], *resolve(fx) { yield* fx.giveKeyword(fx.targets[0]![0]!, "ward"); } })] }),
   PUMPED: defineCard({ abilities: [whenThisGainsStats({ *resolve(fx) { yield* fx.giveKeyword(fx.self, "storm"); } })] }),
   "OVERFLOW-QUICK": defineCard({
@@ -129,6 +133,24 @@ describe("BP11 / BP12 mechanics", () => {
     expect([t.field(), t.stats("CAR")]).toEqual([["CAR"], [3, 3]]);
     t.play("BOX").attack("CAR", "opp:V2");
     expect([t.stats("CAR"), t.field("opp")]).toEqual([[3, 1], []]);
+  });
+
+  it("CR 5.32.1 — attack too: raised or lowered in an earlier maneuver, it is the printed one again; changed after the new maneuver, it counts (rulings)", () => {
+    const t = d({ me: { field: ["CAR"], hand: ["SHARPEN", "BLUNT", "SHARPEN"], deck: ["V1", "V1", "V1", "V1"] }, opp: { deck: ["V1", "V1", "V1", "V1"] } });
+    t.activate("CAR").play("SHARPEN");
+    expect(t.stats("CAR")).toEqual([5, 3]);
+    t.end();
+    endOpponentTurn(t);
+    t.activate("CAR");
+    expect(t.stats("CAR")).toEqual([3, 3]); // +2 attack gone
+    t.play("BLUNT");
+    expect(t.stats("CAR")).toEqual([1, 3]);
+    t.end();
+    endOpponentTurn(t);
+    t.activate("CAR");
+    expect(t.stats("CAR")).toEqual([3, 3]); // -2 attack gone
+    t.play("SHARPEN");
+    expect(t.stats("CAR")).toEqual([5, 3]); // given after this maneuver: it counts
   });
 
   it("CR 5.32 — maneuvered on the turn it entered, it attacks only as its keywords allow; abilities given stay; no numbers, no maneuver", () => {
