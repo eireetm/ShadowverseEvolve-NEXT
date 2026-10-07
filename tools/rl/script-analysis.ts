@@ -71,17 +71,17 @@ type V =
   | { k: "reader" }
   | { k: "fx" }
   | { k: "side"; v: Side }
-  | { k: "card"; v: CardRef }
+  | { k: "card"; v: CardRef; from?: Extract<V, { k: "list" }> }
   | { k: "list"; zones: Zone[]; side: Side; filter: FilterNode; top?: true }
   | { k: "count"; site: RefSite }
   | { k: "exists"; site: RefSite }
   | { k: "cond" }
   | { k: "pred"; f: FilterNode }
-  | { k: "info"; of: CardRef }
+  | { k: "info"; of: CardRef; from?: Extract<V, { k: "list" }> }
   | { k: "inst"; of: CardRef }
   | { k: "instDef"; of: CardRef }
   | { k: "db" }
-  | { k: "prop"; of: CardRef; path: string[] }
+  | { k: "prop"; of: CardRef; path: string[]; from?: Extract<V, { k: "list" }> }
   | { k: "fn"; params: Node[]; body: Node; module: Module; env: Env }
   | { k: "filterFn"; f: FilterNode }
   | { k: "num"; v: number }
@@ -132,6 +132,8 @@ class Analyzer {
   timing: Timing = "otherTrigger";
   ability = -1;
   where = "";
+  /** The candidates of the targets of the object being read (fx.targets[i] are chosen among targetLists[i]). */
+  targetLists: (Extract<V, { k: "list" }> | null)[] = [];
   private depth = 0;
   private readonly declCache = new Map<string, V>();
 
@@ -166,6 +168,7 @@ class Analyzer {
       // f(g, id): the filter applied to a card.
       const card = args[1];
       if (card?.k === "card" && card.v === "it") return { k: "pred", f: fn.f };
+      if (card?.k === "card" && card.from) this.targetCondition(card.from, fn.f);
       return { k: "cond" };
     }
     if (fn.k !== "fn") return UNKNOWN;
@@ -277,16 +280,28 @@ class Analyzer {
     this.where = saved;
   }
 
+  /** A condition on a chosen card ("if it's a Wyrmkin follower"): is there such a card among its candidates. */
+  targetCondition(list: Extract<V, { k: "list" }>, f: FilterNode): void {
+    if (meaningful(f)) this.recordList({ k: "list", zones: list.zones, side: list.side, filter: and(list.filter, f) }, "targetCondition");
+  }
+
+  /** A card's information read as a filter atom: a predicate on the card being filtered, or a condition on a chosen card. */
+  private onCard(of: CardRef, from: Extract<V, { k: "list" }> | undefined, f: FilterNode): V {
+    if (of === "it") return { k: "pred", f };
+    if (from) this.targetCondition(from, f);
+    return { k: "cond" };
+  }
+
   /**
    * A target of script/targets.ts (enemyFollower({...}), inYourZone("cemetery", {...})): its candidates, as a reference when
-   * they say more than "a follower on the field" (another zone, or a trait, class, name or cost).
+   * they say more than "a follower on the field" (another zone, or a trait, class, name or cost). They are also kept for the
+   * body's conditions on the chosen cards.
    */
   targetSite(helper: V, args: V[]): void {
     const spec = this.apply(helper, args);
-    if (spec.k !== "obj") return;
-    const candidates = spec.props.get("candidates");
-    if (candidates?.k !== "fn") return;
-    const list = this.apply(candidates, [{ k: "reader" }, { k: "side", v: "own" }, { k: "card", v: "self" }]);
+    const candidates = spec.k === "obj" ? spec.props.get("candidates") : undefined;
+    const list = candidates?.k === "fn" ? this.apply(candidates, [{ k: "reader" }, { k: "side", v: "own" }, { k: "card", v: "self" }]) : UNKNOWN;
+    this.targetLists.push(list.k === "list" ? list : null);
     if (list.k !== "list") return;
     const trivial = (f: FilterNode): boolean =>
       f.t === "any" || f.t === "notSelf" || (f.t === "type" && f.v === "follower") || (f.t === "and" && f.args.every(trivial));
@@ -458,28 +473,29 @@ class Analyzer {
       const prop = a.k === "prop" ? a : b.k === "prop" ? b : null;
       const other = prop === a ? b : a;
       const cmp = prop === a ? COMPARE[op]! : MIRROR[op]!;
-      if (prop && prop.of === "it") {
+      if (prop && (prop.of === "it" || prop.from)) {
+        const at = (f: FilterNode) => this.onCard(prop.of, prop.from, f);
         const last = prop.path[prop.path.length - 1];
         if (last === "cost" && other.k === "num") {
-          if (cmp === ">=") return { k: "pred", f: { t: "costMin", v: other.v } };
-          if (cmp === ">") return { k: "pred", f: { t: "costMin", v: other.v + 1 } };
-          if (cmp === "<=") return { k: "pred", f: { t: "costMax", v: other.v } };
-          if (cmp === "<") return { k: "pred", f: { t: "costMax", v: other.v - 1 } };
-          if (cmp === "===") return { k: "pred", f: and({ t: "costMin", v: other.v }, { t: "costMax", v: other.v }) };
+          if (cmp === ">=") return at({ t: "costMin", v: other.v });
+          if (cmp === ">") return at({ t: "costMin", v: other.v + 1 });
+          if (cmp === "<=") return at({ t: "costMax", v: other.v });
+          if (cmp === "<") return at({ t: "costMax", v: other.v - 1 });
+          if (cmp === "===") return at(and({ t: "costMin", v: other.v }, { t: "costMax", v: other.v }));
         }
         // Current attack / defense (CR 2.7, 2.8: what the card has now).
         if ((last === "attack" || last === "defense") && other.k === "num") {
           const s = last === "attack" ? "atk" : "def";
-          if (cmp === ">=") return { k: "pred", f: { t: `${s}Min`, v: other.v } as FilterNode };
-          if (cmp === ">") return { k: "pred", f: { t: `${s}Min`, v: other.v + 1 } as FilterNode };
-          if (cmp === "<=") return { k: "pred", f: { t: `${s}Max`, v: other.v } as FilterNode };
-          if (cmp === "<") return { k: "pred", f: { t: `${s}Max`, v: other.v - 1 } as FilterNode };
-          if (cmp === "===") return { k: "pred", f: and({ t: `${s}Min`, v: other.v } as FilterNode, { t: `${s}Max`, v: other.v } as FilterNode) };
+          if (cmp === ">=") return at({ t: `${s}Min`, v: other.v } as FilterNode);
+          if (cmp === ">") return at({ t: `${s}Min`, v: other.v + 1 } as FilterNode);
+          if (cmp === "<=") return at({ t: `${s}Max`, v: other.v } as FilterNode);
+          if (cmp === "<") return at({ t: `${s}Max`, v: other.v - 1 } as FilterNode);
+          if (cmp === "===") return at(and({ t: `${s}Min`, v: other.v } as FilterNode, { t: `${s}Max`, v: other.v } as FilterNode));
         }
-        if (last === "class" && other.k === "str") return { k: "pred", f: { t: "class", v: other.v } };
-        if (last === "type" && other.k === "str") return { k: "pred", f: { t: "type", v: other.v } };
-        if (last === "name" && other.k === "str") return { k: "pred", f: { t: "name", v: other.v } };
-        return { k: "pred", f: { t: "other", why: `${prop.path.join(".")} ${op}` } };
+        if (last === "class" && other.k === "str") return at({ t: "class", v: other.v });
+        if (last === "type" && other.k === "str") return at({ t: "type", v: other.v });
+        if (last === "name" && other.k === "str") return at({ t: "name", v: other.v });
+        return prop.of === "it" ? { k: "pred", f: { t: "other", why: `${prop.path.join(".")} ${op}` } } : { k: "cond" };
       }
       // The card itself excluded: id !== self.
       if (op === "!==" || op === "!=") return UNKNOWN;
@@ -502,21 +518,25 @@ class Analyzer {
     const object = this.eval(node.object as Node, env, module);
     const name = node.computed ? null : ((node.property as Node).name as string);
     if (name === null) {
-      this.eval(node.property as Node, env, module);
-      return object.k === "arr" ? (object.items[0] ?? UNKNOWN) : UNKNOWN;
+      const index = this.eval(node.property as Node, env, module);
+      if (object.k !== "arr") return UNKNOWN;
+      return (index.k === "num" ? object.items[index.v] : undefined) ?? object.items[0] ?? UNKNOWN;
     }
     switch (object.k) {
       case "fx":
         if (name === "game") return { k: "reader" };
         if (name === "controller") return { k: "side", v: "own" };
         if (name === "self") return { k: "card", v: "self" };
-        if (name === "targets") return { k: "arr", items: [{ k: "card", v: "other" }] };
+        if (name === "targets")
+          return this.targetLists.length > 0
+            ? { k: "arr", items: this.targetLists.map((l) => ({ k: "arr", items: [{ k: "card", v: "other", ...(l ? { from: l } : {}) }] }) as V) }
+            : { k: "arr", items: [{ k: "arr", items: [{ k: "card", v: "other" }] }] };
         return UNKNOWN;
       case "list":
         if (name === "length") return object.top ? UNKNOWN : { k: "count", site: this.site(object, "count") };
         return { k: "list", zones: object.zones, side: object.side, filter: object.filter };
       case "info":
-        return { k: "prop", of: object.of, path: [name] };
+        return { k: "prop", of: object.of, path: [name], ...(object.from ? { from: object.from } : {}) };
       case "inst":
         // g.card(self).controller: the card's controller (its owner on the field, CR 3.1.2).
         if ((name === "controller" || name === "owner") && object.of === "self") return { k: "side", v: "own" };
@@ -525,7 +545,7 @@ class Analyzer {
       case "reader":
         return name === "db" ? { k: "db" } : UNKNOWN;
       case "prop":
-        return { k: "prop", of: object.of, path: [...object.path, name] };
+        return { k: "prop", of: object.of, path: [...object.path, name], ...(object.from ? { from: object.from } : {}) };
       case "obj":
         return object.props.get(name) ?? UNKNOWN;
       case "arr":
@@ -587,6 +607,12 @@ class Analyzer {
         if (m === "slice" || m === "concat" || m === "sort" || m === "map") return m === "map" ? UNKNOWN : object;
         return UNKNOWN;
       }
+      if (object.k === "prop" && object.of !== "it" && object.from) {
+        const vs = args();
+        const last = object.path[object.path.length - 1];
+        if ((last === "traits" || last === "names") && m === "includes" && vs[0]?.k === "str") return this.onCard(object.of, object.from, { t: last === "traits" ? "trait" : "name", v: vs[0].v });
+        return { k: "cond" };
+      }
       if (object.k === "prop" && object.of === "it") {
         const vs = args();
         const last = object.path[object.path.length - 1];
@@ -604,6 +630,7 @@ class Analyzer {
       }
       if (object.k === "arr") {
         const vs = args();
+        if (m === "flat") return { k: "arr", items: object.items.flatMap((x) => (x.k === "arr" ? x.items : [x])) };
         if (m === "some" || m === "every" || m === "includes") return { k: "cond" };
         if (m === "filter" && object.items.length > 0) return object.items.length === 1 && object.items[0]!.k === "list" ? { ...(object.items[0] as Extract<V, { k: "list" }>), filter: and((object.items[0] as Extract<V, { k: "list" }>).filter, this.predicate(vs[0] ?? UNKNOWN)) } : UNKNOWN;
         return UNKNOWN;
@@ -664,7 +691,7 @@ class Analyzer {
       case "info":
       case "typeAndTraits":
       case "statsOf":
-        return vs[0]?.k === "card" ? { k: "info", of: vs[0].v } : { k: "info", of: "other" };
+        return vs[0]?.k === "card" ? { k: "info", of: vs[0].v, ...(vs[0].from ? { from: vs[0].from } : {}) } : { k: "info", of: "other" };
       case "leader":
         return { k: "card", v: "other" };
       case "card":
@@ -781,6 +808,7 @@ export function analyzeScript(file: string, script: CardScript): CardAnalysis {
     }
   };
   const readObject = (obj: Node, env: Env, mod: Module) => {
+    if ((obj.properties as Node[]).some((p) => p.type === "Property" && ((p.key as Node).name ?? (p.key as Node).value) === "targets")) az.targetLists = [];
     for (const p of (obj.properties as Node[]) ?? []) {
       if (p.type !== "Property") continue;
       const key = ((p.key as Node).name ?? (p.key as Node).value) as string;
@@ -926,7 +954,8 @@ export function analyzeScript(file: string, script: CardScript): CardAnalysis {
   if (root) visit(root, module);
   // Local helpers of the card's own file used by its card object.
   for (const [name, node] of module.decls) if (!seen.has(`${module.file}#${name}`)) visit(node, module);
-  return { fx, unknownFx: [...unknownFx].sort(), refs: dedupe(az.refs), conds: az.conds };
+  const refs = dedupe(az.refs).filter((r) => !(r.filter.t === "any" && r.agg === "count" && !r.threshold && !r.scaled));
+  return { fx, unknownFx: [...unknownFx].sort(), refs, conds: az.conds };
 }
 
 /** Sites read twice (a constant's value, a closure evaluated again) count once. */
