@@ -44,6 +44,7 @@ const WHERE: Record<string, string> = {
   max: "选择数量的上限",
   when: "能不能选择",
   target: "要选择的对象",
+  targetCondition: "对选中的卡的条件",
   search: "检索",
   searchEach: "检索",
   fromEvolveDeck: "从进化牌组选",
@@ -133,8 +134,21 @@ function filterText(f: RefFilter): string {
       return "（不含这张卡自己）";
     case "other":
       return `（读不懂的条件：${f.why}）`;
-    case "and":
-      return f.args.map(filterText).join(" 且 ");
+    case "and": {
+      // 费用≥2 且 费用≤2 → 费用=2 (and the same for attack and defense).
+      const args = [...f.args];
+      const parts: string[] = [];
+      for (const [min, max, label] of [["costMin", "costMax", "费用"], ["atkMin", "atkMax", "攻击力"], ["defMin", "defMax", "生命值"]] as const) {
+        const lo = args.find((a) => a.t === min) as { v: number } | undefined;
+        const hi = args.find((a) => a.t === max) as { v: number } | undefined;
+        if (lo && hi && lo.v === hi.v) {
+          parts.push(`${label}=${lo.v}`);
+          args.splice(args.indexOf(lo as RefFilter), 1);
+          args.splice(args.indexOf(hi as RefFilter), 1);
+        }
+      }
+      return [...args.map(filterText), ...parts].join(" 且 ");
+    }
     case "or":
       return `（${f.args.map(filterText).join(" 或 ")}）`;
     case "not":
@@ -251,7 +265,7 @@ const head = [
   `由 \`npm run rl:review\` 生成（${new Date().toISOString().slice(0, 10)}）。列出 18 套示例卡组的 ${where.size} 张卡（每张只列在它出现的第一套卡组下），每张卡：卡面、AI 从脚本里读到的效果类别，以及它"在数什么"。表有 ${CARD_FEATURE_COLUMNS.length} 列。`,
   "",
   "怎么看：",
-  "- **数的东西**：卡的效果或条件要数的卡，写成「时机 · 用在哪：哪一方的哪个区域里的什么卡，张数 / 有没有」。「按数量起作用」= 张数直接决定效果大小（例如能消失几个）；「张数 ≥3」= 至少要 3 张；「要选择的对象 / 检索：有没有」= 有没有能选、能检索的卡。",
+  "- **数的东西**：卡的效果或条件要数的卡，写成「时机 · 用在哪：哪一方的哪个区域里的什么卡，张数 / 有没有」。「按数量起作用」= 张数直接决定效果大小（例如能消失几个）；「张数 ≥3」= 至少要 3 张；「要选择的对象 / 检索：有没有」= 有没有能选、能检索的卡；「对选中的卡的条件：有没有」= 效果对某种卡更强（例如目标是龙裔就改成 5 点伤害），对方场上有没有这种卡。",
   `- **和引擎对过**：用 ${recorded.length > 0 ? `已录对局（每份数据 ${games} 局）` : "生成的对局"}的每个主要阶段，直接调用卡自己的条件函数，和这里写的数比较。一共调用 ${oracle.calls} 次。只有一个条件函数里正好一处计数的才能这样对；效果处理中间的计数没法直接调用，只能靠人看。`,
   "- **请看一下**：卡面提到墓场、类型或职业，但没有提取到对应计数，可能漏了。",
   "- 请重点找：数错的区域或哪一方、漏掉的条件（类型、职业、费用）、门槛数字不对、该按数量的没标、该数的没数。",

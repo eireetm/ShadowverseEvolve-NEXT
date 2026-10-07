@@ -77,6 +77,10 @@ describe("what a card counts, read from its script", () => {
       ["target", "cemetery", "exists", JSON.stringify({ t: "and", args: [{ t: "type", v: "follower" }, { t: "trait", v: "キュート" }, { t: "costMax", v: 4 }] })],
       ["target", "cemetery", "exists", JSON.stringify({ t: "and", args: [{ t: "type", v: "follower" }, { t: "trait", v: "キュート" }, { t: "costMax", v: 2 }] })],
     ]);
+    // BP09-060: 5 damage instead of 2 when the chosen enemy follower is a Wyrmkin: is there one.
+    expect(refs("BP09-060")).toEqual([{ timing: "onEvolve", where: "targetCondition", zones: ["field"], side: "opp", filter: { t: "and", args: [{ t: "type", v: "follower" }, { t: "trait", v: "竜族" }] }, agg: "exists", threshold: { op: ">=", n: 1 }, scaled: false }]);
+    // BP12-054: whether its EX area has room is the zone's size, already in the vector: no reference.
+    expect(refs("BP12-054")).toEqual([]);
     // BP08-018: search your deck for a Commander or a Soldier.
     expect(refs("BP08-018")[0]).toMatchObject({ where: "search", zones: ["deck"], agg: "exists", filter: { t: "or", args: [{ t: "trait", v: "指揮官" }, { t: "trait", v: "兵士" }] } });
   }, 120_000);
