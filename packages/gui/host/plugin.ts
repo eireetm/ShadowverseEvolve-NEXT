@@ -4,6 +4,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Plugin } from "vite";
 import { hostConfig, type HostConfig } from "./config.ts";
 import { deckPath, deleteDeckFile, listDecks, readDeckText, writeDeckText } from "./decks.ts";
+import { browserHasFile, fileTag } from "./file-cache.ts";
 import { deleteReplayFile, listReplays, readReplayText, replayPath, writeReplayText } from "./replays.ts";
 import { CONTENT_TYPES, findCardArt, findMisc, listMisc, listResources } from "./resources.ts";
 import { readSettingsText, writeSettingsText } from "./settings-file.ts";
@@ -31,14 +32,12 @@ function sendJson(res: ServerResponse, status: number, value: unknown): void {
   res.end(JSON.stringify(value));
 }
 
-/** Send an image file; the browser keeps it and asks again with If-Modified-Since (a changed file is picked up). */
+/** Send an image file; the browser keeps it and asks again (file-cache.ts: a changed file is picked up). */
 function sendFile(req: IncomingMessage, res: ServerResponse, file: string): void {
-  const modified = statSync(file).mtime;
-  modified.setMilliseconds(0);
-  res.setHeader("Last-Modified", modified.toUTCString());
+  const tag = fileTag(statSync(file));
+  res.setHeader("ETag", tag);
   res.setHeader("Cache-Control", "no-cache");
-  const since = req.headers["if-modified-since"];
-  if (since && new Date(since).getTime() >= modified.getTime()) {
+  if (browserHasFile(req, tag)) {
     res.statusCode = 304;
     res.end();
     return;
