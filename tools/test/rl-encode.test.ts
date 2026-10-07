@@ -4,6 +4,10 @@ import { createEngine, randomAnswer, seedRng, type PlayerId } from "../../packag
 import { ALL_CARDS, ALL_SCRIPTS } from "../../packages/core/src/sets";
 import { DEFAULT_WEIGHTS } from "../../packages/bot/src";
 import { dotTerms, evalTerms, termWeights, W1_TERMS } from "../rl/eval-terms";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { certificatePath, certifiedRules, sha256Of, type ReplayCertificate } from "../rl/certificate";
 import { npyBytes, readNpy as readNpyFile } from "../rl/npy";
 import { bucketOf, labelOf, replaySamples, splitOf } from "../rl/sampling";
 import { sampleDeck } from "../rl/series";
@@ -116,3 +120,35 @@ describe(".npy files", () => {
 
 // Pinned buckets (computed once, 2026-10-06): a change would move games between the training and test sets.
 const PINNED_BUCKETS = [84, 41, 50];
+
+describe("replay certificates (npm run rl:certify)", () => {
+  it("vouch for older rules code only for the records file they were made for", () => {
+    const dir = mkdtempSync(join(tmpdir(), "sve-cert-"));
+    try {
+      const records = join(dir, "games.jsonl.gz");
+      writeFileSync(records, "games");
+      const cert: ReplayCertificate = {
+        format: "sve-replay-certificate",
+        version: 1,
+        rules: "new",
+        records: { file: "games.jsonl.gz", sha256: sha256Of(records), games: 2 },
+        recordedRules: { old: 2 },
+        replayed: 2,
+        commit: "",
+        dirty: false,
+        date: "2026-10-07T00:00:00.000Z",
+        command: "test",
+      };
+      writeFileSync(certificatePath(dir, "new"), JSON.stringify(cert));
+      expect([...(certifiedRules(dir, "new", records)?.accepted ?? [])]).toEqual(["old"]);
+      expect(certifiedRules(dir, "newer", records)).toBeNull(); // other rules code again: certify again
+      writeFileSync(certificatePath(dir, "new"), JSON.stringify({ ...cert, replayed: 1 }));
+      expect(certifiedRules(dir, "new", records)).toBeNull(); // not every game replayed the same
+      writeFileSync(certificatePath(dir, "new"), JSON.stringify(cert));
+      writeFileSync(records, "games and more");
+      expect(certifiedRules(dir, "new", records)).toBeNull(); // games added since
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

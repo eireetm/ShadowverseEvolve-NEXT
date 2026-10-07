@@ -2,7 +2,8 @@
  * The value network's samples from a run's games: npm run rl:encode -- <run dir> [--out <dir>] [--workers N] [--limit N]
  *   [--no-x] [--pick N] [--leak-every N] [--leaf-check N] [--force]
  * Reads <run dir>/games.jsonl.gz (the games npm run rl:ingest took), replays every game with this repository's rules code
- * (the same as the games', or the run stops), and at each sample point (tools/rl/sampling.ts: the first main phase decision
+ * (the same as the games', or older rules code a replay certificate of npm run rl:certify vouches for; other games are left
+ * out), and at each sample point (tools/rl/sampling.ts: the first main phase decision
  * of the active player in a turn) takes both players' views. Per sample: the encoder's features (x: encoder v1 of
  * packages/bot/src/encoder.ts, with the card feature table card-features.json, both decks' lists and both players' bots),
  * the label (1 won, 0.5 drawn, 0 lost), side columns (which game and input, who is active and first, which bots, decks,
@@ -46,6 +47,7 @@ import { ALL_CARDS, ALL_SCRIPTS } from "../packages/core/src/sets";
 import { rulesFingerprint } from "../packages/gui/fingerprint";
 import { COUNTER_NAMES } from "../packages/gui/src/i18n/counters";
 import { zh } from "../packages/gui/src/i18n/zh";
+import { certifiedRules } from "./rl/certificate";
 import { readNpy, writeNpy } from "./rl/npy";
 import { gameLines } from "./rl/records";
 import { bucketOf, labelOf, replaySamples, splitOf } from "./rl/sampling";
@@ -254,6 +256,7 @@ function engineAgrees(game: GameSession, view: PlayerView, me: PlayerId, x: Int1
 /** The worker: the shards k, k + N, k + 2N … of the games. */
 function runWorker(k: number): void {
   const fingerprint = rulesFingerprint(join(ROOT, "packages", "gui"));
+  const certified = certifiedRules(resolve(runDir!), fingerprint, records)?.accepted ?? new Set<string>();
   const jobs = jobFiles();
   const weights = termWeights(DEFAULT_WEIGHTS);
   const holdoutDecks = new Set(DECK_SETS.holdout);
@@ -297,7 +300,8 @@ function runWorker(k: number): void {
     const a = acc!;
     const g = JSON.parse(line) as JobGame;
     const drop = (why: string) => (a.dropped[why] = (a.dropped[why] ?? 0) + 1);
-    if (rulesOfRecorded(String(g.engine?.fingerprint)) !== fingerprint) {
+    const recordedRules = rulesOfRecorded(String(g.engine?.fingerprint));
+    if (recordedRules !== fingerprint && !certified.has(recordedRules)) {
       drop("other rules code");
       continue;
     }
@@ -693,7 +697,15 @@ if (option("--worker") !== null) {
       return "";
     }
   };
+  const rulesNow = rulesFingerprint(join(ROOT, "packages", "gui"));
+  const certificate = certifiedRules(resolve(runDir), rulesNow, records)?.certificate ?? null;
   const lines: [boolean, string][] = [
+    [
+      true,
+      certificate
+        ? `规则代码：现在 ${rulesNow}；记录时 ${Object.entries(certificate.recordedRules).map(([fp, n]) => `${fp}（${n} 局）`).join("、")}，认证书 certified-${rulesNow}.json：${certificate.replayed} 局在现在的代码下重放一致（${certificate.date.slice(0, 10)}）。`
+        : `规则代码：现在 ${rulesNow}，没有认证书（只收用它记录的对局）。`,
+    ],
     [kept > 0 && Object.keys(dropped).every((k) => k === "unfinished"), `对局：${total} 局，收下 ${kept} 局${Object.keys(dropped).length ? `，没用 ${Object.entries(dropped).map(([k, v]) => `${v}（${k}）`).join("、")}` : ""}；全部重放到记录的结果。`],
     [checks.broken === 0, `文件：${checks.broken} 块读不出（应为 0）。`],
     [checks.labelBad === 0, `标签：${checks.labelPairs} 个取样点，标签取自记录的胜负（重放到最后和记录一致的对局才用），双方视角相加为 1。`],
@@ -872,7 +884,8 @@ if (option("--worker") !== null) {
       path: records,
       sha256: createHash("sha256").update(readFileSync(records)).digest("hex"),
       games: total,
-      rulesFingerprint: rulesFingerprint(join(ROOT, "packages", "gui")),
+      rulesFingerprint: rulesNow,
+      certificate: certificate ? { file: `certified-${rulesNow}.json`, recordedRules: certificate.recordedRules, replayed: certificate.replayed, date: certificate.date } : null,
       botFingerprint: botFingerprint(ROOT),
       commit: git("rev-parse", "--short", "HEAD"),
       dirty: git("status", "--porcelain", "--", "packages/core", "packages/bot", "tools") !== "",
