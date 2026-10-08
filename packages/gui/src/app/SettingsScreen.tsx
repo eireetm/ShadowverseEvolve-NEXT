@@ -252,6 +252,11 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
             <input type="checkbox" checked={settings.shareGames} onChange={(e) => updateSettings({ shareGames: e.target.checked })} data-testid="settings-share-games" />
           </label>
           <p className="sve-hint">{t("settings.shareGamesHelp")}</p>
+          <label className="sve-settings-row">
+            <span>{t("settings.chatNotice")}</span>
+            <input type="checkbox" checked={settings.chatNotice} onChange={(e) => updateSettings({ chatNotice: e.target.checked })} data-testid="settings-chat-notice" />
+          </label>
+          <p className="sve-hint">{t("settings.chatNoticeHelp")}</p>
         </section>
         <button type="button" className="sve-menu-button" onClick={onBack}>
           {t("common.back")}

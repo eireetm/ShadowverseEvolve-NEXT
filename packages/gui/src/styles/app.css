@@ -206,6 +206,44 @@ option {
   gap: 6px;
 }
 
+/* A flash when someone else writes in the online chat (settings: online chat notice; online/ChatNotice.tsx): like the
+   turn order notice, shorter, over every screen, and clicks go through it. */
+.sve-chat-notice {
+  position: fixed;
+  top: 16%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 85;
+  max-width: calc(100vw - 32px);
+  padding: 12px 28px;
+  border-radius: 14px;
+  background: rgb(20 26 36 / var(--sve-ui-alpha));
+  border: 1px solid var(--sve-accent);
+  box-shadow: 0 16px 48px #000b;
+  color: var(--sve-accent);
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+  pointer-events: none;
+  animation: sve-chat-notice 1.6s ease forwards;
+}
+
+@keyframes sve-chat-notice {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px);
+  }
+  12%,
+  75% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 .sve-toasts {
   position: fixed;
   right: 12px;
