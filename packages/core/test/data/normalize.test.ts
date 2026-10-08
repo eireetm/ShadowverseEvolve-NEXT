@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { CardDataError, groupPrintings, normalizePrinting, type RawCardJson } from "../../src";
+import { CardDataError, type RawCardJson } from "../../src";
+import { groupPrintings, normalizePrinting } from "../../src/data/normalize";
 import { parseCardType, parseTraits } from "../../src/data/normalize";
 import { englishText, japaneseKey, sameCardText, treatedAs } from "../../src/data/english-text";
 import { applyDataFixes } from "../../src/data/fixes";

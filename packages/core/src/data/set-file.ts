@@ -1,5 +1,5 @@
 import type { CardDefinition } from "../model/card";
-import { CardDataError } from "./normalize";
+import { CardDataError } from "./errors";
 
 /** Format version of the generated `packages/core/data/<SET>.json` files. */
 export const CARD_SET_FORMAT = 1;

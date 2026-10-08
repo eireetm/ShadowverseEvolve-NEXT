@@ -8,7 +8,7 @@ import { migrateSettings } from "../src/app/settings";
 import { deckFromText, deckToText, parseDeckFile, toDeckList, type DeckFile } from "../src/decks/format";
 import type { FormatId } from "../src/engine/protocol";
 import { formatProblemText, formatProblems, leadersFor, type FormatProblem } from "../src/formats/formats";
-import { RESTRICTION_LISTS, listsFor, restrictionList } from "../src/formats/lists";
+import { RESTRICTION_LISTS, listFingerprint, listProblem, listsFor, restrictionList } from "../src/formats/lists";
 import { translate } from "../src/i18n";
 
 // Formats and restriction lists: the lists' files, and a deck's problems in standard, Cross Craft (CR Appendix B-2) and
@@ -33,6 +33,17 @@ describe("restriction lists", () => {
     expect(listsFor("crossCraft").map((l) => l.id)).toEqual(["11_26_EN_CROSS", "10_26_JPN_CROSS", "09_26_EN_CROSS"]);
     expect(listsFor("unlimited")).toEqual([]);
     expect(restrictionList("gone")).toBeNull();
+  });
+
+  it("online: the other player's program must have the host's list, the same one (its contents' fingerprint)", () => {
+    const list = restrictionList("10_26_JPN")!;
+    const hash = listFingerprint(list);
+    expect(listFingerprint({ ...list })).toBe(hash);
+    expect(listFingerprint({ ...list, banned: list.banned.slice(1) })).not.toBe(hash);
+    expect(listProblem({ list: null, listHash: null })).toBeNull();
+    expect(listProblem({ list: "10_26_JPN", listHash: hash })).toBeNull();
+    expect(listProblem({ list: "10_26_JPN", listHash: "0000000000" })).toBe("different");
+    expect(listProblem({ list: "12_26_JPN", listHash: hash })).toBe("missing");
   });
 
   it("name real cards: each number's Japanese (Asia), Chinese (mainland China) or English (English site) name is the one the list gives", () => {

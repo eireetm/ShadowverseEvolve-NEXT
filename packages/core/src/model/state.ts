@@ -283,8 +283,8 @@ export interface PersistentEffect {
   change: EffectChange;
   /**
    * The effect is an ability given to its card ("Give it '...'", CR 10.9.1.2), quoted in the text of this card definition:
-   * a given ability or text, or an effect of a kind the giving card's script `gives`. Only for showing it (the player
-   * view's `CardView.gifts`).
+   * a given ability or text, or an effect of a kind the giving card's script `gives`. It is lost with the card's abilities
+   * (state/effects.ts effectInForce), and the player view shows it (`CardView.gifts`).
    */
   givenBy?: DefId;
 }

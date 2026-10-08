@@ -1,5 +1,5 @@
 import type { CardDefinition, DefId, PrintingId } from "../model/card";
-import { CardDataError } from "./normalize";
+import { CardDataError } from "./errors";
 
 /**
  * Placeholder leader used when a deck list names no leader card (CR 6.1.1.1 requires one;

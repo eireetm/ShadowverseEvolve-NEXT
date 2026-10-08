@@ -1,5 +1,5 @@
 import type { CardClass, Universe } from "../model/card";
-import { CardDataError } from "./normalize";
+import { CardDataError } from "./errors";
 import { BP22_CHINESE_NAMES } from "./preview-bp22";
 import type { RawCardJson, RawRuling } from "./raw";
 

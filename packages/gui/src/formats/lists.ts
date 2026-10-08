@@ -42,3 +42,29 @@ export const listsFor = (format: FormatId): RestrictionList[] => RESTRICTION_LIS
 
 /** A list by its id; none for none or a list that isn't there any more. */
 export const restrictionList = (id: string | null | undefined): RestrictionList | null => (id ? (RESTRICTION_LISTS.find((list) => list.id === id) ?? null) : null);
+
+/**
+ * A short fingerprint of a list's contents (FNV-1a of its JSON): online, the host's rules carry the one of the list the room
+ * uses, and the other player's program checks its own list of that name is the same (net/online.ts listProblem).
+ */
+export function listFingerprint(list: RestrictionList): string {
+  const text = JSON.stringify(list);
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return `${h.toString(16).padStart(8, "0")}${text.length.toString(16)}`;
+}
+
+/**
+ * Online: the host's restriction list (its rules' `list` and `listHash`) as this program has it: none (no list of that name)
+ * or another version of it (its contents differ). Its decks would be checked another way: it can't be ready. Null: no list,
+ * or the same one.
+ */
+export function listProblem(rules: { list: string | null; listHash: string | null }): "missing" | "different" | null {
+  if (rules.list === null) return null;
+  const mine = restrictionList(rules.list);
+  if (!mine) return "missing";
+  return rules.listHash !== null && listFingerprint(mine) !== rules.listHash ? "different" : null;
+}

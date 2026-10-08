@@ -90,8 +90,10 @@ describe("messages", () => {
   });
 
   it("carry a game's preparation and answers, checked field by field", () => {
-    const rules = { format: "crossCraft", list: "01_26_EN_CROSS", turnOrder: "random", undo: false, watchHands: false, watchChat: false };
+    const rules = { format: "crossCraft", list: "01_26_EN_CROSS", listHash: "1a2b3c4d5e", turnOrder: "random", undo: false, watchHands: false, watchChat: false };
     expect(parseMessage({ t: "rules", rules })).toEqual({ t: "rules", rules });
+    // The list's fingerprint: none when it isn't a text.
+    expect(parseMessage({ t: "rules", rules: { ...rules, listHash: 7 } })).toEqual({ t: "rules", rules: { ...rules, listHash: null } });
     // What the spectators may do (the server's rooms): only when the host says so; an older host's rules say nothing of it.
     expect(parseMessage({ t: "rules", rules: { ...rules, watchHands: true, watchChat: "yes" } })).toEqual({ t: "rules", rules: { ...rules, watchHands: true } });
     const { watchHands: _h, watchChat: _c, ...older } = rules;

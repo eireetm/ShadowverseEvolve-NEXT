@@ -494,7 +494,7 @@ export function makeEffectContext(g: G, init: EffectInit): EffectContext {
   };
   /**
    * The card whose text quotes this effect as an ability it gives (CR 10.9.1.2): a given ability or text, or an effect of a
-   * kind the ability's card `gives` (CardScript.gives). For showing it; none for other effects.
+   * kind the ability's card `gives` (CardScript.gives). Such an effect is lost with the card's abilities; none for others.
    */
   const giverOf = (change: EffectChange): DefId | null => {
     const def = textDefOf(g, init.sourceDef);

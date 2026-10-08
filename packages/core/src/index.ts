@@ -37,7 +37,7 @@ export type { GameEvent, CardMove, MoveReason, ZoneRef } from "./events/types";
 export { redactEvent } from "./events/redact";
 
 export { CardDatabase, DEFAULT_LEADER } from "./data/database";
-export { CardDataError, normalizePrinting, groupPrintings } from "./data/normalize";
+export { CardDataError } from "./data/errors";
 export type { RawCardJson } from "./data/raw";
 export { readCardSetFile, type CardSetFile } from "./data/set-file";
 

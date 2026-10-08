@@ -67,6 +67,26 @@ describe("the abilities given to a card, in the player view", () => {
     expect(gifts(d({ me: { field: ["BP09-049"], cemetery: n(4, "BP09-049") } }), "BP09-049@field")).toEqual([]);
   });
 
+  it("an ability given as an effect is lost with the card's abilities (BP08-024's cap, then BP11-041 in the opponent's turn)", () => {
+    // Durandal: "this takes at most 3 damage" for this turn and the opponent's next; V3 attacks, so it is engaged then.
+    const capped = () =>
+      d({ me: { field: ["BP08-024", "V3"] }, opp: { field: ["V5"], hand: ["BP11-041"], deck: n(3), maxPlayPoints: 5 } })
+        .activate("BP08-024")
+        .choose("cap")
+        .attack("V3", "opp:leader")
+        .end();
+    // It still has it: the opponent's V5 deals 3 (CR 5.14.2 replacement).
+    const kept = capped();
+    expect(gifts(kept, "V3")).toEqual(["BP08-024 damageCap"]);
+    kept.attack("opp:V5", "V3");
+    expect(kept.stats("V3")).toEqual([3, 1]);
+    // It lost all its abilities, the one given too (BP05-061 ruling): 5 damage destroys it, and the view shows the loss.
+    const lost = capped().play("opp:BP11-041");
+    expect([gifts(lost, "V3"), seen(lost, "V3").abilitiesLost]).toEqual([[], true]);
+    lost.attack("opp:V5", "V3");
+    expect(lost.field()).toEqual(["BP08-024"]);
+  });
+
   it("a delayed trigger that is the ability its card gives (CP04-045: the spell in the EX area is buried at your end phase)", () => {
     const t = d({ me: { ...PC, hand: ["CP04-045"], cemetery: ["CP04-018"], playPoints: 2 }, opp: { ...PC, deck: ["V1"] } }).play("CP04-045");
     expect(gifts(t, "CP04-018@ex")).toEqual(["CP04-045 delayed:2"]);

@@ -20,8 +20,8 @@ export interface Gift {
 
 /**
  * The abilities given to a card as the player view shows them, oldest first (CR 10.9.1.6):
- *  - effects that are given abilities (`PersistentEffect.givenBy`): a given ability or text while the card has it (not one
- *    from before it lost all abilities, BP05-061 ruling); another effect while it applies;
+ *  - effects that are given abilities (`PersistentEffect.givenBy`) while they are in force: not one from before the card
+ *    lost all its abilities (state/effects.ts, BP05-061 ruling);
  *  - abilities given by passive abilities of cards on the field (`FieldPassives.grantsFor`, BP12-029) and by the
  *    equipment tokens it equips (CR 14.5.2), unless it lost them;
  *  - the ability its own text quotes while the condition holds (`CardScript.quotedWhile`), where its abilities work;
@@ -35,7 +35,6 @@ export function giftsOf(env: Env, id: CardId): Gift[] {
   for (const e of state.effects) {
     if (e.target !== id || e.givenBy === undefined || !effectInForce(state, e)) continue;
     const change = e.change;
-    if ((change.kind === "grantedAbility" || change.kind === "gainedText") && !kept(e.seq)) continue;
     const ability = change.kind === "grantedAbility" ? change.grant : change.kind === "gainedText" ? `text:${change.text}` : change.kind;
     out.push({ seq: e.seq, gift: { by: e.givenBy, ability } });
   }

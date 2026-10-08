@@ -7,6 +7,7 @@ import { selectCards } from "./runtime/decide";
 import type { Proc } from "./runtime/proc";
 import { getCard, type Env } from "./state/access";
 import { activeScript, characteristics, passiveSources } from "./state/characteristics";
+import { effectInForce } from "./state/effects";
 import { moveCards } from "./state/zones";
 import { restrictionCount } from "./state/restrictions";
 import { thisTurn } from "./state/turn-counts";
@@ -29,7 +30,7 @@ export function playCost(g: Env, card: CardId, player: PlayerId, option: PlayOpt
   // Effects that set the cost (e.g. BP02-091 "Those cards cost 0 play points to play"); the
   // latest one applies (timestamp order, 10.9.1.6).
   let setByEffect: number | undefined;
-  for (const e of g.state.effects) if (e.target === card && e.change.kind === "playCostSet") setByEffect = e.change.value;
+  for (const e of g.state.effects) if (e.target === card && e.change.kind === "playCostSet" && effectInForce(g.state, e)) setByEffect = e.change.value;
   let cost = setTo ?? option?.setCost ?? setByEffect ?? base;
   cost += g.scripts[getCard(g.state, card).def]?.playCost?.(reader, card, player) ?? 0;
   for (const p of [0, 1] as const) {
@@ -37,7 +38,8 @@ export function playCost(g: Env, card: CardId, player: PlayerId, option: PlayOpt
       cost += activeScript(g, f)?.field?.playCostOf?.(reader, f, card, player) ?? 0;
     }
   }
-  for (const e of g.state.effects) if (e.target === card && e.change.kind === "playCost") cost += e.change.amount;
+  // A given "This costs N less to play" (BP12-005) is lost with the card's abilities (state/effects.ts).
+  for (const e of g.state.effects) if (e.target === card && e.change.kind === "playCost" && effectInForce(g.state, e)) cost += e.change.amount;
   cost += option?.costDelta ?? 0;
   // "The next [matching] card you play this turn costs N less" (BP03-038), after set-to-value
   // changes (its Transcendence ruling: a cost set to 7 is then reduced by 4).

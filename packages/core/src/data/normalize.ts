@@ -2,6 +2,7 @@ import { backFaceId, CARD_CLASSES, type CardClass, type CardDefinition, type Car
 import { englishText, japaneseKey, japaneseWordsKey, PREVIEW_TEXT, treatedAs, withoutReminders, withoutTreatedAs, wordDice, type TextSource } from "./english-text";
 import type { RawCardJson } from "./raw";
 import { MAGICAL_ITEM, UNIVERSE_OF_SET } from "./universes";
+import { CardDataError } from "./errors";
 
 /**
  * Raw scraped JSON -> CardDefinition.
@@ -11,9 +12,7 @@ import { MAGICAL_ITEM, UNIVERSE_OF_SET } from "./universes";
  * reported as an error — never silently guessed.
  */
 
-export class CardDataError extends Error {
-  override name = "CardDataError";
-}
+export { CardDataError };
 
 const EVOLVED_SUFFIX = " (Evolved)";
 
