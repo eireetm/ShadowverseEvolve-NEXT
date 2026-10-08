@@ -284,8 +284,8 @@ export const KNOWN_SCRIPT_KEYS = {
   mode: ["targets", "earthRite"],
   playOption: ["setCost", "costDelta", "earthRite"],
   equipment: ["keywords", "abilities"],
-  /** Read for nothing (deck building rules, code that runs, names and labels). */
-  ignored: ["deckLimit", "restrictsDeck", "resolve", "trigger", "id", "label", "canPay", "pay", "candidates", "max", "distinct", "distinctNames", "available", "targetFilter", "freesFieldSlots", "delayed", "mode", "count", "cost"],
+  /** Read for nothing (deck building rules, code that runs, names and labels, what is only shown: `gives`, `quotedWhile`). */
+  ignored: ["deckLimit", "restrictsDeck", "resolve", "trigger", "id", "label", "canPay", "pay", "candidates", "max", "distinct", "distinctNames", "available", "targetFilter", "freesFieldSlots", "delayed", "mode", "count", "cost", "gives", "quotedWhile"],
 } as const;
 
 const COLUMN_INDEX = new Map(CARD_FEATURE_COLUMNS.map((c, i) => [c, i]));

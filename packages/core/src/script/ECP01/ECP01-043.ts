@@ -15,6 +15,7 @@ import { damageUpToOneThenPlusOne } from "./shared";
 const twenty = (g: GameReader, p: PlayerId) => g.cards(p, "cemetery").filter((id) => g.typeAndTraits(id).traits.includes("ウマ娘")).length >= 20;
 
 export default defineCard({
+  quotedWhile: (g, self) => twenty(g, g.controller(self)),
   field: {
     keywordsFor: (g, self, card) => (card === self && twenty(g, g.controller(self)) ? ["storm"] : []),
   },

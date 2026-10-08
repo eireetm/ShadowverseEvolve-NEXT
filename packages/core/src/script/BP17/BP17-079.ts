@@ -8,6 +8,7 @@ import { defineCard, fanfare, lastWords } from "../helpers";
 import { machina } from "./shared";
 
 export default defineCard({
+  gives: ["playCost"],
   field: {
     // keywordsFor: typeAndTraits (not info) for the other cards.
     keywordsFor: (g, self, card) => {

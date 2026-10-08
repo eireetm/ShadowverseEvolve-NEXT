@@ -9,6 +9,7 @@ import { atStartOfYourEndPhase, defineCard, spell } from "../helpers";
 import { named, yourFollower } from "../targets";
 
 export default defineCard({
+  gives: ["damageDealtPlus"],
   playableIf: (g, _self, p) => g.overflow(p),
   abilities: [
     {

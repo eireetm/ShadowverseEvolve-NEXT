@@ -5,6 +5,7 @@ import { defineCard, fanfare } from "../helpers";
 import { anotherYourFollower } from "../targets";
 
 export default defineCard({
+  gives: ["preventDamage"],
   abilities: [
     fanfare({
       targets: [anotherYourFollower()],

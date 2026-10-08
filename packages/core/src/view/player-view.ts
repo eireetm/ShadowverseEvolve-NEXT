@@ -4,7 +4,8 @@ import type { CardId, PlayerId } from "../model/ids";
 import type { Keyword } from "../model/keyword";
 import type { AttackState, GameResult, Phase, PlayerZone } from "../model/state";
 import type { Env } from "../engine/state/access";
-import { characteristics, isBoxed } from "../engine/state/characteristics";
+import { abilitiesLostAt, characteristics, isBoxed } from "../engine/state/characteristics";
+import { giftsOf, type Gift } from "./gifts";
 import { cardVisibleTo } from "./visibility";
 
 /** A card whose information the viewer may see. */
@@ -31,6 +32,10 @@ export interface CardView {
   superEvolved: boolean;
   /** CR 5.31 — it is Boxed (lost its abilities, doesn't refresh in its controller's start phase). */
   boxed: boolean;
+  /** CR 10.9.1.2 — the abilities given to it, each with the card whose text quotes it (view/gifts.ts). */
+  gifts: readonly Gift[];
+  /** It lost all its abilities, printed and given before ("loses all abilities", BP05-061; Boxed, CR 5.31.2). */
+  abilitiesLost: boolean;
   /** CR 15.1 */
   counters: Readonly<Record<string, number>>;
   /** A race-zone, drive-zone or equipment-zone card: the card on the field it is linked to (CR 14.2.1.1, 14.4.9.2, 14.5.2.2). */
@@ -117,6 +122,8 @@ function cardView(env: Env, id: CardId): CardView {
     evolvedWith: c.evolvedWith,
     superEvolved: c.superEvolved,
     boxed: isBoxed(env.state, id),
+    gifts: giftsOf(env, id),
+    abilitiesLost: abilitiesLostAt(env.state, id) !== null,
     counters: { ...c.counters },
     linkedTo: c.linkedTo ?? null,
   };

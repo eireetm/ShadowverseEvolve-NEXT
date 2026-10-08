@@ -20,5 +20,6 @@ const menaStrike = strike({
 export default defineCard({
   keywords: ["rush"],
   selfKeywords: (g, self) => (fiveLevin(g, g.controller(self)) ? ["assail"] : []),
+  quotedWhile: (g, self) => fiveLevin(g, g.controller(self)),
   abilities: [{ ...menaStrike, trigger: (e, me, g) => fiveLevin(g, me.controller) && menaStrike.trigger(e, me, g) }],
 });

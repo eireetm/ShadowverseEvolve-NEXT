@@ -5,6 +5,7 @@ import { activated, defineCard } from "../helpers";
 import { yourFollower } from "../targets";
 
 export default defineCard({
+  gives: ["damageCap"],
   abilities: [
     activated(
       { engageSelf: true },

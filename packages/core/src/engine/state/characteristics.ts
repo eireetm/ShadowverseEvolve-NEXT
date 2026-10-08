@@ -94,6 +94,15 @@ export function defaultAbilityZones(env: Env, def: DefId): readonly ZoneName[] {
   return type === "crest" ? IN_EX : type === "equipment" ? IN_EQUIPMENT_ZONE : ON_FIELD;
 }
 
+/**
+ * The card definition whose text the abilities of definition `def` are written in: the definition itself, or the
+ * equipment token's for what it gives ("equip:"); none for given abilities ("grant:") and keyword abilities.
+ */
+export function textDefOf(env: Env, def: DefId): DefId | null {
+  if (def.startsWith(EQUIP_PREFIX)) return def.slice(EQUIP_PREFIX.length);
+  return env.db.has(def) ? def : null;
+}
+
 /** The zones where an ability of a card with definition `def` works: its `validIn`, else the default. */
 export function abilityZones(env: Env, def: DefId, ability: { readonly validIn?: readonly ZoneName[] | undefined }): readonly ZoneName[] {
   return ability.validIn ?? defaultAbilityZones(env, def);

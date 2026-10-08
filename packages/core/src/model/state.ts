@@ -281,6 +281,12 @@ export interface PersistentEffect {
   /** Turn in which the effect was created. */
   createdTurn: number;
   change: EffectChange;
+  /**
+   * The effect is an ability given to its card ("Give it '...'", CR 10.9.1.2), quoted in the text of this card definition:
+   * a given ability or text, or an effect of a kind the giving card's script `gives`. Only for showing it (the player
+   * view's `CardView.gifts`).
+   */
+  givenBy?: DefId;
 }
 
 /**
