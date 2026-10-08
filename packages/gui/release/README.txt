@@ -7,7 +7,7 @@ Shadowverse: Evolve NEXT  {{version}}
 【中文】
 
 这是什么
-  《Shadowverse: Evolve》（影之诗：进化对决）的非官方对战模拟器，个人学习和测试用，不做商业用途。
+  《Shadowverse: Evolve》（影之诗：进化对决）的非官方对战模拟器，仅供个人学习和测试用，不做商业用途，请于下载后24小时内删除。
   和官方（Cygames、Bushiroad）没有关系。不附带任何官方素材。
 
 需要
@@ -23,7 +23,7 @@ Shadowverse: Evolve NEXT  {{version}}
   其他系统：在这个文件夹里运行  node server.mjs
 
 能做的
-  - 对战 AI：Bot-简单、Bot-中等、Bot-困难、Bot-困难 beta（困难和困难 beta 会作弊：看得到你的手牌和双方牌组）。
+  - 对战 AI：3种不同难度的Bot。
   - 构筑卡组、观看录像、设置（语言：English / 中文 / 日本語）。
   - 联机对战：双方都要用同一个版本（{{version}}）。一方"创建房间"，把房间号发给对方；连不上时用"手动连接"。
 
@@ -58,7 +58,7 @@ Shadowverse: Evolve NEXT  {{version}}
 【日本語】
 
 これは何か
-  『Shadowverse: Evolve』の非公式対戦シミュレーターです。個人の学習・テスト用で、商用目的ではありません。
+  『Shadowverse: Evolve』の非公式対戦シミュレーターです。個人の学習・テスト用で、商用目的ではありません、ダウンロード後24時間以内に削除してください。
   公式（Cygames、ブシロード）とは関係ありません。カード画像や公式の画像素材は含まれていません。
 
 必要なもの
@@ -73,7 +73,7 @@ Shadowverse: Evolve NEXT  {{version}}
   他の OS：このフォルダで  node server.mjs  を実行します。
 
 できること
-  - AI と対戦：Bot-かんたん、Bot-ふつう、Bot-むずかしい、Bot-むずかしい beta（むずかしいとむずかしい beta はずるをします：あなたの手札と両方のデッキが見えます）。
+  - AI と対戦：3種類のBotから選択可能。
   - デッキ構築、リプレイ、設定（言語：English / 中文 / 日本語）。
   - オンライン対戦：お互いに同じバージョン（{{version}}）が必要です。片方が「ルームを作る」でルームコードを相手に送ります。
     つながらないときは「手動で接続」を使ってください。
@@ -110,7 +110,7 @@ Shadowverse: Evolve NEXT  {{version}}
 【English】
 
 What this is
-  An unofficial simulator of the card game Shadowverse: Evolve, for personal study and testing, not for commercial use.
+  An unofficial simulator of the card game Shadowverse: Evolve, for personal study and testing, not for commercial use, please delete within 24 hours of downloading.
   Not affiliated with Cygames or Bushiroad. No card images or official picture assets are included.
 
 You need
@@ -125,7 +125,7 @@ Start
   Other systems: run  node server.mjs  in this folder.
 
 What it does
-  - Play against the AI: Bot-Easy, Bot-Medium, Bot-Hard, Bot-Hard beta (Hard and Hard beta cheat: they see your hand and both decks).
+  - Play against the AI: 3 Bots with different difficulty.
   - Build decks, watch replays, settings (language: English / 中文 / 日本語).
   - Online play: both players need the same version ({{version}}). One makes a room and sends the room code;
     if it can't connect, use "Connect by hand".
