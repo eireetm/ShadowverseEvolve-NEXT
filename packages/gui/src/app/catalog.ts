@@ -1,6 +1,7 @@
 // Every card definition (from the engine worker at start), for showing cards and searching them. Read only.
 import type { CardLang } from "./settings";
 import type { CatalogCard } from "../engine/protocol";
+import { inCardLang } from "../i18n/hant";
 
 export class Catalog {
   private readonly byDef = new Map<string, CatalogCard>();
@@ -55,7 +56,7 @@ export class Catalog {
  */
 export function cardName(card: CatalogCard | undefined, lang: CardLang, fallback = "?"): string {
   if (!card) return fallback;
-  return card.names[lang] || (lang === "cn" ? card.names.ja : null) || card.name;
+  return inCardLang(lang, (data) => card.names[data] || (data === "cn" ? card.names.ja : null) || card.name);
 }
 
 /**
@@ -63,6 +64,8 @@ export function cardName(card: CatalogCard | undefined, lang: CardLang, fallback
  * placeholder, so the other languages fall back to Japanese, its original.
  */
 export function cardText(card: CatalogCard, lang: CardLang): string {
-  if (card.preview && lang !== "en") return card.text[lang] || card.text.ja || card.text.cn || "";
-  return card.text[lang] || card.text.en || card.text.ja || card.text.cn || "";
+  return inCardLang(lang, (data) => {
+    if (card.preview && data !== "en") return card.text[data] || card.text.ja || card.text.cn || "";
+    return card.text[data] || card.text.en || card.text.ja || card.text.cn || "";
+  });
 }

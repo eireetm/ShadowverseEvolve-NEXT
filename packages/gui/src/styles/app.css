@@ -58,6 +58,7 @@
   /* Chinese and Japanese share many characters but draw them differently: each language gets its own fonts first. */
   --sve-font-latin: "Segoe UI", system-ui;
   --sve-font-zh: "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Noto Sans SC", "Noto Sans CJK SC";
+  --sve-font-zh-hant: "Microsoft JhengHei UI", "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", "Noto Sans CJK TC";
   --sve-font-ja: "Yu Gothic UI", "Meiryo UI", "Meiryo", "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP";
   color-scheme: dark;
   font-family: var(--sve-font-latin), var(--sve-font-zh), var(--sve-font-ja), sans-serif;
@@ -72,6 +73,12 @@
 
 [lang|="zh"] {
   font-family: "Segoe UI", var(--sve-font-zh), var(--sve-font-ja), system-ui, sans-serif;
+}
+
+/* Traditional Chinese (lang="zh-Hant"): its own forms of the characters. */
+:root:lang(zh-Hant),
+[lang="zh-Hant"] {
+  font-family: "Segoe UI", var(--sve-font-zh-hant), var(--sve-font-zh), var(--sve-font-ja), system-ui, sans-serif;
 }
 
 * {

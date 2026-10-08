@@ -4,6 +4,7 @@ import { createEngine, type CardDefinition } from "@sve/core";
 import { ALL_CARDS, ALL_SCRIPTS } from "@sve/core/sets";
 import { describe, expect, it } from "vitest";
 import type { CardLang } from "../src/app/settings";
+import type { DataLang } from "../src/i18n/hant";
 import { Catalog } from "../src/app/catalog";
 import { giftLines, giftQuotes } from "../src/game/card/gifts";
 
@@ -14,11 +15,11 @@ import { giftLines, giftQuotes } from "../src/game/card/gifts";
 
 const engine = createEngine({ cards: ALL_CARDS, scripts: ALL_SCRIPTS });
 const catalog = new Catalog(engine.db.all().map((def) => ({ ...def, status: engine.implementationStatus(def.id) })));
-const LANGS: readonly CardLang[] = ["en", "cn", "ja"];
+const LANGS: readonly DataLang[] = ["en", "cn", "ja"];
 const card = (id: string) => ALL_CARDS.find((c) => c.id === id)!;
 
 /** The card's text in a language, or null where the data has none (a pre-release card's English text is a placeholder). */
-const textOf = (def: CardDefinition, lang: CardLang): string | null => {
+const textOf = (def: CardDefinition, lang: DataLang): string | null => {
   const text = def.text[lang];
   return text && text !== "unavailable" ? text : null;
 };

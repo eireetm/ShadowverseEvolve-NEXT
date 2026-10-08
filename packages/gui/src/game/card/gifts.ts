@@ -5,6 +5,7 @@ import type { Gift } from "@sve/core";
 import type { CardLang } from "../../app/settings";
 import type { Catalog } from "../../app/catalog";
 import type { CatalogCard } from "../../engine/protocol";
+import { dataLang, toHant, type DataLang } from "../../i18n/hant";
 
 /** What follows the last quote of a Chinese or Japanese gift ("获得「…」能力", "「…」を持つ" / "を得る"). */
 const AFTER: Record<"cn" | "ja", RegExp> = { cn: /^的?能力/, ja: /^を(?:持|得)/ };
@@ -30,7 +31,7 @@ function bracketed(text: string): { open: number; close: number }[] {
  * joined to it; a token's text after "―――" (the card describes a token it makes) is the token's. English: the quotes
  * other than a name's ('a follower with "Octrice" in its name', BP20-026).
  */
-export function giftQuotes(text: string, lang: CardLang): string[] {
+export function giftQuotes(text: string, lang: DataLang): string[] {
   if (lang === "en") {
     // Between the 1st and 2nd quote mark, the 3rd and 4th ...: what follows a name is " in its name".
     const parts = text.split('"');
@@ -46,11 +47,15 @@ export function giftQuotes(text: string, lang: CardLang): string[] {
   return quotes.filter((_, i) => gift[i]).map((q) => own.slice(q.open + 1, q.close));
 }
 
-/** A card's quoted abilities in a card language, or in the next one its text has them in (as cardText falls back). */
+/**
+ * A card's quoted abilities in a card language, or in the next one its text has them in (as cardText falls back);
+ * Traditional Chinese: the Chinese ones, converted.
+ */
 export function quotesOf(card: CatalogCard, lang: CardLang): { lang: CardLang; quotes: string[] } | null {
-  for (const l of [...new Set<CardLang>([lang, "en", "ja", "cn"])]) {
+  for (const l of [...new Set<DataLang>([dataLang(lang), "en", "ja", "cn"])]) {
     const quotes = giftQuotes(card.text[l] ?? "", l);
-    if (quotes.length > 0) return { lang: l, quotes };
+    if (quotes.length === 0) continue;
+    return lang === "zh-Hant" && l === "cn" ? { lang, quotes: quotes.map(toHant) } : { lang: l, quotes };
   }
   return null;
 }

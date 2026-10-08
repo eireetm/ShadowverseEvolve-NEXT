@@ -10,6 +10,7 @@ import type { Decision } from "@sve/core";
 import { cardName, type Catalog } from "../app/catalog";
 import type { CardLang } from "../app/settings";
 import type { Translate } from "../i18n";
+import { toHant } from "../i18n/hant";
 import { OPTION_TEXT, type OptionText } from "../i18n/option-text";
 import { withTokenLabels } from "./card/tokens";
 import { timingLabel } from "./labels";
@@ -52,6 +53,7 @@ function patternList(): Pattern[] {
 /** A card script's label (or a part of one) in `lang`: a card's name, a quoted text, a matching pattern; else as it is. */
 export function scriptLabel(label: string, ctx: Pick<OptionContext, "catalog" | "lang">): string {
   const { catalog, lang } = ctx;
+  if (lang === "zh-Hant") return toHant(scriptLabel(label, { ...ctx, lang: "cn" }));
   if (lang === "en") return withTokenLabels(label, "en");
   const card = catalog.named(label);
   if (card) return cardName(card, lang);

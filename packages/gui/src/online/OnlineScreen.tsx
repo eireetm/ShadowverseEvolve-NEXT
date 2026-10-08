@@ -143,7 +143,7 @@ export function OnlineScreen({ onBack, onGame, onEditDecks }: Props) {
         <button type="button" onClick={back} data-testid="online-back">
           {t("common.back")}
         </button>
-        {uiLang === "zh" ? <ThanksBoxes /> : null}
+        {uiLang === "zh" || uiLang === "zh-Hant" ? <ThanksBoxes /> : null}
       </div>
     </div>
   );

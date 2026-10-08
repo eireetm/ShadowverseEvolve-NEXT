@@ -27,7 +27,7 @@
   - 组卡界面：筛选、异画、赛制和禁卡表、卡组码；
   - 录像、复现包（逐字节重现一局）、撤销 / 倒回、手动调试；
   - 联机：P2P（不需要服务器），或者经过自己架的联机服务器（`@sve/server`）；
-  - 界面和卡牌文本都可以切换中文、英文、日文；
+  - 界面和卡牌文本都可以切换中文、英文、日文和 Traditional Chinese（由中文转换，用 OpenCC 的词典）；
   - 外观、声音、字体都可以换成自己的文件（见"自定义资源"）；衍生物在对局里显示哪个印刷版本的卡图，可以在设置页的"衍生物卡图"里选。
 - **安卓版**：同一个界面装进安卓 WebView（Capacitor），手机横屏使用。
 
@@ -131,7 +131,7 @@ packages/
       replays/          录像
       resources/        自定义资源的查找、主题、音效
       host/             文件的读写：电脑上调用本机服务层，安卓上读写手机里的文件
-      i18n/             界面文字（英文、中文、日文）
+      i18n/             界面文字（英文、中文、日文；Traditional Chinese 由中文转换）
       styles/           内置样式
     public/             玩家的自定义资源（只有空文件夹进仓库）
     decks/samples/      示例卡组
@@ -399,7 +399,7 @@ An unofficial rules engine, AI and client for the *Shadowverse: Evolve* trading 
   - A deck builder with filters, alternate arts, formats and restriction lists, and deck codes.
   - Replays, bug report files that replay a game exactly, undo and rewind, and manual debugging.
   - Online play: peer to peer (no server needed), or through an online server of your own (`@sve/server`).
-  - The interface and the card text can each be English, Chinese or Japanese.
+  - The interface and the card text can each be English, Chinese, Japanese or Traditional Chinese (converted from the Chinese with OpenCC's dictionaries).
   - Pictures, sounds and fonts can be replaced with your own files (see "Custom resources"); which printing a token shows in games is chosen in the settings ("Token art").
 - **Android app**: the same interface in the Android WebView (Capacitor), played with the phone held sideways.
 
@@ -503,7 +503,7 @@ packages/
       replays/          replays
       resources/        finding custom resources, the theme, sounds
       host/             file access: the local service on a computer, the phone's files on Android
-      i18n/             interface text (English, Chinese, Japanese)
+      i18n/             interface text (English, Chinese, Japanese; Traditional Chinese converted from the Chinese)
       styles/           built-in style
     public/             your own resources (only the empty folders are in the repository)
     decks/samples/      sample decks

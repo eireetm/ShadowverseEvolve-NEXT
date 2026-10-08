@@ -7,7 +7,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { IMPLEMENTED_KEYWORDS, opponentOf, type CardId, type CardView, type Keyword, type ManualDestination, type ManualOp, type PlayerId } from "@sve/core";
 import { cardName } from "../../app/catalog";
-import { useSettings } from "../../app/settings";
+import { useSettings, type UiLang } from "../../app/settings";
 import { useApp } from "../../app/store";
 import type { GameUpdate } from "../../engine/protocol";
 import { findCard, zoneOf } from "../../engine/view-utils";
@@ -241,7 +241,7 @@ function KeywordInput({ onApply }: { onApply: (keyword: Keyword) => void }) {
 }
 
 /** A counter kind (the card's own first, then every kind the GUI names) and how many to put or remove. */
-function CounterInput({ view, lang, onApply }: { view: CardView; lang: "en" | "zh" | "ja"; onApply: (counter: string, amount: number) => void }) {
+function CounterInput({ view, lang, onApply }: { view: CardView; lang: UiLang; onApply: (counter: string, amount: number) => void }) {
   const t = useT();
   const kinds = [...new Set([...Object.keys(view.counters), ...Object.keys(COUNTER_NAMES)])];
   const [counter, setCounter] = useState(kinds[0] ?? "stack");

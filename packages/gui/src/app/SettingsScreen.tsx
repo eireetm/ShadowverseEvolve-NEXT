@@ -3,7 +3,8 @@ import { hostApi, type ImportResult } from "../host/api";
 import { useT } from "../i18n";
 import { engine } from "./store";
 import { applyUiTransparency, currentUiTransparency, loadResources } from "../resources/resources";
-import { updateSettings, useSettings, type CardLang, type UiLang } from "./settings";
+import { updateSettings, useSettings, type CardLang, type Settings, type UiLang } from "./settings";
+import { loadHant, usesHant } from "../i18n/hant";
 import { settingsFilePath } from "./settings-file";
 import { useApp } from "./store";
 import { changedTokens } from "./token-art";
@@ -83,6 +84,12 @@ function ResourcesSection() {
  * The settings (remembered in this browser, and in the PC release's settings.ini too): the languages (the interface's and
  * the card text's), the appearance, sound, the game, online play.
  */
+/** Another language: Traditional Chinese's converter is loaded first, so the page changes at once (i18n/hant.ts). */
+function switchLang(change: Pick<Partial<Settings>, "uiLang" | "cardLang">): void {
+  if (usesHant({ uiLang: change.uiLang ?? "en", cardLang: change.cardLang ?? "en" })) void loadHant().then(() => updateSettings(change));
+  else updateSettings(change);
+}
+
 export function SettingsScreen({ onBack }: { onBack: () => void }) {
   const t = useT();
   const settings = useSettings();
@@ -114,17 +121,19 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
           <h3>{t("settings.language")}</h3>
           <label className="sve-settings-row">
             <span>{t("settings.uiLang")}</span>
-            <select value={settings.uiLang} onChange={(e) => updateSettings({ uiLang: e.target.value as UiLang })} data-testid="settings-ui-lang">
+            <select value={settings.uiLang} onChange={(e) => switchLang({ uiLang: e.target.value as UiLang })} data-testid="settings-ui-lang">
               <option value="en">English</option>
               <option value="zh">中文</option>
+              <option value="zh-Hant">Traditional Chinese</option>
               <option value="ja">日本語</option>
             </select>
           </label>
           <label className="sve-settings-row">
             <span>{t("settings.cardLang")}</span>
-            <select value={settings.cardLang} onChange={(e) => updateSettings({ cardLang: e.target.value as CardLang })}>
+            <select value={settings.cardLang} onChange={(e) => switchLang({ cardLang: e.target.value as CardLang })} data-testid="settings-card-lang">
               <option value="en">English</option>
               <option value="cn">中文</option>
+              <option value="zh-Hant">Traditional Chinese</option>
               <option value="ja">日本語</option>
             </select>
           </label>
