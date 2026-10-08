@@ -9,6 +9,7 @@ import { installClickSound, playBgm } from "../resources/sound";
 import type { BgmName } from "../resources/sound-plan";
 import { ReplaysScreen } from "../replays/ReplaysScreen";
 import { SetupScreen } from "../setup/SetupScreen";
+import { ChatNotice } from "../online/ChatNotice";
 import { MainMenu } from "./MainMenu";
 import { SettingsScreen } from "./SettingsScreen";
 import { useSettings } from "./settings";
@@ -112,6 +113,7 @@ export function App() {
   return (
     <div className="sve-app">
       <main className="sve-screen">{body}</main>
+      <ChatNotice />
       <ErrorToasts />
     </div>
   );

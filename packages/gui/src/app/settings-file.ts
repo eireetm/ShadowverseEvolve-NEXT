@@ -38,7 +38,7 @@ function whole(value: string, min: number, max: number): number | null {
 
 const percent = (fraction: number): string => String(Math.round(fraction * 100));
 
-const flag = (field: "animations" | "announceQuick" | "manualSlots" | "manualDebug" | "shareGames") => ({
+const flag = (field: "animations" | "announceQuick" | "manualSlots" | "manualDebug" | "shareGames" | "chatNotice") => ({
   values: "true, false",
   get: (s: Settings) => String(s[field]),
   set: (_: Settings, v: string) => {
@@ -130,6 +130,7 @@ const ENTRIES: readonly Entry[] = [
     set: (_, v) => ({ playerName: cleanName(v) }),
   },
   { section: "online", key: "share_games", field: "shareGames", label: "settings.shareGames", ...flag("shareGames") },
+  { section: "online", key: "chat_notice", field: "chatNotice", label: "settings.chatNotice", ...flag("chatNotice") },
   { section: "debug", key: "manual_slots", field: "manualSlots", label: "debug.manualSlots", ...flag("manualSlots") },
   { section: "debug", key: "manual_debug", field: "manualDebug", label: "debug.manual", ...flag("manualDebug") },
 ];

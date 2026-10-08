@@ -24,6 +24,7 @@ const mine: Settings = {
   manualDebug: true,
   playerName: "小明",
   shareGames: false,
+  chatNotice: true,
   setupDecks: ["mine.json", "samples/sd02.json"],
 };
 
@@ -43,9 +44,10 @@ describe("settings.ini", () => {
     expect(text).toContain("turn_password = p;w=1\n");
     const { settings, present, ignored } = readSettingsFile(text, DEFAULT_SETTINGS);
     expect(ignored).toEqual([]);
-    expect(present.size).toBe(15);
+    expect(present.size).toBe(16);
     expect(text).toContain("player_name = 小明\n");
     expect(text).toContain("share_games = false\n");
+    expect(text).toContain("chat_notice = true\n");
     for (const field of FILE_FIELDS) expect(settings[field], field).toEqual(mine[field]);
     // What isn't in the file (the last game setup ...) stays as the browser has it.
     expect(settings.setupDecks).toEqual(DEFAULT_SETTINGS.setupDecks);

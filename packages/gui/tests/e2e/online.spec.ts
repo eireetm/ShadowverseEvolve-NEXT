@@ -40,22 +40,31 @@ async function connectByHand(host: Page, guest: Page): Promise<void> {
   }
 }
 
-async function chatBothWays(host: Page, guest: Page): Promise<void> {
+/** Chat both ways, then the host leaves. `notice`: the host has "online chat notice" on, the guest hasn't. */
+async function chatBothWays(host: Page, guest: Page, notice = false): Promise<void> {
   for (const page of [host, guest]) await expect(page.getByTestId("online-rtt")).toHaveText(/\d+ ms/, { timeout: 15_000 });
   await host.getByTestId("online-chat-input").fill("hello from the host");
   await host.getByTestId("online-send").click();
   await expect(guest.getByTestId("online-chat")).toContainText("hello from the host");
+  // One's own line flashes nothing; nor does any line where the setting is off.
+  if (notice) for (const page of [host, guest]) await expect(page.getByTestId("chat-notice")).toHaveCount(0);
   await guest.getByTestId("online-chat-input").fill("こんにちは");
   await guest.getByTestId("online-send").click();
   await expect(host.getByTestId("online-chat")).toContainText("こんにちは");
+  if (notice) {
+    // The other's line flashes on the host's screen, and goes by itself.
+    await expect(host.getByTestId("chat-notice")).toHaveText("Someone sent a chat message");
+    await expect(host.getByTestId("chat-notice")).toHaveCount(0);
+    await expect(guest.getByTestId("chat-notice")).toHaveCount(0);
+  }
   // The host leaves: the guest is told.
   await host.getByTestId("online-leave").click();
   await expect(guest.getByTestId("online-closed")).toHaveText("The other player left.");
 }
 
-test("two programs connect with codes passed by hand, chat, and one leaves", async ({ browser }) => {
+test("two programs connect with codes passed by hand, chat (the host's screen flashes a notice), and one leaves", async ({ browser }) => {
   test.setTimeout(120_000);
-  const host = await openOnline(browser);
+  const host = await openOnline(browser, { chatNotice: true });
   const guest = await openOnline(browser);
   // A wrong code is refused.
   await guest.locator(".sve-online-manual summary").click();
@@ -63,7 +72,7 @@ test("two programs connect with codes passed by hand, chat, and one leaves", asy
   await guest.getByTestId("online-manual-join").click();
   await expect(guest.getByTestId("online-error")).toContainText("isn't a connection code");
   await connectByHand(host, guest);
-  await chatBothWays(host, guest);
+  await chatBothWays(host, guest, true);
 });
 
 /**

@@ -274,6 +274,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
   - 所有消息都经过服务器：不用打洞，也不用国外的公共服务；房间号输错会马上提示"房间不存在"；对方看不到你的 IP。
   - 配置：设置 → 联机 →"修改服务器配置"（联机界面里也有这个按钮），粘贴服务器的主人给你的文字，可以先"测试连接"。
   - **大厅**：列出公开的房间（"xxx的房间"、规则、等待对手还是对局中、观战人数），点"加入"或"观战"就能进。创建时取消"在大厅里公开这个房间"，就只能用房间号进。
+  - **房间密码**：创建时勾选"设置房间密码"，会随机生成 6 位数字，加入和观战都要输入；大厅里上锁的房间写着"需要密码"。
   - **保存对局**：设置 → 联机 →"联机自动保存对局到云端"（默认开）。双方都开着时，下完的对局会存到服务器上，用来训练 AI：只有种子、双方卡组和每一步，没有名字和聊天。有一方关掉就不存，房间里会写明这局存不存。
 - **不用服务器（P2P）**：
   - **房间号**：一方创建房间，把 6 位房间号发给对方。双方借用公共的免费服务（Nostr、MQTT、BitTorrent）找到对方，然后用 WebRTC 直连。
@@ -283,8 +284,10 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 - **对局**：双方各自运行同一局，只同步每一步的回答。断线后可以重连，接着打。
   - **悔棋**：房主在规则里勾选"允许悔棋"（使用服务器时在创建房间之前，也可以在房间里改）。对局中在侧边栏"调试"里点"撤销我的上一个回答"：你上一个回答之后对方还没操作过，两边就一起退回到那一步；对方操作过就不能撤销。观战者也跟着退。
   - 联机时种子和"保存复现包"在对局结束后才显示（有了它们，改过的程序能推算出牌组顺序）。
+  - **聊天提醒**：设置 → 联机 →"联机聊天提醒"（默认关）。打开后，对手或观战者发了聊天消息时，屏幕上方会闪一下"有人发了一条聊天消息"；自己发的不提醒。
 - **观战**：知道房间号的人点"观战"进房间看对局。P2P 的房间最多 2 人；用服务器时由服务器决定（默认 10 人）。
   - 只能看双方都看得到的信息（看不到手牌），可以换边；不能操作，也不能发言（能看到聊天）。
+  - 使用服务器时，房主可以在规则里允许观战者看到手牌（观战者在"调试"里打开"显示所有背面的卡"）和发言。
   - 对局中途进来的马上追上进度；断线后自动重连。
   - 只有用房间号连接时才能观战（手动连接不行）。
 
@@ -646,6 +649,7 @@ Sound effects (26):
   - Every message goes through the server: no hole punching, no public services abroad; a wrong code is said at once ("no room of that code"); the other player doesn't see your IP.
   - Configuration: Settings > Online > "Edit the server configuration" (the online screen has the button too): paste the text the server's owner gave you; "Test the connection" first if you like.
   - **Lobby**: the public rooms ("xxx's room", the rules, waiting or playing, the spectators), joined or watched with a click. Untick "List the room in the lobby" before making a room to have it joined by its code only.
+  - **Room password**: tick "A password" before making a room: 6 random digits, asked of whoever joins or watches; the lobby marks such rooms "password".
   - **Keeping games**: Settings > Online > "Keep my online games on the server" (on by default). When both players have it on, a finished game is kept on the server to train the AI: the seed, both decks and every move, no names, no chat. One of them off: not kept; the room says which.
 - **Without the server (P2P)**:
   - **Room code**: one player creates a room and sends the 6-letter code to the other. Both find each other through free public services (Nostr, MQTT, BitTorrent), then connect directly with WebRTC.
@@ -655,8 +659,10 @@ Sound effects (26):
 - **The game**: each program runs the same game and only the answers are exchanged. After a lost connection, reconnect and play on.
   - **Taking back**: the host ticks "Allow taking back answers" in the rules (on the server, before making the room; it can be changed in the room too). In the game, "Undo my last answer" on the sidebar's Debug tab takes both programs back to before your last answer, while the other player hasn't answered since; after they have, it can't. Spectators follow.
   - Online, the seed and "Save a bug report file" are shown once the game is over (with them, a changed program could work out the decks' order).
+  - **Chat notice**: Settings > Online > "Online chat notice" (off by default). With it on, "Someone sent a chat message" flashes at the top of the screen when the other player or a spectator writes in the chat; your own messages don't.
 - **Watching**: anyone with the room code can click "Watch" to watch the room's games: 2 spectators a room at most without the server; with it, as many as the server says (10 by default).
   - Spectators see only what both players can see (no hands) and can swap sides; they can't play or chat (they read the chat).
+  - On the server, the host's rules can let spectators see the hands (each turns on "Reveal all hidden cards" on the Debug tab) and write in the chat.
   - One who comes in the middle of a game catches up at once; a lost connection connects again by itself.
   - Watching needs a room code (not a manual connection).
 

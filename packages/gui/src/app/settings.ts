@@ -48,6 +48,8 @@ export interface Settings {
   playerName: string;
   /** Online play on the server: a finished game is kept on the server (to train the bots), if both players allow it. */
   shareGames: boolean;
+  /** Online play: a notice flashes on the screen when the other player or a spectator writes in the chat (online/ChatNotice.tsx). */
+  chatNotice: boolean;
   /** Online play on the server: a room made is listed in the server's lobby (else it is joined by its code only). */
   publicRooms: boolean;
   /** Online play, the host's rule: players may take back their last answer while the other hasn't answered since. */
@@ -82,6 +84,7 @@ export const DEFAULT_SETTINGS: Settings = {
   turn: { urls: "", username: "", credential: "" },
   playerName: "",
   shareGames: true,
+  chatNotice: false,
   publicRooms: true,
   allowUndo: false,
   roomPassword: false,

@@ -38,12 +38,17 @@ test("a tablet: the menus scroll, the deck builder works by tapping, a card is d
   await page.goto("/");
   await expect(page.getByTestId("menu-play")).toBeEnabled({ timeout: 120_000 });
 
-  // The settings are taller than the screen: a swipe scrolls them, and their last button can be reached.
+  // The settings are taller than the screen: swipes scroll them (a finger on the labels' side, off the controls), and their
+  // last button can be reached.
   await page.getByTestId("menu-settings").tap();
   const back = page.locator(".sve-settings > button").last();
-  const below = (await back.boundingBox())!.y + 20 > 712;
-  const start = await middle(page.locator(".sve-settings"));
-  await fingerDrag(page, cdp, { x: start.x, y: 600 }, { x: start.x, y: 200 });
+  const bottom = async () => {
+    const b = (await back.boundingBox())!;
+    return b.y + b.height;
+  };
+  const below = (await bottom()) > 712;
+  const x = (await page.locator(".sve-settings").boundingBox())!.x + 24;
+  for (let i = 0; i < 4 && (await bottom()) > 712; i++) await fingerDrag(page, cdp, { x, y: 600 }, { x, y: 200 });
   if (below) expect(await page.locator(".sve-menu").evaluate((e) => e.scrollTop)).toBeGreaterThan(0);
   const box = (await back.boundingBox())!;
   expect(box.y + box.height).toBeLessThanOrEqual(712);
