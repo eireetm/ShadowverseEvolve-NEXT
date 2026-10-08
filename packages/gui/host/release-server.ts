@@ -1,7 +1,8 @@
 // The PC release's local server (scripts/release-pc.ts bundles it into the release as server.mjs, README "发行版"): the
 // built app (app/), the player's own files (public/), and the GUI's /api/* (decks, replays, the list of public/ files, the
 // settings file settings.ini) — the same deck / replay / resource code the dev server's plugin.ts uses. No assets folder: card images and the game's
-// look come only from public/ (else the built-in style). Only this computer can reach it (127.0.0.1).
+// look come only from public/ (else the built-in style). Only this computer can reach it (127.0.0.1). It also updates the
+// program from GitHub's latest release (update.ts; only the release has /api/update).
 import { spawn } from "node:child_process";
 import { createReadStream, existsSync, mkdirSync, statSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
@@ -14,9 +15,13 @@ import { browserHasFile, fileTag } from "./file-cache.ts";
 import { deleteReplayFile, listReplays, readReplayText, replayPath, writeReplayText } from "./replays.ts";
 import { listResources, ownCardArt } from "./resources.ts";
 import { readSettingsText, writeSettingsText } from "./settings-file.ts";
+import { localSources, Updater } from "./update.ts";
 
 /** The release's version (packages/gui/package.json), put in when the release is built. */
 declare const __SVE_VERSION__: string;
+
+// The window's title: start.bat's has no version, as an update replaces the program while that window stays.
+process.title = `Shadowverse: Evolve NEXT ${__SVE_VERSION__}`;
 
 // The release's folder: where server.mjs, the bundle of this file, is.
 const root = dirname(fileURLToPath(import.meta.url));
@@ -37,6 +42,15 @@ const cfg: HostConfig = {
   settingsFile,
 };
 for (const dir of [cfg.publicDir, cfg.decksDir, cfg.replaysDir]) mkdirSync(dir, { recursive: true });
+
+// Updates (settings "检查版本更新"; update.ts): GitHub's latest release. SVE_UPDATE_TEST_ORIGIN: GitHub played by a server on
+// this computer, for the tests (nothing else is taken).
+const testOrigin = process.env.SVE_UPDATE_TEST_ORIGIN ?? "";
+const updater = new Updater({
+  root,
+  version: __SVE_VERSION__,
+  ...(/^http:\/\/127\.0\.0\.1:\d+$/.test(testOrigin) ? { sources: localSources(testOrigin), proxy: async () => null } : {}),
+});
 
 const TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -211,7 +225,34 @@ async function api(req: IncomingMessage, res: ServerResponse, url: URL): Promise
       return sendJson(res, 200, { ok: true });
     }
   }
+  // Updates (update.ts): { version, job }; the latest release; install the newer one the check found, then restart.
+  if (path === "update/status" && req.method === "GET") return sendJson(res, 200, updater.status());
+  if (path === "update/check" && req.method === "GET") return sendJson(res, 200, await updater.check());
+  if (path === "update/install" && req.method === "POST") {
+    // JSON only: another site's page can't send that here without asking first (CORS), which this server never allows.
+    if (!(req.headers["content-type"] ?? "").startsWith("application/json")) return sendJson(res, 415, { error: "JSON only" });
+    return sendJson(res, updater.install(restart) ? 202 : 409, updater.status());
+  }
   return sendJson(res, 404, { error: "unknown API" });
+}
+
+/**
+ * After an update: this server stops, and the new server.mjs starts in this window on this port, where the page finds it
+ * and loads the new version. This process waits for it, so closing the window still ends both.
+ */
+function restart(): void {
+  // A moment first: the page's next look at the status sees "restarting".
+  setTimeout(() => {
+    server.close(() => {
+      const next = spawn(process.execPath, [join(root, "server.mjs"), "--no-open"], { cwd: root, stdio: "inherit", env: { ...process.env, SVE_PORT: String(port) } });
+      next.on("exit", (code) => process.exit(code ?? 0));
+      next.on("error", (err) => {
+        console.error(err.message);
+        process.exit(1);
+      });
+    });
+    server.closeAllConnections();
+  }, 600);
 }
 
 let port = Number(process.env.SVE_PORT ?? process.argv.find((a) => a.startsWith("--port="))?.slice(7) ?? 5170);

@@ -82,6 +82,7 @@ function readBody(req: IncomingMessage): Promise<string> {
  *  PUT  /api/settings-file                 write the settings file (text body)
  *  GET  /api/online-server                 { path, text }: the online server file (HostConfig.serverFile; path null: none)
  *  PUT  /api/online-server                 write it (text body)
+ *  GET  /api/update/status                 null: no updates (the PC release's server has /api/update: release-server.ts)
  */
 export function hostPlugin(cfg: HostConfig = hostConfig()): Plugin {
   const handle = async (req: IncomingMessage, res: ServerResponse, next: Next): Promise<void> => {
@@ -177,6 +178,8 @@ export function hostPlugin(cfg: HostConfig = hostConfig()): Plugin {
           return sendJson(res, 200, { ok: true });
         }
       }
+      // No updates here (the PC release's server has them: release-server.ts): null, not a 404 the browser logs as an error.
+      if (path === "update/status" && req.method === "GET") return sendJson(res, 200, null);
       return sendJson(res, 404, { error: "unknown API" });
     } catch (err) {
       return sendJson(res, 500, { error: err instanceof Error ? err.message : String(err) });

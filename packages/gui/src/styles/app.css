@@ -322,6 +322,34 @@ option {
   font-size: 12px;
 }
 
+/* Under it, the PC release's "check for updates" and what it found (app/UpdateWindow.tsx). */
+.sve-settings-update {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+/* The window offering a newer version, then the update as it goes. */
+.sve-update-backdrop {
+  inset: 0;
+}
+
+.sve-update {
+  width: min(440px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sve-update-text {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
 .sve-menu-buttons {
   display: flex;
   flex-direction: column;
