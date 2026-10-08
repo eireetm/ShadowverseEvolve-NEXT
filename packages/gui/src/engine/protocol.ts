@@ -295,6 +295,14 @@ export interface LogEntry {
   cards: Record<CardId, CardInfo>;
 }
 
+/** Additional presentation data for a visible instance. Type, stats and gifts remain in CardView. */
+export interface CardRuntimeDetails {
+  enteredFieldThisTurn: boolean;
+  cannotAttack: boolean;
+  cannotAttackLeader: boolean;
+  cannotDealDamage: boolean;
+}
+
 export interface GameUpdate {
   seed: string;
   controllers: [SeatController, SeatController];
@@ -321,6 +329,8 @@ export interface GameUpdate {
   /** Whose view this is (the human's seat; in hot seat, the player who must decide). */
   perspective: PlayerId;
   view: PlayerView;
+  /** Computed with the same state and visibility as view on every publication. */
+  cardDetails: Record<CardId, CardRuntimeDetails>;
   decision: DecisionInfo | null;
   waitingFor: PlayerId | null;
   /** A bot is about to answer. */

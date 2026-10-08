@@ -2009,6 +2009,14 @@ option {
   font-size: 13.5px;
 }
 
+.sve-details-current-state .sve-details-flags span {
+  padding: 1px 4px;
+  border: 1px solid var(--sve-muted);
+  border-radius: 4px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
 .sve-card-text {
   font-size: 14.5px;
   line-height: 1.55;
