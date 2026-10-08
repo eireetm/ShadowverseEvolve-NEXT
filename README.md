@@ -176,6 +176,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 | `images/cards/unknown` | 卡图缺失时的替代图（上面会写出卡名） |
 | `images/backs/default` | 主卡组的卡背（牌组、背面朝上的卡、对手的手牌） |
 | `images/backs/evolve` | 进化牌组的卡背（没有时用主卡组的卡背） |
+| `images/credits/beardad` | 中文联机界面最下面"感谢熊爸卡牌"点开后显示的赞助者 logo（没有时只显示文字） |
 | `textures/board/field` | 一方的场地，对手的是同一张图旋转 180°。牌桌按原图（1586×992）上的格子摆卡，换图时要保持同样的尺寸和格子位置 |
 | `textures/menu/background_m` | 主界面的背景（设置、开局页也用） |
 | `textures/menu/background_d` | 组卡界面的背景（没有时用主界面的） |
@@ -546,6 +547,7 @@ The game's look and sound can be replaced or extended with your own files, with 
 | `images/cards/unknown` | Shown when a card image is missing (with the card name written on it) |
 | `images/backs/default` | The main deck's card back (the deck, face-down cards, the opponent's hand) |
 | `images/backs/evolve` | The evolve deck's card back (the main deck's back when missing) |
+| `images/credits/beardad` | The sponsor's logo shown by "感谢熊爸卡牌" at the bottom of the Chinese online screen (only the thanks when missing) |
 | `textures/board/field` | One side's playmat; the opponent's is the same picture turned 180°. Cards sit on the slots drawn on the original (1586×992), so a new picture must keep that size and those slots |
 | `textures/menu/background_m` | The main menu's background (also settings and game setup) |
 | `textures/menu/background_d` | The deck builder's background (the main menu's when missing) |

@@ -193,6 +193,11 @@ export type ToWorker =
   /** A spectator: which side of the table is at the bottom (both are shown as the other player sees them). */
   | { kind: "spectatorSide"; perspective: PlayerId }
   /**
+   * A spectator: whether the room's host lets its spectators see both players' hidden cards (they are shown when the
+   * spectator turns on "reveal all" too: HostSettings.revealAll).
+   */
+  | { kind: "spectatorReveal"; allowed: boolean }
+  /**
    * The playback of the replay being watched: play or pause, its speed, go to a position (0: the start), one step forward
    * or back, whose view (with or without both players' hidden cards: HostSettings.revealAll).
    */
@@ -309,9 +314,10 @@ export interface GameUpdate {
    * Online play (null: a local game): this program's seat and the one the other program plays (both null: a spectator,
    * who watches the two players' programs), and whether the games differ. In a room that allows taking answers back
    * (`allowUndo`), `undo` is where "undo my last answer" goes back to: this person's last answer, while the other player
-   * hasn't answered since and the game goes on (null: not now).
+   * hasn't answered since and the game goes on (null: not now). A spectator may see both players' hidden cards
+   * (`revealAllowed`: the host lets it; it turns on "reveal all" for that).
    */
-  online: { seat: PlayerId | null; remote: PlayerId | null; desync: string | null; spectating: boolean; allowUndo: boolean; undo: number | null } | null;
+  online: { seat: PlayerId | null; remote: PlayerId | null; desync: string | null; spectating: boolean; allowUndo: boolean; undo: number | null; revealAllowed: boolean } | null;
   /** Whose view this is (the human's seat; in hot seat, the player who must decide). */
   perspective: PlayerId;
   view: PlayerView;

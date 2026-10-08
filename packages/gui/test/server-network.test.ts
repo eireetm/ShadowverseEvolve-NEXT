@@ -4,6 +4,7 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { WebSocketServer } from "ws";
 import { readConfig } from "../../server/src/config";
 import { recordFiles } from "../../server/src/records";
 import { startRelay, type Relay } from "../../server/src/relay";
@@ -46,8 +47,11 @@ const until = async (check: () => boolean, ms = 4000): Promise<void> => {
   }
 };
 
-/** A program in room `code` on the server: its links, what each brought, the seats it was told, the problems it heard. */
-function program(settings: ServerSettings, code: string, role: "host" | JoinAs, mode: JoinMode) {
+/**
+ * A program in room `code` on the server (with the room's `password`, if any): its links, what each brought, the seats it was
+ * told, the problems it heard.
+ */
+function program(settings: ServerSettings, code: string, role: "host" | JoinAs, mode: JoinMode, password: string | null = null) {
   const links: { link: PeerLink; as: JoinAs; got: NetMessage[]; closed: boolean }[] = [];
   const problems: ServerProblem[] = [];
   let seats = -1;
@@ -73,7 +77,7 @@ function program(settings: ServerSettings, code: string, role: "host" | JoinAs, 
       admit,
     },
     undefined,
-    [serverNetwork(settings, mode, { onWelcome: (n) => (seats = n), onProblem: (p) => problems.push(p) })],
+    [serverNetwork(settings, mode, { onWelcome: (n) => (seats = n), onProblem: (p) => problems.push(p) }, password)],
   );
   meetings.push(meeting);
   return { links, meeting, problems, seats: () => seats, isFull: () => full, players: () => open("player"), watchers: () => open("watch") };
@@ -115,6 +119,42 @@ describe("rooms on the online server", () => {
     const back = program(settings, "SRV001", "player", "any");
     await until(() => host.players() === 1 && back.links.length === 1);
     expect(host.problems).toEqual([]);
+  });
+
+  it("a room with a password takes only those who say it; a server too old for passwords makes no room with one", async () => {
+    const settings = await startServer(2);
+    const host = program(settings, "PASS01", "host", "create", "135790");
+    await until(() => host.seats() === 2);
+    const none = program(settings, "PASS01", "player", "join");
+    const wrong = program(settings, "PASS01", "player", "join", "000000");
+    await until(() => none.problems.length > 0 && wrong.problems.length > 0);
+    expect([none.problems, wrong.problems, host.players()]).toEqual([["password"], ["password"], 0]);
+    const guest = program(settings, "PASS01", "player", "join", "135790");
+    await until(() => host.players() === 1 && guest.links.length === 1);
+    const watcher = program(settings, "PASS01", "watch", "join", "135790");
+    await until(() => host.watchers() === 1 && watcher.links.length === 1);
+    // A server before 1.2.0 keeps no password: a room made with one would be open, so none is made; joining needs none.
+    const old = new WebSocketServer({ port: 0, host: "127.0.0.1" });
+    const joins: unknown[] = [];
+    old.on("connection", (ws) =>
+      ws.on("message", (data) => {
+        const m = JSON.parse(String(data)) as { t: string };
+        if (m.t === "hello") ws.send(JSON.stringify({ t: "welcome", v: 1, id: "old", seats: 2, records: false }));
+        else if (m.t === "join") joins.push(m);
+      }),
+    );
+    try {
+      await new Promise<void>((done) => old.once("listening", () => done()));
+      const oldSettings = { ...settings, address: `ws://127.0.0.1:${(old.address() as AddressInfo).port}` };
+      const locked = program(oldSettings, "PASS02", "host", "create", "111111");
+      await until(() => locked.problems.length > 0);
+      expect(locked.problems).toEqual(["nopassword"]);
+      program(oldSettings, "PASS03", "player", "join", "111111");
+      await until(() => joins.length === 1);
+      expect(joins).toEqual([{ t: "join", room: "PASS03", mode: "join", password: "111111" }]);
+    } finally {
+      old.close();
+    }
   });
 
   it("says at once that a room isn't there, or is there already, or is full", async () => {
@@ -181,7 +221,7 @@ describe("the server's lobby and the games it keeps", () => {
     await until(() => handle !== null);
     handle!.describe(info());
     await until(() => seen.length === 2);
-    expect(seen[1]).toEqual([{ code: "LOBBY1", name: "小明", format: "standard", list: "10_26_JPN", turnOrder: "choose", players: 1, watchers: 0, playing: false, seats: 4 }]);
+    expect(seen[1]).toEqual([{ code: "LOBBY1", name: "小明", format: "standard", list: "10_26_JPN", turnOrder: "choose", players: 1, watchers: 0, playing: false, seats: 4, locked: false }]);
     handle!.describe(info({ public: false }));
     await until(() => seen.length === 3);
     expect(seen[2]).toEqual([]);

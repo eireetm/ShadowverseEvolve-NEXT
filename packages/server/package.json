@@ -1,6 +1,6 @@
 {
   "name": "@sve/server",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "type": "module",
   "description": "The online server for the app's \"use the server\" online mode: rooms by code, messages passed between the programs in a room.",

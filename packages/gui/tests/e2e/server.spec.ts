@@ -244,11 +244,104 @@ test("a room that allows taking answers back: the debug tab's undo, on both side
   expect(problems).toEqual([]);
 });
 
-test("the Chinese online screen has the three boxes at its bottom; the other languages don't", async ({ browser }) => {
+test("the Chinese online screen has the three boxes at its bottom, the sponsor's opens its window; the other languages don't", async ({ browser }) => {
   const zh = await openOnline(browser, SERVER, { uiLang: "zh" });
-  await expect(zh.getByTestId("online-thanks").locator("div")).toHaveText(["广告位招租", "广告位招租", "感谢熊爸卡牌"]);
+  await expect(zh.getByTestId("online-thanks").locator("div")).toHaveText(["感谢赞助者", "感谢赞助者"]);
+  await expect(zh.getByTestId("online-thanks-sponsor")).toHaveText("感谢熊爸卡牌");
+  await zh.getByTestId("online-thanks-sponsor").click();
+  await expect(zh.getByTestId("online-sponsor")).toContainText("感谢熊爸卡牌倾情赞助");
+  await zh.getByTestId("online-sponsor-close").click();
+  await expect(zh.getByTestId("online-sponsor")).toHaveCount(0);
   const en = await openOnline(browser, SERVER);
   await expect(en.getByTestId("online-thanks")).toHaveCount(0);
+});
+
+/** The cards of a seat's hand on a page, and how many of them show their face. */
+async function handFaces(page: Page, seat: 0 | 1): Promise<{ cards: number; faces: number }> {
+  const cards = await page.locator(`[data-zone="${seat}:hand"] [data-card]`).count();
+  const backs = await page.locator(`[data-zone="${seat}:hand"] [data-card][data-hidden="true"]`).count();
+  return { cards, faces: cards - backs };
+}
+
+test("a room with a password, whose spectators may chat and see the hands; the other player's deck stays unnamed", async ({ browser }) => {
+  test.setTimeout(240_000);
+  const problems: string[] = [];
+  const host = await openOnline(browser, SERVER, {
+    playerName: "Host",
+    roomPassword: true,
+    allowWatchHands: true,
+    allowWatchChat: true,
+    setupTurnOrder: "player1",
+    setupDecks: ["samples/sd01.json", "samples/sd02.json"],
+  });
+  const guest = await openOnline(browser, SERVER, { setupDecks: ["samples/sd03.json", "samples/sd02.json"] });
+  const spectator = await openOnline(browser, SERVER, { playerName: "Red" });
+  watchProblems([host, guest, spectator], problems);
+  for (const id of ["online-server-password", "online-server-watch-hands", "online-server-watch-chat"]) await expect(host.getByTestId(id)).toBeChecked();
+  await host.getByTestId("online-server-host").click();
+  const code = (await host.getByTestId("online-room-code").innerText({ timeout: 30_000 })).trim();
+  const password = (await host.getByTestId("online-room-password").innerText()).trim();
+  expect(password).toMatch(/^[0-9]{6}$/);
+
+  // The lobby lists it as locked: its password is asked there.
+  const row = spectator.locator(`[data-testid="online-lobby-room"][data-code="${code}"]`);
+  await expect(row).toHaveAttribute("data-locked", "yes", { timeout: 30_000 });
+  await expect(row.getByTestId("online-lobby-watch")).toBeDisabled();
+
+  // Without the password, no way in; with it, in.
+  await guest.getByTestId("online-server-code").fill(code);
+  await guest.getByTestId("online-server-join").click();
+  await expect(guest.getByTestId("online-closed")).toHaveText("Wrong password: this room needs its password (ask its host).", { timeout: 30_000 });
+  await guest.getByTestId("online-again").click();
+  await guest.getByTestId("online-server-code").fill(code);
+  await guest.getByTestId("online-server-room-password").fill(password);
+  await guest.getByTestId("online-server-join").click();
+  for (const page of [host, guest]) {
+    await expect(page.getByTestId("online-connected")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId("online-password")).toHaveText(password);
+  }
+  await expect(guest.getByTestId("online-rules")).toHaveText("Standard · restriction list: None · first player: Player 1 goes first · spectators see the hands · spectators chat");
+
+  // The spectator comes from the lobby with the password, and may write: both players read its line, with its name.
+  await row.getByTestId("online-lobby-password").fill(password);
+  await row.getByTestId("online-lobby-watch").click();
+  await expect(spectator.getByTestId("online-watching")).toBeVisible({ timeout: 30_000 });
+  await spectator.getByTestId("online-chat-input").fill("good luck");
+  await spectator.getByTestId("online-send").click();
+  for (const page of [host, guest]) await expect(page.getByTestId("online-chat")).toContainText("Spectator Red: good luck");
+  await expect(spectator.getByTestId("online-chat")).toContainText("Me: good luck");
+  await guest.getByTestId("online-chat-input").fill("thanks");
+  await guest.getByTestId("online-send").click();
+  await expect(spectator.getByTestId("online-chat")).toContainText("Player 2: thanks");
+
+  // Before the game, the other player's deck is said ready, not named.
+  await expect(guest.getByTestId("online-ready")).toBeEnabled({ timeout: 30_000 });
+  await guest.getByTestId("online-ready").click();
+  await expect(host.getByTestId("online-opponent")).toHaveAttribute("data-ready", "yes");
+  await expect(host.getByTestId("online-opponent")).toHaveText("Ready");
+  await host.getByTestId("online-ready").click();
+  for (const page of [host, guest, spectator]) await expect(page.locator(".sve-table")).toBeVisible({ timeout: 30_000 });
+
+  // The spectator sees no hand until it turns "reveal all" on (its debug tab has it: the host allows it); then both.
+  await expect.poll(async () => (await handFaces(spectator, 0)).cards, { timeout: 30_000 }).toBeGreaterThan(0);
+  for (const seat of [0, 1] as const) expect((await handFaces(spectator, seat)).faces).toBe(0);
+  await spectator.getByTestId("sidebar-show").click();
+  await spectator.getByTestId("tab-debug").click();
+  // (Checked once the engine worker's update says so.)
+  await spectator.getByTestId("debug-reveal-all").click();
+  await expect(spectator.getByTestId("debug-reveal-all")).toBeChecked();
+  for (const seat of [0, 1] as const) {
+    await expect.poll(async () => {
+      const hand = await handFaces(spectator, seat);
+      return hand.cards > 0 && hand.faces === hand.cards;
+    }).toBe(true);
+  }
+  // A player never has it.
+  await guest.getByTestId("sidebar-show").click();
+  await guest.getByTestId("tab-debug").click();
+  await expect(guest.getByTestId("debug-reveal-all")).toHaveCount(0);
+  expect((await handFaces(guest, 0)).faces).toBe(0);
+  expect(problems).toEqual([]);
 });
 
 test("the server's configuration: none, pasted in the settings' window, tested; a wrong key is said", async ({ browser }) => {

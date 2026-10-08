@@ -82,6 +82,11 @@ export function battleImageUrl(): string | null {
   return background("background_f");
 }
 
+/** A sponsor's logo (the online screen's thanks, in the Chinese interface): public/images/credits/<name>.*. */
+export function creditImageUrl(name: string): string | null {
+  return find(`images/credits/${name}`, IMAGE);
+}
+
 /** An icon for a card-text token ("fanfare", "cost02", ...), from public/textures/icons/. */
 export function iconUrl(token: string): string | null {
   return find(`textures/icons/${token}`, IMAGE);

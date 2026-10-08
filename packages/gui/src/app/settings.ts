@@ -51,6 +51,11 @@ export interface Settings {
   publicRooms: boolean;
   /** Online play, the host's rule: players may take back their last answer while the other hasn't answered since. */
   allowUndo: boolean;
+  /** Online play on the server: a room made has a password (6 random digits) asked of the other player and the spectators. */
+  roomPassword: boolean;
+  /** Online play on the server, the host's rules: spectators may see both players' hidden cards ("reveal all"), and chat. */
+  allowWatchHands: boolean;
+  allowWatchChat: boolean;
 }
 
 const KEY = "sve-gui-settings";
@@ -78,6 +83,9 @@ export const DEFAULT_SETTINGS: Settings = {
   shareGames: true,
   publicRooms: true,
   allowUndo: false,
+  roomPassword: false,
+  allowWatchHands: false,
+  allowWatchChat: false,
 };
 
 /**

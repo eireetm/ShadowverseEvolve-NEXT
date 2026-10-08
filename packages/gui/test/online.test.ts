@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decodeSignal, encodeSignal, newRoomCode, normalizeRoomCode, ROOM_CODE_LENGTH } from "../src/net/codes";
+import { decodeSignal, encodeSignal, newRoomCode, newRoomPassword, normalizeRoomCode, normalizeRoomPassword, ROOM_CODE_LENGTH } from "../src/net/codes";
 import { BACKLOG_PIECE, parseMessage, watchedOptions, type WatchedGame } from "../src/net/messages";
 import { iceServers, STUN_SERVERS } from "../src/net/relays";
 
@@ -33,6 +33,17 @@ describe("room codes", () => {
     expect(normalizeRoomCode(" k7q-m2x ")).toBe("K7QM2X");
     // O, I, L, 0, 1 are never in a code; a wrong length isn't one either.
     for (const bad of ["K7QM2O", "K7QM2I", "K7Q M21", "K7QM2", "K7QM2XX", ""]) expect(normalizeRoomCode(bad)).toBeNull();
+  });
+
+  it("a room's password on the server: 6 random digits, each as likely; typed ones tidied up", () => {
+    // Bytes from 250 on are drawn again (250 = 25 × 10: below it, each digit as likely).
+    let draws = 0;
+    const bytes = [Uint8Array.from([250, 255, 9, 10, 249, 0]), Uint8Array.from([123, 7, 1, 2, 3, 4])];
+    expect(newRoomPassword(() => bytes[draws++]!)).toBe("909037");
+    for (let i = 0; i < 50; i++) expect(newRoomPassword()).toMatch(/^[0-9]{6}$/);
+    expect(normalizeRoomPassword(" 123 456 ")).toBe("123456");
+    expect(normalizeRoomPassword("１２３４５６")).toBe("123456");
+    for (const bad of ["12345", "1234567", "12345a", ""]) expect(normalizeRoomPassword(bad)).toBeNull();
   });
 });
 
@@ -79,8 +90,12 @@ describe("messages", () => {
   });
 
   it("carry a game's preparation and answers, checked field by field", () => {
-    const rules = { format: "crossCraft", list: "01_26_EN_CROSS", turnOrder: "random", undo: false };
+    const rules = { format: "crossCraft", list: "01_26_EN_CROSS", turnOrder: "random", undo: false, watchHands: false, watchChat: false };
     expect(parseMessage({ t: "rules", rules })).toEqual({ t: "rules", rules });
+    // What the spectators may do (the server's rooms): only when the host says so; an older host's rules say nothing of it.
+    expect(parseMessage({ t: "rules", rules: { ...rules, watchHands: true, watchChat: "yes" } })).toEqual({ t: "rules", rules: { ...rules, watchHands: true } });
+    const { watchHands: _h, watchChat: _c, ...older } = rules;
+    expect(parseMessage({ t: "rules", rules: older })).toEqual({ t: "rules", rules });
     expect(parseMessage({ t: "rules", rules: { ...rules, list: null } })).toEqual({ t: "rules", rules: { ...rules, list: null } });
     // Taking answers back: allowed only when the host says so.
     expect(parseMessage({ t: "rules", rules: { ...rules, undo: true } })).toEqual({ t: "rules", rules: { ...rules, undo: true } });
@@ -128,6 +143,10 @@ describe("messages", () => {
     expect(parseMessage({ t: "watchers", n: 101 })).toBeNull();
     expect(parseMessage({ t: "chat", text: "gl", seat: 1 })).toEqual({ t: "chat", text: "gl", seat: 1 });
     expect(parseMessage({ t: "chat", text: "gl", seat: 2 })).toBeNull();
+    // A spectator's line passed on by the host: its name, cleaned ("": none given).
+    expect(parseMessage({ t: "chat", text: "gl", watcher: " 小红\n " })).toEqual({ t: "chat", text: "gl", watcher: "小红" });
+    expect(parseMessage({ t: "chat", text: "gl", watcher: "" })).toEqual({ t: "chat", text: "gl", watcher: "" });
+    expect(parseMessage({ t: "chat", text: "gl", watcher: 3 })).toBeNull();
     const deck = { leader: "SD01-LD01", main: ["SD01-001"], evolve: [] };
     const game = {
       id: "seed",

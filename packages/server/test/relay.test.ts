@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
 import { APP_ID, clientConfigText, newConfigText, newKey, readConfig, withKey, withoutKey, type ServerConfig } from "../src/config";
 import { recordFiles } from "../src/records";
-import { CLOSE, RELAY_PROTOCOL, startRelay, type Relay } from "../src/relay";
+import { CLOSE, RELAY_PROTOCOL, startRelay, WRONG_PASSWORDS_PER_HOUR, type Relay } from "../src/relay";
 
 // The online server's relay (src/relay.ts): keys, rooms by code, messages passed in a room, comings and goings, the limits.
 
@@ -99,9 +99,9 @@ async function welcomed(url: string, key = KEY): Promise<Client & { id: string; 
   return Object.assign(c, { id: w.id as string, seats: w.seats as number });
 }
 
-async function inRoom(url: string, room: string, mode: "create" | "join" | "any", key = KEY) {
+async function inRoom(url: string, room: string, mode: "create" | "join" | "any", key = KEY, password?: string) {
   const c = await welcomed(url, key);
-  c.send({ t: "join", room, mode });
+  c.send({ t: "join", room, mode, ...(password !== undefined ? { password } : {}) });
   const answer = await Promise.race([c.next("joined"), c.next("nojoin")]);
   return Object.assign(c, { answer });
 }
@@ -166,6 +166,32 @@ describe("the relay", () => {
     expect((await inRoom(url, "HPXSZ3", "any")).answer).toEqual({ t: "joined", peers: [] });
   });
 
+  it("a room made with a password takes only those who say it (players and spectators alike), a few wrong tries an hour", async () => {
+    const url = await start();
+    expect((await welcomed(url)).received[0]).toMatchObject({ t: "welcome", passwords: true });
+    const host = await inRoom(url, "LOCK01", "create", KEY, "123456");
+    expect(host.answer).toEqual({ t: "joined", peers: [] });
+    /** A try at the room: its answer, the connection closed after it (an address has 20 connections at most). */
+    const tryRoom = async (mode: "join" | "any", password?: string) => {
+      const c = await inRoom(url, "LOCK01", mode, KEY, password);
+      c.ws.close();
+      await c.closed;
+      return c.answer;
+    };
+    expect(await tryRoom("join")).toEqual({ t: "nojoin", why: "password" });
+    expect(await tryRoom("join", "654321")).toEqual({ t: "nojoin", why: "password" });
+    expect(await tryRoom("any", "12345")).toEqual({ t: "nojoin", why: "password" });
+    const guest = await inRoom(url, "LOCK01", "join", KEY, "123456");
+    expect(guest.answer).toEqual({ t: "joined", peers: [host.id] });
+    // Coming back ("any") says it too; a room without a password takes anyone, whatever they say.
+    expect((await inRoom(url, "LOCK01", "any", KEY, "123456")).answer.t).toBe("joined");
+    await inRoom(url, "OPEN01", "create");
+    expect((await inRoom(url, "OPEN01", "join", KEY, "999999")).answer.t).toBe("joined");
+    // Wrong passwords from one address: a few an hour, then none is even tried.
+    for (let i = 3; i < WRONG_PASSWORDS_PER_HOUR; i++) expect(await tryRoom("join", "000000")).toEqual({ t: "nojoin", why: "password" });
+    expect(await tryRoom("join", "123456")).toEqual({ t: "nojoin", why: "tries" });
+  });
+
   it("has room for the two players, the spectator seats and two more; and as many rooms as max_rooms", async () => {
     const url = await start(configWith({ spectators: 2, maxRooms: 2 }));
     await inRoom(url, "ROOM01", "create");
@@ -224,7 +250,13 @@ describe("the lobby and the games kept", () => {
     const host = await inRoom(url, "PUB001", "create");
     host.send(info({ name: "  小明\u0000\n的名字太长了一二三四五六七八九十  " }));
     const listed = (await lobby.next("rooms")).rooms as Record<string, unknown>[];
-    expect(listed).toEqual([{ code: "PUB001", name: "小明 的名字太长了一二三四五六七", format: "standard", list: "10_26_JPN", turnOrder: "choose", players: 1, watchers: 0, playing: false, seats: 3 }]);
+    expect(listed).toEqual([{ code: "PUB001", name: "小明 的名字太长了一二三四五六七", format: "standard", list: "10_26_JPN", turnOrder: "choose", players: 1, watchers: 0, playing: false, seats: 3, locked: false }]);
+    // A room with a password is listed as locked (the server knows it; the host doesn't say it).
+    const locked = await inRoom(url, "PUB002", "create", KEY, "246802");
+    locked.send(info({ name: "小刚" }));
+    expect(((await lobby.next("rooms")).rooms as Record<string, unknown>[]).map((r) => [r.code, r.locked])).toEqual([["PUB001", false], ["PUB002", true]]);
+    locked.ws.close();
+    await lobby.next("rooms");
     // A private room isn't listed; only the host's word counts.
     const secret = await inRoom(url, "PRV001", "create");
     secret.send(info({ public: false, name: "秘密" }));
