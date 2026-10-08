@@ -34,7 +34,7 @@ export type AppPlatform = "android" | "ios";
 let DIR = Directory.External;
 
 /** public/'s folders (README "Custom resources"), made at the start so the player sees where to copy their files. */
-const PUBLIC_FOLDERS = ["audio/bgm", "audio/sfx", "audio/cards", "images/cards", "images/backs", "textures/board", "textures/menu", "textures/icons", "fonts"];
+const PUBLIC_FOLDERS = ["audio/bgm", "audio/sfx", "audio/cards", "images/cards", "images/backs", "images/credits", "textures/board", "textures/menu", "textures/icons", "fonts"];
 
 /** The sample decks (decks/samples), in the app. */
 const SAMPLES = import.meta.glob<string>("../../decks/samples/*.json", { eager: true, query: "?raw", import: "default" });

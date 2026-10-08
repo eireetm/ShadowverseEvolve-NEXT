@@ -36,6 +36,12 @@ export interface Rules {
   turnOrder: TurnOrder;
   /** A player may take back their last answers while the other player hasn't answered since ("悔棋"). */
   undo: boolean;
+  /**
+   * The online server's rooms: the spectators may see both players' hidden cards (each spectator turns on "reveal all" for
+   * that), and may write in the chat. The players see these rules too. Off on the public networks.
+   */
+  watchHands: boolean;
+  watchChat: boolean;
 }
 
 /** A player's deck, locked for the game ("ready"). */
@@ -87,8 +93,11 @@ export type NetMessage =
   | { t: "select" }
   /** The host has no seat left of the kind asked for. */
   | { t: "full" }
-  /** A chat line; to a spectator, the host also says whose (the seat of the player who wrote it). */
-  | { t: "chat"; text: string; seat?: 0 | 1 }
+  /**
+   * A chat line; passed on by the host, it says whose: the seat of the player who wrote it (to a spectator), or a
+   * spectator's name (`watcher`, "" when none was given: a room whose rules let spectators write).
+   */
+  | { t: "chat"; text: string; seat?: 0 | 1; watcher?: string }
   /** The host: how many spectators are watching (to the players and the spectators). */
   | { t: "watchers"; n: number }
   /** The host, to a spectator: the game being played now (null: none yet), its inputs so far following as "backlog". */
@@ -233,8 +242,13 @@ export function parseMessage(value: unknown): NetMessage | null {
     case "join":
       return m.as === "player" || m.as === "watch" ? { t: "join", as: m.as } : null;
     case "chat":
-      if (typeof m.text !== "string" || !(m.seat === undefined || isSeat(m.seat))) return null;
-      return { t: "chat", text: m.text.slice(0, CHAT_MAX), ...(m.seat !== undefined ? { seat: m.seat } : {}) };
+      if (typeof m.text !== "string" || !(m.seat === undefined || isSeat(m.seat)) || !(m.watcher === undefined || isString(m.watcher, 64))) return null;
+      return {
+        t: "chat",
+        text: m.text.slice(0, CHAT_MAX),
+        ...(m.seat !== undefined ? { seat: m.seat } : {}),
+        ...(m.watcher !== undefined ? { watcher: cleanName(m.watcher as string) } : {}),
+      };
     case "watchers":
       return isIndex(m.n) && m.n <= MAX_SPECTATOR_SEATS ? { t: "watchers", n: m.n } : null;
     case "watch": {
@@ -254,7 +268,10 @@ export function parseMessage(value: unknown): NetMessage | null {
       const r = m.rules as Record<string, unknown> | null;
       if (typeof r !== "object" || r === null) return null;
       if (!FORMATS.includes(r.format as FormatId) || !TURN_ORDERS.includes(r.turnOrder as TurnOrder) || !(r.list === null || isString(r.list))) return null;
-      return { t: "rules", rules: { format: r.format as FormatId, list: r.list as string | null, turnOrder: r.turnOrder as TurnOrder, undo: r.undo === true } };
+      return {
+        t: "rules",
+        rules: { format: r.format as FormatId, list: r.list as string | null, turnOrder: r.turnOrder as TurnOrder, undo: r.undo === true, watchHands: r.watchHands === true, watchChat: r.watchChat === true },
+      };
     }
     case "ready": {
       if (m.deck === null) return { t: "ready", deck: null };

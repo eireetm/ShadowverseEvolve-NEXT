@@ -19,11 +19,11 @@ import type { FromWorker, GameOptions, RecordedInput } from "../engine/protocol"
 import { checkDeck } from "../formats/check";
 import { leadersFor, type FormatProblem } from "../formats/formats";
 import { RESTRICTION_LISTS, restrictionList } from "../formats/lists";
-import { newRoomCode } from "./codes";
+import { newRoomCode, newRoomPassword } from "./codes";
 import type { PeerLink } from "./link";
 import { answerConnection, BadCodeError, offerConnection, type ManualAttempt } from "./manual";
 import type { MessageKey } from "../i18n";
-import { BACKLOG_PIECE, cleanName, MAX_SPECTATOR_SEATS, SPECTATOR_SEATS, watchedOptions, type Hello, type JoinAs, type NetMessage, type ReadyDeck, type Rules, type WatchedGame } from "./messages";
+import { BACKLOG_PIECE, CHAT_MAX, cleanName, MAX_SPECTATOR_SEATS, SPECTATOR_SEATS, watchedOptions, type Hello, type JoinAs, type NetMessage, type ReadyDeck, type Rules, type WatchedGame } from "./messages";
 import type { TurnServer } from "./relays";
 import { meet, type Admission, type Meeting, type MeetingHandlers } from "./rooms";
 import { serverNetwork, type JoinMode, type ServerProblem, type ServerRoom } from "./server";
@@ -267,6 +267,11 @@ async function receive(message: NetMessage): Promise<void> {
       await seedStep();
       break;
     case "chat":
+      // A spectator's line, passed on by the host (the guest's side), or the other player's.
+      if (message.watcher !== undefined && phase.role === "guest") {
+        setOnline({ chat: [...state.chat, { from: "watcher" as const, name: message.watcher, text: message.text }].slice(-200) });
+        break;
+      }
       setOnline({ chat: [...state.chat, { from: "peer" as const, text: message.text }].slice(-200) });
       // The host's spectators read the other player's lines too (the other player is player 2).
       if (phase.role === "host") toWatchers({ t: "chat", text: message.text, seat: 1 });
@@ -452,7 +457,7 @@ function begin(seed: string, seat: 0 | 1): void {
   engine.send({ kind: "settings", settings: playSettings() });
   const options = onlineOptions(seed, prep.rules, host, guest, seat);
   engine.send({ kind: "start", options });
-  setOnline({ game: { id: seed, seat, opponent: prep.theirs.name }, prep: { ...NO_PREP, rules: prep.rules } });
+  setOnline({ game: { id: seed, seat }, prep: { ...NO_PREP, rules: prep.rules } });
   nameTheGame();
   // The host's spectators watch the new game from its start.
   if (seat === 0) toWatchers({ t: "watch", game: watchedGame(options, 0) });
@@ -527,12 +532,20 @@ function requestUndo(): void {
 }
 setUndoRequest(requestUndo);
 
-/** The rules in this program's settings (the host's are the game's). */
+/** The rules in this program's settings (the host's are the game's). What its spectators may do: on the online server only. */
 function hostRules(): Rules {
   const settings = getSettings();
   const format = settings.format;
   const list = format === "unlimited" ? null : (restrictionList(settings.restrictionLists[format])?.id ?? null);
-  return { format, list, turnOrder: settings.setupTurnOrder, undo: settings.allowUndo };
+  const server = getOnline().room?.server === true;
+  return {
+    format,
+    list,
+    turnOrder: settings.setupTurnOrder,
+    undo: settings.allowUndo,
+    watchHands: server && settings.allowWatchHands,
+    watchChat: server && settings.allowWatchChat,
+  };
 }
 
 /** The host: the rules of the next game, from its settings (again whenever they change: both players are then not ready). */
@@ -548,9 +561,12 @@ export function updateRules(): void {
   describeRoom();
 }
 
+/** The rules to the other player, and to the spectators (what they may do: see the hidden cards, write in the chat). */
 function sendRules(): void {
   const rules = getOnline().prep.rules;
-  if (rules) currentLink()?.send({ t: "rules", rules });
+  if (!rules) return;
+  currentLink()?.send({ t: "rules", rules });
+  toWatchers({ t: "rules", rules });
 }
 
 /** Lock this player's deck for the next game (null: not ready any more). Both ready: the game starts. */
@@ -572,6 +588,8 @@ interface Watcher {
   queue: NetMessage[];
   /** When it last said something (it pings every few seconds): a silent one is let go. */
   lastSeen: number;
+  /** Its person's name, as its hello said ("": none given): its chat lines say it. */
+  name: string;
 }
 
 let watchers: Watcher[] = [];
@@ -607,15 +625,20 @@ function countWatchers(): void {
 }
 
 function addWatcher(link: PeerLink): void {
-  const w: Watcher = { link, ready: false, queue: [], lastSeen: performance.now() };
+  const w: Watcher = { link, ready: false, queue: [], lastSeen: performance.now(), name: "" };
   watchers = [...watchers, w];
   link.onMessage = (message) => {
     w.lastSeen = performance.now();
     if (message.t === "ping") link.send({ t: "pong", n: message.n });
     else if (message.t === "bye") dropWatcher(w);
+    else if (message.t === "hello") w.name = message.name ?? "";
+    else if (message.t === "chat") watcherSaid(w, message.text);
   };
   link.onClose = () => dropWatcher(w);
   link.send(hello);
+  // What it may do here (see the hidden cards, write in the chat).
+  const rules = getOnline().prep.rules ?? hostRules();
+  link.send({ t: "rules", rules });
   countWatchers();
   watcherTimer ??= window.setInterval(dropSilentWatchers, 5000);
   void sendGame(w);
@@ -671,6 +694,24 @@ setChatRelay((text) => {
   if (getOnline().phase.kind === "connected") toWatchers({ t: "chat", text, seat: 0 });
 });
 
+/**
+ * A spectator wrote in the chat: in a room whose rules let spectators write, the host shows it and passes it on to the other
+ * player and the other spectators, with the spectator's name (otherwise it is not heard).
+ */
+function watcherSaid(w: Watcher, text: string): void {
+  const line = text.trim().slice(0, CHAT_MAX);
+  const rules = getOnline().prep.rules ?? hostRules();
+  if (line === "" || !rules.watchChat) return;
+  setOnline({ chat: [...getOnline().chat, { from: "watcher" as const, name: w.name, text: line }].slice(-200) });
+  const said: NetMessage = { t: "chat", text: line, watcher: w.name };
+  currentLink()?.send(said);
+  for (const other of watchers) {
+    if (other === w) continue;
+    if (other.ready) other.link.send(said);
+    else other.queue.push(said);
+  }
+}
+
 // ---- A spectator's side ----
 
 /** The game being watched as it comes from the host: its options, and its inputs so far until all of them are here. */
@@ -688,7 +729,7 @@ function watching(peer: PeerLink): void {
     setOnline({ phase: { kind: "closed", reason: "lost" } });
     // A spectator only watches: it comes back by itself (the host sends the game again).
     const room = getOnline().room;
-    if (room?.role === "spectator") rewatch = window.setTimeout(() => watchRoom(room.code, true, room.server), 2000);
+    if (room?.role === "spectator") rewatch = window.setTimeout(() => watchRoom(room.code, true, room.server, room.password), 2000);
   };
   peer.onMessage = (message) => hear(message);
   peer.onClose = lost;
@@ -715,6 +756,12 @@ function hear(message: NetMessage): void {
       break;
     case "chat":
       if (message.seat !== undefined) setOnline({ chat: [...state.chat, { from: message.seat, text: message.text }].slice(-200) });
+      else if (message.watcher !== undefined) setOnline({ chat: [...state.chat, { from: "watcher" as const, name: message.watcher, text: message.text }].slice(-200) });
+      break;
+    case "rules":
+      // What the host lets its spectators do: write in the chat (state.ts canChat), see the hidden cards (the engine).
+      setOnline({ prep: { ...NO_PREP, rules: message.rules } });
+      engine.send({ kind: "spectatorReveal", allowed: message.rules.watchHands });
       break;
     case "watch":
       // Another program's games can't be followed (CR-wise the same engine is needed: the fingerprints).
@@ -748,29 +795,38 @@ function startWatching(): void {
   const coming = incoming;
   if (!coming) return;
   incoming = null;
-  engine.send({ kind: "settings", settings: playSettings() });
+  // A spectator keeps "reveal all" as it set it while watching this room (it is off when it came: watchRoom); it shows
+  // the hidden cards only when the host allows it (the rules it sent).
+  const { revealAll: _, ...settings } = playSettings();
+  engine.send({ kind: "settings", settings });
   engine.send({ kind: "spectate", options: watchedOptions(coming.game), inputs: coming.inputs });
+  engine.send({ kind: "spectatorReveal", allowed: getOnline().prep.rules?.watchHands === true });
   const continuing = getOnline().game?.id === coming.game.id;
-  setOnline({ game: { id: coming.game.id, seat: null, opponent: "" }, names: coming.game.players ?? null });
+  setOnline({ game: { id: coming.game.id, seat: null }, names: coming.game.players ?? null });
   // A new game shows by itself; the same game again (after a lost connection) just goes on.
   if (!continuing) gameStarted();
 }
 
 /**
- * Watch the games in room `code` (a spectator's seat), on the online server (`server`) or the public networks; `again`: after
- * a lost connection (the game shown stays).
+ * Watch the games in room `code` (a spectator's seat), on the online server (`server`, with the room's `password` if it has
+ * one) or the public networks; `again`: after a lost connection (the game shown stays).
  */
-export function watchRoom(code: string, again = false, server = false): void {
+export function watchRoom(code: string, again = false, server = false, password: string | null = null): void {
   stopLooking();
   disconnect();
   dropWatchers();
   setOnline({
     phase: { kind: "joining", code, as: "watch" },
     error: null,
-    room: { code, role: "spectator", server },
+    room: { code, role: "spectator", server, password },
     ...(again ? {} : { game: null, chat: [], watchers: 0, prep: NO_PREP }),
   });
-  meeting = meetRoom(code, "watch", server, again ? "any" : "join", {
+  if (!again) {
+    // A new room to watch: nothing hidden shown until its host allows it and this spectator turns "reveal all" on.
+    engine.send({ kind: "settings", settings: { revealAll: false } });
+    engine.send({ kind: "spectatorReveal", allowed: false });
+  }
+  meeting = meetRoom(code, "watch", server, again ? "any" : "join", password, {
     onLink: (peer) => watching(peer),
     onFull: () => {
       stopLooking();
@@ -788,9 +844,10 @@ export function spectatorSide(perspective: 0 | 1): void {
 
 /**
  * Meet in room `code`: on the public networks, or on the online server (`server`) — making the room, joining one that is
- * there, or either (coming back after a lost connection). Without a server configured, nothing (the error says so).
+ * there, or either (coming back after a lost connection), with the room's `password` (the server's rooms only; made with
+ * one, the room takes only those who say it). Without a server configured, nothing (the error says so).
  */
-function meetRoom(code: string, role: "host" | JoinAs, server: boolean, mode: JoinMode, handlers: MeetingHandlers): Meeting | null {
+function meetRoom(code: string, role: "host" | JoinAs, server: boolean, mode: JoinMode, password: string | null, handlers: MeetingHandlers): Meeting | null {
   if (!server) return meet(code, role, turn(), handlers);
   const settings = currentServer();
   if (!settings) {
@@ -798,14 +855,19 @@ function meetRoom(code: string, role: "host" | JoinAs, server: boolean, mode: Jo
     return null;
   }
   return meet(code, role, null, handlers, undefined, [
-    serverNetwork(settings, mode, {
-      onWelcome: (seats, records) => setOnline({ seats: Math.max(0, Math.min(MAX_SPECTATOR_SEATS, seats)), records }),
-      onProblem: (problem) => serverProblem(problem, role, mode),
-      onRoom: (room) => {
-        serverRoom = room;
-        describeRoom();
+    serverNetwork(
+      settings,
+      mode,
+      {
+        onWelcome: (seats, records) => setOnline({ seats: Math.max(0, Math.min(MAX_SPECTATOR_SEATS, seats)), records }),
+        onProblem: (problem) => serverProblem(problem, role, mode),
+        onRoom: (room) => {
+          serverRoom = room;
+          describeRoom();
+        },
       },
-    }),
+      password,
+    ),
   ]);
 }
 
@@ -866,9 +928,10 @@ function serverProblem(problem: ServerProblem, role: "host" | JoinAs, mode: Join
     hostTries += 1;
     return hostRoom(undefined, false, true);
   }
-  if (problem === "missing" || problem === "full") {
+  if (problem === "missing" || problem === "full" || problem === "password" || problem === "tries") {
     stopLooking();
-    setOnline({ phase: { kind: "closed", reason: problem === "missing" ? "missing" : role === "watch" ? "watchFull" : "full" }, error: null });
+    const reason = problem === "full" ? (role === "watch" ? "watchFull" : "full") : problem;
+    setOnline({ phase: { kind: "closed", reason }, error: null });
     return;
   }
   const error: MessageKey = `online.server.${problem}`;
@@ -882,16 +945,20 @@ function serverProblem(problem: ServerProblem, role: "host" | JoinAs, mode: Join
 
 /**
  * Make a room — on the online server (`server`) or the public networks: its code, to pass to the other player; wait for them
- * (and spectators). `again`: the same room once more after a lost connection (its spectators aren't told to go: they come
- * back by themselves).
+ * (and spectators). On the server, a password too when the host chose one (6 random digits, to pass with the code; asked of
+ * the other player and the spectators). `again`: the same room once more after a lost connection (its spectators aren't told
+ * to go: they come back by themselves).
  */
 export function hostRoom(code = newRoomCode(), again = false, server = false): void {
   stopLooking();
   disconnect();
   dropWatchers(!again);
   if (getOnline().phase.kind !== "hosting") hostTries = 0;
-  setOnline({ phase: { kind: "hosting", code }, error: null, room: { code, role: "host", server } });
-  meeting = meetRoom(code, "host", server, again ? "any" : "create", {
+  // The same room again, or another code for it (the server had the one drawn): the same password.
+  const kept = again || hostTries > 0 ? (getOnline().room?.password ?? null) : null;
+  const password = server ? (kept ?? (!again && getSettings().roomPassword ? newRoomPassword() : null)) : null;
+  setOnline({ phase: { kind: "hosting", code }, error: null, room: { code, role: "host", server, password } });
+  meeting = meetRoom(code, "host", server, again ? "any" : "create", password, {
     onLink: (peer, as) => (as === "player" ? connected("host", peer) : addWatcher(peer)),
     onFull: () => undefined,
     admit,
@@ -899,15 +966,16 @@ export function hostRoom(code = newRoomCode(), again = false, server = false): v
 }
 
 /**
- * Join the room of this code (already normalized: codes.ts normalizeRoomCode), on the online server (`server`) or the public
- * networks; `again`: after a lost connection (on the server, the room is waited for if it isn't there).
+ * Join the room of this code (already normalized: codes.ts normalizeRoomCode), on the online server (`server`, with the
+ * room's `password` if it has one) or the public networks; `again`: after a lost connection (on the server, the room is
+ * waited for if it isn't there).
  */
-export function joinRoom(code: string, server = false, again = false): void {
+export function joinRoom(code: string, server = false, again = false, password: string | null = null): void {
   stopLooking();
   disconnect();
   dropWatchers();
-  setOnline({ phase: { kind: "joining", code, as: "player" }, error: null, room: { code, role: "guest", server } });
-  meeting = meetRoom(code, "player", server, again ? "any" : "join", {
+  setOnline({ phase: { kind: "joining", code, as: "player" }, error: null, room: { code, role: "guest", server, password } });
+  meeting = meetRoom(code, "player", server, again ? "any" : "join", password, {
     onLink: (peer) => connected("guest", peer),
     onFull: () => {
       stopLooking();
@@ -924,8 +992,8 @@ export function reconnect(): void {
   const room = getOnline().room;
   if (!room) return;
   if (room.role === "host") hostRoom(room.code, true, room.server);
-  else if (room.role === "spectator") watchRoom(room.code, true, room.server);
-  else joinRoom(room.code, room.server, true);
+  else if (room.role === "spectator") watchRoom(room.code, true, room.server, room.password);
+  else joinRoom(room.code, room.server, true, room.password);
 }
 
 /** Codes by hand, the host: make the connection code. */

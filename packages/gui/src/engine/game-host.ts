@@ -247,6 +247,8 @@ export class GameHost {
    */
   private spectating = false;
   private spectatorSide: PlayerId = 0;
+  /** The room's host lets its spectators see both players' hidden cards (shown with "reveal all" on: spectatorSees). */
+  private spectatorReveal = false;
 
   constructor(
     private readonly engine: Engine,
@@ -270,6 +272,9 @@ export class GameHost {
         if (!this.spectating) return;
         this.spectatorSide = message.perspective;
         return this.pump();
+      case "spectatorReveal":
+        this.spectatorReveal = message.allowed;
+        return this.spectating ? this.pump() : undefined;
       case "answer":
         return this.watching ? undefined : this.answer(message.seat, message.answer);
       case "concede":
@@ -752,8 +757,8 @@ export class GameHost {
     const remotes = this.remotes();
     if (remotes.length === 0) return null;
     const allowUndo = !!this.options?.allowUndo;
-    if (remotes.length === 2) return { seat: null, remote: null, desync: this.desync, spectating: true, allowUndo, undo: null };
-    return { seat: opponentOf(remotes[0]!), remote: remotes[0]!, desync: this.desync, spectating: false, allowUndo, undo: this.undoPoint() };
+    if (remotes.length === 2) return { seat: null, remote: null, desync: this.desync, spectating: true, allowUndo, undo: null, revealAllowed: this.spectatorReveal };
+    return { seat: opponentOf(remotes[0]!), remote: remotes[0]!, desync: this.desync, spectating: false, allowUndo, undo: this.undoPoint(), revealAllowed: false };
   }
 
   private watchState(): WatchState | null {
@@ -914,22 +919,36 @@ export class GameHost {
   }
 
   /**
+   * A spectator sees both players' hidden cards: its room's host lets it, and it turned on "reveal all". Otherwise it sees
+   * what both players see (CR 4.1.2).
+   */
+  private spectatorSees(): boolean {
+    return this.spectating && this.spectatorReveal && this.settings.revealAll;
+  }
+
+  /**
    * Whose information the log shows: the one person, else everything (hot seat, watching bots, debugging); a replay's
-   * viewer; a spectator, what both players see ("public").
+   * viewer; a spectator, what both players see ("public"), or everything when it sees the hidden cards.
    */
   private logViewer(): PlayerId | "all" | "public" {
     if (this.watching) return this.settings.revealAll ? "all" : this.watching.perspective;
-    if (this.spectating) return "public";
+    if (this.spectating) return this.spectatorSees() ? "all" : "public";
     const humans = this.humans();
     return this.seesAll() || humans.length !== 1 ? "all" : humans[0]!;
   }
 
   private view(viewer: PlayerId): PlayerView {
     const game = this.game!;
-    if (this.spectating) return this.publicView(viewer);
+    // A spectator decides nothing: no decision of anyone's, whatever it sees.
+    if (this.spectating) return this.spectatorSees() ? { ...this.bothSides(viewer), decision: null } : this.publicView(viewer);
+    if (!this.seesAll()) return withoutMemory(game.view(viewer));
+    return this.bothSides(viewer);
+  }
+
+  /** Each side as its own player sees it (CR 4.1.2), from `viewer`'s side: hands and evolve decks visible; decks stay unknown. */
+  private bothSides(viewer: PlayerId): PlayerView {
+    const game = this.game!;
     const view = game.view(viewer);
-    if (!this.seesAll()) return withoutMemory(view);
-    // Each side as its own player sees it (CR 4.1.2): hands and evolve decks become visible; decks stay unknown.
     const other = opponentOf(viewer);
     const players: [PlayerSideView, PlayerSideView] = [view.players[0], view.players[1]];
     players[other] = game.view(other).players[other];

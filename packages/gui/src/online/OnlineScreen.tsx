@@ -7,6 +7,7 @@
 // seat, "观战"): the spectator sees them, and the chat, and does nothing else. The person's name goes with the connection;
 // on the server, its lobby lists the public rooms ("xxx 的房间") to join or watch with a click.
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { errorText } from "../app/errors";
 import { updateSettings, useSettings } from "../app/settings";
 import { reportError, useApp } from "../app/store";
@@ -18,7 +19,7 @@ import { hostApi, type DeckFileEntry } from "../host/api";
 import { useT, type MessageKey, type Translate } from "../i18n";
 import { APP_VERSION, PLATFORM } from "../app/version";
 import { checkNetwork, type NetworkCheck } from "../net/check";
-import { normalizeRoomCode } from "../net/codes";
+import { normalizeRoomCode, normalizeRoomPassword } from "../net/codes";
 import { cleanName, NAME_MAX, SPECTATOR_SEATS, type Rules } from "../net/messages";
 import { watchLobby, type LobbyRoom, type ServerProblem } from "../net/server";
 import type { ServerSettings } from "../net/server-config";
@@ -45,6 +46,7 @@ import {
   type OnlinePhase,
 } from "../net/online";
 import type { OnlineState } from "../net/state";
+import { creditImageUrl } from "../resources/lookup";
 import { Chat } from "./Chat";
 import { useBack } from "../app/back";
 import { ServerConfigWindow } from "../app/ServerConfigWindow";
@@ -146,15 +148,54 @@ export function OnlineScreen({ onBack, onGame, onEditDecks }: Props) {
   );
 }
 
-/** Three boxes under the online screen, in the Chinese interface only: two for sponsors to come, one thanking a sponsor. */
+/**
+ * Three boxes under the online screen, in the Chinese interface only: two thanking the sponsors, one a sponsor of its own,
+ * which opens its window.
+ */
 function ThanksBoxes() {
   const t = useT();
+  const [open, setOpen] = useState(false);
   return (
     <div className="sve-online-thanks" data-testid="online-thanks">
       <div className="sve-online-thanks-ad">{t("online.adSpace")}</div>
       <div className="sve-online-thanks-ad">{t("online.adSpace")}</div>
-      <div className="sve-online-thanks-sponsor">{t("online.thanksSponsor")}</div>
+      <button type="button" className="sve-online-thanks-sponsor" onClick={() => setOpen(true)} data-testid="online-thanks-sponsor">
+        {t("online.thanksSponsor")}
+      </button>
+      {open ? <SponsorWindow onClose={() => setOpen(false)} /> : null}
     </div>
+  );
+}
+
+/**
+ * The sponsor's window: its logo (public/images/credits/beardad.*, when there) and the thanks. On the page itself (a portal):
+ * among the boxes it would take a box's size.
+ */
+function SponsorWindow({ onClose }: { onClose: () => void }) {
+  const t = useT();
+  const logo = creditImageUrl("beardad");
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+  useBack(true, onClose);
+  return createPortal(
+    <div className="sve-modal-backdrop sve-sponsor-backdrop" onClick={onClose}>
+      <div className="sve-modal sve-sponsor" onClick={(e) => e.stopPropagation()} data-testid="online-sponsor">
+        <header className="sve-modal-header">
+          <span />
+          <button type="button" onClick={onClose} data-testid="online-sponsor-close">
+            {t("game.close")}
+          </button>
+        </header>
+        {logo ? <img className="sve-sponsor-logo" src={logo} alt="" data-testid="online-sponsor-logo" /> : null}
+        <p className="sve-sponsor-text">{t("online.sponsorThanks")}</p>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -171,6 +212,7 @@ function Phase({ phase, since, identified, going, onGame, onEditDecks }: PhasePr
   const t = useT();
   const seconds = useSeconds(since);
   const slow = seconds >= 20;
+  const password = useOnline().room?.password ?? null;
   switch (phase.kind) {
     case "idle":
       return <Start />;
@@ -179,6 +221,12 @@ function Phase({ phase, since, identified, going, onGame, onEditDecks }: PhasePr
         <div className="sve-online-step">
           <p>{t("online.roomCode")}</p>
           <CodeBox code={phase.code} large testId="online-room-code" />
+          {password ? (
+            <>
+              <p>{t("online.roomPasswordIs")}</p>
+              <CodeBox code={password} large testId="online-room-password" />
+            </>
+          ) : null}
           <p className="sve-hint">{t("online.hostWaiting", { s: seconds })}</p>
           {slow ? <p className="sve-hint">{t("online.slowHint", { version: APP_VERSION })}</p> : null}
           <WatchersFact />
@@ -292,6 +340,8 @@ function Lobby({ server }: { server: ServerSettings }) {
   const t = useT();
   const [rooms, setRooms] = useState<LobbyRoom[] | null>(null);
   const [problem, setProblem] = useState<ServerProblem | null>(null);
+  /** The passwords typed for the locked rooms, by room code. */
+  const [passwords, setPasswords] = useState<Record<string, string>>({});
   useEffect(() => {
     const lobby = watchLobby(server, setRooms, setProblem);
     return () => lobby.close();
@@ -307,27 +357,47 @@ function Lobby({ server }: { server: ServerSettings }) {
         <p className="sve-hint">{t("online.lobbyEmpty")}</p>
       ) : (
         <ul>
-          {rooms.map((room) => (
-            <li key={room.code} data-code={room.code} data-testid="online-lobby-room">
-              <span className="sve-online-lobby-what">
-                <strong>{t("online.lobbyRoom", { name: nameOr(room.name, t) })}</strong>
-                <span className="sve-hint">
-                  {[
-                    t(`format.${room.format}` as MessageKey),
-                    room.list ?? t("format.noList"),
-                    t(room.playing ? "online.lobbyPlaying" : room.players < 2 ? "online.lobbyWaiting" : "online.lobbyPlaying"),
-                    t("online.lobbySpectators", { n: room.watchers, max: room.seats }),
-                  ].join(" · ")}
+          {rooms.map((room) => {
+            // A locked room: its password typed here first.
+            const pass = room.locked ? normalizeRoomPassword(passwords[room.code] ?? "") : null;
+            const shut = room.locked === true && pass === null;
+            return (
+              <li key={room.code} data-code={room.code} data-locked={room.locked ? "yes" : "no"} data-testid="online-lobby-room">
+                <span className="sve-online-lobby-what">
+                  <strong>
+                    {t("online.lobbyRoom", { name: nameOr(room.name, t) })}
+                    {room.locked ? <span className="sve-online-lock">{t("online.lobbyLocked")}</span> : null}
+                  </strong>
+                  <span className="sve-hint">
+                    {[
+                      t(`format.${room.format}` as MessageKey),
+                      room.list ?? t("format.noList"),
+                      t(room.playing ? "online.lobbyPlaying" : room.players < 2 ? "online.lobbyWaiting" : "online.lobbyPlaying"),
+                      t("online.lobbySpectators", { n: room.watchers, max: room.seats }),
+                    ].join(" · ")}
+                  </span>
                 </span>
-              </span>
-              <button type="button" disabled={room.players >= 2 || room.playing} onClick={() => joinRoom(room.code, true)} data-testid="online-lobby-join">
-                {t("online.join")}
-              </button>
-              <button type="button" disabled={room.watchers >= room.seats} onClick={() => watchRoom(room.code, false, true)} data-testid="online-lobby-watch">
-                {t("online.watch")}
-              </button>
-            </li>
-          ))}
+                {room.locked ? (
+                  <input
+                    className="sve-online-password"
+                    value={passwords[room.code] ?? ""}
+                    onChange={(e) => setPasswords({ ...passwords, [room.code]: e.target.value })}
+                    placeholder={t("online.passwordLabel")}
+                    maxLength={8}
+                    inputMode="numeric"
+                    autoComplete="off"
+                    data-testid="online-lobby-password"
+                  />
+                ) : null}
+                <button type="button" disabled={shut || room.players >= 2 || room.playing} onClick={() => joinRoom(room.code, true, false, pass)} data-testid="online-lobby-join">
+                  {t("online.join")}
+                </button>
+                <button type="button" disabled={shut || room.watchers >= room.seats} onClick={() => watchRoom(room.code, false, true, pass)} data-testid="online-lobby-watch">
+                  {t("online.watch")}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
@@ -365,16 +435,40 @@ function UndoField({ testId }: { testId: string }) {
 }
 
 /**
- * The online server: the rules of the room to make (the host's settings, as in the room), make it, or join one by its code,
- * to play or to watch. Without a server configured: what it is, and the configuration's window.
+ * What the spectators of a room on the server may do (the host's rules): see both players' hidden cards (each spectator turns
+ * on "reveal all" in its debug page for that), and write in the chat.
+ */
+function WatchFields({ testId }: { testId: string }) {
+  const t = useT();
+  const { allowWatchHands, allowWatchChat } = useSettings();
+  return (
+    <>
+      <label className="sve-online-check-label">
+        <input type="checkbox" checked={allowWatchHands} onChange={(e) => updateSettings({ allowWatchHands: e.target.checked })} data-testid={`${testId}-watch-hands`} />
+        {t("online.allowWatchHands")}
+      </label>
+      <label className="sve-online-check-label">
+        <input type="checkbox" checked={allowWatchChat} onChange={(e) => updateSettings({ allowWatchChat: e.target.checked })} data-testid={`${testId}-watch-chat`} />
+        {t("online.allowWatchChat")}
+      </label>
+    </>
+  );
+}
+
+/**
+ * The online server: the rules of the room to make (the host's settings, as in the room), make it (with a password, if the
+ * host wants one), or join one by its code (and its password, if it has one), to play or to watch. Without a server
+ * configured: what it is, and the configuration's window.
  */
 function ServerStart() {
   const t = useT();
   const settings = useSettings();
   const server = useServerConfig().server;
   const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
   const [editing, setEditing] = useState(false);
   const room = normalizeRoomCode(code);
+  const pass = normalizeRoomPassword(password);
   return (
     <section className="sve-online-section sve-online-server" data-testid="online-server">
       <h3>{server ? t("online.server.title", { name: server.name }) : t("online.server.titleNone")}</h3>
@@ -385,30 +479,44 @@ function ServerStart() {
             <FormatPicker />
             <TurnOrderField testId="online-server-turn-order" />
             <UndoField testId="online-server-undo" />
+            <WatchFields testId="online-server" />
           </fieldset>
           <label className="sve-online-check-label">
             <input type="checkbox" checked={settings.publicRooms} onChange={(e) => updateSettings({ publicRooms: e.target.checked })} data-testid="online-server-public" />
             {t("online.publicRoom")}
           </label>
+          <label className="sve-online-check-label">
+            <input type="checkbox" checked={settings.roomPassword} onChange={(e) => updateSettings({ roomPassword: e.target.checked })} data-testid="online-server-password" />
+            {t("online.roomPassword")}
+          </label>
           <button type="button" className="sve-primary sve-menu-button" onClick={() => hostRoom(undefined, false, true)} data-testid="online-server-host">
             {t("online.host")}
           </button>
           <form
-            className="sve-online-join"
+            className="sve-online-join sve-online-join-wrap"
             onSubmit={(e) => {
               e.preventDefault();
-              if (room) joinRoom(room, true);
+              if (room) joinRoom(room, true, false, pass);
             }}
           >
             <input value={code} onChange={(e) => setCode(e.target.value)} placeholder={t("online.codePlaceholder")} maxLength={12} data-testid="online-server-code" />
+            <input
+              className="sve-online-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder={t("online.passwordPlaceholder")}
+              maxLength={8}
+              inputMode="numeric"
+              autoComplete="off"
+              data-testid="online-server-room-password"
+            />
             <button type="submit" disabled={!room} data-testid="online-server-join">
               {t("online.join")}
             </button>
-            <button type="button" disabled={!room} onClick={() => room && watchRoom(room, false, true)} data-testid="online-server-watch">
+            <button type="button" disabled={!room} onClick={() => room && watchRoom(room, false, true, pass)} data-testid="online-server-watch">
               {t("online.watch")}
             </button>
           </form>
-          <p className="sve-hint">{t("online.server.watchHint")}</p>
           <Lobby server={server} />
         </>
       ) : (
@@ -527,6 +635,19 @@ function roomSeats(online: OnlineState): number {
   return online.room?.server ? online.seats : SPECTATOR_SEATS;
 }
 
+/** The room's password on the server, for those in it to pass on (the host to the spectators it wants), when it has one. */
+function PasswordFact() {
+  const t = useT();
+  const password = useOnline().room?.password;
+  if (!password) return null;
+  return (
+    <li>
+      {t("online.passwordFact")}
+      <span data-testid="online-password">{password}</span>
+    </li>
+  );
+}
+
 /** How many spectators the room has (the host counts them). */
 function WatchersFact() {
   const t = useT();
@@ -584,6 +705,7 @@ function Watching({ phase, identified, going, onGame }: WatchingProps) {
             {t("online.playersVs", { a: nameOr(names[0], t), b: nameOr(names[1], t) })}
           </li>
         ) : null}
+        <PasswordFact />
       </ul>
       <WatchersFact />
       {going ? (
@@ -734,6 +856,7 @@ function Connected({ phase, identified, going, onGame, onEditDecks }: ConnectedP
           {t("online.peerNameLabel")}
           {phase.peer ? nameOr(phase.peer.name, t) : "…"}
         </li>
+        <PasswordFact />
       </ul>
       <WatchersFact />
       {online.room?.server && online.records ? (
@@ -743,7 +866,7 @@ function Connected({ phase, identified, going, onGame, onEditDecks }: ConnectedP
       ) : null}
       {going && online.game ? (
         <div className="sve-online-game" data-testid="online-game">
-          <p>{t("online.gameGoing", { deck: online.game.opponent })}</p>
+          <p>{t("online.gameGoing")}</p>
           <button type="button" className="sve-primary" onClick={onGame} data-testid="online-to-game">
             {t("online.toGame")}
           </button>
@@ -762,7 +885,8 @@ function Connected({ phase, identified, going, onGame, onEditDecks }: ConnectedP
 /** "Standard · restriction list: 01_26_JPN · first player: a random player chooses". */
 function rulesText(rules: Rules, t: ReturnType<typeof useT>): string {
   const summary = t("online.rulesSummary", { format: t(`format.${rules.format}`), list: rules.list ?? t("format.noList"), order: t(`turnOrder.${rules.turnOrder}`) });
-  return rules.undo ? `${summary} · ${t("online.rulesUndo")}` : summary;
+  const extras = [rules.undo ? t("online.rulesUndo") : null, rules.watchHands ? t("online.rulesWatchHands") : null, rules.watchChat ? t("online.rulesWatchChat") : null];
+  return [summary, ...extras.filter((x): x is string => x !== null)].join(" · ");
 }
 
 /**
@@ -773,7 +897,8 @@ function Prep({ role, same, onEditDecks }: { role: "host" | "guest"; same: boole
   const t = useT();
   const settings = useSettings();
   const catalog = useApp((s) => s.catalog);
-  const { prep } = useOnline();
+  const { prep, room } = useOnline();
+  const server = room?.server === true;
   const [decks, setDecks] = useState<DeckFileEntry[] | null>(null);
   const [status, setStatus] = useState<{ deck: DeckFile; problems: FormatProblem[] } | null>(null);
   const file = settings.setupDecks[0];
@@ -782,7 +907,7 @@ function Prep({ role, same, onEditDecks }: { role: "host" | "guest"; same: boole
   // The host's rules follow its settings.
   useEffect(() => {
     if (role === "host") updateRules();
-  }, [role, settings.format, settings.restrictionLists, settings.setupTurnOrder, settings.allowUndo]);
+  }, [role, settings.format, settings.restrictionLists, settings.setupTurnOrder, settings.allowUndo, settings.allowWatchHands, settings.allowWatchChat]);
   useEffect(() => {
     hostApi.listDecks().then(setDecks, (err: unknown) => reportError(String(err)));
   }, []);
@@ -816,6 +941,7 @@ function Prep({ role, same, onEditDecks }: { role: "host" | "guest"; same: boole
             <FormatPicker />
             <TurnOrderField testId="online-turn-order" />
             <UndoField testId="online-undo" />
+            {server ? <WatchFields testId="online" /> : null}
           </fieldset>
         ) : (
           <>
@@ -888,8 +1014,8 @@ function Prep({ role, same, onEditDecks }: { role: "host" | "guest"; same: boole
             : prep.theirsProblems === null
               ? t("online.opponentChecking")
               : prep.theirsProblems.length === 0
-                ? t("online.opponentReady", { deck: prep.theirs.name })
-                : t("online.opponentProblems", { deck: prep.theirs.name })}
+                ? t("online.opponentReady")
+                : t("online.opponentProblems")}
         </p>
         {prep.theirsProblems && prep.theirsProblems.length > 0 && ctx ? (
           <ul className="sve-problems">

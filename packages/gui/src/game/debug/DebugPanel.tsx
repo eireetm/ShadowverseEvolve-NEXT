@@ -99,12 +99,15 @@ export function DebugPanel({ update }: { update: GameUpdate }) {
         ) : null}
       </div>
       {!secret ? <p className="sve-hint">{t("debug.replayNote")}</p> : null}
+      {/* Online, only a spectator whose room's host allows it sees the hidden cards (the players never do). */}
+      {!online || update.online?.revealAllowed ? (
+        <label className="sve-check">
+          <input type="checkbox" checked={settings.revealAll} onChange={(e) => engine.send({ kind: "settings", settings: { revealAll: e.target.checked } })} data-testid="debug-reveal-all" />
+          {t("debug.revealAll")}
+        </label>
+      ) : null}
       {!online ? (
         <>
-          <label className="sve-check">
-            <input type="checkbox" checked={settings.revealAll} onChange={(e) => engine.send({ kind: "settings", settings: { revealAll: e.target.checked } })} />
-            {t("debug.revealAll")}
-          </label>
           <label className="sve-check">
             <input type="checkbox" checked={settings.paused} onChange={(e) => engine.send({ kind: "settings", settings: { paused: e.target.checked } })} />
             {t("debug.pauseBots")}

@@ -87,8 +87,8 @@ describe("online play: two programs, one game", () => {
       const a = side(0, options(seed), announce);
       const b = side(1, options(seed), announce);
       // Each side is told whose seat is the other program's; nobody is asked the other's decisions.
-      expect(a.last().online).toEqual({ seat: 0, remote: 1, desync: null, spectating: false, allowUndo: false, undo: null });
-      expect(b.last().online).toEqual({ seat: 1, remote: 0, desync: null, spectating: false, allowUndo: false, undo: null });
+      expect(a.last().online).toEqual({ seat: 0, remote: 1, desync: null, spectating: false, allowUndo: false, undo: null, revealAllowed: false });
+      expect(b.last().online).toEqual({ seat: 1, remote: 0, desync: null, spectating: false, allowUndo: false, undo: null, revealAllowed: false });
       play(a, b);
       expect(a.last().result).not.toBeNull();
       expect(b.last().result).toEqual(a.last().result);
@@ -213,7 +213,7 @@ describe("online play: spectators", () => {
     const a = side(0, options("watch-1"), false);
     const b = side(1, options("watch-1"), false);
     const w = spectator(options("watch-1"));
-    expect(w.last().online).toEqual({ seat: null, remote: null, desync: null, spectating: true, allowUndo: false, undo: null });
+    expect(w.last().online).toEqual({ seat: null, remote: null, desync: null, spectating: true, allowUndo: false, undo: null, revealAllowed: false });
     play(a, b);
     expect(a.last().result).not.toBeNull();
     const rng = seedRng("watch-order");
@@ -264,6 +264,34 @@ describe("online play: spectators", () => {
     expect(w.last().perspective).toBe(1);
     expect(w.last().view.viewer).toBe(1);
     expect(w.last().view.players[1].hand.every((c) => c.hidden)).toBe(true);
+  });
+
+  it("sees both players' hidden cards only when the host allows it and the spectator turns on 'reveal all' (and still decides nothing)", () => {
+    const a = side(0, options("watch-5"), false);
+    const b = side(1, options("watch-5"), false);
+    play(a, b, 0, 30);
+    const w = spectator(options("watch-5"), a.host.replay()!.inputs);
+    const hidden = () => [0, 1].every((p) => w.last().view.players[p as 0 | 1].hand.every((c) => c.hidden));
+    // "Reveal all" alone: the host doesn't allow it.
+    w.host.handle({ kind: "settings", settings: { revealAll: true } });
+    expect([hidden(), w.last().online?.revealAllowed]).toEqual([true, false]);
+    // Allowed: shown now; both hands, from either side; no decision.
+    w.host.handle({ kind: "spectatorReveal", allowed: true });
+    expect(w.last().online?.revealAllowed).toBe(true);
+    for (const p of [0, 1] as const) expect(w.last().view.players[p].hand.every((c) => !c.hidden && c.def !== "")).toBe(true);
+    expect(w.last().view.decision).toBeNull();
+    w.host.handle({ kind: "spectatorSide", perspective: 1 });
+    expect(w.last().view.players[0].hand.every((c) => !c.hidden)).toBe(true);
+    // "Reveal all" off, or not allowed any more: hidden again.
+    w.host.handle({ kind: "settings", settings: { revealAll: false } });
+    expect(hidden()).toBe(true);
+    w.host.handle({ kind: "settings", settings: { revealAll: true } });
+    w.host.handle({ kind: "spectatorReveal", allowed: false });
+    expect(hidden()).toBe(true);
+    // The players never see the other's hand, allowed or not (it is the spectators' rule).
+    a.host.handle({ kind: "settings", settings: { revealAll: true } });
+    a.host.handle({ kind: "spectatorReveal", allowed: true });
+    expect(a.last().view.players[1].hand.every((c) => c.hidden)).toBe(true);
   });
 
   it("a spectator can't answer, concede or take back; a player's concession ends the game there too", () => {

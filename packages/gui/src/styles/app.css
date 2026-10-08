@@ -2965,6 +2965,30 @@ option {
   min-width: 0;
 }
 
+/*
+ * The server's join form: the room code and its password, then the buttons; on a narrow screen the buttons go to the next
+ * line (nothing squeezed).
+ */
+.sve-online-join-wrap {
+  flex-wrap: wrap;
+}
+
+.sve-online-join-wrap input {
+  flex: 1 1 var(--sve-join-input-width, 8em);
+}
+
+.sve-online-join-wrap button,
+.sve-online-lobby li button {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* A locked room's password in the lobby: beside its buttons (under the room's line on a narrow screen). */
+.sve-online-lobby input.sve-online-password {
+  flex: 0 1 var(--sve-password-width, 8em);
+  min-width: 6em;
+}
+
 .sve-online-code {
   display: flex;
   gap: 8px;
@@ -3097,6 +3121,7 @@ option {
 
 .sve-online-lobby li {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
@@ -3104,8 +3129,9 @@ option {
   border-radius: 6px;
 }
 
+/* The room's line takes the row's room first; on a narrow screen its password and buttons go under it. */
 .sve-online-lobby-what {
-  flex: 1;
+  flex: 1 1 var(--sve-lobby-room-width, 12em);
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -3117,6 +3143,17 @@ option {
   white-space: nowrap;
 }
 
+/* A locked room (it has a password) in the lobby. */
+.sve-online-lock {
+  margin-left: 6px;
+  padding: 0 6px;
+  border: 1px solid var(--sve-border);
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--sve-muted);
+}
+
 /* The online screen's three boxes at the bottom (the Chinese interface only): sponsors' places, and thanks. */
 .sve-online-thanks {
   display: grid;
@@ -3125,7 +3162,8 @@ option {
   margin-top: 4px;
 }
 
-.sve-online-thanks > div {
+.sve-online-thanks > div,
+.sve-online-thanks > button {
   height: var(--sve-thanks-height, 56px);
   display: flex;
   align-items: center;
@@ -3144,6 +3182,49 @@ option {
   border: 1px solid var(--sve-accent);
   color: var(--sve-accent);
   font-weight: 700;
+}
+
+/* A button (it opens the sponsor's window): the box's look, not a button's. */
+button.sve-online-thanks-sponsor {
+  width: 100%;
+  padding: 0;
+  background: transparent;
+}
+
+button.sve-online-thanks-sponsor:hover {
+  background: rgb(255 255 255 / 0.06);
+}
+
+/* The sponsor's window: its logo and the thanks, in the middle of the screen. */
+.sve-sponsor-backdrop {
+  inset: 0;
+}
+
+.sve-sponsor {
+  width: min(var(--sve-sponsor-width, 360px), calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.sve-sponsor .sve-modal-header {
+  align-self: stretch;
+  margin-bottom: 0;
+}
+
+.sve-sponsor-logo {
+  width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.sve-sponsor-text {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
 }
 
 .sve-server-config-backdrop {
@@ -3204,6 +3285,11 @@ option {
 
 .sve-online-theirs strong {
   color: #f0c36b;
+}
+
+/* A spectator's line (a room whose rules let spectators chat). */
+.sve-online-watcher strong {
+  color: var(--sve-watcher-chat, #b9a7f0);
 }
 
 /* "Check the network" (net/check.ts): what this computer can reach, to compare between two players. */

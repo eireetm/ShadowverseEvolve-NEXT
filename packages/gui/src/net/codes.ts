@@ -16,6 +16,24 @@ export function normalizeRoomCode(text: string): string | null {
   return code.length === ROOM_CODE_LENGTH && [...code].every((c) => ROOM_ALPHABET.includes(c)) ? code : null;
 }
 
+/** A room's password on the online server (its host chose to have one): 6 digits. */
+export const ROOM_PASSWORD_LENGTH = 6;
+
+/** A new room password: 6 random digits (crypto.getRandomValues in the app; bytes from 250 on drawn again: no digit likelier). */
+export function newRoomPassword(random: (n: number) => Uint8Array = (n) => crypto.getRandomValues(new Uint8Array(n))): string {
+  let digits = "";
+  while (digits.length < ROOM_PASSWORD_LENGTH) {
+    for (const b of random(ROOM_PASSWORD_LENGTH)) if (b < 250 && digits.length < ROOM_PASSWORD_LENGTH) digits += String(b % 10);
+  }
+  return digits;
+}
+
+/** A room password as typed ("123 456", full-width "１２３４５６" from a Chinese input method): its 6 digits, or null when it isn't one. */
+export function normalizeRoomPassword(text: string): string | null {
+  const password = text.replace(/\s/g, "").replace(/[０-９]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 0xfee0));
+  return new RegExp(`^[0-9]{${ROOM_PASSWORD_LENGTH}}$`).test(password) ? password : null;
+}
+
 /** "SVE1-O-..." (an offer) or "SVE1-A-..." (an answer): the session description, compressed. */
 const PREFIX = "SVE1-";
 

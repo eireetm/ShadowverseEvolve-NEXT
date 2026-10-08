@@ -16,10 +16,25 @@ export const RELAY_PROTOCOL = 1;
 
 /**
  * What can go wrong with the server: it refused this program (its key, its version, too busy), the room isn't there (or is
- * there already, or full), it couldn't be reached, or it closed the connection (over its limits, the key revoked, or any
- * other reason).
+ * there already, or full; or its password wasn't said, or this address said too many wrong ones lately), it couldn't be
+ * reached, it closed the connection (over its limits, the key revoked, or any other reason), or it is too old to keep a
+ * room's password ("nopassword": a room made with one would be open to all).
  */
-export type ServerProblem = "key" | "version" | "app" | "busy" | "missing" | "exists" | "full" | "unreachable" | "limit" | "revoked" | "closed";
+export type ServerProblem =
+  | "key"
+  | "version"
+  | "app"
+  | "busy"
+  | "missing"
+  | "exists"
+  | "full"
+  | "password"
+  | "tries"
+  | "unreachable"
+  | "limit"
+  | "revoked"
+  | "closed"
+  | "nopassword";
 
 /** How a program comes into the room: making it (the host), joining one that is there, or either (coming back). */
 export type JoinMode = "create" | "join" | "any";
@@ -44,10 +59,14 @@ export interface RoomInfo {
   playing: boolean;
 }
 
-/** A room as the lobby lists it: its code, what its host said (the public flag aside), the server's spectator seats. */
+/**
+ * A room as the lobby lists it: its code, what its host said (the public flag aside), the server's spectator seats, and
+ * whether coming in needs its password (an older server doesn't say: none).
+ */
 export interface LobbyRoom extends Omit<RoomInfo, "public"> {
   code: string;
   seats: number;
+  locked?: boolean;
 }
 
 /** What happened to a game sent to be kept (packages/server records.ts), or "unsent": no answer, no connection. */
@@ -62,15 +81,22 @@ export interface ServerRoom {
 /** How long the server has to answer before it counts as unreachable. */
 const ANSWER_MS = 12_000;
 
-const PROBLEMS = new Set<string>(["key", "version", "app", "busy", "missing", "exists", "full", "limit", "revoked"]);
+const PROBLEMS = new Set<string>(["key", "version", "app", "busy", "missing", "exists", "full", "password", "tries", "limit", "revoked"]);
 const problemOf = (why: unknown): ServerProblem => (typeof why === "string" && PROBLEMS.has(why) ? (why as ServerProblem) : "closed");
 
-/** The server as a network to meet in one room on: `mode` says how this program comes in. */
-export function serverNetwork(server: ServerSettings, mode: JoinMode, handlers: ServerMeetingHandlers): Network {
-  return { via: "server", join: ((_config: unknown, code: string) => joinServer(server, code, mode, handlers)) as unknown as Network["join"], relays: [server.address] };
+/**
+ * The server as a network to meet in one room on: `mode` says how this program comes in, `password` the room's (6 digits;
+ * made with it, the room takes only those who say it).
+ */
+export function serverNetwork(server: ServerSettings, mode: JoinMode, handlers: ServerMeetingHandlers, password: string | null = null): Network {
+  return {
+    via: "server",
+    join: ((_config: unknown, code: string) => joinServer(server, code, mode, handlers, password)) as unknown as Network["join"],
+    relays: [server.address],
+  };
 }
 
-function joinServer(server: ServerSettings, code: string, mode: JoinMode, handlers: ServerMeetingHandlers): Room {
+function joinServer(server: ServerSettings, code: string, mode: JoinMode, handlers: ServerMeetingHandlers, password: string | null): Room {
   const peers = new Set<string>();
   const actions = new Map<string, MessageAction<JsonValue>>();
   let left = false;
@@ -168,7 +194,14 @@ function joinServer(server: ServerSettings, code: string, mode: JoinMode, handle
           welcomed = true;
           clearTimeout(timer);
           handlers.onWelcome?.(typeof m.seats === "number" ? m.seats : 0, m.records === true);
-          send({ t: "join", room: code, mode });
+          // An older server that keeps no passwords (its welcome doesn't say it does) would make this room open to all: not made
+          // there. (Joining one there needs none: it can't have one.)
+          if (password !== null && m.passwords !== true && mode !== "join") {
+            report("nopassword");
+            ws.close(1000);
+            break;
+          }
+          send({ t: "join", room: code, mode, ...(password !== null ? { password } : {}) });
           break;
         case "joined":
           joined = true;
@@ -274,7 +307,17 @@ export function watchLobby(server: ServerSettings, onRooms: (rooms: LobbyRoom[])
 function lobbyRoom(v: unknown): v is LobbyRoom {
   if (typeof v !== "object" || v === null) return false;
   const r = v as Record<string, unknown>;
-  return typeof r.code === "string" && typeof r.name === "string" && typeof r.format === "string" && (r.list === null || typeof r.list === "string") && typeof r.players === "number" && typeof r.watchers === "number" && typeof r.seats === "number" && typeof r.playing === "boolean";
+  return (
+    typeof r.code === "string" &&
+    typeof r.name === "string" &&
+    typeof r.format === "string" &&
+    (r.list === null || typeof r.list === "string") &&
+    typeof r.players === "number" &&
+    typeof r.watchers === "number" &&
+    typeof r.seats === "number" &&
+    typeof r.playing === "boolean" &&
+    (r.locked === undefined || typeof r.locked === "boolean")
+  );
 }
 
 /** What a check of the server found: it takes this program (its round trip and spectator seats), or the problem. */

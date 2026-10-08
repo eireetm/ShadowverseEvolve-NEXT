@@ -21,16 +21,21 @@ export type OnlinePhase =
   | { kind: "connected"; role: OnlineRole; via: Via; route: Route; rtt: number | null; peer: Hello | null }
   /**
    * The connection ended: the other side left, it was lost, the room had no seat left (a player's, or a spectator's), or
-   * (the online server says so) there is no room of that code.
+   * (the online server says so) there is no room of that code, the room's password wasn't said (or was wrong), or this
+   * address said too many wrong passwords lately.
    */
-  | { kind: "closed"; reason: "left" | "lost" | "full" | "watchFull" | "missing" };
+  | { kind: "closed"; reason: "left" | "lost" | "full" | "watchFull" | "missing" | "password" | "tries" };
 
 /** The host (player 1), the other player (player 2), or a spectator (connected to the host, watching only). */
 export type OnlineRole = "host" | "guest" | "spectator";
 
-/** Who wrote a chat line: this program's person, the other player, or (seen by a spectator) player 1 or 2. */
+/**
+ * Who wrote a chat line: this program's person, the other player, (seen by a spectator) player 1 or 2, or a spectator (its
+ * `name`, "" when none was given; a room whose rules let spectators write).
+ */
 export interface ChatLine {
-  from: "me" | "peer" | 0 | 1;
+  from: "me" | "peer" | 0 | 1 | "watcher";
+  name?: string;
   text: string;
 }
 
@@ -47,11 +52,10 @@ export interface Prep {
   starting: boolean;
 }
 
-/** The game played over the connection: its id (the seed), this program's seat (null: watching), the other player's deck. */
+/** The game played over the connection: its id (the seed), this program's seat (null: watching). */
 export interface OnlineGame {
   id: string;
   seat: 0 | 1 | null;
-  opponent: string;
 }
 
 export interface OnlineState {
@@ -65,9 +69,9 @@ export interface OnlineState {
   game: OnlineGame | null;
   /**
    * The room of the last connection, to connect again the same way after losing it (null: codes by hand); `server`: on the
-   * online server (else on the public networks).
+   * online server (else on the public networks); its `password` on the server (6 digits; null: none), said again then.
    */
-  room: { code: string; role: OnlineRole; server: boolean } | null;
+  room: { code: string; role: OnlineRole; server: boolean; password: string | null } | null;
   /** Spectators watching the room's games (the host counts them and tells the others). */
   watchers: number;
   /** The room's spectator seats: the online server says how many its rooms have; the public networks' rooms have 2. */
@@ -122,9 +126,9 @@ export function requestOnlineUndo(): void {
   undoRequest?.();
 }
 
-/** Whether this program may write in the chat: a player connected (a spectator only reads it). */
+/** Whether this program may write in the chat: a player connected, or a spectator when the room's rules let it (else it reads). */
 export function canChat(s: OnlineState = state): boolean {
-  return s.phase.kind === "connected" && s.phase.role !== "spectator";
+  return s.phase.kind === "connected" && (s.phase.role !== "spectator" || s.prep.rules?.watchChat === true);
 }
 
 export function currentLink(): PeerLink | null {

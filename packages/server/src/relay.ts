@@ -8,8 +8,9 @@
 // than play.
 //
 // The messages, JSON (app → server):
-//   hello {v, app, key}           first, within 10 seconds        → welcome {v, id, seats, records} | refused {why}, closed
-//   join {room, mode}             create: a new room; join: one that exists; any: either   → joined {peers} | nojoin {why}
+//   hello {v, app, key}           first, within 10 seconds        → welcome {v, id, seats, records, passwords} | refused {why}, closed
+//   join {room, mode, password?}  create: a new room; join: one that exists; any: either   → joined {peers} | nojoin {why}
+//                                 (a room made with a password, 6 digits, takes only the programs that say it)
 //   to {id, d}                    d to the program `id` of the room                         → that program gets from {id, d}
 //   info {name, format, list, turnOrder, public, players, watchers, playing}   the room's host: what the lobby shows of it
 //   lobby {}                      (not in a room) the public rooms now, and again whenever they change → rooms {rooms}
@@ -26,6 +27,12 @@ export const RELAY_PROTOCOL = 1;
 
 /** Room codes: what the apps make (6 letters and digits), with room to spare. */
 const ROOM_CODE = /^[A-Za-z0-9-]{1,32}$/;
+
+/** A room's password: 6 digits (the app that makes the room draws them). */
+const PASSWORD = /^[0-9]{6}$/;
+
+/** Wrong passwords an address may say in an hour (at this pace 6 digits can't be guessed). */
+export const WRONG_PASSWORDS_PER_HOUR = 20;
 
 /** WebSocket close codes the apps read. */
 export const CLOSE = { refused: 4001, limit: 4008, revoked: 4003, shutdown: 4010 } as const;
@@ -52,6 +59,8 @@ export interface LobbyRoom extends Omit<RoomInfo, "public"> {
   code: string;
   /** Its spectator seats (the server's). */
   seats: number;
+  /** Coming in (to play or to watch) needs its password. */
+  locked: boolean;
 }
 
 interface Room {
@@ -60,6 +69,8 @@ interface Room {
   /** The program that made it (its host), the one whose info is taken; another member's once it has gone. */
   owner: string;
   info: RoomInfo | null;
+  /** The password its maker gave (null: none): every program coming in must say it. */
+  password: string | null;
 }
 
 interface Conn {
@@ -146,6 +157,8 @@ export function startRelay(server: Server, initial: ServerConfig, log: (line: st
   setKeys();
   const conns = new Set<Conn>();
   const perIp = new Map<string, number>();
+  /** Wrong room passwords said from each address since `since` (counted again after an hour). */
+  const wrong = new Map<string, { n: number; since: number }>();
   const rooms = new Map<string, Room>();
   let hour = new Map<string, KeyUse>();
   let refused = new Map<string, number>();
@@ -168,7 +181,7 @@ export function startRelay(server: Server, initial: ServerConfig, log: (line: st
       .filter((r) => r.info?.public)
       .map((r) => {
         const { public: _, ...shown } = r.info!;
-        return { code: r.code, ...shown, seats: config.spectators };
+        return { code: r.code, ...shown, seats: config.spectators, locked: r.password !== null };
       });
   let lobbyTimer: NodeJS.Timeout | null = null;
   const lobbyChanged = (): void => {
@@ -228,7 +241,7 @@ export function startRelay(server: Server, initial: ServerConfig, log: (line: st
     c.key = key;
     c.keyName = name;
     use(name).connects += 1;
-    send(c, { t: "welcome", v: RELAY_PROTOCOL, id: c.id, seats: config.spectators, records: config.records.enabled });
+    send(c, { t: "welcome", v: RELAY_PROTOCOL, id: c.id, seats: config.spectators, records: config.records.enabled, passwords: true });
   };
 
   const join = (c: Conn, m: Record<string, unknown>): void => {
@@ -239,12 +252,26 @@ export function startRelay(server: Server, initial: ServerConfig, log: (line: st
     let room = rooms.get(code);
     if (room && mode === "create") return send(c, { t: "nojoin", why: "exists" });
     if (!room && mode === "join") return send(c, { t: "nojoin", why: "missing" });
+    const password = typeof m.password === "string" && PASSWORD.test(m.password) ? m.password : null;
+    if (room && room.password !== null) {
+      // An address that said too many wrong passwords this hour gets into no locked room, whatever it says now (else
+      // guessing on would find it); below that, a wrong (or no) password counts.
+      const now = Date.now();
+      let tries = wrong.get(c.ip);
+      if (!tries || now - tries.since > 3_600_000) wrong.set(c.ip, (tries = { n: 0, since: now }));
+      if (tries.n >= WRONG_PASSWORDS_PER_HOUR) return send(c, { t: "nojoin", why: "tries" });
+      if (password !== room.password) {
+        tries.n += 1;
+        if (tries.n === WRONG_PASSWORDS_PER_HOUR) log(`${c.ip}: ${WRONG_PASSWORDS_PER_HOUR} wrong room passwords in an hour`);
+        return send(c, { t: "nojoin", why: "password" });
+      }
+    }
     if (!room) {
       if (rooms.size >= config.maxRooms) {
         log(`no room for ${c.keyName}: ${rooms.size} rooms (max_rooms)`);
         return send(c, { t: "nojoin", why: "busy" });
       }
-      room = { code, members: new Map(), owner: c.id, info: null };
+      room = { code, members: new Map(), owner: c.id, info: null, password };
       rooms.set(code, room);
       use(c.keyName!).rooms += 1;
     }
@@ -326,6 +353,8 @@ export function startRelay(server: Server, initial: ServerConfig, log: (line: st
 
   // Connections that don't answer a ping by the next one are gone (a phone that lost its network keeps no socket open).
   const pinger = setInterval(() => {
+    const now = Date.now();
+    for (const [ip, tries] of wrong) if (now - tries.since > 3_600_000) wrong.delete(ip);
     for (const c of conns) {
       if (!c.alive) {
         c.ws.terminate();
