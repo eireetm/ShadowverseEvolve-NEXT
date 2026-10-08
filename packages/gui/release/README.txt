@@ -28,8 +28,10 @@ Shadowverse: Evolve NEXT  {{version}}
   - 联机对战：双方都要用同一个版本（{{version}}）。一方"创建房间"，把房间号发给对方；连不上时用"手动连接"。
 
 从旧版更新
-  把这个版本里的 app 文件夹、server.mjs、start.bat、README.txt、VERSION.txt 复制到旧版的文件夹里，覆盖原来的。
-  decks、replays、public 里你自己的文件和 settings.ini 不用动。
+  设置页最下面的"检查版本更新"：GitHub 上有新版本时会提示，点"更新"就自动下载、换掉程序并重启。
+  只换程序（app、server.mjs、start.bat、README.txt、VERSION.txt、decks/samples）；你自己的卡组、录像、public 里的文件、
+  settings.ini 和 online-server.ini 都不动。换下来的旧程序放在 update/previous 里。
+  连不上 GitHub 时手动更新：把新版本里的 app 文件夹、server.mjs、start.bat、README.txt、VERSION.txt 复制到旧版的文件夹里，覆盖原来的。
 
 文件夹
   decks/     卡组文件（samples/ 里是示例卡组）
@@ -46,6 +48,7 @@ Shadowverse: Evolve NEXT  {{version}}
                fonts/                            字体
   settings.ini  设置：第一次启动时生成，可以直接编辑（游戏关着时改，或者改完后刷新页面），说明在文件里
   app/       程序本身，不要改动
+  update/    更新时换下来的旧程序（update/previous），不需要可以删掉
 
 遇到问题
   - 打开后一片黑、或者显示"界面出错了"：对这个页面关掉网页翻译和浏览器插件，再刷新。
@@ -76,8 +79,11 @@ Shadowverse: Evolve NEXT  {{version}}
     つながらないときは「手動で接続」を使ってください。
 
 古いバージョンからの更新
-  このバージョンの app フォルダ、server.mjs、start.bat、README.txt、VERSION.txt を古いバージョンのフォルダにコピーして上書きします。
-  decks、replays、public の自分のファイルと settings.ini はそのままで大丈夫です。
+  設定画面のいちばん下の「バージョンの更新を確認」：GitHub に新しいバージョンがあれば知らせます。「更新する」で自動的にダウンロードし、
+  プログラムを入れ替えて再起動します。入れ替えるのはプログラム（app、server.mjs、start.bat、README.txt、VERSION.txt、decks/samples）だけで、
+  自分のデッキ、リプレイ、public のファイル、settings.ini と online-server.ini はそのままです。古いプログラムは update/previous に残ります。
+  GitHub に接続できないときは手動で：新しいバージョンの app フォルダ、server.mjs、start.bat、README.txt、VERSION.txt を
+  古いバージョンのフォルダにコピーして上書きします。
 
 フォルダ
   decks/     デッキファイル（samples/ はサンプルデッキ）
@@ -94,6 +100,7 @@ Shadowverse: Evolve NEXT  {{version}}
                fonts/                            フォント
   settings.ini  設定：初回起動時に作られます。直接編集できます（ゲームを閉じているときに編集するか、編集後にページを再読み込み）。説明はファイルの中にあります
   app/       プログラム本体（変更しないでください）
+  update/    更新で入れ替えた古いプログラム（update/previous）。不要なら削除してかまいません
 
 困ったとき
   - 開いても真っ黒、または「画面でエラーが起きました」と出るとき：このページではページ翻訳とブラウザ拡張機能をオフにして、再読み込みしてください。
@@ -124,8 +131,12 @@ What it does
     if it can't connect, use "Connect by hand".
 
 Updating from an older version
-  Copy this version's app folder, server.mjs, start.bat, README.txt and VERSION.txt into the old version's folder, replacing theirs.
-  Your own files in decks, replays and public, and settings.ini, stay as they are.
+  "Check for updates" at the bottom of the settings: when GitHub has a newer version, "Update" downloads it, puts the new
+  program in place and restarts. Only the program is replaced (app, server.mjs, start.bat, README.txt, VERSION.txt,
+  decks/samples): your decks, replays, files in public, settings.ini and online-server.ini stay as they are. The old program
+  is kept in update/previous.
+  When GitHub can't be reached, by hand: copy the new version's app folder, server.mjs, start.bat, README.txt and VERSION.txt
+  into the old version's folder, replacing theirs.
 
 Folders
   decks/     deck files (samples/: sample decks)
@@ -143,6 +154,7 @@ Folders
   settings.ini  the settings: made at the first start, and can be edited by hand (while the game is closed, or reload the page
              after saving it); the comments in it explain each one
   app/       the program itself; don't change it
+  update/    the program an update replaced (update/previous); delete it if you like
 
 Problems
   - A black page, or "The interface stopped working": turn off page translation and browser extensions for this page, then reload.

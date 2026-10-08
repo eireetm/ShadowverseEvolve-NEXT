@@ -4,7 +4,9 @@
  * repository root; options (after `--`):
  *   --out <folder>     where (default: SVEN-<version>-pc beside the repository). It must not exist yet, or be empty.
  *   --public <folder>  copy this folder's files into the release's public/ (default: none, only the empty folders)
- *   --zip              also write <folder>.zip, to send
+ *   --zip              also write the zips: <folder>.zip, the program only, for GitHub's release (the program's updates
+ *                      download it: host/update.ts); <folder>-private.zip, the whole folder with online-server.ini and the
+ *                      resources, to send to friends (only when the folder has those)
  * The version is packages/gui/package.json's. VERSION.txt also gets the commit and the engine fingerprint: online, both
  * programs need the same fingerprint.
  */
@@ -79,7 +81,9 @@ const fingerprint = engineFingerprint(gui);
 console.log(`Shadowverse: Evolve NEXT ${version} (PC) -> ${out}`);
 mkdirSync(out, { recursive: true });
 
-// 1. The app, without public/ (the release has its own).
+// 1. The app, without public/ (the release has its own), and without the project's online server: the release reads it from
+// online-server.ini beside the program, and the app goes onto GitHub, where a server's address and key must never be.
+process.env.SVE_NO_ONLINE_SERVER = "1";
 await build({ configFile: join(gui, "vite.config.ts"), root: gui, publicDir: false, build: { outDir: join(out, "app"), emptyOutDir: true }, logLevel: "warn" });
 
 // 2. The server: one file for Node, with the host code it uses. Paths in its comments are relative to the repository.
@@ -129,9 +133,11 @@ writeWindowsText(
   false,
 );
 
-// 5. A zip to send: the folder itself at its top, its empty folders kept; pictures and sounds are stored as they are.
-if (zip) {
-  const file = `${out}.zip`;
+// 5. The zips, the folder itself at their top, its empty folders kept; pictures and sounds stored as they are.
+//    <folder>.zip: for GitHub's release, which the program's updates download — the program only: no online-server.ini (a
+//    server's address and key are for those its owner gives them to) and no files in public/ (resources aren't published).
+//    <folder>-private.zip: the whole folder, to send to friends, when it has those.
+async function writeZip(file: string, keep: (path: string) => boolean): Promise<void> {
   const top = basename(out);
   const stream = createWriteStream(file);
   await new Promise<void>((done, fail) => {
@@ -140,7 +146,7 @@ if (zip) {
       stream.write(chunk);
       if (final) stream.end(() => done());
     });
-    for (const path of filesUnder(out, true)) {
+    for (const path of filesUnder(out, true).filter(keep)) {
       const name = `${top}/${path}`;
       const entry = path.endsWith("/") || /\.(webp|png|jpe?g|gif|avif|mp3|ogg|m4a|wav|woff2?)$/i.test(path) ? new ZipPassThrough(name) : new ZipDeflate(name, { level: 9 });
       archive.add(entry);
@@ -149,6 +155,17 @@ if (zip) {
     archive.end();
   });
   console.log(`zip: ${file} (${(statSync(file).size / 2 ** 20).toFixed(1)} MB)`);
+}
+if (zip) {
+  const players = (path: string) => path === "online-server.ini" || (path.startsWith("public/") && !path.endsWith("/"));
+  await writeZip(`${out}.zip`, (path) => !players(path));
+  const forGitHub = `SVEN-${version}-pc.zip`;
+  if (basename(`${out}.zip`) !== forGitHub) console.log(`  For GitHub, upload it as ${forGitHub}: the updates look for that name.`);
+  console.log(`  GitHub: a release tagged v${version} (not a pre-release) with ${forGitHub}; the program's "check for updates" finds it.`);
+  if (filesUnder(out).some(players)) {
+    await writeZip(`${out}-private.zip`, () => true);
+    console.log("  Not for GitHub: the -private zip has online-server.ini or resources. Send it to friends only.");
+  }
 }
 
 const files = filesUnder(out);

@@ -303,7 +303,9 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 - **版本号**：`packages/gui/package.json` 的 `version`，PC 版和安卓版都用它，发新版前先改。
   - 安卓的 versionCode 按版本号算（0.1.2 → 102，0.2.0 → 200）。每次都比上一次大，才能直接覆盖安装，并保留数据。
 - **PC 版**：`npm run release:pc -- --zip`
-  - 在仓库旁边生成 `SVEN-<版本>-pc/` 文件夹和同名的 zip。
+  - 在仓库旁边生成 `SVEN-<版本>-pc/` 文件夹和两个 zip：
+    - `SVEN-<版本>-pc.zip`：只有程序，不带 `online-server.ini` 和 `public/` 里的文件。传到 GitHub 的 release，程序的更新下载的就是它。
+    - `SVEN-<版本>-pc-private.zip`：整个文件夹，带着 `online-server.ini` 和 `--public` 的资源。只私下发给朋友，不要传到 GitHub。文件夹里有这些时才生成。
   - 文件夹已经存在时不会覆盖：换一个 `--out <文件夹>`，或者先删掉旧的。
   - 里面有：
     - 程序（`app/`）；
@@ -311,8 +313,16 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
     - 示例卡组、空的 `replays/` 和 `public/` 文件夹结构；
     - 三语的 `README.txt`，以及写着版本、提交和引擎指纹的 `VERSION.txt`。
   - `--public <文件夹>`：把这个文件夹里的资源一起放进 `public/`（默认不放）。
-  - 仓库根目录有 `online-server.ini` 时一起放进去。
+  - 仓库根目录有 `online-server.ini` 时，文件夹和私用的 zip 里带着它。程序本身不编进服务器配置，只读旁边的这个文件。
   - 需要 Node.js 20 以上。
+  - **更新**：设置页最下面的"检查版本更新"，只有 PC 版有。
+    - 检查：先问 GitHub（API，或者 `releases/latest` 的跳转）；都连不上时，再问几个国内常用的免费镜像，只读版本号。
+    - 有新版本时弹窗，点"更新"：
+      - 只从 GitHub 下载 `SVEN-<版本>-pc.zip`，核对大小、SHA-256 和包里 `VERSION.txt` 写的版本；
+      - 换掉程序（`app/`、`server.mjs`、`start.bat`、`README.txt`、`VERSION.txt`、`decks/samples/`），在同一个窗口、同一个端口重启，网页自己刷新；
+      - 玩家的文件不动，旧程序放在 `update/previous/`。
+    - 电脑设了代理（`HTTPS_PROXY`，或者 VPN 软件设的系统代理）时走代理。
+    - 发布新版：在 GitHub 建一个正式的 release（不是 pre-release），tag 写 `v<版本>`，附上 `SVEN-<版本>-pc.zip`，文件名不能改。
   - **设置文件 `settings.ini`**：第一次启动时在这个文件夹里生成（带着浏览器里原有的设置）。
     - 里面是设置页的各项（语言、界面透明度、音量、快速提示、TURN 中转）和调试页的几项（动画、Bot 速度、手动选择卡片位置、手动调试），每项上面有三语的说明。
     - 文件优先：启动时读取，缺少的项和写错的值用默认值；在游戏里改的设置会写回文件，只改那一项，其他的行和注释保留。
@@ -678,7 +688,9 @@ Come in two kinds: for PCs and for Android.
 - **Version**: the `version` in `packages/gui/package.json`, used by both. Change it before building a new release.
   - Android's versionCode comes from it (0.1.2 → 102, 0.2.0 → 200). It must grow every time for the new APK to install over the old one and keep the data.
 - **PC**: `npm run release:pc -- --zip`
-  - It writes a folder `SVEN-<version>-pc/` next to the repository, and a zip of it.
+  - It writes a folder `SVEN-<version>-pc/` next to the repository, and two zips:
+    - `SVEN-<version>-pc.zip`: the program only, without `online-server.ini` or the files in `public/`. It goes into the GitHub release, and is what the program's updates download.
+    - `SVEN-<version>-pc-private.zip`: the whole folder, with `online-server.ini` and the `--public` resources. Send it to friends only, never to GitHub. Written only when the folder has those.
   - It never writes into an existing folder: pass another `--out <folder>`, or delete the old one first.
   - Inside:
     - the program (`app/`);
@@ -686,8 +698,16 @@ Come in two kinds: for PCs and for Android.
     - the sample decks, an empty `replays/`, and the `public/` folder structure;
     - `README.txt` in three languages, and `VERSION.txt` with the version, the commit and the engine fingerprint.
   - `--public <folder>`: copies that folder's resources into `public/` (none by default).
-  - With `online-server.ini` at the repository's root, the release has it too.
+  - With `online-server.ini` at the repository's root, the folder and the private zip have it. The program itself has no server built in; it reads this file beside it.
   - Requires Node.js 20 or newer.
+  - **Updates**: "Check for updates" at the bottom of the settings, in the PC release only.
+    - The check asks GitHub (its API, or the redirect of `releases/latest`); when neither answers, a few free mirrors much used in mainland China, for the version number only.
+    - A newer version opens a window. "Update":
+      - downloads `SVEN-<version>-pc.zip` from GitHub only, and checks its size, its SHA-256 and the version its `VERSION.txt` says;
+      - replaces the program (`app/`, `server.mjs`, `start.bat`, `README.txt`, `VERSION.txt`, `decks/samples/`) and restarts in the same window on the same port, where the page reloads itself;
+      - never touches the player's files, and keeps the old program in `update/previous/`.
+    - With a proxy set on the computer (`HTTPS_PROXY`, or the system proxy a VPN program sets), it goes through it.
+    - Publishing: a full GitHub release (not a pre-release) tagged `v<version>`, with `SVEN-<version>-pc.zip` attached under exactly that name.
   - **Settings file `settings.ini`**: written into the folder at the first start (with the settings the browser had).
     - It holds the settings page's settings (languages, interface transparency, volumes, the Quick pause, the TURN relay) and a few of the debug panel's (animations, bot speed, choosing card spots by hand, manual debugging), each with a comment in three languages.
     - The file comes first: it is read at the start (a missing key or a wrong value: the default), and a setting changed in the game is written back to it, that key only; other lines and comments stay.

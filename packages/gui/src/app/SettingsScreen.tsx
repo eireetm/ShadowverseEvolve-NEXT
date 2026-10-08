@@ -10,6 +10,7 @@ import { useApp } from "./store";
 import { changedTokens } from "./token-art";
 import { TokenArtWindow } from "./TokenArtWindow";
 import { ServerConfigWindow } from "./ServerConfigWindow";
+import { UpdateCheckButton } from "./UpdateWindow";
 import { loadServerConfig, useServerConfig } from "../net/server-config";
 import { APP_VERSION } from "./version";
 
@@ -264,6 +265,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
         <p className="sve-settings-version" data-testid="settings-version">
           {t("settings.version", { version: APP_VERSION })}
         </p>
+        <UpdateCheckButton />
       </div>
     </div>
   );
