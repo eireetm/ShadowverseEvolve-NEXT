@@ -279,7 +279,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
   - **房间号**：一方创建房间，把 6 位房间号发给对方。双方借用公共的免费服务（Nostr、MQTT、BitTorrent）找到对方，然后用 WebRTC 直连。
   - **手动连接**：房间号连不上时，双方互相发送连接码（`SVE1-O-…` / `SVE1-A-…`）。
   - **连不上时**：可以在设置里填自己的 TURN 中转；"检测网络"会显示这台电脑的网络情况。
-- **版本**：两边的联机协议、卡牌（定义和实现状态）和规则代码的指纹都相同才能开始，联机界面会显示是否相同；版本号本身不比。规则代码的指纹只算会影响对局的部分：代码的注释和排版、卡面文本、中文和英文卡名都不算。房主选的禁卡表，对方也要有同样的一张（没有或不一样时，对方不能准备）。各自 `public/` 里的资源（卡图、音效、背景、字体、`theme.css`）、设置、界面语言、卡组都不用一样。同一版本的电脑版和安卓版可以互相联机；设置页最下面和联机界面都显示版本号，连不上时先确认双方的版本一样。
+- **版本**：两边的联机协议、卡牌（定义和实现状态）和规则代码的指纹都相同才能开始，联机界面会显示是否相同；版本号本身不比。规则代码的指纹只算会影响对局的部分：代码的注释和排版、卡面文本、中文和英文卡名、只决定玩家看到什么的代码都不算。房主选的禁卡表，对方也要有同样的一张（没有或不一样时，对方不能准备）。各自 `public/` 里的资源（卡图、音效、背景、字体、`theme.css`）、设置、界面语言、卡组都不用一样。同一版本的电脑版和安卓版可以互相联机；设置页最下面和联机界面都显示版本号，连不上时先确认双方的版本一样。
 - **对局**：双方各自运行同一局，只同步每一步的回答。断线后可以重连，接着打。
   - **悔棋**：房主在规则里勾选"允许悔棋"（使用服务器时在创建房间之前，也可以在房间里改）。对局中在侧边栏"调试"里点"撤销我的上一个回答"：你上一个回答之后对方还没操作过，两边就一起退回到那一步；对方操作过就不能撤销。观战者也跟着退。
   - 联机时种子和"保存复现包"在对局结束后才显示（有了它们，改过的程序能推算出牌组顺序）。
@@ -321,7 +321,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 - **联机**：双方的引擎指纹一样才能对局（`VERSION.txt` 和联机界面里都能看到）。
   - 改了 `packages/core/` 或 `packages/gui/src/engine/` 的代码，或者卡牌数据里规则用到的部分（编号、卡名、费用、攻防、类型、职业、种族、印刷版本……），指纹就会变，大家都要换新版。
   - 联机协议（`packages/gui/src/net/` 的 `PROTOCOL`）变了也一样；只改了界面的版本可以和旧版互相联机。
-  - 指纹不变的：只改注释或排版；只改卡面文本、中文或英文卡名；只改构建卡牌数据的代码（`packages/core/src/data/` 里的 `fixes.ts` 等）、`packages/core/src/testing/` 或 `src/engine/client.ts`（怎么算见 `packages/gui/fingerprint.ts`）。
+  - 指纹不变的：只改注释或排版；只改卡面文本、中文或英文卡名；只改构建卡牌数据的代码（`packages/core/src/data/` 里的 `fixes.ts` 等）、`packages/core/src/testing/`、`src/engine/client.ts`，或者只决定玩家看到什么的代码（玩家视角、按视角隐藏的事件）（怎么算见 `packages/gui/fingerprint.ts`）。
 
 ### 安卓版
 
@@ -651,7 +651,7 @@ Sound effects (26):
   - **Room code**: one player creates a room and sends the 6-letter code to the other. Both find each other through free public services (Nostr, MQTT, BitTorrent), then connect directly with WebRTC.
   - **Manual connection**: when a room code doesn't connect, the players exchange connection codes (`SVE1-O-…` / `SVE1-A-…`).
   - **If you can't connect**: set your own TURN relay in the settings; "Check the network" shows what this computer can reach.
-- **Versions**: a game starts only when both programs have the same online protocol and the same fingerprints of the cards (definitions, implementation status) and of the rules code; the online screen says whether they do. The version number itself isn't compared. The rules code's fingerprint counts only what can change a game: comments and the code's layout, card texts, and Chinese and English card names don't count. The restriction list the host chooses must be the same one in the other player's program (without it, or with another version of it, that player can't get ready). The resources in each one's `public/` (card pictures, sounds, backgrounds, fonts, `theme.css`), the settings, the interface language and the decks can all differ. The PC program and the Android app of one version play each other; the bottom of the settings page and the online screen show the version: when two can't connect, check that both have the same one.
+- **Versions**: a game starts only when both programs have the same online protocol and the same fingerprints of the cards (definitions, implementation status) and of the rules code; the online screen says whether they do. The version number itself isn't compared. The rules code's fingerprint counts only what can change a game: comments and the code's layout, card texts, Chinese and English card names, and the code that only works out what a player is shown don't count. The restriction list the host chooses must be the same one in the other player's program (without it, or with another version of it, that player can't get ready). The resources in each one's `public/` (card pictures, sounds, backgrounds, fonts, `theme.css`), the settings, the interface language and the decks can all differ. The PC program and the Android app of one version play each other; the bottom of the settings page and the online screen show the version: when two can't connect, check that both have the same one.
 - **The game**: each program runs the same game and only the answers are exchanged. After a lost connection, reconnect and play on.
   - **Taking back**: the host ticks "Allow taking back answers" in the rules (on the server, before making the room; it can be changed in the room too). In the game, "Undo my last answer" on the sidebar's Debug tab takes both programs back to before your last answer, while the other player hasn't answered since; after they have, it can't. Spectators follow.
   - Online, the seed and "Save a bug report file" are shown once the game is over (with them, a changed program could work out the decks' order).
@@ -693,7 +693,7 @@ Come in two kinds: for PCs and for Android.
 - **Online play**: both sides need the same engine fingerprint (shown in `VERSION.txt` and in the online screen).
   - Changing code in `packages/core/` or `packages/gui/src/engine/`, or what the rules read of the card data (numbers, card names, costs, attack and defense, types, classes, traits, printings ...), changes it, and everyone needs the new release.
   - So does a new online protocol (`PROTOCOL` in `packages/gui/src/net/`); a release that only changes the interface plays with the older one.
-  - It stays the same when only comments or layout change; only card texts or Chinese and English card names; only the code that builds the card data (`fixes.ts` and the others in `packages/core/src/data/`), `packages/core/src/testing/` or `src/engine/client.ts` (how it is made: `packages/gui/fingerprint.ts`).
+  - It stays the same when only comments or layout change; only card texts or Chinese and English card names; only the code that builds the card data (`fixes.ts` and the others in `packages/core/src/data/`), `packages/core/src/testing/`, `src/engine/client.ts`, or the code that only works out what a player is shown (the player view, the events as each player is told them) (how it is made: `packages/gui/fingerprint.ts`).
 ### Android app
 
 - **Build**: with Android Studio installed, `npm run android:apk` makes a debug APK at `packages/gui/android/app/build/outputs/apk/debug/app-debug.apk`.

@@ -49,7 +49,7 @@ export function actionLabel(
       const def = catalog.def(info.cards[action.evolveCard]?.def ?? "");
       const shown = action.backFace && def?.backFace ? catalog.def(def.backFace) : def;
       return [
-        `${t("decision.evolve")} → ${cardName(shown, lang)}`,
+        `${evolveWay(action, info, t)} → ${cardName(shown, lang)}`,
         action.useEvolutionPoint ? t("decision.withEp") : null,
         action.superEvolve ? t("decision.superEvolve") : null,
         action.backFace ? t("decision.backFace") : null,
@@ -68,6 +68,20 @@ export function actionLabel(
     case "manual": // never listed in a decision (model/manual.ts)
       return "";
   }
+}
+
+/**
+ * "Evolve", and its cost when the card can evolve more than one way now (BP19-082 "Evolve (1)" and, summoned from the
+ * cemetery, "Evolve (0)"; BP02-089 "Evolve (2)" or one that discards 3): which of its evolve abilities the item is.
+ */
+function evolveWay(action: Extract<MainAction, { type: "evolve" }>, info: DecisionInfo, t: Translate): string {
+  const decision = info.decision;
+  const ways = decision.type === "mainPhase" ? new Set(decision.actions.flatMap((a) => (a.type === "evolve" && a.card === action.card ? [a.ability] : []))) : new Set<number>();
+  const summary = ways.size > 1 ? info.abilities[`${action.card}:${action.ability}`] : undefined;
+  if (!summary) return t("decision.evolve");
+  // Play points, also none ("(0)"), unless the cost is only what its text says (discard 3 cards).
+  const pp = summary.pp ?? (summary.custom ? null : 0);
+  return [t("decision.evolve"), pp !== null ? t("ability.cost", { n: pp }) : null, summary.custom ? t("ability.custom") : null].filter((p): p is string => p !== null).join(" ");
 }
 
 const TIMINGS = ["fanfare", "lastWords", "onEvolve", "onSuperEvolve", "strike", "onRace", "onDrive", "other"] as const;

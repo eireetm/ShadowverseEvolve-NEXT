@@ -1,6 +1,6 @@
 // A line of text for each log event. The worker already hid what the log's viewer may not see (CR 4.1.2): a card it
 // can't name is "a card".
-import type { CardId, CardMove, GameEvent, ManualOp } from "@sve/core";
+import type { CardId, CardMove, GameEvent, ManualOp, PlayerId } from "@sve/core";
 import { cardName, type Catalog } from "../../app/catalog";
 import { counterName } from "../../i18n/counters";
 import type { CardLang, UiLang } from "../../app/settings";
@@ -15,6 +15,8 @@ export interface LogContext {
   /** The interface language (counter names). */
   uiLang: UiLang;
   update: GameUpdate;
+  /** The deck placements a shuffle of that deck made pointless (shuffledPlacements): by entry, whose deck. */
+  shuffled?: ReadonlyMap<number, ReadonlySet<PlayerId>>;
 }
 
 export interface LogLine {
@@ -61,7 +63,7 @@ export function describeEntry(entry: LogEntry, ctx: LogContext, showAll: boolean
     case "mulligan":
       return line(t(event.redraw ? "log.mulligan.redraw" : "log.mulligan.keep", { player: player(event.player) }));
     case "cardsMoved":
-      return describeMoves(event.moves, ctx, name, showAll);
+      return describeMoves(entry, event.moves, ctx, name, showAll);
     case "cardPlayed":
       return line(t("log.played", { player: player(event.player), card: name(event.card) }));
     case "abilityPlayed":
@@ -152,7 +154,52 @@ function manualText(op: ManualOp, ctx: LogContext, name: (id: CardId) => string,
   }
 }
 
-function describeMoves(moves: readonly CardMove[], ctx: LogContext, name: (id: CardId | null | undefined) => string, showAll: boolean): LogLine | null {
+/**
+ * Where a card went: its zone, or for a deck the top, the bottom, or its place from the top (the move's `to.position`:
+ * everyone sees where a card goes) — unless that deck was then shuffled (shuffledPlacements).
+ */
+function whereTo(m: CardMove, entry: LogEntry, ctx: LogContext): string {
+  const { t } = ctx;
+  const position = m.to.zone === "deck" && !ctx.shuffled?.get(entry.seq)?.has(m.to.player) ? m.to.position : undefined;
+  if (position === "top" || position === 0) return t("log.zone.deckTop");
+  if (position === "bottom") return t("log.zone.deckBottom");
+  if (typeof position === "number") return t("log.zone.deckAt", { n: position + 1 });
+  return t(zoneKey(m.to.zone));
+}
+
+/**
+ * The deck placements a shuffle of that deck made pointless: cards put on the top or the bottom of a deck and then
+ * shuffled into it (BP05-054 "shuffle it into your deck" does that) before anything else happens with that deck and
+ * before another card or ability is played. Their lines say "deck", not where in it. By entry (seq): whose deck.
+ */
+export function shuffledPlacements(log: readonly LogEntry[]): Map<number, Set<PlayerId>> {
+  const out = new Map<number, Set<PlayerId>>();
+  log.forEach((entry, i) => {
+    const event = entry.event;
+    if (event.type !== "cardsMoved") return;
+    const decks = new Set(event.moves.filter((m) => m.to.zone === "deck" && m.to.position !== undefined).map((m) => m.to.player));
+    for (const p of decks) {
+      for (const later of log.slice(i + 1)) {
+        const e = later.event;
+        if (e.type === "deckShuffled" && e.player === p) {
+          out.set(entry.seq, new Set([...(out.get(entry.seq) ?? []), p]));
+          break;
+        }
+        const usesDeck = e.type === "cardsMoved" && e.moves.some((m) => (m.from?.zone === "deck" && m.from.player === p) || (m.to.zone === "deck" && m.to.player === p));
+        if (usesDeck || e.type === "cardPlayed" || e.type === "abilityPlayed" || e.type === "turnStarted" || e.type === "phaseStarted") break;
+      }
+    }
+  });
+  return out;
+}
+
+function describeMoves(
+  entry: LogEntry,
+  moves: readonly CardMove[],
+  ctx: LogContext,
+  name: (id: CardId | null | undefined) => string,
+  showAll: boolean,
+): LogLine | null {
   const { t, update } = ctx;
   // Setup, playing (the "plays" line says it) and mulligans (their own line) are not repeated.
   const shown = moves.filter((m) => showAll || (m.reason !== "setup" && m.reason !== "play" && m.reason !== "mulligan"));
@@ -167,13 +214,13 @@ function describeMoves(moves: readonly CardMove[], ctx: LogContext, name: (id: C
   }
   const groups = new Map<string, CardMove[]>();
   for (const m of shown) {
-    const key = `${m.from?.zone ?? ""}>${m.to.zone}`;
+    const key = `${m.from?.zone ?? ""}>${whereTo(m, entry, ctx)}`;
     groups.set(key, [...(groups.get(key) ?? []), m]);
   }
   const parts = [...groups.values()].map((group) => {
     const first = group[0]!;
     const cards = group.every((m) => m.def === "") ? t("log.cardsN", { n: group.length }) : group.map((m) => name(m.newCard ?? m.card)).join(", ");
-    return t("log.move", { cards, from: t(zoneKey(first.from?.zone)), to: t(zoneKey(first.to.zone)) });
+    return t("log.move", { cards, from: t(zoneKey(first.from?.zone)), to: whereTo(first, entry, ctx) });
   });
   return { kind: "event", text: parts.join(" · ") };
 }

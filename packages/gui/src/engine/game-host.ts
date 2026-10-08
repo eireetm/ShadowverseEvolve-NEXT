@@ -999,6 +999,8 @@ export class GameHost {
           else if (action.type === "evolve") {
             add(action.card);
             own(action.evolveCard);
+            // Its cost: a card with more than one way to evolve shows each one's (BP19-082, labels.ts).
+            activated(action.card, action.ability);
           } else if (action.type === "activate") {
             add(action.card);
             activated(action.card, action.ability);
