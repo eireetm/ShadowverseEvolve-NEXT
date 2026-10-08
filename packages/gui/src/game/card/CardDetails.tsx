@@ -144,7 +144,7 @@ export function CardPanel({ focus, details, exact = false, art = true }: { focus
       ) : null}
       {view && details ? (
         <>
-          <section className="sve-details-runtime" data-testid="details-state">
+          <section className="sve-details-runtime sve-details-current-state" data-testid="details-state">
             <h4>{t("card.currentState")}</h4>
             <div className="sve-details-flags">
               {details.enteredFieldThisTurn ? <span>{t("card.enteredThisTurn")}</span> : null}
@@ -154,7 +154,7 @@ export function CardPanel({ focus, details, exact = false, art = true }: { focus
             {details.abilitiesLost ? <p className="sve-hint sve-details-abilities-lost-help">{t("card.abilitiesLostHelp")}</p> : null}
           </section>
           {/* Reserved for gained abilities; no list is inferred from printed keywords or CardView. */}
-          <section className="sve-details-runtime" data-testid="details-gained">
+          <section className="sve-details-runtime sve-details-gained-abilities" data-testid="details-gained">
             <h4>{t("card.gainedAbilities")}</h4>
           </section>
         </>

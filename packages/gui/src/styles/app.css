@@ -1956,6 +1956,14 @@ option {
   display: none;
 }
 
+.sve-game .sve-details-current-state {
+  display: block;
+}
+
+.sve-game .sve-details-gained-abilities {
+  display: block;
+}
+
 .sve-card-text p {
   margin: 0 0 4px;
 }
