@@ -136,9 +136,9 @@ export interface CardScript {
   equipment?: { abilities?: readonly AbilityDef[]; keywords?: readonly Keyword[] };
   /**
    * CR 10.9.1.2 — the kinds of effect this card's abilities create that its text quotes as an ability given to a card
-   * (BP20-036 "Give it Assail and 'This doesn't take damage' for the rest of this turn": "preventDamage"). Only for
-   * showing them with that card (the player view's `CardView.gifts`); abilities given by `fx.grant` and texts by
-   * `fx.gainText` are shown without it.
+   * (BP20-036 "Give it Assail and 'This doesn't take damage' for the rest of this turn": "preventDamage"). Such an effect is
+   * that ability: it is lost with the card's abilities (state/effects.ts effectInForce, BP05-061 ruling), and the player
+   * view shows it with that card (`CardView.gifts`). Abilities given by `fx.grant` and texts by `fx.gainText` are so without it.
    */
   gives?: readonly EffectChange["kind"][];
   /**

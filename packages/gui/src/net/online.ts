@@ -18,7 +18,7 @@ import { DECK_FORMAT, toDeckList, type DeckFile } from "../decks/format";
 import type { FromWorker, GameOptions, RecordedInput } from "../engine/protocol";
 import { checkDeck } from "../formats/check";
 import { leadersFor, type FormatProblem } from "../formats/formats";
-import { RESTRICTION_LISTS, restrictionList } from "../formats/lists";
+import { listFingerprint, restrictionList } from "../formats/lists";
 import { newRoomCode, newRoomPassword } from "./codes";
 import type { PeerLink } from "./link";
 import { answerConnection, BadCodeError, offerConnection, type ManualAttempt } from "./manual";
@@ -33,7 +33,7 @@ import { currentLink, gameStarted, getOnline, NO_PREP, setChatRelay, setLink, se
 export { sendChat, useOnline, getOnline, canChat, type OnlinePhase } from "./state";
 
 /** The protocol these messages follow (a program with another one can't play with this one, or watch its games). */
-export const PROTOCOL = "online-4";
+export const PROTOCOL = "online-5";
 
 declare const __ENGINE_FINGERPRINT__: string;
 /** The rules code's fingerprint (vite.config.ts); "dev" where the build didn't make one (tests). */
@@ -58,12 +58,14 @@ async function sha256(text: string): Promise<string> {
 const randomHex = (bytes: number): string => [...crypto.getRandomValues(new Uint8Array(bytes))].map((b) => b.toString(16).padStart(2, "0")).join("");
 
 /**
- * A short fingerprint of the card pool (definitions and how complete their scripts are) and of the restriction lists: two
- * programs play the same cards and check decks the same way.
+ * A short fingerprint of the card pool (definitions and how complete their scripts are): two programs play the same cards.
+ * The restriction lists don't count: only the one a room uses has to be the same, and the rules say which (listProblem).
  */
 export async function cardsFingerprint(catalog: Catalog): Promise<string> {
-  return (await sha256(JSON.stringify({ cards: catalog.cards.map((card) => [card.id, card.status]), lists: RESTRICTION_LISTS }))).slice(0, 16);
+  return (await sha256(JSON.stringify({ cards: catalog.cards.map((card) => [card.id, card.status]) }))).slice(0, 16);
 }
+
+export { listProblem } from "../formats/lists";
 
 export async function identify(catalog: Catalog): Promise<void> {
   hello = helloOf(await cardsFingerprint(catalog));
@@ -536,11 +538,12 @@ setUndoRequest(requestUndo);
 function hostRules(): Rules {
   const settings = getSettings();
   const format = settings.format;
-  const list = format === "unlimited" ? null : (restrictionList(settings.restrictionLists[format])?.id ?? null);
+  const list = format === "unlimited" ? null : restrictionList(settings.restrictionLists[format]);
   const server = getOnline().room?.server === true;
   return {
     format,
-    list,
+    list: list?.id ?? null,
+    listHash: list ? listFingerprint(list) : null,
     turnOrder: settings.setupTurnOrder,
     undo: settings.allowUndo,
     watchHands: server && settings.allowWatchHands,

@@ -36,6 +36,7 @@ import {
   leave,
   leavingConcedes,
   problemsUnder,
+  listProblem,
   ready,
   readyDeckOf,
   reconnect,
@@ -930,7 +931,9 @@ function Prep({ role, same, onEditDecks }: { role: "host" | "guest"; same: boole
 
   const ctx = catalog ? { catalog, lang: settings.cardLang, t } : null;
   const isReady = prep.mine !== null;
-  const canReady = same === true && rules !== null && catalog !== null && status !== null && status.problems.length === 0;
+  // The host's restriction list: this program must have the same one to check the decks the same way.
+  const listIssue = role === "guest" && rules ? listProblem(rules) : null;
+  const canReady = same === true && rules !== null && catalog !== null && status !== null && status.problems.length === 0 && listIssue === null;
   return (
     <div className="sve-online-prep" data-testid="online-prep">
       <section>
@@ -946,6 +949,11 @@ function Prep({ role, same, onEditDecks }: { role: "host" | "guest"; same: boole
         ) : (
           <>
             <p data-testid="online-rules">{rules ? rulesText(rules, t) : "…"}</p>
+            {listIssue && rules?.list ? (
+              <p className="sve-problem" data-testid="online-list-problem">
+                {t(`online.list.${listIssue}`, { list: rules.list })}
+              </p>
+            ) : null}
             <p className="sve-hint">{t("online.hostSetsRules")}</p>
           </>
         )}

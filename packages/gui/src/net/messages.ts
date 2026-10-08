@@ -33,6 +33,8 @@ export interface Rules {
   format: FormatId;
   /** The restriction list (a file of restrictions/), or none. */
   list: string | null;
+  /** That list's contents' fingerprint (formats/lists.ts listFingerprint): the other player's must be the same. */
+  listHash: string | null;
   turnOrder: TurnOrder;
   /** A player may take back their last answers while the other player hasn't answered since ("悔棋"). */
   undo: boolean;
@@ -270,7 +272,15 @@ export function parseMessage(value: unknown): NetMessage | null {
       if (!FORMATS.includes(r.format as FormatId) || !TURN_ORDERS.includes(r.turnOrder as TurnOrder) || !(r.list === null || isString(r.list))) return null;
       return {
         t: "rules",
-        rules: { format: r.format as FormatId, list: r.list as string | null, turnOrder: r.turnOrder as TurnOrder, undo: r.undo === true, watchHands: r.watchHands === true, watchChat: r.watchChat === true },
+        rules: {
+          format: r.format as FormatId,
+          list: r.list as string | null,
+          listHash: isString(r.listHash) ? r.listHash : null,
+          turnOrder: r.turnOrder as TurnOrder,
+          undo: r.undo === true,
+          watchHands: r.watchHands === true,
+          watchChat: r.watchChat === true,
+        },
       };
     }
     case "ready": {

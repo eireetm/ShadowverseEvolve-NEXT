@@ -34,7 +34,7 @@ async function connectByHand(host: Page, guest: Page): Promise<void> {
   await expect(host.getByTestId("online-via")).toHaveText("codes passed by hand", { timeout: 30_000 });
   for (const page of [host, guest]) {
     await expect(page.getByTestId("online-connected")).toBeVisible({ timeout: 60_000 });
-    await expect(page.getByTestId("online-same")).toHaveText("Both programs are the same version (cards, rules, restriction lists).");
+    await expect(page.getByTestId("online-same")).toHaveText("Both programs are the same version (cards, rules).");
     // Each says its version and platform (a person compares them when two programs can't play together).
     await expect(page.getByTestId("online-versions")).toHaveText(/^Versions: yours [\d.]+ · PC, theirs [\d.]+ · PC$/);
   }
@@ -93,9 +93,12 @@ test("two programs play a game: the host's rules, both decks ready, answers both
   watchProblems([host, guest], problems);
   await connectByHand(host, guest);
 
-  // The host sets the rules; the guest sees them, and its deck is checked under them.
+  // The host sets the rules; the guest sees them, and its deck is checked under them. The restriction list is the one its own
+  // program has (the same contents): it can get ready.
   await host.getByTestId("online-turn-order").selectOption("player1");
-  await expect(guest.getByTestId("online-rules")).toHaveText("Standard · restriction list: None · first player: Player 1 goes first");
+  await host.getByTestId("format-list").selectOption("10_26_JPN");
+  await expect(guest.getByTestId("online-rules")).toHaveText("Standard · restriction list: 10_26_JPN · first player: Player 1 goes first");
+  await expect(guest.getByTestId("online-list-problem")).toHaveCount(0);
   await expect(guest.getByTestId("online-opponent")).toHaveText("Choosing a deck…");
   await readyBoth(host, guest);
 
@@ -306,7 +309,7 @@ test("two programs meet in a room through the public relays", async ({ browser }
   const via = await guest.getByTestId("online-via").innerText();
   await expect(host.getByTestId("online-via")).toHaveText(via);
   console.log(`connected via ${via} in ${Math.round((Date.now() - started) / 1000)} s`);
-  await expect(host.getByTestId("online-same")).toHaveText("Both programs are the same version (cards, rules, restriction lists).");
+  await expect(host.getByTestId("online-same")).toHaveText("Both programs are the same version (cards, rules).");
   await chatBothWays(host, guest);
 });
 

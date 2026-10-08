@@ -8,7 +8,7 @@ import { KEYWORD_ABILITIES, KEYWORD_DEF_PREFIX } from "../abilities/keyword-abil
 import { EQUIP_PREFIX, equipmentOf } from "../abilities/equipment";
 import { makeReader } from "../query";
 import { getCard, type Env } from "./access";
-import { effectInForce } from "./effects";
+import { abilitiesLostAt, effectInForce } from "./effects";
 import { isRacing } from "./links";
 
 /** An ability together with where it is defined (definition id + index in its script). */
@@ -51,17 +51,9 @@ export interface Characteristics {
   abilitiesLostAt: number | null;
 }
 
-/**
- * Timestamp of the latest "loses all abilities" effect in force on the card (BP05-061), or null.
- * Being Boxed is one too (CR 5.31.2, 5.31.2.1).
- */
-export function abilitiesLostAt(state: Readonly<GameState>, id: CardId): number | null {
-  let at: number | null = null;
-  for (const e of state.effects) {
-    if (e.target === id && (e.change.kind === "loseAbilities" || e.change.kind === "boxed") && effectInForce(state, e)) at = e.seq;
-  }
-  return at;
-}
+// Timestamp of the latest "loses all abilities" effect in force on the card (state/effects.ts: an effect that is a given
+// ability needs it to tell whether it is in force).
+export { abilitiesLostAt } from "./effects";
 
 /** CR 5.31 — is the card Boxed (e.g. BP11-024 "a Boxed enemy follower")? */
 export function isBoxed(state: Readonly<GameState>, id: CardId): boolean {
