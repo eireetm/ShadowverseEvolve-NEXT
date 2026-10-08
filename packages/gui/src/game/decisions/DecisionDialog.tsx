@@ -13,6 +13,7 @@ import { useT, type MessageKey, type Translate } from "../../i18n";
 import { cardText } from "../../app/catalog";
 import { inDialog } from "../actions";
 import { abilityLine } from "../card/ability-text";
+import { inCardLang } from "../../i18n/hant";
 import { CardTextLine, plainLine } from "../card/CardText";
 import { CardTile } from "../card/CardTile";
 import { setHighlight } from "../focus";
@@ -108,9 +109,10 @@ function SelectPending({ d, info, update, answer, busy }: FormProps<"selectPendi
     const source = summary?.source;
     const head = `${source ? `${label(source)} — ` : ""}${abilityLabel(summary, t)}`;
     const def = summary?.sourceDef && !summary.granted ? catalog.def(summary.sourceDef) : undefined;
+    const [timing, rank, count] = [summary?.timing, summary?.rank, summary?.count];
     const line =
-      def && summary?.timing !== undefined && summary.rank !== undefined && summary.count !== undefined
-        ? abilityLine(def.id, cardText(def, cardLang), cardLang, summary.timing, summary.rank, summary.count)
+      def && timing !== undefined && rank !== undefined && count !== undefined
+        ? inCardLang(cardLang, (data) => abilityLine(def.id, cardText(def, data), data, timing, rank, count))
         : null;
     return { id, source, head, line };
   });

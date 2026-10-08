@@ -1,7 +1,7 @@
 import type { AbilityDef } from "@sve/core";
 import { ALL_CARDS, ALL_SCRIPTS } from "@sve/core/sets";
 import { describe, expect, it } from "vitest";
-import type { CardLang } from "../src/app/settings";
+import type { DataLang } from "../src/i18n/hant";
 import { rankOf } from "../src/engine/game-host";
 import { abilityLine, markedLines, OTHER_LINES } from "../src/game/card/ability-text";
 
@@ -9,12 +9,12 @@ import { abilityLine, markedLines, OTHER_LINES } from "../src/game/card/ability-
 // Karyl's) read the same by their timing alone. Checked against every card: each ability of a timing with a mark gets its own
 // line in every card language, and the cards with more than one trigger without a mark are all in OTHER_LINES.
 
-const LANGS: readonly CardLang[] = ["en", "cn", "ja"];
+const LANGS: readonly DataLang[] = ["en", "cn", "ja"];
 const MARKED = ["fanfare", "lastWords", "onEvolve", "onSuperEvolve", "strike", "onRace", "onDrive"];
 type Automatic = Extract<AbilityDef, { kind: "automatic" }>;
 
 /** The card's text in a language, or null where the data has none (a pre-release card's English text is a placeholder). */
-const textOf = (card: (typeof ALL_CARDS)[number], lang: CardLang): string | null => {
+const textOf = (card: (typeof ALL_CARDS)[number], lang: DataLang): string | null => {
   const text = card.text[lang];
   return text && text !== "unavailable" ? text : null;
 };
@@ -33,7 +33,7 @@ describe("an ability's line of its card text", () => {
     const abilities = ALL_SCRIPTS["CP04-037"]!.abilities ?? [];
     expect([rankOf(abilities, 0), rankOf(abilities, 1), rankOf(abilities, 2)]).toEqual([{ rank: 0, count: 2 }, {}, { rank: 1, count: 2 }]);
     const karyl = ALL_CARDS.find((c) => c.id === "CP04-037")!;
-    const line = (lang: CardLang, rank: number) => abilityLine("CP04-037", karyl.text[lang] ?? "", lang, "fanfare", rank, 2);
+    const line = (lang: DataLang, rank: number) => abilityLine("CP04-037", karyl.text[lang] ?? "", lang, "fanfare", rank, 2);
     expect(line("cn", 0)).toBe("《UB》《入场曲》将手牌中的1张法术卡舍弃：选择敌方场上的1个从者。给予其3点伤害。抽取1张卡。");
     expect(line("cn", 1)).toBe("《入场曲》《消费2》：将1张『混沌魔法书』卡装备到这张卡。");
     expect(line("ja", 0)).toMatch(/^UBファンファーレ手札のスペル1枚を捨てる：/);
@@ -98,7 +98,7 @@ describe("an ability's line of its card text", () => {
   });
 
   it("follows the Japanese and Chinese order where it differs from the English one, and gives no line where the text doesn't tell", () => {
-    const text = (id: string, lang: CardLang) => ALL_CARDS.find((c) => c.id === id)!.text[lang] ?? "";
+    const text = (id: string, lang: DataLang) => ALL_CARDS.find((c) => c.id === id)!.text[lang] ?? "";
     // BP10-004: the first trigger is "Whenever an enemy follower is put onto the field", the second the end phase one.
     expect(abilityLine("BP10-004", text("BP10-004", "en"), "en", "other", 1, 2)).toBe("At the start of your end phase, refresh this card.");
     expect(abilityLine("BP10-004", text("BP10-004", "cn"), "cn", "other", 1, 2)).toBe("当自己的结束阶段到来时，将这张卡竖置。");

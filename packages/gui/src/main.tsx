@@ -3,7 +3,9 @@ import { createRoot } from "react-dom/client";
 import "./styles/app.css";
 import { App } from "./app/App";
 import { showCrash } from "./app/crash";
+import { getSettings } from "./app/settings";
 import { loadSettingsFile } from "./app/settings-file";
+import { followSettings, loadHant, usesHant } from "./i18n/hant";
 import { setHost } from "./host/api";
 import { webHost } from "./host/web";
 
@@ -25,6 +27,9 @@ async function start(): Promise<void> {
     setHost(webHost);
   }
   await loadSettingsFile();
+  // Traditional Chinese: its converter first, so the first page is already in it (loaded again if a setting asks later).
+  if (usesHant(getSettings())) await loadHant();
+  followSettings();
   createRoot(document.getElementById("root")!, {
     // React removes everything on an error nothing catches: say so rather than leave an empty page (crash.ts).
     onUncaughtError: (error, info) => {

@@ -8,6 +8,7 @@ import { traitName } from "../../app/traits";
 import { findCard, sideOf } from "../../engine/view-utils";
 import { htmlLang, useT } from "../../i18n";
 import { counterName } from "../../i18n/counters";
+import { dataLang, type DataLang } from "../../i18n/hant";
 import { useFocusSelect, type FocusCard } from "../focus";
 import { ArtViewer, type ArtFace } from "./ArtViewer";
 import { CardArt } from "./CardArt";
@@ -15,7 +16,9 @@ import { CardText, CardTextLine } from "./CardText";
 import { displayOf } from "./display";
 import { giftLines } from "./gifts";
 
-const LANGS: readonly CardLang[] = ["en", "cn", "ja"];
+const LANGS: readonly DataLang[] = ["en", "cn", "ja"];
+/** The card data's other languages (Traditional Chinese is the Chinese one: not again). */
+const otherLangs = (lang: CardLang): DataLang[] => LANGS.filter((l) => l !== dataLang(lang));
 
 /**
  * The last card the pointer went over (CardPanel). A card of the game is followed while it stays in its zone (it evolves,
@@ -47,7 +50,7 @@ export function CardPanel({ focus, exact = false, art = true }: { focus: FocusCa
   const name = cardName(def, cardLang);
   // Only the languages' own names, each once (a language without one would repeat the card name, e.g. a pre-release card's
   // Japanese name where it has no Chinese one).
-  const others = LANGS.filter((l) => l !== cardLang)
+  const others = otherLangs(cardLang)
     .map((l) => ({ lang: l, name: def.names[l] ?? "" }))
     .filter((o, i, all) => o.name !== "" && o.name !== name && all.findIndex((x) => x.name === o.name) === i);
   const stat = (label: string, now: number | null | undefined, printed: number | null) =>
@@ -106,7 +109,7 @@ export function CardPanel({ focus, exact = false, art = true }: { focus: FocusCa
           {t("card.traits")}: <span lang={htmlLang(cardLang)}>{def.traits.map((trait) => traitName(trait, cardLang)).join("・")}</span>
           <span className="sve-details-other">
             {" ("}
-            {LANGS.filter((l) => l !== cardLang).map((l, i) => (
+            {otherLangs(cardLang).map((l, i) => (
               <span key={l} lang={htmlLang(l)}>
                 {i > 0 ? " / " : ""}
                 {def.traits.map((trait) => traitName(trait, l)).join("・")}

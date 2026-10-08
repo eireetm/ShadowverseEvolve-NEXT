@@ -5,6 +5,7 @@
 //    names that contain them ("竜使い" -> 原初の竜使い = 元祖驭龙使); the rest are translated here, marked "translated".
 // New sets bring new traits: test/traits.test.ts lists any trait of the card pool missing here.
 import type { CardLang } from "./settings";
+import { inCardLang } from "../i18n/hant";
 
 export interface TraitNames {
   en: string;
@@ -142,7 +143,7 @@ export const TRAIT_NAMES: Readonly<Record<string, TraitNames>> = {
 
 /** A trait's name in a card language (the Japanese one when there is no translation). */
 export function traitName(trait: string, lang: CardLang): string {
-  return lang === "ja" ? trait : (TRAIT_NAMES[trait]?.[lang] ?? trait);
+  return inCardLang(lang, (data) => (data === "ja" ? trait : (TRAIT_NAMES[trait]?.[data] ?? trait)));
 }
 
 /** Every name of a trait (Japanese, English, Chinese), for searching. */

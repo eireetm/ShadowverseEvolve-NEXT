@@ -7,20 +7,20 @@
 //    among themselves.
 //  - Other triggers have no mark: OTHER_LINES says it for the cards with more than one (with one, its card's name says
 //    which ability it is).
-import type { CardLang } from "../../app/settings";
+import type { DataLang } from "../../i18n/hant";
 
 /**
  * What may come before a timing's mark at the start of a line: other icons and keywords (UB, 【...】, 《...》), and another
  * timing's mark ("{[fanfare]}/{[lastwords]}", "ファンファーレラストワード").
  */
-const HEAD: Record<CardLang, string> = {
+const HEAD: Record<DataLang, string> = {
   en: String.raw`(?:\{\[[a-z0-9]+\]\}[\s/,]*)*`,
   cn: String.raw`(?:[《【][^》】]*[》】][/／]?)*`,
   ja: String.raw`(?:UB|[《【][^》】]*[》】]|ファンファーレ|ラストワード|[/／])*`,
 };
 
 /** Each timing's mark in each card language: the spellings the card data has (older sets bracket some of them). */
-const MARKS: Readonly<Record<string, Record<CardLang, string>>> = {
+const MARKS: Readonly<Record<string, Record<DataLang, string>>> = {
   fanfare: { en: String.raw`\{\[fanfare\]\}`, cn: "[《【]入场曲[》】]", ja: "《?ファンファーレ》?" },
   lastWords: { en: String.raw`\{\[lastwords\]\}`, cn: "[《【]谢幕曲[》】]", ja: "《?ラストワード》?" },
   onEvolve: { en: String.raw`On Evolve\b`, cn: "【进化时】", ja: "【進化時】" },
@@ -31,7 +31,7 @@ const MARKS: Readonly<Record<string, Record<CardLang, string>>> = {
 };
 
 const patterns = new Map<string, RegExp>();
-function pattern(timing: string, lang: CardLang): RegExp | null {
+function pattern(timing: string, lang: DataLang): RegExp | null {
   const mark = MARKS[timing]?.[lang];
   if (!mark) return null;
   const key = `${timing}:${lang}`;
@@ -46,7 +46,7 @@ function pattern(timing: string, lang: CardLang): RegExp | null {
  * are one sentence the script splits (BP09-002: a Beast or another follower). The Japanese and Chinese texts list some in
  * another order than the English one (BP10-004, BP14-059). A new card with more than one is listed by the test.
  */
-export const OTHER_LINES: Readonly<Record<string, Partial<Record<CardLang, readonly number[]>>>> = {
+export const OTHER_LINES: Readonly<Record<string, Partial<Record<DataLang, readonly number[]>>>> = {
   "BP03-075": { en: [0, 1], cn: [0, 1], ja: [0, 1] },
   "BP07-088": { en: [1, 2], cn: [1, 2], ja: [1, 2] },
   "BP09-002": { en: [1, 1], cn: [1, 1], ja: [1, 1] },
@@ -68,7 +68,7 @@ export const OTHER_LINES: Readonly<Record<string, Partial<Record<CardLang, reado
 };
 
 /** The lines of a card's text that start with a timing's mark, in order (none for a timing without a mark: "other"). */
-export function markedLines(text: string, lang: CardLang, timing: string): string[] {
+export function markedLines(text: string, lang: DataLang, timing: string): string[] {
   const re = pattern(timing, lang);
   return re ? text.split("\n").filter((line) => re.test(line.trim())) : [];
 }
@@ -79,7 +79,7 @@ export function markedLines(text: string, lang: CardLang, timing: string): strin
  * that OTHER_LINES doesn't list, or a text with another number of marked lines than the card has abilities (a translation
  * that splits one ability in two, a mark inside another ability's text).
  */
-export function abilityLine(def: string, text: string, lang: CardLang, timing: string, rank: number, count: number): string | null {
+export function abilityLine(def: string, text: string, lang: DataLang, timing: string, rank: number, count: number): string | null {
   if (timing === "other") {
     const index = OTHER_LINES[def]?.[lang]?.[rank];
     return index === undefined ? null : text.split("\n")[index]?.trim() || null;

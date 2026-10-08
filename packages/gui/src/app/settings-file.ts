@@ -27,8 +27,8 @@ interface Entry {
 }
 
 const BOOLEANS = new Map([...["true", "yes", "on", "1"].map((v) => [v, true] as const), ...["false", "no", "off", "0"].map((v) => [v, false] as const)]);
-const UI_LANGS = new Map<string, UiLang>([["en", "en"], ["zh", "zh"], ["cn", "zh"], ["ja", "ja"], ["jp", "ja"]]);
-const CARD_LANGS = new Map<string, CardLang>([["en", "en"], ["zh", "cn"], ["cn", "cn"], ["ja", "ja"], ["jp", "ja"]]);
+const UI_LANGS = new Map<string, UiLang>([["en", "en"], ["zh", "zh"], ["cn", "zh"], ["zh-hant", "zh-Hant"], ["ja", "ja"], ["jp", "ja"]]);
+const CARD_LANGS = new Map<string, CardLang>([["en", "en"], ["zh", "cn"], ["cn", "cn"], ["zh-hant", "zh-Hant"], ["ja", "ja"], ["jp", "ja"]]);
 
 /** A whole number brought into [min, max], or null when the value isn't a number. */
 function whole(value: string, min: number, max: number): number | null {
@@ -68,7 +68,7 @@ const ENTRIES: readonly Entry[] = [
     key: "interface",
     field: "uiLang",
     label: "settings.uiLang",
-    values: "en, zh, ja",
+    values: "en, zh, zh-Hant, ja",
     get: (s) => s.uiLang,
     set: (_, v) => {
       const lang = UI_LANGS.get(v.toLowerCase());
@@ -80,7 +80,7 @@ const ENTRIES: readonly Entry[] = [
     key: "cards",
     field: "cardLang",
     label: "settings.cardLang",
-    values: "en, zh, ja",
+    values: "en, zh, zh-Hant, ja",
     get: (s) => (s.cardLang === "cn" ? "zh" : s.cardLang),
     set: (_, v) => {
       const lang = CARD_LANGS.get(v.toLowerCase());

@@ -1,8 +1,9 @@
 import type { CardLang } from "../../app/settings";
+import { inCardLang, type DataLang } from "../../i18n/hant";
 
 // Labels of the {[...]} icons of card text, in the card text's language. A picture in public/textures/icons/<name>.png
 // replaces a label (README "Custom resources").
-const LABELS: Record<CardLang, Record<string, string>> = {
+const LABELS: Record<DataLang, Record<string, string>> = {
   en: {
     fanfare: "Fanfare",
     lastwords: "Last Words",
@@ -70,12 +71,14 @@ const LABELS: Record<CardLang, Record<string, string>> = {
 
 /** A card-text icon's label ("cost03": "(3)", "消费3", "コスト3"). */
 export function tokenLabel(name: string, lang: CardLang): string {
-  const cost = /^cost(\d+|X)$/i.exec(name);
-  if (cost) {
-    const n = /^\d+$/.test(cost[1]!) ? String(Number(cost[1])) : cost[1]!;
-    return lang === "en" ? `(${n})` : lang === "cn" ? `消费${n}` : `コスト${n}`;
-  }
-  return LABELS[lang][name] ?? LABELS.en[name] ?? name;
+  return inCardLang(lang, (data) => {
+    const cost = /^cost(\d+|X)$/i.exec(name);
+    if (cost) {
+      const n = /^\d+$/.test(cost[1]!) ? String(Number(cost[1])) : cost[1]!;
+      return data === "en" ? `(${n})` : data === "cn" ? `消费${n}` : `コスト${n}`;
+    }
+    return LABELS[data][name] ?? LABELS.en[name] ?? name;
+  });
 }
 
 /** Text with its {[...]} icons as their labels (plain text: buttons, titles). */

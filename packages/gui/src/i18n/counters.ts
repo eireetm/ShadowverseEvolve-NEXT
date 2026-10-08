@@ -3,8 +3,9 @@
 // Japanese ones ("童話カウンター"). Stack counters are the rules' own (CR 13.3.2). New sets bring new counters:
 // test/i18n.test.ts lists any counter kind of the card scripts missing here.
 import type { UiLang } from "../app/settings";
+import { toHant, type MessagesLang } from "./hant";
 
-export const COUNTER_NAMES: Readonly<Record<string, Readonly<Record<UiLang, string>>>> = {
+export const COUNTER_NAMES: Readonly<Record<string, Readonly<Record<MessagesLang, string>>>> = {
   stack: { en: "Stack", zh: "蓄积", ja: "スタック" },
   arrow: { en: "Arrow", zh: "箭矢", ja: "矢" },
   battery: { en: "Battery", zh: "电池", ja: "バッテリー" },
@@ -31,5 +32,6 @@ export const COUNTER_NAMES: Readonly<Record<string, Readonly<Record<UiLang, stri
 
 /** A counter's name in the interface language (its id when it isn't listed). */
 export function counterName(kind: string, lang: UiLang): string {
+  if (lang === "zh-Hant") return toHant(COUNTER_NAMES[kind]?.zh ?? kind);
   return COUNTER_NAMES[kind]?.[lang] ?? kind;
 }

@@ -100,7 +100,7 @@ describe("settings.ini", () => {
       "",
       "[language]",
       "; 语言 / 言語 / Language",
-      "; 界面文字 / 画面の表示 / Interface: en, zh, ja",
+      "; 界面文字 / 画面の表示 / Interface: en, zh, zh-Hant, ja",
       "interface = zh",
       "",
     ]);

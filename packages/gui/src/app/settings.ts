@@ -4,8 +4,9 @@ import { useSyncExternalStore } from "react";
 import { knownController, type FormatId, type SeatController, type TurnOrder } from "../engine/protocol";
 import type { TurnServer } from "../net/relays";
 
-export type UiLang = "en" | "zh" | "ja";
-export type CardLang = "en" | "cn" | "ja";
+/** "zh-Hant": Traditional Chinese, the Simplified Chinese converted (i18n/hant.ts). */
+export type UiLang = "en" | "zh" | "zh-Hant" | "ja";
+export type CardLang = "en" | "cn" | "zh-Hant" | "ja";
 
 export interface Settings {
   uiLang: UiLang;
