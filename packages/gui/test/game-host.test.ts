@@ -9,6 +9,8 @@ import { parseDeckFile, toDeckList } from "../src/decks/format";
 import { Catalog } from "../src/app/catalog";
 import { describeEntry } from "../src/game/log/format";
 import { translate } from "../src/i18n";
+import { forEachCard } from "../src/engine/view-utils";
+import { cardRuntimeDetails } from "../src/engine/card-details";
 
 // The engine worker's logic, run in Node with a manual scheduler (bots answer when the test lets them).
 const engine = createEngine({ cards: ALL_CARDS, scripts: ALL_SCRIPTS });
@@ -45,6 +47,42 @@ function harness(controllers: [SeatController, SeatController], seed = "host-tes
 }
 
 describe("GameHost (engine worker logic)", () => {
+  it("publishes details for exactly the final visible view, including settings changes without new inputs", () => {
+    const h = harness(["human", "random"]);
+    h.host.handle({ kind: "settings", settings: { paused: true, revealAll: false } });
+    h.host.handle({ kind: "start", options: h.options });
+    const validate = () => {
+      const update = h.last();
+      const ids: string[] = [];
+      forEachCard(update.view, (card) => ids.push(card.id));
+      expect(Object.keys(update.cardDetails).sort()).toEqual(ids.sort());
+      expect(update.cardDetails).toEqual(cardRuntimeDetails(h.host.session!.reader(), engine.scripts, update.view));
+      for (const side of update.view.players) {
+        for (const card of [...side.hand, ...side.evolveDeck]) if (card.hidden) expect(update.cardDetails[card.id]).toBeUndefined();
+      }
+    };
+    validate();
+    const before = h.last();
+    const snapshot = h.host.session!.snapshot();
+    h.host.handle({ kind: "settings", settings: { revealAll: true } });
+    validate();
+    expect(h.last().inputCount).toBe(before.inputCount);
+    expect(Object.keys(h.last().cardDetails).length).toBeGreaterThan(Object.keys(before.cardDetails).length);
+    expect(h.host.session!.snapshot()).toEqual(snapshot);
+    h.host.handle({ kind: "settings", settings: { revealAll: false } });
+    validate();
+    expect(h.last().cardDetails).toEqual(before.cardDetails);
+
+    const replay = h.host.replay()!;
+    h.host.handle({ kind: "watch", replay });
+    h.host.handle({ kind: "watchControl", playing: false, perspective: 1 });
+    validate();
+    expect(h.last().view.players[0].hand.every((card) => card.hidden)).toBe(true);
+    h.host.handle({ kind: "spectate", options: replay.options, inputs: replay.inputs });
+    validate();
+    expect(h.last().view.players.every((side) => side.hand.every((card) => card.hidden))).toBe(true);
+    expect(h.errors()).toEqual([]);
+  });
   it("publishes the format and a Cross Craft player's second leader (old replays: the format from deck restrictions)", () => {
     const h = harness(["random", "random"]);
     h.host.handle({ kind: "start", options: { ...h.options, deckRestrictions: false, format: "crossCraft", secondLeaders: ["SD02-LD01", null] } });
@@ -148,6 +186,7 @@ describe("GameHost (engine worker logic)", () => {
     h.host.handle({ kind: "start", options: h.options });
     h.scheduler.run(15);
     const at = h.last().inputCount;
+    const runtime = h.last().cardDetails;
     const state = JSON.stringify(h.host.session!.state);
     const replay = h.host.replay()!;
     h.scheduler.run(15);
@@ -156,6 +195,7 @@ describe("GameHost (engine worker logic)", () => {
     h.host.handle({ kind: "settings", settings: { paused: true } });
     h.host.handle({ kind: "rewind", inputs: at });
     expect(h.last().inputCount).toBe(at);
+    expect(h.last().cardDetails).toEqual(runtime);
     expect(h.last().logReset).toBe(true);
     expect(JSON.stringify(h.host.session!.state)).toBe(state);
     // A replay file (JSON) loaded into a new host.
@@ -163,6 +203,7 @@ describe("GameHost (engine worker logic)", () => {
     other.host.handle({ kind: "settings", settings: { paused: true } });
     other.host.handle({ kind: "loadReplay", replay: JSON.parse(JSON.stringify(replay)) as Replay });
     expect(JSON.stringify(other.host.session!.state)).toBe(state);
+    expect(other.last().cardDetails).toEqual(runtime);
     expect(h.errors()).toEqual([]);
   });
 
@@ -389,10 +430,12 @@ describe("GameHost (engine worker logic)", () => {
     // Go to the middle, a step forward and one back.
     const middle = stops[Math.floor(stops.length / 2)]!;
     w.host.handle({ kind: "watchControl", seek: middle, playing: false });
+    const runtime = w.last().cardDetails;
     expect(w.last().watch!.position).toBe(middle);
     w.host.handle({ kind: "watchControl", step: 1 });
     expect(w.last().watch!.position).toBe(stops.find((s) => s > middle));
     w.host.handle({ kind: "watchControl", step: -1 });
+    expect(w.last().cardDetails).toEqual(runtime);
     expect(w.last().watch!.position).toBe(middle);
     // Player 2's view without the hidden cards: player 1's hand is hidden, the log is player 2's.
     w.host.handle({ kind: "settings", settings: { revealAll: false } });
@@ -402,6 +445,7 @@ describe("GameHost (engine worker logic)", () => {
     expect(update.watch!.position).toBe(middle);
     expect(update.logReset).toBe(true);
     expect(update.view.players[0].hand.every((c) => c.hidden)).toBe(true);
+    for (const card of update.view.players[0].hand) expect(update.cardDetails[card.id]).toBeUndefined();
     // Play at the end starts it again.
     w.host.handle({ kind: "watchControl", seek: replay.inputs.length, playing: false });
     w.host.handle({ kind: "watchControl", playing: true });
@@ -453,4 +497,3 @@ describe("what a player only remembers (HiddenCardView.known)", () => {
     expect(inEngine, "the engine did remember cards in these games").toBeGreaterThan(0);
   }, 120_000);
 });
-
