@@ -60,7 +60,8 @@ test("token art: a printing chosen in the settings is the Fairy made in a game",
   await expect(token).toHaveCount(1);
   await expect(token.locator("[data-printing]")).toHaveAttribute("data-printing", "SD01-T01");
   await token.hover();
-  await expect(page.locator(".sve-details-meta")).toContainText("SD01-T01");
+  await expect(page.locator(".sve-details-meta")).toBeHidden();
+  await expect(page.getByTestId("details-printings")).toBeHidden();
   expect(problems).toEqual([]);
 });
 

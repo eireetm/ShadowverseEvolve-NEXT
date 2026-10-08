@@ -47,6 +47,7 @@ import type {
 } from "./protocol";
 import { knownController } from "./protocol";
 import { forEachCard } from "./view-utils";
+import { cardRuntimeDetails } from "./card-details";
 
 export interface Scheduler {
   /** Run `fn` after `ms` milliseconds; the returned function cancels it. */
@@ -1100,6 +1101,7 @@ export class GameHost {
     const options = this.options;
     if (!game || !options) return;
     const perspective = this.perspective();
+    const view = this.view(perspective);
     const update: GameUpdate = {
       seed: options.seed,
       controllers: options.controllers,
@@ -1112,7 +1114,8 @@ export class GameHost {
       watch: this.watchState(),
       online: this.onlineState(),
       perspective,
-      view: this.view(perspective),
+      view,
+      cardDetails: cardRuntimeDetails(game.reader(), view),
       decision: this.decisionInfo(),
       waitingFor: this.passing || this.watching ? null : (game.decision?.player ?? null),
       thinking,

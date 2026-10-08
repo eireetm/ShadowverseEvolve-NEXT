@@ -9,6 +9,7 @@ import { parseDeckFile, toDeckList } from "../src/decks/format";
 import { Catalog } from "../src/app/catalog";
 import { describeEntry } from "../src/game/log/format";
 import { translate } from "../src/i18n";
+import { forEachCard } from "../src/engine/view-utils";
 
 // The engine worker's logic, run in Node with a manual scheduler (bots answer when the test lets them).
 const engine = createEngine({ cards: ALL_CARDS, scripts: ALL_SCRIPTS });
@@ -45,6 +46,36 @@ function harness(controllers: [SeatController, SeatController], seed = "host-tes
 }
 
 describe("GameHost (engine worker logic)", () => {
+  it("publishes details for exactly the visible cards, including settings and perspective updates without new inputs", () => {
+    const h = harness(["human", "human"]);
+    h.host.handle({ kind: "start", options: h.options });
+    h.host.handle({ kind: "answer", seat: h.last().decision!.decision.player, answer: { type: "chooseTurnOrder", goFirst: true } });
+    const check = () => {
+      const update = h.last();
+      const visible: string[] = [];
+      forEachCard(update.view, (c) => visible.push(c.id));
+      expect(Object.keys(update.cardDetails).sort()).toEqual(visible.sort());
+      expect(JSON.parse(JSON.stringify(update.cardDetails))).toEqual(update.cardDetails);
+      return update;
+    };
+    const hidden = check();
+    const inputs = hidden.inputCount;
+    h.host.handle({ kind: "settings", settings: { revealAll: true } });
+    const revealed = check();
+    expect(revealed.inputCount).toBe(inputs);
+    expect(Object.keys(revealed.cardDetails).length).toBeGreaterThan(Object.keys(hidden.cardDetails).length);
+    h.host.handle({ kind: "settings", settings: { revealAll: false } });
+    expect(check().cardDetails).toEqual(hidden.cardDetails);
+    h.host.handle({ kind: "watch", replay: h.host.replay()! });
+    h.host.handle({ kind: "watchControl", playing: false, seek: inputs });
+    check();
+    h.host.handle({ kind: "watchControl", perspective: 1 });
+    expect(check().inputCount).toBe(inputs);
+    h.host.handle({ kind: "watchControl", seek: 0 });
+    expect(check().inputCount).toBe(0);
+    expect(h.errors()).toEqual([]);
+  });
+
   it("publishes the format and a Cross Craft player's second leader (old replays: the format from deck restrictions)", () => {
     const h = harness(["random", "random"]);
     h.host.handle({ kind: "start", options: { ...h.options, deckRestrictions: false, format: "crossCraft", secondLeaders: ["SD02-LD01", null] } });

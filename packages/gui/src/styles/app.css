@@ -1900,7 +1900,6 @@ option {
   color: var(--sve-muted);
 }
 
-.sve-details-state,
 .sve-details-flags {
   display: flex;
   flex-wrap: wrap;
@@ -1908,9 +1907,53 @@ option {
   font-size: 13.5px;
 }
 
+.sve-details-runtime {
+  min-width: 0;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--sve-border);
+  overflow-wrap: anywhere;
+}
+
+.sve-details-runtime h4 {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+
+.sve-details-runtime .sve-hint {
+  margin: 6px 0 0;
+}
+
+.sve-game .sve-details-stats,
+.sve-game .sve-details-stat {
+  flex-wrap: wrap;
+}
+
+.sve-game .sve-details {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .sve-card-text {
   font-size: 14.5px;
   line-height: 1.55;
+}
+
+.sve-game .sve-details .sve-card-text {
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.sve-game .sve-details-printings {
+  display: none;
+}
+
+.sve-game .sve-details-maneuver-duration {
+  display: none;
+}
+
+.sve-game .sve-details-abilities-lost-help {
+  display: none;
 }
 
 .sve-card-text p {

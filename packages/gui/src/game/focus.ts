@@ -9,7 +9,7 @@ export interface FocusCard {
   def: string;
   printing: string | null;
   back?: boolean;
-  /** The card as it was when shown, when it is visible in the game (the panel follows it while it stays in its zone). */
+  /** A visible card supplied to a panel; CardDetails resolves id against the latest update before displaying it. */
   view?: CardView;
 }
 

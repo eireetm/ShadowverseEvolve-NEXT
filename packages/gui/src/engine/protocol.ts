@@ -290,6 +290,15 @@ export interface LogEntry {
   cards: Record<CardId, CardInfo>;
 }
 
+/** Serializable presentation data for a visible game instance; current type and numbers stay in CardView. */
+export interface CardRuntimeDetails {
+  enteredFieldThisTurn: boolean;
+  boxed: boolean;
+  abilitiesLost: boolean;
+  /** Maneuver applies for the rest of this turn (CR 5.32). Shown beside the current type. */
+  maneuveredThisTurn: boolean;
+}
+
 export interface GameUpdate {
   seed: string;
   controllers: [SeatController, SeatController];
@@ -315,6 +324,8 @@ export interface GameUpdate {
   /** Whose view this is (the human's seat; in hot seat, the player who must decide). */
   perspective: PlayerId;
   view: PlayerView;
+  /** Built from the same state and visibility as view, on every publication. */
+  cardDetails: Record<CardId, CardRuntimeDetails>;
   decision: DecisionInfo | null;
   waitingFor: PlayerId | null;
   /** A bot is about to answer. */
