@@ -6,9 +6,19 @@ import { cardRuntimeDetails } from "../src/engine/card-details";
 import { findCard } from "../src/engine/view-utils";
 
 const engine = createEngine({
-  cards: [...ALL_CARDS, testFollower("V5", 5, 5, 5), testSpell("GIVE-WARD", 0), testSpell("SILENCE", 0)],
+  cards: [...ALL_CARDS, testFollower("V5", 5, 5, 5), testFollower("V1", 1, 2, 2), testFollower("RUSH", 1, 2, 2), testSpell("GIVE-WARD", 0), testSpell("SILENCE", 0), testSpell("LOCK", 0)],
   scripts: {
     ...ALL_SCRIPTS,
+    RUSH: script.defineCard({ keywords: ["rush"] }),
+    LOCK: script.defineCard({ abilities: [script.spell({
+      *resolve(fx) {
+        for (const id of fx.game.followers(1)) {
+          yield* fx.cannotAttack(id, "endOfTurn");
+          yield* fx.cannotAttackLeader(id, "endOfTurn");
+          yield* fx.cannotDealDamage(id, "endOfTurn");
+        }
+      },
+    })] }),
     SILENCE: script.defineCard({ abilities: [script.spell({
       *resolve(fx) {
         for (const id of fx.game.followers(1)) yield* fx.loseAbilities(id, "endOfTurn");
@@ -20,6 +30,128 @@ const engine = createEngine({
       },
     })] }),
   },
+});
+
+describe("effect restrictions in card details", () => {
+  it("does not mistake engagement, entry, ordinary Rush or Ward targeting for an effect restriction", () => {
+    const t = drive(engine, {
+      me: { field: [{ card: "V5", engaged: true }, { card: "V1", enteredThisTurn: true }, { card: "RUSH", enteredThisTurn: true }] },
+      opp: { field: [{ card: "BP03-110", engaged: true }] },
+    });
+    for (const card of ["V5", "V1", "RUSH"]) {
+      expect(details(t.game)[t.id(card)]).toMatchObject({ cannotAttack: false, cannotAttackLeader: false, cannotDealDamage: false });
+    }
+  });
+
+  it("reads printed and conditional abilities, the active evolved definition, and ignores cards outside the field", () => {
+    const t = drive(engine, {
+      me: {
+        field: ["BP01-088", "BP03-110", { card: "BP02-107", evolvedInto: "BP02-108" }],
+        hand: ["BP01-088"],
+      },
+      opp: { field: ["V1", "V5"] },
+      config: { manualActions: true },
+    });
+    const rapunzel = t.id("BP03-110");
+    expect(details(t.game)[t.id("BP01-088@field")]?.cannotAttack).toBe(true);
+    expect(details(t.game)[t.id("BP01-088@hand")]?.cannotAttack).toBe(false);
+    expect(details(t.game)[rapunzel]?.cannotAttack).toBe(true);
+    expect(details(t.game)[t.id("BP02-107")]?.cannotAttackLeader).toBe(true);
+    t.game.act({ type: "mainPhase", action: { type: "manual", op: { kind: "counters", card: rapunzel, counter: "fable", amount: 1 } } });
+    expect(details(t.game)[rapunzel]?.cannotAttack).toBe(false);
+    t.game.act({ type: "mainPhase", action: { type: "manual", op: { kind: "move", card: t.id("opp:V1"), to: "hand" } } });
+    expect(details(t.game)[t.id("BP02-107")]?.cannotAttackLeader).toBe(false);
+  });
+
+  it("reevaluates cemetery conditions instead of recognizing card numbers", () => {
+    for (const count of [9, 10]) {
+      const t = drive(engine, { me: { field: ["BP22-074"], cemetery: Array<string>(count).fill("BP22-074") } });
+      expect(details(t.game)[t.id("BP22-074@field")]?.cannotAttack).toBe(count === 9);
+    }
+  });
+
+  it("suppresses printed restrictions after ability loss while independent applied effects remain", () => {
+    const t = drive(engine, {
+      me: { hand: ["LOCK", "SILENCE"], deck: ["V5"] },
+      opp: { field: ["BP01-088", "BP05-057"], deck: ["V5"] },
+    });
+    const attack = t.id("opp:BP01-088");
+    const leader = t.id("opp:BP05-057");
+    expect(details(t.game)[attack]?.cannotAttack).toBe(true);
+    expect(details(t.game)[leader]?.cannotAttackLeader).toBe(true);
+    t.play("SILENCE");
+    expect(details(t.game)[attack]).toMatchObject({ abilitiesLost: true, cannotAttack: false });
+    expect(details(t.game)[leader]).toMatchObject({ abilitiesLost: true, cannotAttackLeader: false });
+    t.play("LOCK");
+    expect(details(t.game)[attack]).toMatchObject({ abilitiesLost: true, cannotAttack: true, cannotAttackLeader: true, cannotDealDamage: true });
+    t.end();
+    expect(details(t.game)[attack]).toMatchObject({ abilitiesLost: false, cannotAttack: true, cannotAttackLeader: false, cannotDealDamage: false });
+  });
+
+  it("keeps applied restrictions through later ability loss, removes them on zone changes and restores snapshots", () => {
+    const t = drive(engine, { me: { hand: ["LOCK", "SILENCE"] }, opp: { field: ["V5"] }, config: { manualActions: true } });
+    t.play("LOCK").play("SILENCE");
+    const id = t.id("opp:V5");
+    const snapshot = t.game.snapshot();
+    expect(details(t.game)[id]).toMatchObject({ abilitiesLost: true, cannotAttack: true, cannotAttackLeader: true, cannotDealDamage: true });
+    expect(t.game.snapshot()).toEqual(snapshot);
+    t.game.act({ type: "mainPhase", action: { type: "manual", op: { kind: "move", card: id, to: "hand" } } });
+    expect(details(t.game)[id]).toBeUndefined();
+    const hand = t.id("opp:V5@hand");
+    expect(cardRuntimeDetails(t.game.reader(), t.game.view(1))[hand]).toMatchObject({ cannotAttack: false, cannotAttackLeader: false, cannotDealDamage: false });
+    expect(details(engine.restore(snapshot))[id]).toMatchObject({ cannotAttack: true, cannotAttackLeader: true, cannotDealDamage: true });
+  });
+
+  it("tracks restrictions from either field and stops them when their source loses abilities or leaves", () => {
+    const t = drive(engine, { me: { field: ["V1"], hand: ["SILENCE"] }, opp: { field: ["BP09-040"] }, config: { manualActions: true } });
+    const id = t.id("V1");
+    expect(details(t.game)[id]?.cannotAttack).toBe(true);
+    t.play("SILENCE");
+    expect(details(t.game)[id]?.cannotAttack).toBe(false);
+    const other = drive(engine, { me: { field: ["V1", "BP09-040"] }, config: { manualActions: true } });
+    expect(details(other.game)[other.id("V1")]?.cannotAttack).toBe(true);
+    other.game.act({ type: "mainPhase", action: { type: "manual", op: { kind: "move", card: other.id("BP09-040"), to: "hand" } } });
+    expect(details(other.game)[other.id("V1")]?.cannotAttack).toBe(false);
+  });
+
+  it("includes an effect requiring follower targets first only while a follower can be targeted", () => {
+    const t = drive(engine, { me: { field: ["V5", "BP06-113"] }, opp: { field: [{ card: "V1", engaged: true }] }, config: { manualActions: true } });
+    expect(details(t.game)[t.id("V5")]?.cannotAttackLeader).toBe(true);
+    t.game.act({ type: "mainPhase", action: { type: "manual", op: { kind: "engage", card: t.id("opp:V1"), engaged: false } } });
+    expect(details(t.game)[t.id("V5")]?.cannotAttackLeader).toBe(false);
+  });
+
+  it("applies the duration rule for an opponent's next turn, including an intervening extra own turn", () => {
+    const t = drive(engine, { me: { hand: ["BP03-013"], playPoints: 3, deck: ["V5"] }, opp: { field: ["V5"], deck: ["V5", "V5"] } }).play("BP03-013");
+    const id = t.id("opp:V5");
+    expect(details(t.game)[id]?.cannotAttack).toBe(true);
+    const extraTurn = t.game.snapshot();
+    extraTurn.checkpoint.turn += 2;
+    expect(details(engine.restore(extraTurn))[id]?.cannotAttack).toBe(false);
+    t.end();
+    expect(details(t.game)[id]?.cannotAttack).toBe(true);
+    t.end();
+    expect(details(t.game)[id]?.cannotAttack).toBe(false);
+  });
+
+  it("shows a Stand Trigger's explicit leader restriction even after it refreshes the follower", () => {
+    const t = drive(engine, { me: { hand: ["CP03-120"], playPoints: 1 }, opp: { deck: ["V5"] } }).play("CP03-120");
+    const id = t.id("CP03-120");
+    expect(details(t.game)[id]).toMatchObject({ cannotAttack: false, cannotAttackLeader: true });
+    expect(findCard(t.game.view(0), id)?.engaged).toBe(false);
+    t.end();
+    expect(details(t.game)[id]?.cannotAttackLeader).toBe(false);
+  });
+
+  it("shows damage prohibition from BP01-024 and BP12-109 and clears it at the end of the turn", () => {
+    const curse = drive(engine, { me: { hand: ["BP01-024"], playPoints: 2 }, opp: { field: ["V5"], deck: ["V1"] } }).play("BP01-024");
+    const id = curse.id("opp:V5");
+    expect(details(curse.game)[id]).toMatchObject({ cannotAttack: false, cannotDealDamage: true });
+    curse.end();
+    expect(details(curse.game)[id]?.cannotDealDamage).toBe(false);
+    const evolved = drive(engine, { me: { field: ["BP12-108"], evolveDeck: ["BP12-109"], playPoints: 2 }, opp: { field: ["V1", "V5"] } }).evolve("BP12-108");
+    for (const card of ["opp:V1", "opp:V5"]) expect(details(evolved.game)[evolved.id(card)]?.cannotDealDamage).toBe(true);
+  });
 });
 const details = (game: GameSession) => cardRuntimeDetails(game.reader(), game.view(0));
 

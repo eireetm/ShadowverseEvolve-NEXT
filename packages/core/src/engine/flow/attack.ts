@@ -4,7 +4,7 @@ import { dealDamage, fieldDamageSource, type DamageInstance } from "../actions/d
 import { confirmationTiming } from "../abilities/confirmation";
 import type { G } from "../runtime/context";
 import type { Proc } from "../runtime/proc";
-import { ATTACKS_KEY, isOnField, leaderOf, recordUse } from "../state/access";
+import { ATTACKS_KEY, isOnField, leaderOf, recordUse, type Env } from "../state/access";
 import { activeScript, characteristics, hasKeyword, isFollowerOnField, passiveSources } from "../state/characteristics";
 import { makeReader } from "../query";
 import { effectPreventsAttack, effectPreventsLeaderAttack } from "../state/effects";
@@ -83,7 +83,7 @@ export function canAttackWith(g: G, player: PlayerId, attacker: CardId): boolean
  * CR 8.4.3.2.1 — printed "can't attack", a conditional form of it, an effect that says so, or a
  * card on either field that forbids it (BP09-040).
  */
-function cannotAttackNow(g: G, attacker: CardId): boolean {
+export function cannotAttackNow(g: Env, attacker: CardId): boolean {
   const ban = activeScript(g, attacker)?.cannotAttack;
   if (ban === true) return true;
   if (typeof ban === "function" && ban(makeReader(g), attacker)) return true;

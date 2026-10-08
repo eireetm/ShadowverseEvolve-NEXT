@@ -295,6 +295,9 @@ export interface CardRuntimeDetails {
   enteredFieldThisTurn: boolean;
   boxed: boolean;
   abilitiesLost: boolean;
+  cannotAttack: boolean;
+  cannotAttackLeader: boolean;
+  cannotDealDamage: boolean;
   /** Maneuver applies for the rest of this turn (CR 5.32). Shown beside the current type. */
   maneuveredThisTurn: boolean;
 }

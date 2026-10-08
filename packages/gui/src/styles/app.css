@@ -1948,6 +1948,10 @@ option {
   display: none;
 }
 
+.sve-game .sve-details-printed {
+  display: none;
+}
+
 .sve-game .sve-details-maneuver-duration {
   display: none;
 }
@@ -1961,7 +1965,7 @@ option {
 }
 
 .sve-game .sve-details-gained-abilities {
-  display: block;
+  display: none;
 }
 
 .sve-card-text p {

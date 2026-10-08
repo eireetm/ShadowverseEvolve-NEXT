@@ -14,7 +14,8 @@ import { exAreaLimit, fieldLimit } from "./state/limits";
 import { playVariants } from "./flow/play-card";
 import { choosesAnyNumberOfOptions } from "./abilities/modes";
 import { countsThisTurn } from "./state/turn-counts";
-import { effectInForce } from "./state/effects";
+import { effectInForce, effectPreventsLeaderAttack } from "./state/effects";
+import { cannotAttackNow } from "./flow/attack";
 import { carrotsToServe, canServe } from "./actions/race";
 import { canRide, drivePointsToRide } from "./actions/drive";
 import { isRacing, linkedCards } from "./state/links";
@@ -215,6 +216,12 @@ export interface GameReader {
   hasEarthRite(id: CardId): boolean;
   /** CR 5.31 — is the card Boxed (BP11-024 "a Boxed enemy follower")? */
   isBoxed(id: CardId): boolean;
+  /** A follower on the field is forbidden to attack by an ability/effect (not engagement or entry this turn). */
+  cannotAttackByEffect(id: CardId): boolean;
+  /** An ability/effect forbids leader attacks; excludes ordinary Rush, entry this turn and Ward targeting. */
+  cannotAttackLeaderByEffect(id: CardId): boolean;
+  /** A persistent effect says this instance cannot deal damage; not attack eligibility or damage prevention on a target. */
+  cannotDealDamage(id: CardId): boolean;
   /** Has the card gained attack or defense this turn (BP11-035; an effect's +X or a super-evolution)? */
   gainedStatsThisTurn(id: CardId): boolean;
   /** How often `key` was recorded for this card this turn (`fx.recordUse`, e.g. BP11-092's options). */
@@ -367,6 +374,22 @@ export function makeReader(env: Env): GameReader {
       return c !== undefined && !(c.zone === "field" && c.controller !== p && characteristics(env, id).keywords.includes("aura"));
     },
     isBoxed: (id) => isBoxed(state(), id),
+    cannotAttackByEffect: (id) => isFollowerOnField(env, id) && cannotAttackNow(env, id),
+    cannotAttackLeaderByEffect: (id) => {
+      if (!isFollowerOnField(env, id)) return false;
+      if (activeScript(env, id)?.cannotAttackLeader?.(reader, id) || effectPreventsLeaderAttack(state(), id)) return true;
+      // Keep this presentation query separate from attackTargets: Rush, entry and Ward targeting are not restrictions.
+      const followersFirst = [...passiveSources(env, 0), ...passiveSources(env, 1)].some(
+        (source) => activeScript(env, source)?.field?.followersBeforeLeaders,
+      );
+      if (!followersFirst) return false;
+      const assail = reader.hasKeyword(id, "assail");
+      const opponent = opponentOf(reader.controller(id));
+      return ps(opponent).zones.field.some(
+        (target) => isFollowerOnField(env, target) && (assail || state().cards[target]!.engaged) && !reader.hasKeyword(target, "intimidate"),
+      );
+    },
+    cannotDealDamage: (id) => state().effects.some((e) => e.target === id && e.change.kind === "cannotDealDamage" && effectInForce(state(), e)),
     gainedStatsThisTurn: (id) => {
       const c = state().cards[id];
       return c !== undefined && countsThisTurn(state(), c.controller).statsGained.includes(id);

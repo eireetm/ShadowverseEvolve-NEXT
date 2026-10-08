@@ -57,7 +57,7 @@ export function CardPanel({ focus, details, exact = false, art = true }: { focus
       <div className="sve-details-stat">
         <span>{label}</span>
         <strong>{now === undefined ? printed : now}</strong>
-        {now !== undefined && now !== null && printed !== null && now !== printed ? <small>{t("card.printed", { value: printed })}</small> : null}
+        {now !== undefined && now !== null && printed !== null && now !== printed ? <small className="sve-details-printed">{t("card.printed", { value: printed })}</small> : null}
       </div>
     );
   const text = cardText(def, cardLang);
@@ -150,6 +150,9 @@ export function CardPanel({ focus, details, exact = false, art = true }: { focus
               {details.enteredFieldThisTurn ? <span>{t("card.enteredThisTurn")}</span> : null}
               {details.boxed ? <span>{t("card.boxed")}</span> : null}
               {details.abilitiesLost ? <span>{t("card.abilitiesLost")}</span> : null}
+              {details.cannotAttack ? <span>{t("card.cannotAttack")}</span> : null}
+              {details.cannotAttackLeader ? <span>{t("card.cannotAttackLeader")}</span> : null}
+              {details.cannotDealDamage ? <span>{t("card.cannotDealDamage")}</span> : null}
             </div>
             {details.abilitiesLost ? <p className="sve-hint sve-details-abilities-lost-help">{t("card.abilitiesLostHelp")}</p> : null}
           </section>
