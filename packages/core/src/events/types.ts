@@ -29,6 +29,11 @@ export interface ZoneRef {
   zone: ZoneName;
   /** CR 4.2.3 — faceup state of the card in that zone. */
   faceUp: boolean;
+  /**
+   * A card put into a deck: where (CR 4.5.2.1 the top or the bottom; a number counts from the top, 0 = top, CR 4.1.3.1).
+   * Everyone sees where a card goes, also when they don't see which card it is.
+   */
+  position?: "top" | "bottom" | number;
 }
 
 /**

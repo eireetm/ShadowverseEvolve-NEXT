@@ -117,6 +117,16 @@ function attach(state: GameState, card: CardInstance, position: MoveSpec["positi
   state.cards[card.id] = card;
 }
 
+/**
+ * Where a card put into a deck went, for its move (`ZoneRef.position`): the top or the bottom (CR 4.5.2.1), or its place
+ * counted from the top when an effect said a number (CR 4.1.3.1: with fewer cards, the bottom). Nothing for other zones.
+ */
+function deckPlace(state: GameState, card: CardInstance, spec: MoveSpec): { position?: "top" | "bottom" | number } {
+  if (card.zone !== "deck" || spec.position === undefined) return {};
+  if (typeof spec.position !== "number") return { position: spec.position };
+  return { position: zoneList(state, card.controller, "deck").indexOf(card.id) };
+}
+
 function freshInstance(
   state: GameState,
   printing: PrintingId,
@@ -352,7 +362,7 @@ export function moveCards(g: G, allSpecs: readonly MoveSpec[], reason: MoveReaso
       printing: old.printing,
       owner: old.owner,
       from: { player: old.controller, zone: old.zone, faceUp: old.faceUp },
-      to: { player: toPlayer, zone: spec.to, faceUp: card.faceUp },
+      to: { player: toPlayer, zone: spec.to, faceUp: card.faceUp, ...deckPlace(state, card, spec) },
       reason: spec.reason ?? reason,
       before: befores[i]!,
       ...(spec.cause ? { cause: spec.cause } : {}),

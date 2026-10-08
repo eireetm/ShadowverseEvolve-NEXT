@@ -4,7 +4,7 @@ import { useApp } from "../../app/store";
 import type { GameUpdate } from "../../engine/protocol";
 import { useT } from "../../i18n";
 import { setHighlight } from "../focus";
-import { describeEntry } from "./format";
+import { describeEntry, shuffledPlacements } from "./format";
 
 /** The game so far, newest at the bottom; pointing at a line lights up its cards on the board. */
 export function LogPanel({ update }: { update: GameUpdate }) {
@@ -14,13 +14,14 @@ export function LogPanel({ update }: { update: GameUpdate }) {
   const { cardLang, uiLang } = useSettings();
   const [showAll, setShowAll] = useState(false);
   const bottom = useRef<HTMLDivElement>(null);
+  const shuffled = useMemo(() => shuffledPlacements(log), [log]);
   const lines = useMemo(
     () =>
       log.flatMap((entry) => {
-        const line = describeEntry(entry, { t, catalog, lang: cardLang, uiLang, update }, showAll);
+        const line = describeEntry(entry, { t, catalog, lang: cardLang, uiLang, update, shuffled }, showAll);
         return line ? [{ entry, line }] : [];
       }),
-    [log, t, catalog, cardLang, uiLang, update, showAll],
+    [log, t, catalog, cardLang, uiLang, update, showAll, shuffled],
   );
   // (Braces: scrollIntoView returns a promise in newer browsers, and an effect may only return a clean-up function.)
   useEffect(() => {

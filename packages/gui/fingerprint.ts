@@ -10,8 +10,9 @@ import { join, relative } from "node:path";
  *  - what the rules read of the card data (rulesDataOf);
  *  - the worker that runs a game (src/engine; not client.ts, the page's side of it).
  * Not, so that they don't part players: comments and the code's layout (codeOf); the card texts and the English, Chinese and
- * alternate names; the modules that build the card data files (CARD_DATA_BUILD) and the core's test helpers. `gui` is
- * packages/gui. vite.config.ts builds it into the app; scripts/release-pc.ts writes it into a release's VERSION.txt.
+ * alternate names; the modules that build the card data files (CARD_DATA_BUILD), the core's test helpers, and the code that
+ * only works out what a player is shown (DISPLAY_ONLY). `gui` is packages/gui. vite.config.ts builds it into the app;
+ * scripts/release-pc.ts writes it into a release's VERSION.txt.
  */
 export function engineFingerprint(gui: string): string {
   const hash = createHash("sha256");
@@ -60,6 +61,13 @@ function add(hash: Hash, name: string, content: string): void {
  */
 export const CARD_DATA_BUILD: ReadonlySet<string> = new Set(["custom.ts", "english-text.ts", "fixes.ts", "normalize.ts", "preview.ts", "preview-bp22.ts", "raw.ts"]);
 
+/**
+ * Code that only works out what a player is shown: the player view (with the abilities given to cards) and the events as
+ * each player is told them, and the worker's helpers for them. It never changes a game (the state's hash would tell):
+ * left out, so that showing more doesn't part players. What a player knows (core/view/visibility.ts) changes the state.
+ */
+export const DISPLAY_ONLY: ReadonlySet<string> = new Set(["core/view/player-view.ts", "core/view/gifts.ts", "core/events/redact.ts", "engine/view-utils.ts"]);
+
 /** The code files the online fingerprint counts, by name ("core/engine/flow/attack.ts", "engine/game-host.ts"). */
 export function engineCode(gui: string): { name: string; file: string }[] {
   const out: { name: string; file: string }[] = [];
@@ -67,7 +75,7 @@ export function engineCode(gui: string): { name: string; file: string }[] {
     for (const entry of readdirSync(dir).sort()) {
       const full = join(dir, entry);
       const path = relative(root, full).split("\\").join("/");
-      if (skip(path)) continue;
+      if (skip(path) || DISPLAY_ONLY.has(`${prefix}/${path}`)) continue;
       if (statSync(full).isDirectory()) walk(prefix, root, full, skip);
       else if (entry.endsWith(".ts")) out.push({ name: `${prefix}/${path}`, file: full });
     }

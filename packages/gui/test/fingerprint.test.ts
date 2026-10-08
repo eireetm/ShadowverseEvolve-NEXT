@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { parseAst } from "rolldown/parseAst";
 import { afterAll, describe, expect, it } from "vitest";
-import { codeOf, engineCode, engineFingerprint } from "../fingerprint";
+import { codeOf, DISPLAY_ONLY, engineCode, engineFingerprint } from "../fingerprint";
 
 // The online fingerprint (fingerprint.ts): what decides how a game goes counts, comments, the code's layout, card texts and
 // translated names don't. Checked on a small tree of its own, and on the real code: each counted file reads the same after
@@ -37,6 +37,8 @@ describe("the online fingerprint", () => {
     "core/src/data/database.ts": "export const LOADED = true;\n",
     "core/src/data/fixes.ts": 'export const FIX = "汉字";\n',
     "core/src/testing/driver.ts": "export const DRIVE = 1;\n",
+    "core/src/view/player-view.ts": "export const SHOWN = 1;\n",
+    "gui/src/engine/view-utils.ts": "export const FOUND = 1;\n",
     "gui/src/engine/game-host.ts": "export function pace(): number {\n  return 1;\n}\n",
     "gui/src/engine/client.ts": "export const PAGE = 1;\n",
   };
@@ -64,6 +66,9 @@ describe("the online fingerprint", () => {
     expect(write({ "core/src/data/fixes.ts": 'export const FIX = "漢字";\n' })).toBe(base);
     expect(write({ "core/src/testing/driver.ts": "export const DRIVE = 2;\n" })).toBe(base);
     expect(write({ "gui/src/engine/client.ts": "export const PAGE = 2;\n" })).toBe(base);
+    // What a player is shown.
+    expect(write({ "core/src/view/player-view.ts": "export const SHOWN = 2;\n" })).toBe(base);
+    expect(write({ "gui/src/engine/view-utils.ts": "export const FOUND = 2;\n" })).toBe(base);
   });
 
   it("changes with the rules code, the worker, and what the rules read of a card", () => {
@@ -92,8 +97,9 @@ describe("the counted code", () => {
     expect(differ).toEqual([]);
   }, 180_000);
 
-  it("uses only counted modules (and the bots, which don't play online games; and the card data files)", () => {
-    const files = new Set(counted.map((c) => resolve(c.file)));
+  it("uses only counted modules (and the bots, which don't play online games; the card data files; what a player is shown)", () => {
+    const shown = [...DISPLAY_ONLY].map((name) => (name.startsWith("core/") ? resolve(GUI, "..", "core", "src", name.slice(5)) : resolve(GUI, "src", name)));
+    const files = new Set([...counted.map((c) => resolve(c.file)), ...shown]);
     const data = resolve(GUI, "..", "core", "data");
     const outside: string[] = [];
     for (const { name, file } of counted) {
