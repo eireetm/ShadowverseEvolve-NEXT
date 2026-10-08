@@ -176,7 +176,6 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 | `images/cards/unknown` | 卡图缺失时的替代图（上面会写出卡名） |
 | `images/backs/default` | 主卡组的卡背（牌组、背面朝上的卡、对手的手牌） |
 | `images/backs/evolve` | 进化牌组的卡背（没有时用主卡组的卡背） |
-| `images/credits/beardad` | 中文联机界面最下面"感谢熊爸卡牌"点开后显示的赞助者 logo（没有时只显示文字） |
 | `textures/board/field` | 一方的场地，对手的是同一张图旋转 180°。牌桌按原图（1586×992）上的格子摆卡，换图时要保持同样的尺寸和格子位置 |
 | `textures/menu/background_m` | 主界面的背景（设置、开局页也用） |
 | `textures/menu/background_d` | 组卡界面的背景（没有时用主界面的） |
@@ -271,7 +270,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 
 - **使用服务器**：有人架了联机服务器、并且给了配置时，联机界面最上面是"使用服务器（服务器的名字）"。
   - 先选好赛制、禁卡表、先后手，再"创建房间"，把 6 位房间号发给对方；对方在同一栏输入房间号，点"加入"或"观战"。进房间以后房主还能改规则。
-  - 所有消息都经过服务器：不用打洞，也不用国外的公共服务；房间号输错会马上提示"房间不存在"；对方看不到你的 IP。
+  - 所有消息都经过服务器；房间号输错会马上提示"房间不存在"；对方看不到你的 IP。
   - 配置：设置 → 联机 →"修改服务器配置"（联机界面里也有这个按钮），粘贴服务器的主人给你的文字，可以先"测试连接"。
   - **大厅**：列出公开的房间（"xxx的房间"、规则、等待对手还是对局中、观战人数），点"加入"或"观战"就能进。创建时取消"在大厅里公开这个房间"，就只能用房间号进。
   - **房间密码**：创建时勾选"设置房间密码"，会随机生成 6 位数字，加入和观战都要输入；大厅里上锁的房间写着"需要密码"。
@@ -316,7 +315,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
   - 仓库根目录有 `online-server.ini` 时，文件夹和私用的 zip 里带着它。程序本身不编进服务器配置，只读旁边的这个文件。
   - 需要 Node.js 20 以上。
   - **更新**：设置页最下面的"检查版本更新"，只有 PC 版有。
-    - 检查：先问 GitHub（API，或者 `releases/latest` 的跳转）；都连不上时，再问几个国内常用的免费镜像，只读版本号。
+    - 检查：先问 GitHub（API，或者 `releases/latest` 的跳转）；都连不上时，再问几个中国常用的免费镜像，只读版本号。
     - 有新版本时弹窗，点"更新"：
       - 只从 GitHub 下载 `SVEN-<版本>-pc.zip`，核对大小、SHA-256 和包里 `VERSION.txt` 写的版本；
       - 换掉程序（`app/`、`server.mjs`、`start.bat`、`README.txt`、`VERSION.txt`、`decks/samples/`），在同一个窗口、同一个端口重启，网页自己刷新；
@@ -561,7 +560,6 @@ The game's look and sound can be replaced or extended with your own files, with 
 | `images/cards/unknown` | Shown when a card image is missing (with the card name written on it) |
 | `images/backs/default` | The main deck's card back (the deck, face-down cards, the opponent's hand) |
 | `images/backs/evolve` | The evolve deck's card back (the main deck's back when missing) |
-| `images/credits/beardad` | The sponsor's logo shown by "感谢熊爸卡牌" at the bottom of the Chinese online screen (only the thanks when missing) |
 | `textures/board/field` | One side's playmat; the opponent's is the same picture turned 180°. Cards sit on the slots drawn on the original (1586×992), so a new picture must keep that size and those slots |
 | `textures/menu/background_m` | The main menu's background (also settings and game setup) |
 | `textures/menu/background_d` | The deck builder's background (the main menu's when missing) |
@@ -656,7 +654,7 @@ Sound effects (26):
 
 - **Use the server**: when someone runs an online server and has given out its configuration, the online screen begins with "Use the server (its name)".
   - Choose the format, the restriction list and who goes first, then "Make a room", and send the 6-letter code to the other player, who types it in the same part and clicks "Join" or "Watch". The host can still change the rules in the room.
-  - Every message goes through the server: no hole punching, no public services abroad; a wrong code is said at once ("no room of that code"); the other player doesn't see your IP.
+  - Every message goes through the server; a wrong code is said at once ("no room of that code"); the other player doesn't see your IP.
   - Configuration: Settings > Online > "Edit the server configuration" (the online screen has the button too): paste the text the server's owner gave you; "Test the connection" first if you like.
   - **Lobby**: the public rooms ("xxx's room", the rules, waiting or playing, the spectators), joined or watched with a click. Untick "List the room in the lobby" before making a room to have it joined by its code only.
   - **Room password**: tick "A password" before making a room: 6 random digits, asked of whoever joins or watches; the lobby marks such rooms "password".
