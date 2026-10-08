@@ -9,6 +9,7 @@ import { and, costAtLeast, enemyFollower, isFollower, nameIncludes } from "../ta
 import { GILDED_BLADE, loot } from "./shared";
 
 export default defineCard({
+  gives: ["playCost"],
   abilities: [
     spell({
       targets: [enemyFollower()],

@@ -43,7 +43,7 @@ import { cardRefs, chooseOptions, confirm, orderCards, selectCards } from "../ru
 import type { Proc } from "../runtime/proc";
 import { getCard, nextSeq, recordUse } from "../state/access";
 import { noteKnown } from "../state/knowledge";
-import { activeScript, characteristics, isFollowerOnField, passiveSources } from "../state/characteristics";
+import { activeScript, characteristics, isFollowerOnField, passiveSources, textDefOf } from "../state/characteristics";
 import { exAreaLimit } from "../state/limits";
 import { createCards, moveCards } from "../state/zones";
 import { executeUnionBurst } from "../abilities/play-ability";
@@ -492,11 +492,32 @@ export function makeEffectContext(g: G, init: EffectInit): EffectContext {
     if (!d) throw new EngineError(`no token named "${name}" (CR 9.1.2.3)`);
     return d.id;
   };
+  /**
+   * The card whose text quotes this effect as an ability it gives (CR 10.9.1.2): a given ability or text, or an effect of a
+   * kind the ability's card `gives` (CardScript.gives). For showing it; none for other effects.
+   */
+  const giverOf = (change: EffectChange): DefId | null => {
+    const def = textDefOf(g, init.sourceDef);
+    if (def === null) return null;
+    const gift = change.kind === "grantedAbility" || change.kind === "gainedText" || (g.scripts[def]?.gives?.includes(change.kind) ?? false);
+    return gift ? def : null;
+  };
   /** A persistent effect on one card object; ends if the card changes zones (CR 10.9.2). */
   const addEffect = (target: CardId, until: Until, change: EffectChange) => {
     if (!g.state.cards[target]) return; // CR 1.3.2 — impossible actions are not performed
     const seq = nextSeq(g.state);
-    g.state.effects.push({ id: `e${seq}`, seq, target, source: selfIfPresent(), controller: ctrl, until, createdTurn: g.state.turn, change });
+    const givenBy = giverOf(change);
+    g.state.effects.push({
+      id: `e${seq}`,
+      seq,
+      target,
+      source: selfIfPresent(),
+      controller: ctrl,
+      until,
+      createdTurn: g.state.turn,
+      change,
+      ...(givenBy !== null ? { givenBy } : {}),
+    });
   };
 
   /** Move searched cards to their destinations (the field / EX area limits may ask which). */

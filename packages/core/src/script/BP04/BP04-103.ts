@@ -6,6 +6,7 @@
 import { defineCard, fanfare } from "../helpers";
 
 export default defineCard({
+  gives: ["preventDamage"],
   abilities: [
     fanfare({
       *resolve(fx) {

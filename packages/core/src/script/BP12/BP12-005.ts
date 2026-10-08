@@ -7,6 +7,7 @@ import { named } from "../targets";
 import { SPARKLE } from "./shared";
 
 export default defineCard({
+  gives: ["playCost"],
   abilities: [
     onEvolve({
       *resolve(fx) {

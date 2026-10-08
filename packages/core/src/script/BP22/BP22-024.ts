@@ -6,6 +6,7 @@ import { defineCard, onEvolve } from "../helpers";
 import { yourFollower } from "../targets";
 
 export default defineCard({
+  gives: ["preventDamage"],
   keywords: ["assail"],
   abilities: [
     onEvolve({

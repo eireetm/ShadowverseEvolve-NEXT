@@ -9,6 +9,7 @@ import { enemyFollower } from "../targets";
 import { aquaForceAttacks } from "./shared";
 
 export default defineCard({
+  quotedWhile: (g, self) => g.givenDrive(self),
   abilities: [
     rideAbility(1),
     onDrive({

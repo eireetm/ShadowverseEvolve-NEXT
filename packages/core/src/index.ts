@@ -59,3 +59,4 @@ export type { CardScript, ScriptRegistry, AbilityDef, ActivatedAbility, Automati
 export * as script from "./script/helpers";
 
 export type { PlayerView, PlayerSideView, CardView, HiddenCardView } from "./view/player-view";
+export type { Gift } from "./view/gifts";

@@ -9,6 +9,7 @@ import { inYourZone, named } from "../targets";
 import { cute, imas, inYourCemetery } from "./shared";
 
 export default defineCard({
+  gives: ["playCost"],
   abilities: [
     fanfare({
       *resolve(fx) {

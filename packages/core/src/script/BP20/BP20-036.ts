@@ -5,6 +5,7 @@ import { defineCard, spell } from "../helpers";
 import { yourFollower } from "../targets";
 
 export default defineCard({
+  gives: ["preventDamage"],
   abilities: [
     spell({
       targets: [yourFollower()],

@@ -46,6 +46,15 @@ export async function clickCard(card: Locator): Promise<void> {
   await card.click({ position: { x: Math.min(14, box.width / 3), y: box.height / 2 } });
 }
 
+/** By hand (manual debugging on, at a main phase): a token onto a player's field or into their EX area, from their panel. */
+export async function tokenByHand(page: Page, player: 0 | 1, name: string, to: "field" | "ex"): Promise<void> {
+  await page.getByTestId(`player-panel-${player}`).click();
+  await page.locator(".sve-manual-search").fill(name);
+  const row = page.locator(".sve-manual-token").filter({ has: page.getByText(name, { exact: true }) });
+  await row.getByRole("button", { name: to === "field" ? "Field" : "EX area" }).click();
+  await page.keyboard.press("Escape");
+}
+
 /** A button beside the mats, when it is there and enabled. */
 async function tableButton(page: Page, id: string): Promise<Locator | null> {
   const button = page.getByTestId(`table-${id}`);

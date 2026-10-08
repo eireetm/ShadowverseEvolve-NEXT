@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { CardView } from "@sve/core";
 import { cardName, cardText } from "../../app/catalog";
 import { type CardLang, useSettings } from "../../app/settings";
 import { useApp } from "../../app/store";
@@ -10,8 +11,9 @@ import { counterName } from "../../i18n/counters";
 import { useFocusSelect, type FocusCard } from "../focus";
 import { ArtViewer, type ArtFace } from "./ArtViewer";
 import { CardArt } from "./CardArt";
-import { CardText } from "./CardText";
+import { CardText, CardTextLine } from "./CardText";
 import { displayOf } from "./display";
+import { giftLines } from "./gifts";
 
 const LANGS: readonly CardLang[] = ["en", "cn", "ja"];
 
@@ -143,6 +145,7 @@ export function CardPanel({ focus, exact = false, art = true }: { focus: FocusCa
         </div>
       ) : null}
       {text ? <CardText text={text} lang={cardLang} /> : <p className="sve-hint">{t("card.noText")}</p>}
+      {view ? <Gifts view={view} lang={cardLang} /> : null}
       <div className="sve-details-meta">
         {printing ?? def.id}
         {printing && physical && printing !== physical.id ? ` · ${t("card.altPrinting", { card: physical.id })}` : ""} · {t(`card.status.${def.status}` as const)}
@@ -159,6 +162,33 @@ export function CardPanel({ focus, exact = false, art = true }: { focus: FocusCa
         </div>
       ) : null}
       {viewing ? <ArtViewer faces={viewing} onClose={() => setViewing(null)} /> : null}
+    </div>
+  );
+}
+
+/**
+ * Below a card's text in a game: the abilities it was given (CR 10.9.1.2), each as the text of the card that gave it quotes
+ * it (gifts.ts; that card's name on hover), and whether it lost all its abilities. Nothing when it has neither.
+ */
+function Gifts({ view, lang }: { view: CardView; lang: CardLang }) {
+  const catalog = useApp((s) => s.catalog)!;
+  const t = useT();
+  const lines = giftLines(view.gifts, catalog, lang);
+  if (lines.length === 0 && !view.abilitiesLost) return null;
+  return (
+    <div className="sve-details-gifts" data-testid="details-gifts">
+      {lines.map((line, i) => (
+        <p key={i} className="sve-details-gift" title={cardName(catalog.def(line.by), lang, line.by)}>
+          {i === 0 ? <span className="sve-details-gifts-label">{t("card.gained")}</span> : null}
+          <CardTextLine line={line.lang === "en" ? `"${line.text}"` : `「${line.text}」`} lang={line.lang} />
+        </p>
+      ))}
+      {view.abilitiesLost ? (
+        <p className="sve-details-lost" data-testid="details-lost">
+          <span className="sve-details-gifts-label">{t("card.lost")}</span>
+          {t("card.lostAll")}
+        </p>
+      ) : null}
     </div>
   );
 }

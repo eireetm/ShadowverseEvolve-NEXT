@@ -21,6 +21,7 @@ export default defineCard({
       kind: "automatic",
       timing: "other",
       delayed: true,
+      gives: true,
       trigger: (e, me) =>
         e.type === "phaseStarted" && e.phase === "end" && e.player === me.controller && me.delayedData?.card !== undefined
           ? [{ card: me.delayedData.card }]

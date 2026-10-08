@@ -26,6 +26,7 @@ const onionStrike = strike({
 export default defineCard({
   keywords: ["rush"],
   deckLimit: 50,
+  quotedWhile: (g, self) => fiveOnions(g, g.controller(self)),
   field: { keywordsFor: (g, self, card) => (card === self && fiveOnions(g, g.card(self)!.controller) ? ["storm"] : []) },
   abilities: [{ ...onionStrike, trigger: (e, me, g) => fiveOnions(g, me.controller) && onionStrike.trigger(e, me, g) }],
 });

@@ -1,7 +1,7 @@
 import type { CardType, DefId } from "../model/card";
 import type { CardId, PlayerId } from "../model/ids";
 import type { Keyword } from "../model/keyword";
-import type { GrantedAbilityId, TriggerData, ZoneName } from "../model/state";
+import type { EffectChange, GrantedAbilityId, TriggerData, ZoneName } from "../model/state";
 import type { GameEvent } from "../events/types";
 import type { Proc } from "../engine/runtime/proc";
 import type { GameReader } from "../engine/query";
@@ -134,6 +134,19 @@ export interface CardScript {
    * passives, valid in the equipment zone (14.5.2.1.2).
    */
   equipment?: { abilities?: readonly AbilityDef[]; keywords?: readonly Keyword[] };
+  /**
+   * CR 10.9.1.2 — the kinds of effect this card's abilities create that its text quotes as an ability given to a card
+   * (BP20-036 "Give it Assail and 'This doesn't take damage' for the rest of this turn": "preventDamage"). Only for
+   * showing them with that card (the player view's `CardView.gifts`); abilities given by `fx.grant` and texts by
+   * `fx.gainText` are shown without it.
+   */
+  gives?: readonly EffectChange["kind"][];
+  /**
+   * While this holds, the card has the ability its own text quotes (BP09-049 "While there are at least 5 ... this has
+   * Storm and 'Strike - ...'"), which its script implements as its own ability with the same condition. Only for showing
+   * it (`CardView.gifts`), where the card's abilities work and while it has them.
+   */
+  quotedWhile?(game: GameReader, self: CardId): boolean;
 }
 
 export type ScriptRegistry = Readonly<Record<DefId, CardScript>>;
@@ -483,6 +496,12 @@ export interface AutomaticAbility {
   timesPerTurn?: number;
   /** Only used through delayed triggers created by effects (CR 10.7.5). */
   delayed?: boolean;
+  /**
+   * A delayed trigger that is the ability its card's text gives to the card it watches (`fx.delay`'s data `card`), e.g.
+   * CP04-045 "put it into your EX area and give it 'At the start of your end phase, ... bury it'". Only for showing it
+   * with that card while the trigger waits (`CardView.gifts`).
+   */
+  gives?: true;
   /** CR 10.4.7.4 "when [event], [cost]: [effect]" — the controller may pay to play it. */
   cost?: CustomCost;
   earthRite?: EarthRiteSpec;

@@ -12,6 +12,7 @@ import { enemyFollower } from "../targets";
 const fifteen = (g: GameReader, p: PlayerId) => g.cards(p, "cemetery").filter((id) => g.typeAndTraits(id).traits.includes("ロイヤルパラディン")).length >= 15;
 
 export default defineCard({
+  quotedWhile: (g, self) => fifteen(g, g.controller(self)),
   field: {
     keywordsFor: (g, self, card) => (card === self && fifteen(g, g.controller(self)) ? ["storm"] : []),
   },

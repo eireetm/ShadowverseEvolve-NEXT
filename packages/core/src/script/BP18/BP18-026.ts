@@ -7,6 +7,7 @@ import { defineCard, fanfare } from "../helpers";
 import { enemyFollower } from "../targets";
 
 export default defineCard({
+  gives: ["preventDamage"],
   keywords: ["rush", "assail"],
   abilities: [
     fanfare({

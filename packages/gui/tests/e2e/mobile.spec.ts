@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { useSettings } from "./helpers";
+import { showSidebar, startGame, toMainPhase, tokenByHand, useSettings } from "./helpers";
 
 // A phone held sideways (the Android app is this web app in the phone's WebView): the menus fit, the
 // table packs tighter with your hand beside your mat, the card panel is a drawer (its button or a long press opens it),
@@ -90,6 +90,74 @@ test("a phone: the menus fit, a game is played by tapping, the card panel is a d
   await expect(page.getByTestId("game-left")).toBeVisible();
   await expect(page.locator(".sve-drawer .sve-sidebar-card")).toContainText(held);
   await page.getByTestId("details-hide").tap();
+  expect(problems).toEqual([]);
+});
+
+/** A finger from (x, from) to (x, to), the touch events a phone sends (the browser scrolls what is under it). */
+async function swipe(page: Page, x: number, from: number, to: number): Promise<void> {
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y: from }] });
+  for (let i = 1; i <= 10; i++) await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x, y: from + ((to - from) * i) / 10 }] });
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await cdp.detach();
+}
+
+/** A player's field on the table. */
+const fieldOf = (page: Page, player: 0 | 1) => page.locator(`${player === 0 ? ".sve-mat-own" : ".sve-mat-opponent"} .sve-field-slot .sve-card`);
+
+/** By hand (manual debugging): a Knight token (1/1 follower) onto a player's field. */
+async function knightOnto(page: Page, player: 0 | 1): Promise<void> {
+  const before = await fieldOf(page, player).count();
+  await tokenByHand(page, player, "Knight", "field");
+  await expect(fieldOf(page, player)).toHaveCount(before + 1);
+}
+
+test("a phone: a card's menu longer than the room beside the card scrolls, by finger, to its last item", async ({ page }) => {
+  const problems: string[] = [];
+  page.on("pageerror", (e) => problems.push(e.message));
+  await useSettings(page, { uiLang: "en", botDelayMs: 0, manualDebug: true, setupControllers: ["human", "greedy"], setupDecks: ["samples/sd01.json", "samples/sd02.json"] });
+  await startGame(page, "menu-scroll");
+  await toMainPhase(page);
+  // By hand: enemy Knights until the enemy field is full (5), and a Knight of yours with Storm and Assail (the reserved
+  // enemy followers too, CR 12.11.2): it can attack six times.
+  while ((await fieldOf(page, 1).count()) < 5) await knightOnto(page, 1);
+  await knightOnto(page, 0);
+  const mine = fieldOf(page, 0).last();
+  await mine.click();
+  const dialog = page.getByTestId("manual-dialog");
+  for (const keyword of ["storm", "assail"]) {
+    await dialog.locator("select").filter({ has: page.locator("option[value=storm]") }).selectOption(keyword);
+    await dialog.getByRole("button", { name: "Give a keyword" }).click();
+  }
+  await expect(mine).toContainText("Assail");
+  await page.keyboard.press("Escape");
+  await showSidebar(page);
+  await page.getByRole("button", { name: /^Debug$/ }).click();
+  await page.getByTestId("debug-manual").uncheck();
+  await page.getByTestId("sidebar-hide").click();
+
+  // Its menu stays on the screen; the items don't all fit: the list scrolls, its lower edge fades.
+  await mine.tap();
+  const menu = page.getByTestId("card-menu");
+  const items = page.getByTestId("card-menu-items");
+  await expect(items.getByRole("menuitem")).toHaveCount(6);
+  const box = (await menu.boundingBox())!;
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  expect(box.y + box.height).toBeLessThanOrEqual(412);
+  expect(await items.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+  await expect(items).toHaveAttribute("data-more-below", "");
+  // A finger moves the list up: the last item (the enemy leader) comes into view, and a tap attacks with it.
+  const list = (await items.boundingBox())!;
+  await swipe(page, list.x + list.width / 2, list.y + list.height - 20, list.y + 20);
+  await expect.poll(() => items.evaluate((el) => el.scrollTop + el.clientHeight >= el.scrollHeight - 1)).toBe(true);
+  await expect(items).toHaveAttribute("data-more-above", "");
+  const leader = items.getByRole("menuitem", { name: /leader$/ });
+  const last = (await leader.boundingBox())!;
+  expect(last.y + last.height).toBeLessThanOrEqual(list.y + list.height + 1);
+  const defense = page.getByTestId("player-panel-1").locator(".sve-player-defense");
+  const before = Number(await defense.innerText());
+  await leader.tap();
+  await expect(defense).toHaveText(String(before - 1));
   expect(problems).toEqual([]);
 });
 

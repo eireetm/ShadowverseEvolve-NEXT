@@ -6,6 +6,7 @@
 import { defineCard, enteredByAbility, fanfare, strike } from "../helpers";
 
 export default defineCard({
+  gives: ["preventDamage"],
   keywords: ["rush"],
   abilities: [
     strike({

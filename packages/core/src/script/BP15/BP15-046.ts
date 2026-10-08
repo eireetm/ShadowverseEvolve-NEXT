@@ -26,6 +26,7 @@ const payX: CustomCost = {
 };
 
 export default defineCard({
+  gives: ["playCost"],
   playOptionsRequired: true,
   playOptions: [{ id: "reveal2", label: "Reveal 2 Onmyoji cards from your hand", ...revealFromHand(onmyoji, 2) }],
   abilities: [

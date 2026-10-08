@@ -1182,6 +1182,33 @@ option {
   box-shadow: 0 10px 30px #000c;
 }
 
+/* The items: longer than the room beside the card (its max-height, board/menu-place.ts), they scroll; a finger scrolls
+   them (the menu isn't on the table, whose touch-action is none). An edge with items beyond it fades. */
+.sve-card-menu-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  --sve-menu-fade: 28px;
+}
+
+.sve-card-menu-items[data-more-below] {
+  -webkit-mask-image: linear-gradient(#000 calc(100% - var(--sve-menu-fade)), transparent);
+  mask-image: linear-gradient(#000 calc(100% - var(--sve-menu-fade)), transparent);
+}
+
+.sve-card-menu-items[data-more-above] {
+  -webkit-mask-image: linear-gradient(transparent, #000 var(--sve-menu-fade));
+  mask-image: linear-gradient(transparent, #000 var(--sve-menu-fade));
+}
+
+.sve-card-menu-items[data-more-above][data-more-below] {
+  -webkit-mask-image: linear-gradient(transparent, #000 var(--sve-menu-fade), #000 calc(100% - var(--sve-menu-fade)), transparent);
+  mask-image: linear-gradient(transparent, #000 var(--sve-menu-fade), #000 calc(100% - var(--sve-menu-fade)), transparent);
+}
+
 .sve-card-menu-title {
   padding: 0 4px 4px;
   font-size: 12px;
@@ -1190,6 +1217,7 @@ option {
 }
 
 .sve-card-menu button {
+  flex-shrink: 0;
   justify-content: flex-start;
   text-align: left;
   padding: 6px 10px;
@@ -1915,6 +1943,27 @@ option {
 
 .sve-card-text p {
   margin: 0 0 4px;
+}
+
+/* Below a card's text in a game: the abilities it was given, as the giving card quotes them, and that it lost them all. */
+.sve-details-gifts {
+  padding-top: 6px;
+  border-top: 1px solid var(--sve-border);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.sve-details-gifts p {
+  margin: 0 0 4px;
+}
+
+.sve-details-gifts-label {
+  color: var(--sve-good);
+  font-weight: 700;
+}
+
+.sve-details-lost .sve-details-gifts-label {
+  color: var(--sve-bad);
 }
 
 .sve-token {
