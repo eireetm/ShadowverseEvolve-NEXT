@@ -26,9 +26,11 @@ export const inCemetery = (g: GameReader, p: PlayerId, filter: (g: GameReader, i
 export const threeArmedInCemetery = (g: GameReader, p: PlayerId): boolean => inCemetery(g, p, armed) >= 3;
 
 /**
- * "The number of cards with different base costs in your EX area" (BP10-011, 016; 元のコストの種類数).
+ * "The number of cards with different base costs in your EX area" (BP10-011, 016; 元のコストの種類数). A card without a
+ * cost (a crest, CR 2.5) is no kind of cost (CR 1.3.6.1).
  */
-export const distinctCostsInEx = (g: GameReader, p: PlayerId): number => new Set(g.cards(p, "ex").map((id) => g.info(id).cost)).size;
+export const distinctCostsInEx = (g: GameReader, p: PlayerId): number =>
+  new Set(g.cards(p, "ex").flatMap((id) => (g.info(id).cost === null ? [] : [g.info(id).cost]))).size;
 
 /** "If there's a 0. Lhynkal, The Fool on your field" (BP10-043, 047). */
 export const lhynkalOnField = (g: GameReader, p: PlayerId): boolean =>
