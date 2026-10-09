@@ -5,7 +5,7 @@ import { type CardLang, useSettings } from "../../app/settings";
 import { useApp } from "../../app/store";
 import { shownPrinting } from "../../app/token-art";
 import { traitName } from "../../app/traits";
-import type { CardRuntimeDetails } from "../../engine/protocol";
+import type { CardRuntimeDetails } from "../../presentation/protocol";
 import { findCard, sideOf } from "../../engine/view-utils";
 import { htmlLang, useT } from "../../i18n";
 import { counterName } from "../../i18n/counters";

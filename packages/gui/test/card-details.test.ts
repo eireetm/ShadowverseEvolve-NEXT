@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createEngine, script, type GameSession, type PersistentEffect } from "@sve/core";
 import { ALL_CARDS, ALL_SCRIPTS } from "@sve/core/sets";
 import { drive, Driver, testCrest, testFollower, testSpell } from "@sve/core/testing";
-import { cardRuntimeDetails } from "../src/engine/card-details";
+import { cardRuntimeDetails } from "../src/presentation/card-details";
 import { findCard, forEachCard, withoutMemory } from "../src/engine/view-utils";
 
 const engine = createEngine({

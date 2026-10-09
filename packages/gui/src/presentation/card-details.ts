@@ -1,6 +1,6 @@
 import type { CardId, CardScript, Characteristics, GameReader, PersistentEffect, PlayerView, ScriptRegistry } from "@sve/core";
 import type { CardRuntimeDetails } from "./protocol";
-import { forEachCard } from "./view-utils";
+import { forEachCard } from "../engine/view-utils";
 
 /**
  * GUI-only queries, aligned with main 0.4.1 (2aebbba): flow/attack.ts, state/characteristics.ts,
