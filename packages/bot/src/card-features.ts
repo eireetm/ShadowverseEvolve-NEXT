@@ -204,6 +204,13 @@ export interface CardRef {
   top?: number;
   /** The cards must have different names. */
   distinct?: true;
+  /** The player's choices it is under, all of them (RefSite.alt: "opt:<id>", "mode:<n>", "may", "pay", "rite"...). */
+  alt?: string[];
+  /**
+   * Luck, not a condition: the top cards of a deck (nobody knows their order, CR 4.5.2) or a random result. A fair encoder
+   * gives its chance from the cards its player knows are left, never the real cards.
+   */
+  chance?: "top" | "random";
 }
 
 /** What the tools read from a card's script code (tools/rl/script-analysis.ts). */
@@ -222,7 +229,10 @@ export function refPartial(f: RefFilter): boolean {
   return false;
 }
 
-/** The number of cards a reference needs (a guard "if fewer than 3, stop" needs 3), or null: no threshold. */
+/**
+ * The number of cards a reference needs (a guard "if fewer than 3, stop" needs 3), or null: no threshold. For a chance
+ * reference (the deck's top) it is what the effect hopes for, not a condition.
+ */
 export function refNeeded(r: CardRef): number | null {
   const t = r.threshold;
   if (!t) return null;
@@ -441,12 +451,12 @@ export function cardFeatureRow(def: CardDefinition, script: CardScript | undefin
       add("ref.scaled", r.scaled);
       add("ref.partial", refPartial(r.filter));
       add(r.timing === "fanfare" ? "ref.t.fanfare" : r.timing === "continuous" || r.timing === "fromHand" ? "ref.t.continuous" : r.timing === "activated" || r.timing === "evolve" ? "ref.t.activated" : "ref.t.other", 1);
-      add("ref.w.target", r.where === "target" || r.where === "targetCondition" || r.where === "choose" || r.where === "topCard");
+      add("ref.w.target", !r.chance && (r.where === "target" || r.where === "targetCondition" || r.where === "choose"));
       add("ref.w.affects", r.where === "affects" || r.where === "trigger");
       add("ref.w.each", r.where === "each");
-      add("ref.top", r.top !== undefined);
+      add("ref.top", r.top !== undefined || r.chance !== undefined);
     }
-    const thresholds = analysis.refs.map(refNeeded).filter((n): n is number => n !== null && n <= 20);
+    const thresholds = analysis.refs.filter((r) => !r.chance).map(refNeeded).filter((n): n is number => n !== null && n <= 20);
     if (thresholds.length > 0) add("ref.threshold", Math.max(...thresholds));
   }
   return row.map((v) => Math.min(v, 2047));
