@@ -49,11 +49,14 @@ describe("the effect families", () => {
 });
 
 describe("what a card counts, read from its script", () => {
-  const refs = (def: string) => analysis().get(def)!.refs.map((r) => ({ timing: r.timing, where: r.where, zones: r.zones, side: r.side, filter: r.filter, agg: r.agg, threshold: r.threshold, scaled: r.scaled }));
+  const refs = (def: string) =>
+    analysis()
+      .get(def)!
+      .refs.map((r) => ({ timing: r.timing, where: r.where, zones: r.zones, side: r.side, filter: r.filter, agg: r.agg, threshold: r.threshold, scaled: r.scaled, ...(r.top ? { top: r.top } : {}), ...(r.distinct ? { distinct: r.distinct } : {}) }));
   it("for cards whose effects count a kind of card", () => {
     // BP11-058: banish up to as many enemy followers as Dragoncraft cards costing 7 or more in your cemetery; its activated
     // ability's cost discards another such card from the hand.
-    expect(refs("BP11-058")).toEqual([
+    expect(refs("BP11-058").filter((r) => r.where !== "target")).toEqual([
       { timing: "fanfare", where: "max", zones: ["cemetery"], side: "own", filter: { t: "and", args: [{ t: "class", v: "Dragoncraft" }, { t: "costMin", v: 7 }] }, agg: "count", threshold: null, scaled: true },
       { timing: "activated", where: "canPay", zones: ["hand"], side: "own", filter: { t: "and", args: [{ t: "notSelf" }, { t: "class", v: "Dragoncraft" }, { t: "costMin", v: 7 }] }, agg: "exists", threshold: { op: ">=", n: 1 }, scaled: false },
     ]);
@@ -64,12 +67,41 @@ describe("what a card counts, read from its script", () => {
     // CSD02a-003: at least 3 Cute followers on your field (destructured card information).
     expect(refs("CSD02a-003")[0]).toMatchObject({ timing: "continuous", where: "selfKeywords", zones: ["field"], filter: { t: "and", args: [{ t: "type", v: "follower" }, { t: "trait", v: "キュート" }] }, threshold: { op: ">=", n: 3 } });
     // BP07-021: Swordcraft followers in your cemetery, read from the printed definitions; 10 for Storm, 5 for the fanfare.
-    expect(refs("BP07-021").map((r) => [r.timing, r.threshold?.n])).toEqual([
+    expect(refs("BP07-021").filter((r) => r.where !== "target").map((r) => [r.timing, r.threshold?.n])).toEqual([
       ["continuous", 10],
       ["fanfare", 5],
     ]);
     // SD05-006: as much damage as Forest Bat tokens on your field.
-    expect(refs("SD05-006")[0]).toMatchObject({ zones: ["field"], side: "own", filter: { t: "and", args: [{ t: "token" }, { t: "name", v: "Forest Bat" }] }, scaled: true });
+    expect(refs("SD05-006").find((r) => r.where === "resolve")).toMatchObject({ zones: ["field"], side: "own", filter: { t: "and", args: [{ t: "token" }, { t: "name", v: "Forest Bat" }] }, scaled: true });
+  }, 120_000);
+  it("for keyword conditions, deck-top looks, the cards a passive or trigger is about, and amounts", () => {
+    const a = (def: string) => analysis().get(def)!;
+    // BP01-017: Combo (3) (CR 13.2.1.2), 3 damage; SD01-009: Combo (3).
+    expect(a("BP01-017").conds.combo).toBe(3);
+    expect(a("BP01-017").amounts.dmg).toBe(3);
+    // SD03-001: Spellchain (7) and (15) (CR 13.3.1.2), each a count of the spells in your cemetery; BP01-070 reads the count.
+    expect(refs("SD03-001").map((r) => [r.where, r.threshold?.n])).toEqual([
+      ["spellchain", 7],
+      ["spellchain", 15],
+    ]);
+    expect(refs("BP01-070").filter((r) => r.where === "spellchain").map((r) => r.threshold?.n)).toEqual([5, 10]);
+    // SD05-010: Necrocharge (10) (CR 13.5.1.2).
+    expect(a("SD05-010").conds.necrocharge).toBe(10);
+    // BP01-148: an amulet among the top 5 cards of your deck (CR 5.11).
+    expect(refs("BP01-148")).toMatchObject([{ where: "search", zones: ["deck"], top: 5, filter: { t: "type", v: "amulet" } }]);
+    // SD01-002: your Pixie tokens have Assail; when a Pixie token enters your field, it gets +1/+1; its fanfare buffs each one.
+    expect(refs("SD01-002").map((r) => [r.where, JSON.stringify(r.filter)])).toEqual([
+      ["affects", JSON.stringify({ t: "and", args: [{ t: "token" }, { t: "trait", v: "妖精" }] })],
+      ["trigger", JSON.stringify({ t: "and", args: [{ t: "token" }, { t: "trait", v: "妖精" }] })],
+      ["each", JSON.stringify({ t: "and", args: [{ t: "token" }, { t: "trait", v: "妖精" }, { t: "type", v: "follower" }] })],
+    ]);
+    // SD01-001: your other Pixie followers have Rush.
+    expect(refs("SD01-001")[0]).toMatchObject({ where: "affects", zones: ["field"], side: "own", filter: { t: "and", args: [{ t: "notSelf" }, { t: "and", args: [{ t: "type", v: "follower" }, { t: "trait", v: "妖精" }] }] } });
+    // BP01-119: mill 1; BP09-060: 5 damage (the larger branch).
+    expect(a("BP01-119").amounts.mill).toBe(1);
+    expect(a("BP09-060").amounts.dmg).toBe(5);
+    // CP04-038: spells with different names in your cemetery.
+    expect(refs("CP04-038").find((r) => r.zones[0] === "cemetery")).toMatchObject({ where: "target", distinct: true });
   }, 120_000);
   it("for what a card's targets and searches need", () => {
     // CSD02a-001: a Cute follower costing 4 or less (and one costing 2 or less) in your cemetery.
@@ -78,9 +110,11 @@ describe("what a card counts, read from its script", () => {
       ["target", "cemetery", "exists", JSON.stringify({ t: "and", args: [{ t: "type", v: "follower" }, { t: "trait", v: "キュート" }, { t: "costMax", v: 2 }] })],
     ]);
     // BP09-060: 5 damage instead of 2 when the chosen enemy follower is a Wyrmkin: is there one.
-    expect(refs("BP09-060")).toEqual([{ timing: "onEvolve", where: "targetCondition", zones: ["field"], side: "opp", filter: { t: "and", args: [{ t: "type", v: "follower" }, { t: "trait", v: "竜族" }] }, agg: "exists", threshold: { op: ">=", n: 1 }, scaled: false }]);
-    // BP12-054: whether its EX area has room is the zone's size, already in the vector: no reference.
-    expect(refs("BP12-054")).toEqual([]);
+    expect(refs("BP09-060").filter((r) => r.where === "targetCondition")).toEqual([{ timing: "onEvolve", where: "targetCondition", zones: ["field"], side: "opp", filter: { t: "and", args: [{ t: "type", v: "follower" }, { t: "trait", v: "竜族" }] }, agg: "exists", threshold: { op: ">=", n: 1 }, scaled: false }]);
+    // BP01-017: its target, an enemy follower (a removal has nothing to do without one).
+    expect(refs("BP01-017")).toEqual([{ timing: "fanfare", where: "target", zones: ["field"], side: "opp", filter: { t: "type", v: "follower" }, agg: "exists", threshold: { op: ">=", n: 1 }, scaled: false }]);
+    // BP12-054: whether its EX area has room is the zone's size, already in the vector: no reference (only its target).
+    expect(refs("BP12-054").filter((r) => r.where !== "target")).toEqual([]);
     // BP08-018: search your deck for a Commander or a Soldier.
     expect(refs("BP08-018")[0]).toMatchObject({ where: "search", zones: ["deck"], agg: "exists", filter: { t: "or", args: [{ t: "trait", v: "指揮官" }, { t: "trait", v: "兵士" }] } });
   }, 120_000);

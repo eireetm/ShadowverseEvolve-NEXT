@@ -45,6 +45,11 @@ const WHERE: Record<string, string> = {
   when: "能不能选择",
   target: "要选择的对象",
   targetCondition: "对选中的卡的条件",
+  affects: "受益的卡",
+  trigger: "诱发条件的卡",
+  each: "对每张",
+  spellchain: "魔力连锁",
+  necrocharge: "死灵术",
   search: "检索",
   searchEach: "检索",
   fromEvolveDeck: "从进化牌组选",
@@ -108,8 +113,10 @@ function filterText(f: RefFilter): string {
       return `${CLASS[f.v] ?? f.v}职业`;
     case "name":
       return `名为「${cnName(engine.db.all().find((d) => d.name === f.v)?.id ?? "") || f.v}」`;
-    case "nameIncludes":
-      return `名字含「${f.v}」`;
+    case "nameIncludes": {
+      const names = [...new Set(engine.db.all().filter((d) => d.name.includes(f.v)).map((d) => cnName(d.id)))];
+      return names.length > 0 && names.length <= 4 ? `卡名为「${names.join("」或「")}」` : `名字含「${f.v}」`;
+    }
     case "defs":
       return `卡名为「${[...new Set(f.v.map(cnName))].join("」或「")}」`;
     case "costMin":
@@ -158,7 +165,8 @@ function filterText(f: RefFilter): string {
 
 /** A reference in words. */
 function refText(r: CardRef): string {
-  const what = `${SIDE[r.side]}${r.zones.map((z) => ZONE[z] ?? z).join("、")}里「${filterText(r.filter)}」的卡`;
+  const zones = r.zones.map((z) => (z === "deck" && r.top ? `牌组顶 ${r.top} 张` : (ZONE[z] ?? z))).join("、");
+  const what = `${SIDE[r.side]}${zones}里「${filterText(r.filter)}」的卡${r.distinct ? "（卡名各不相同）" : ""}`;
   const need = refNeeded(r);
   const how = r.agg === "exists" ? "有没有" : r.scaled ? "张数 → 按数量起作用" : need !== null ? `张数 ≥${need}` : "张数";
   return `${TIMING[r.timing] ?? r.timing} · ${WHERE[r.where] ?? r.where}：${what}，${how}${refPartial(r.filter) ? "（**有读不懂的部分**）" : ""}`;
@@ -225,8 +233,11 @@ for (const name of decks) {
       continue;
     }
     const families = Object.entries(a.fx).filter(([, n]) => n > 0).map(([f, n]) => `${FAMILY[f] ?? f}${n > 1 ? ` ×${n}` : ""}`);
-    const conds = Object.entries(a.conds).filter(([, n]) => n > 0).map(([c]) => ({ overflow: "溢出", necrocharge: "死灵术", spellchain: "连锁", combo: "连击", sanguine: "渴血" })[c] ?? c);
-    lines.push(`- 效果：${families.join("、") || "无"}${conds.length ? `；条件用到：${conds.join("、")}` : ""}`);
+    const AMOUNT: Record<string, string> = { dmg: "伤害", aoe: "全体伤害", stats: "加攻击力 / 生命值", debuff: "减攻击力 / 生命值", heal: "主战者生命", draw: "抽牌", mill: "牌组送墓", ex: "进额外区", summon: "召唤", pp: "PP" };
+    const amounts = Object.entries(a.amounts).filter(([, n]) => n > 0).map(([k, n]) => `${AMOUNT[k] ?? k} ${n}`);
+    const COND: Record<string, string> = { overflow: "觉醒（溢出）", necrocharge: "死灵术", spellchain: "魔力连锁", combo: "连击", sanguine: "渴血" };
+    const conds = Object.entries(a.conds).filter(([, n]) => n > 0).map(([c, n]) => (c === "overflow" || c === "sanguine" ? COND[c] : `${COND[c]} ${n}`));
+    lines.push(`- 效果：${families.join("、") || "无"}${amounts.length ? `（写明的数值：${amounts.join("、")}）` : ""}${conds.length ? `；条件用到：${conds.join("、")}` : ""}`);
     if (a.refs.length === 0) lines.push("- 数的东西：无");
     else {
       withRefs += 1;
