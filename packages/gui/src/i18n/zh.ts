@@ -292,6 +292,8 @@ export const zh: Record<MessageKey, string> = {
   "controller.remote": "联机对手",
 
   "game.turn": "第 {n} 回合",
+  "game.firstPlayer": "先手",
+  "game.secondPlayer": "后手",
   "game.phase.setup": "开局",
   "game.phase.start": "开始阶段",
   "game.phase.main": "主要阶段",

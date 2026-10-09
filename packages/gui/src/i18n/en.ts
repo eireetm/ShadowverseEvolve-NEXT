@@ -289,6 +289,8 @@ export const en = {
   "controller.remote": "online opponent",
 
   "game.turn": "Turn {n}",
+  "game.firstPlayer": "First",
+  "game.secondPlayer": "Second",
   "game.phase.setup": "Setup",
   "game.phase.start": "Start phase",
   "game.phase.main": "Main phase",

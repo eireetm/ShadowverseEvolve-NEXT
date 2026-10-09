@@ -80,7 +80,7 @@ export function CenterLine({ update, placing = null }: { update: GameUpdate; pla
     <>
       <div className="sve-center-status">
         <div className="sve-center-turn">
-          <strong>{t("game.turn", { n: view.turn })}</strong> · {t(PHASE_KEYS[view.phase] ?? "game.phase.main")}
+          <strong>{t("game.turn", { n: view.players[view.activePlayer].turnsPassed })}</strong> · {t(PHASE_KEYS[view.phase] ?? "game.phase.main")}
         </div>
         {view.phase !== "over" ? <div>{t("game.activePlayer", { player: playerLabel(view.activePlayer, update, t) })}</div> : null}
         {placing ? (

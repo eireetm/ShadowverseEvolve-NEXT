@@ -293,6 +293,8 @@ export const ja: Record<MessageKey, string> = {
   "controller.remote": "オンラインの相手",
 
   "game.turn": "{n}ターン目",
+  "game.firstPlayer": "先攻",
+  "game.secondPlayer": "後攻",
   "game.phase.setup": "準備",
   "game.phase.start": "スタートフェイズ",
   "game.phase.main": "メインフェイズ",
