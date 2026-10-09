@@ -118,17 +118,6 @@ describe("activated, spell and card play presentation", () => {
     expect(h.context()).toBeNull();
   });
 
-  it("does not guess the free Union Burst's pre-play identity from the outer source or option labels", () => {
-    const t = drive(engine, { me: { universe: "princessConnect", field: ["CP04-113", "CP04-003", "CP04-001"], evolveDeck: ["CP04-114"] } });
-    t.game.state.players[0].thisTurn = { ...t.game.state.players[0].thisTurn, turn: t.game.state.turn, unionBursts: 2 };
-    const h = track(t.game);
-    mainAction(t, h, "evolve", "CP04-113");
-    h.act({ type: "choose", ids: ["2"] });
-    h.act({ type: "selectCards", cards: [t.id("CP04-003")] });
-    expect(t.decision).toMatchObject({ type: "selectCards", reason: "target", source: t.id("CP04-003") });
-    expect(h.context()).toBeNull();
-  });
-
   it("uses the keyword provider for Stack even when its runtime position differs", () => {
     const t = drive(engine, { me: { field: ["BP01-T10", "BP01-T10", "BP01-T10"] } });
     const h = track(t.game);

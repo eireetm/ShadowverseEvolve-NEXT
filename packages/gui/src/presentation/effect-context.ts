@@ -73,6 +73,29 @@ export class EffectContextObserver {
     return ref ? { ...this.save({ source: action.card, controller: player, sourceDef: ref.def, ability: ref.index }, views), runtimeIndex: action.ability } : null;
   }
 
+  /** Reviewed CP04-114 mode 2 handoff, confirmed by the real inner target question. */
+  private freeUnionBurstTarget(parent: AbilityDisplayContext | undefined, before: Decision | null, input: Input, after: Decision | null,
+    views: readonly PlayerView[]): Saved | null {
+    if (parent?.sourceDef !== "CP04-114" || parent.abilityIndex !== 0 || parent.modeIds?.length !== 1 || parent.modeIds[0] !== "2" ||
+      after?.type !== "selectCards" || after.reason !== "target" || !after.source || after.source === parent.source) return null;
+    const selected = before?.type === "selectCards" && before.reason === "target" && before.source === parent.source &&
+      input.type === "selectCards" && input.cards.length === 1 && input.cards[0] === after.source;
+    // A sole legal outer target can be auto-answered in the same act that chooses mode 2.
+    const autoSelected = before?.type === "choose" && before.reason === "mode" && before.source === parent.source &&
+      input.type === "choose" && input.ids.length === 1 && input.ids[0] === "2";
+    if (!selected && !autoSelected) return null;
+    const source = after.source;
+    const card = this.game.reader().card(source);
+    if (card?.zone !== "field" || card.controller !== parent.controller) return null;
+    const refs = this.game.reader().info(source).abilities.filter((ref) => ref.ability.kind !== "spell" && ref.ability.unionBurst);
+    // No legality simulation or option-label parsing. Multi-UB/no-target paths retain their existing handling.
+    const ref = refs.length === 1 ? refs[0] : undefined;
+    if (!ref?.ability.targets?.length || ref.ability.modes) return null;
+    const saved = this.save({ source, controller: parent.controller, sourceDef: ref.def, ability: ref.index }, views);
+    saved.context.instanceId = `action:${this.serial}:freeUB`;
+    return saved;
+  }
+
   /** Commit only after the original act succeeds. A rejected input leaves the prior context intact. */
   act(input: Input, from: PlayerId | undefined, delegate: () => GameEvent[]): GameEvent[] {
     const before = this.game.decision;
@@ -169,6 +192,13 @@ export class EffectContextObserver {
       // when that outer automatic ability both triggered and was played in this act.
       const innerPlay = root?.nested && root !== prior && after && "source" in after && after.source === root.context.source;
       next = innerPlay ? root : last ?? root;
+    }
+
+    // The real target question confirms the child started; a completed/skipped child must not
+    // override a later automatic ability, even if that later ability has the same source.
+    if (unplayed.length === 0) {
+      const freeUnionBurst = this.freeUnionBurstTarget(prior?.context, before, input, after, beforeViews);
+      if (freeUnionBurst && !played.some((s) => matchesPlayed(freeUnionBurst, s.context))) next = freeUnionBurst;
     }
 
     if (next?.context.pendingId) next.context.instanceId = `pending:${next.context.pendingId}`;
