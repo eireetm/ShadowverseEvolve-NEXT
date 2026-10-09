@@ -13,14 +13,17 @@ const ARTIFACTS = [
   { id: "mystic", label: "Summon a Mystic Artifact; the Ancient Artifact goes into your EX area" },
 ];
 
-/** "Banish 5 cards with different base costs from your EX area" (元のコストがすべて異なるように). */
+/**
+ * "Banish 5 cards with different base costs from your EX area" (元のコストがすべて異なるように). A card without a cost (a
+ * crest) has no cost to differ by (CR 1.3.6.1).
+ */
 const banishFiveCosts: CustomCost = {
   canPay: (g, p) => distinctCostsInEx(g, p) >= 5,
   *pay(fx) {
     const chosen: string[] = [];
     for (let i = 0; i < 5; i++) {
       const costs = chosen.map((id) => fx.game.info(id).cost);
-      const left = fx.game.cards(fx.controller, "ex").filter((id) => !chosen.includes(id) && !costs.includes(fx.game.info(id).cost));
+      const left = fx.game.cards(fx.controller, "ex").filter((id) => !chosen.includes(id) && fx.game.info(id).cost !== null && !costs.includes(fx.game.info(id).cost));
       chosen.push(...(yield* fx.chooseCards(left, 1, 1)));
     }
     yield* fx.banish(chosen);

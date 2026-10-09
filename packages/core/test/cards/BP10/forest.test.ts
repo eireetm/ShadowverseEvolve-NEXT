@@ -122,6 +122,9 @@ describe("BP10 Forestcraft", () => {
     expect(t.stats("opp:V5")).toEqual([5, 2]);
     const two = d({ me: { hand: ["BP10-016"], ex: ["V1", "V1", "V2"], playPoints: 1 }, opp: { field: ["V5"] } }).play("BP10-016");
     expect(two.stats("opp:V5")).toEqual([5, 5]);
+    // A crest has no cost (CR 2.5): no kind of cost (1.3.6.1).
+    const crest = d({ me: { hand: ["BP10-016"], ex: ["V1", "V2", "BP20-T01"], playPoints: 1 }, opp: { field: ["V5"] } }).play("BP10-016");
+    expect(crest.stats("opp:V5")).toEqual([5, 5]);
   });
 
   it("017 Deepwood Wolf — Storm; another Beast entering: +2/+2; from the hand (1, into the EX area): a card on your field into its owner's EX area", () => {
