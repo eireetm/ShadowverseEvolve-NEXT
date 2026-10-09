@@ -126,12 +126,14 @@ function fastSelection(d: Extract<Decision, { type: "selectCards" }>, lookup: Ca
     case "wardEngage":
       return legalSelection(d.candidates, mandatory, d.max);
     // CR 12.8.2 (i): a Ward follower may enter engaged (reserved is the default). In its controller's own turn reserved is
-    // never worse — it can still evolve and attack (8.4.2.1) or pay an [engage] cost (10.4.6.1), and its controller may engage
-    // it in their end phase (12.8.2 ii, 7.4.3; a token made at the start of the end phase is still in time) — so it stays
-    // reserved, and the bots don't even consider engaging it then. In the opponent's turn (a Quick follower, one brought back
-    // by Last Words) there is no end phase of its controller before the attacks, so it enters engaged.
+    // never worse before the end phase's engaging — it can still evolve and attack (8.4.2.1) or pay an [engage] cost
+    // (10.4.6.1), and its controller may engage it in their end phase (12.8.2 ii, 7.4.3; a token made at the start of the end
+    // phase is still in time) — so it stays reserved. In the opponent's main phase (one brought back by Last Words, summoned
+    // by a Quick card) it enters engaged: it protects at once against the attacks still to come. In the opponent's end phase
+    // no attack follows (attacks are only in the main phase, 7.3.3, 8.4) and our start phase refreshes it (7.2.3), so engaged
+    // it would only be exposed: reserved. Medium and Hard compare both outside their own main phase (planner.ts wardOnEntry).
     case "wardEnterEngaged": {
-      if (lookup.turn && lookup.turn.active === d.player) return legalSelection(d.candidates, mandatory, d.min);
+      if (lookup.turn && (lookup.turn.active === d.player || lookup.turn.phase === "end")) return legalSelection(d.candidates, mandatory, d.min);
       return legalSelection(d.candidates, mandatory, d.max);
     }
     // Pay and discard as little, and as little worth, as possible.

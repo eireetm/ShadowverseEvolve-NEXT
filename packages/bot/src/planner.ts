@@ -248,6 +248,7 @@ export class PlannerBot {
     const state = session.state;
     if (d.type === "mulligan" && this.mulliganMode === "curve") return this.mulligan(session, d);
     if (d.type === "selectCards" && d.reason === "wardEngage" && this.replyPlans > 0) return this.wardAtEnd(session, d, me);
+    if (d.type === "selectCards" && d.reason === "wardEnterEngaged" && this.replyPlans > 0) return this.wardOnEntry(session, d, me);
     if (state.activePlayer !== me || state.phase !== "main" || d.type === "chooseTurnOrder" || d.type === "mulligan") return this.greedy.decide(session);
     if (state.turn !== this.turn) {
       this.turn = state.turn;
@@ -680,6 +681,57 @@ export class PlannerBot {
   }
 
   /**
+   * CR 12.8.2 (i): a Ward follower entering reserved or engaged, outside our own main phase. Engaged it protects at once
+   * (12.8.2 iii) but can be attacked, by Rush followers too (8.4.3.1); reserved it gives an attacker that can only attack
+   * followers nothing to hit; in the opponent's turn our start phase refreshes it either way (7.2.3). Each answer is played to
+   * our next main phase in the same samples (two for a fair bot, the real game for a cheating one), the opponent played by
+   * the model, and scored there; ties keep the fast answer (policy.ts). Before our own end phase's engaging (7.4.3) it stays
+   * reserved without a comparison: that step can still engage it.
+   */
+  private wardOnEntry(game: GameSession, d: Extract<Decision, { type: "selectCards" }>, me: PlayerId): Answer {
+    const fast = fastAnswer(d, lookupFromReader(game.reader()));
+    const state = game.state;
+    if (state.activePlayer === me && (state.phase !== "end" || this.wardEngageAhead(game, me))) return fast;
+    const answers = [fast, ...wardSelections(d)].filter((a, i, all) => all.findIndex((b) => JSON.stringify(b) === JSON.stringify(a)) === i);
+    const seed = `${this.seed}:wardEntry:${this.plans++}`;
+    const samples = this.cheat ? 1 : 2;
+    let best = fast;
+    let bestValue = -Infinity;
+    for (const answer of answers) {
+      let total = 0;
+      try {
+        for (let i = 0; i < samples; i++) {
+          this.stats.simulations += 1;
+          const session = this.cheat ? game.clone() : game.determinized(me, `${seed}:${i}`);
+          session.act(answer);
+          total += this.playReply(session, me, state.turn, `${seed}:${i}:reply`);
+        }
+      } catch (e) {
+        this.stats.simulationFailures += 1;
+        this.stats.lastError = e instanceof Error ? e.message : String(e);
+        continue;
+      }
+      if (total > bestValue) {
+        best = answer;
+        bestValue = total;
+      }
+    }
+    return best;
+  }
+
+  /** In our own end phase: whether its Ward engaging (CR 7.4.3) is still ahead (played on with fast answers until it asks). */
+  private wardEngageAhead(game: GameSession, me: PlayerId): boolean {
+    const session = this.cheat ? game.clone() : game.determinized(me, `${this.seed}:wardAhead`);
+    const turn = session.state.turn;
+    for (let i = 0; i < 300 && session.decision && !session.result && session.state.turn === turn; i++) {
+      const d = session.decision;
+      if (i > 0 && d.type === "selectCards" && d.reason === "wardEngage" && d.player === me) return true;
+      session.act(fastAnswer(d, lookupFromReader(session.reader())));
+    }
+    return false;
+  }
+
+  /**
    * CR 6.2.1.8: keep or redraw by the curve of the first four turns (mulligan.ts). A cheating bot knows the deck's order, so
    * it compares the hand with the four cards on top; a fair one compares with what the rest of its deck list gives on average
    * (the cards of its own deck, which a player knows, not their order).
@@ -837,6 +889,15 @@ export class PlannerBot {
     const result = session.result;
     return result && result.winner !== me && result.winner !== null ? value + Math.max(-1_000, Math.min(1_000, before)) : value;
   }
+}
+
+/** The Ward followers entering to engage: every subset of up to three, else none or all of them. */
+function wardSelections(d: Extract<Decision, { type: "selectCards" }>): Answer[] {
+  const n = d.candidates.length;
+  if (n > 3) return [{ type: "selectCards", cards: [] }, { type: "selectCards", cards: [...d.candidates] }];
+  const out: Answer[] = [];
+  for (let mask = 0; mask < 1 << n; mask++) out.push({ type: "selectCards", cards: d.candidates.filter((_, i) => mask & (1 << i)) });
+  return out;
 }
 
 function canEnd(d: Decision): boolean {

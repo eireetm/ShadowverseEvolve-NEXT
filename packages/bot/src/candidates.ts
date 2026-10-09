@@ -6,10 +6,9 @@ import { fastAnswer, type CardLookup } from "./policy";
  * wins a tie). Main phase: every action but ending the main phase (the bot compares against
  * ending it), playing one of several identical cards only once. Selections and choices: every
  * answer when there are few, otherwise the fast answer, the smallest ones and random samples,
- * because "any number of cards" can have millions. A Ward follower entering gets the fast answer only: reserved in its
- * controller's own turn before the end phase (entering engaged is never better there, the end phase can engage it,
- * CR 12.8.2 ii), engaged in the opponent's turn (it protects at once). Which Ward followers to engage at the end phase is compared like any
- * selection. Ordering cards gets the fast answer only.
+ * because "any number of cards" can have millions. A Ward follower entering gets the fast answer only (policy.ts; the
+ * planner compares both itself outside its own main phase, planner.ts wardOnEntry). Which Ward followers to engage at the end
+ * phase is compared like any selection. Ordering cards gets the fast answer only.
  */
 export function candidateAnswers(d: Decision, lookup: CardLookup, rng: RngState, max: number, attacksFirst = false): Answer[] {
   const out: Answer[] = [];
