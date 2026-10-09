@@ -20,6 +20,9 @@ export function displayAbilityText(context: AbilityDisplayContext, catalog: Cata
 export function displayAbilityHeading(context: AbilityDisplayContext, update: GameUpdate, catalog: Catalog, lang: CardLang, t: Translate): string {
   const name = context.sourceCard ? cardName(catalog.def(context.sourceCard.def), lang) : cardLabel(context.source, update, catalog, lang, t);
   const keyword = context.keyword;
-  const type = keyword === "drain" || keyword === "singleDrive" || keyword === "twinDrive" ? t(`keyword.${keyword}`) : timingLabel(context.timing, t);
+  const type = context.kind === "cardPlay" ? t("ability.cardPlay") : context.kind === "spell" ? t("ability.spell") :
+    context.kind === "activated" ? context.textRef?.timing === "evolve" ? t("ability.evolve") :
+      context.textRef?.timing === "advanced" ? `${t("ability.advanced")} ${t("ability.act")}` : t("ability.act") :
+    keyword === "drain" || keyword === "singleDrive" || keyword === "twinDrive" ? t(`keyword.${keyword}`) : timingLabel(context.timing, t);
   return `${name} — ${type}`;
 }

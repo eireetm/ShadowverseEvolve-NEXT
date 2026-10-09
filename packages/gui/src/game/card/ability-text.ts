@@ -1,4 +1,4 @@
-// Locate an automatic ability's complete text without changing the rules or the worker protocol.
+// Locate complete ability/play text without changing the rules or the worker protocol.
 import type { AbilityDef, CardDefinition } from "@sve/core";
 import type { CardLang } from "../../app/settings";
 import { dataLang, toHant, type DataLang } from "../../i18n/hant";
@@ -67,8 +67,8 @@ export interface AbilityText {
   text: string;
   /** The language actually used, including a fallback; icon labels must use this language too. */
   lang: CardLang;
-  /** A shared paragraph covers more than one script ability and retains all the printed conditions. */
-  match: "exact" | "shared";
+  /** Shared paragraphs retain all printed conditions. Body explicitly means the full card's own text. */
+  match: "exact" | "shared" | "body";
 }
 
 interface Paragraph {
@@ -79,6 +79,45 @@ interface Paragraph {
 const SEPARATOR = /^[-―—─]{3,}$/;
 const OPTION = /^(?:【\d+】|\(\d+\))/;
 const TIMINGS = Object.keys(MARKS);
+
+const ACTIVATED: Record<DataLang, RegExp> = {
+  en: /^(?:\{\[(?:ub|quick|q)\]\}\s*)*(?:\{\[(?:act|evolve|adv|ride|feed)\]\}|Activate\b|Evolve\b|Ride\b|Fusion\b)/i,
+  cn: /^(?:《UB》|《快速》|【UB】)*(?:[《【](?:起动|启动|进化|高等起动|进阶起动|憑依|凭依|吃饭)[》】])/,
+  ja: /^(?:UB|クイック|Q|《Q》|\{\[(?:ub|quick|q)\]\})*(?:《?(?:起動|進化(?!時)|アドバンス起動|憑依|食事)|\{\[(?:act|evolve|adv|ride|feed)\]\})/,
+};
+/** Reviewed playOptions paragraphs, not every sentence about the cost of play.
+ * Most are the first physical line. Overrides preserve language order and skip passive modifiers.
+ * Several script options may share one printed paragraph (BP01-103, BP17-030).
+ */
+export const PLAY_OPTIONS: Readonly<Record<string, readonly string[]>> = {
+  "BP01-057": ["banish10"], "BP01-103": ["bury4", "banish4"], "BP04-066": ["plus5"],
+  "BP07-004": ["bury4"], "BP07-024": ["engage2"], "BP08-037": ["tenCosts"], "BP09-054": ["zirnitra"],
+  "BP11-007": ["bury4Pixies"], "BP11-068": ["discard"], "BP12-024": ["trees"], "BP12-096": ["aegis"], "BP12-T02": ["engage"],
+  "BP13-025": ["plus2"], "BP13-028": ["bury"], "BP13-035": ["plus4"], "BP13-060": ["plus3"],
+  "BP13-064": ["engage"], "BP13-070": ["bury"], "BP13-098": ["bury"], "BP13-T04": ["bury"],
+  "BP14-011": ["banish"], "BP14-063": ["water"], "BP14-068": ["engage"], "BP14-119": ["discard"],
+  "BP15-038": ["bury3"], "BP15-041": ["reveal2"], "BP15-045": ["banish"], "BP15-046": ["reveal2"],
+  "BP15-083": ["bury2"], "BP15-087": ["engage2"], "BP15-PR12": ["engage"], "BP16-026": ["engage"],
+  "BP17-007": ["trees"], "BP17-030": ["leod", "other"], "BP17-044": ["plus2"], "BP17-054": ["academic"], "BP17-116": ["faceup"],
+  "BP18-090": ["discard2"], "BP18-119": ["discardToghKeyoh"], "BP19-098": ["erralde"], "BP19-100": ["erralde"], "BP19-102": ["erralde"],
+  "BP20-018": ["beast"], "BP21-026": ["plus2"], "BP21-035": ["officer"], "BP21-052": ["academic"],
+  "CP02-038": ["discard3"], "CP02-050": ["discard"], "CP02-103": ["banish9"], "CP03-029": ["facedown"],
+  "CP03-083": ["buryDragon"], "CP03-084": ["bury"], "CP04-036": ["pecorine"],
+  "ECP01-036": ["discard"], "ECP02-046": ["plus3"], "DSD01a-014": ["reveal2"], "BP22-039": ["rite9"], "BP22-072": ["plus2"],
+};
+const PLAY_LINE: Readonly<Record<string, Partial<Record<DataLang, number>>>> = {
+  "BP04-066": { en: 1, cn: 1, ja: 1 }, "BP07-004": { en: 1, cn: 1, ja: 1 },
+  "BP11-068": { en: 1, cn: 1, ja: 1 }, "BP15-083": { cn: 2, ja: 2 }, "BP15-087": { en: 1 },
+  "BP17-044": { en: 1, cn: 1, ja: 1 }, "BP17-116": { en: 1, cn: 1, ja: 1 }, "BP18-119": { en: 1, cn: 1, ja: 1 },
+};
+
+function activationType(text: string, lang: DataLang): string | null {
+  if (!ACTIVATED[lang].test(text)) return null;
+  const head = text.replace(/^(?:(?:\{\[(?:ub|quick|q)\]\}|《UB》|《快速》|【UB】|UB|クイック|《Q》|Q)\s*)*/i, "");
+  if (/^(?:\{\[evolve\]\}|Evolve\b|[《【]进化[》】]|《?進化(?!時))/i.test(head)) return "evolve";
+  if (/^(?:\{\[(?:adv|ride|feed)\]\}|Ride\b|[《【](?:(?:高等|进阶)起动|憑依|凭依|吃饭)[》】]|《?(?:アドバンス起動|憑依|食事))/.test(head)) return "advanced";
+  return "activated";
+}
 
 /** Mask quotes without removing offsets or sentences outside them. Names in 『...』 are not ability quotes. */
 function outsideQuotes(text: string, lang: DataLang): string {
@@ -170,6 +209,17 @@ function delayedText(def: string, text: string, lang: DataLang): string | null {
 function segment(def: string, text: string, lang: DataLang, timing: string, rank: number, count: number): Omit<AbilityText, "lang"> | null {
   if (!text.trim() || text === "unavailable" || !Number.isInteger(count) || !Number.isInteger(rank) || count < 1 || rank < 0 || rank >= count) return null;
   const all = paragraphs(text, lang);
+  if (timing === "spell") return all.length ? { text: all.map((p) => p.text).join("\n"), match: "body" } : null;
+  if (timing === "play") {
+    const options = PLAY_OPTIONS[def];
+    if (!options) return null;
+    const line = all.find((p) => p.line === (PLAY_LINE[def]?.[lang] ?? 0));
+    return line ? { text: line.text, match: options.length > 1 ? "shared" : "exact" } : null;
+  }
+  if (["activated", "evolve", "advanced"].includes(timing)) {
+    const lines = all.filter((p) => activationType(p.text, lang) === timing);
+    return lines.length === count ? { text: lines[rank]!.text, match: "exact" } : null;
+  }
   if (timing === "other") {
     if ((count === 1 || (def === "BP22-037" && rank === 1)) && DELAYED.has(def)) {
       const delayed = delayedText(def, text, lang);
@@ -244,8 +294,29 @@ export function locateAutomaticAbilityText(
   return locateAbilityText({ id: `${card.id}:quoted`, text }, lang, ability.timing, rank, count);
 }
 
-/** Automatic abilities represented only by a keyword have no printed effect paragraph (CR 12.13 / 14.4.6). */
+/** Script identity remains authoritative; text syntax only locates its paragraph. */
+export function abilityTextGroup(ability: AbilityDef): string {
+  return ability.kind === "automatic" ? ability.timing : ability.kind === "spell" ? "spell" :
+    ability.evolve ? "evolve" : ability.advanced ? "advanced" : "activated";
+}
+
+export function locateScriptAbilityText(
+  card: Pick<CardDefinition, "id" | "text">, abilities: readonly AbilityDef[], index: number, lang: CardLang,
+): AbilityText | null {
+  const ability = abilities[index];
+  if (!ability) return null;
+  const group = abilityTextGroup(ability);
+  const same = (a: AbilityDef) => a.kind === ability.kind && abilityTextGroup(a) === group;
+  return locateAbilityText(card, lang, group, abilities.slice(0, index).filter(same).length, abilities.filter(same).length);
+}
+
+/** Keyword abilities without their own printed effect paragraph. */
 const KEYWORD_TEXT: Readonly<Record<string, Record<DataLang, string>>> = {
+  stack: {
+    ja: "起動これをアクト：自分の他の【スタック】を持つアミュレット1つを選ぶ。それにこれのスタックカウンターをすべて移す。",
+    cn: "《起动》将这张卡《横置》：选择自己的其他的持有【蓄积】能力的1个护符。将这张卡的蓄积指示物全体移到其上。",
+    en: "Activate, engage: Select another amulet with Stack on your field and transfer all this card's Stack counters to it.",
+  },
   drain: {
     ja: "【ドレイン】このフォロワーが攻撃によるダメージを与えたとき、自分のリーダーの体力をそのダメージ数に等しい値増加する。",
     cn: "【虹吸】当这个从者给予攻击伤害时，使自己的主战者的生命值增加与该伤害值等量的数值。",
