@@ -18,7 +18,7 @@ import { candidateAnswers } from "./candidates";
 import { DEFAULT_WEIGHTS, exactResults, weightsEvaluator, type EvalWeights, type Evaluator } from "./evaluate";
 import { GreedyBot, type BotStats } from "./greedy";
 import { positionKey } from "./keys";
-import { adaptStep, lethalFirstModel, lethalWithinReach, lineWins, searchSureLethal, stepOf, type LethalStep, type Model, type Responder } from "./lethal";
+import { adaptStep, lethalFirstModel, lethalWithinReach, lineWinsAgainstAll, replayLine, searchSureLethal, stepOf, type Adversary, type LethalStep, type Model, type Responder } from "./lethal";
 import { redrawByExpectation, redrawKnowingDeck } from "./mulligan";
 import { fastAnswer, lookupFromReader } from "./policy";
 
@@ -74,8 +74,8 @@ export interface PlannerBotOptions {
    */
   lethalSearch?: number;
   /**
-   * A fair bot's lethal must win in this many more samples of what it knows, the opponent answering (default 3); its plans
-   * that win in its sample count as won only if they do too. A cheating bot plays in the real game and needs none.
+   * A fair bot's lethal must win in this many more samples of what it knows, whatever the opponent answers (default 3); its
+   * plans that win in its sample count as won only if they do too (0: no checks). A cheating bot checks in the real game.
    */
   lethalChecks?: number;
   /** "curve": keep or redraw by the curve of the first turns (mulligan.ts); "greedy" (default): the greedy bot's rule. */
@@ -118,6 +118,8 @@ interface Node {
   value: number;
   /** The game ended, or our turn did: nothing left to plan. */
   done: boolean;
+  /** A plan that won in our sample but not surely, where it was stopped (unsureWinsStopped). */
+  unsure?: true;
   /** The position however it was reached (positionKey): one position, one plan. */
   key: string;
 }
@@ -135,9 +137,10 @@ export class PlannerBot {
   readonly stats: BotStats = { decisions: 0, simulations: 0, simulationFailures: 0, simulationErrors: {}, fallbacks: 0, lastError: null };
   /**
    * Sure lethal first: searches made and skipped (nothing new since this turn's last one), lines played and dropped on the
-   * way (no longer sure), lines found but not sure, and plans that won in the bot's sample but not surely (not taken as won).
+   * way (no longer sure), lines found but not sure, plans that won in the bot's sample but not surely (scored where they were
+   * stopped), and checks with too many answers of the opponent to try them all (not sure).
    */
-  readonly lethalStats = { searches: 0, skipped: 0, played: 0, dropped: 0, rejected: 0, unsurePlans: 0 };
+  readonly lethalStats = { searches: 0, skipped: 0, played: 0, dropped: 0, rejected: 0, unsurePlans: 0, capped: 0 };
   /** The turns where it drew a plan instead of taking the best (`explore`). */
   readonly explored: number[] = [];
   private readonly evaluator: Evaluator;
@@ -274,7 +277,7 @@ export class PlannerBot {
       // An answer of the opponent or a card drawn may have changed it: checked again at each main phase decision.
       const rest = line.steps.slice(line.given);
       const seed = `${this.seed}:lethal:${this.lethalSearches++}`;
-      const answer = d.type !== "mainPhase" || this.sureFrom(game, me, rest, seed, 2) ? adaptStep(game, rest[0]!) : null;
+      const answer = d.type !== "mainPhase" || this.sureFrom(game, me, rest, seed, 2) === null ? adaptStep(game, rest[0]!) : null;
       if (answer) {
         line.given += 1;
         return answer;
@@ -300,6 +303,7 @@ export class PlannerBot {
       checks: this.cheat ? 0 : this.lethalChecks,
       searchResponder: () => this.responder(this.opponentQuick),
       checkResponder: () => this.responder(true),
+      adversary: this.adversary(`${seed}:check`),
       maxLines: 6,
       seed,
     });
@@ -318,11 +322,24 @@ export class PlannerBot {
     return first;
   }
 
-  /** Does the line surely win from this position: in the real game (cheating), or in `samples` samples of what we know? */
-  private sureFrom(game: GameSession, me: PlayerId, line: readonly LethalStep[], seed: string, samples: number): boolean {
-    if (this.cheat) return lineWins(game.clone(), line, me, this.responder(true));
-    for (let i = 0; i < samples; i++) if (!lineWins(game.determinized(me, `${seed}:${i}`), line, me, this.responder(true))) return false;
-    return true;
+  /**
+   * Does the line surely win from this position, whatever the opponent answers: in the real game (cheating), or in `samples`
+   * samples of what we know? Null if it does; else the world and the opponent's answers that stop it.
+   */
+  private sureFrom(game: GameSession, me: PlayerId, line: readonly LethalStep[], seed: string, samples: number): Stopped | null {
+    for (let i = 0; i < (this.cheat ? 1 : samples); i++) {
+      const world = () => (this.cheat ? game.clone() : game.determinized(me, `${seed}:${i}`));
+      const adversary = this.adversary(`${seed}:${i}`);
+      const check = lineWinsAgainstAll(world, line, me, adversary);
+      if (check.capped) this.lethalStats.capped += 1;
+      if (!check.won) return { world, script: check.script ?? null, adversary };
+    }
+    return null;
+  }
+
+  /** The opponent of a lethal check: every answer of theirs tried (lethal.ts). */
+  private adversary(seed: string): Adversary {
+    return { cap: 200, maxAnswers: 8, seed };
   }
 
   /** The opponent in a simulation of our turn: a fresh greedy model (`model` false: they pass). */
@@ -353,18 +370,31 @@ export class PlannerBot {
     const world = () => (this.cheat ? game.clone() : game.determinized(me, seed));
     const root = this.node(world(), null, null, me, turn, "decide");
     let finished = this.beam(root, me, turn, world, this.maxSimulations, this.beamWidth);
-    // A plan that wins in our sample only because of what was sampled (a card drawn, the opponent passing) isn't a won one.
-    if (!this.cheat && this.lethalChecks > 0) finished = finished.filter((node) => node.session.result?.winner !== me || this.sureWin(node, game, me, seed));
+    // A plan that wins in our sample only because of what was sampled (a card drawn) or of how the opponent answered isn't a
+    // won one: it is scored where it was stopped (D10: only a sure win counts as one).
+    if (this.lethalChecks > 0) finished = this.unsureWinsStopped(finished, game, me, turn, seed);
     if (finished.length === 0) return fastAnswer(game.decision!, lookupFromReader(game.reader()));
     const candidates = this.kinds(finished, root, me, this.replyPlans);
+    // The best plan that can still win (not surely) is always compared.
+    const unsure = finished.find((node) => node.unsure);
+    if (unsure && !candidates.includes(unsure) && this.replyPlans > 0) candidates.push(unsure);
     if (this.lookahead >= 2 && candidates.length > 1) {
-      const values = this.lookAhead(candidates, game, me, turn, seed, world, this.explores(turn));
+      const values = this.unsureFloor(candidates, this.lookAhead(candidates, game, me, turn, seed, world, this.explores(turn)));
       return this.carryOut(this.pick(candidates, values, turn), turn, me);
     }
     if (this.replyPlans <= 0) return this.carryOut(finished[0]!, turn, me);
     // The plans by the position they leave, then by the position after the opponent's reply.
-    const values = candidates.map((node) => (node.done ? this.finalValue(node, me) : this.afterReply(node, me, turn, world)));
+    const values = this.unsureFloor(candidates, candidates.map((node) => (node.done ? this.finalValue(node, me) : this.afterReply(node, me, turn, world))));
     return this.carryOut(this.pick(candidates, values, turn), turn, me);
+  }
+
+  /**
+   * A plan that wins in some samples but not surely, scored where it was stopped, is never scored as a sure loss (where it was
+   * stopped, the opponent wins in their turn): when every other plan loses too, it is the one that can still win.
+   */
+  private unsureFloor(candidates: Node[], values: number[]): number[] {
+    const floor = -DEFAULT_WEIGHTS.win / 2 + 1;
+    return values.map((v, i) => (candidates[i]!.unsure ? Math.max(v, floor) : v));
   }
 
   /** Whether this turn still explores (`explore`): drawn once per turn, at its first plan; a draw spends it. */
@@ -639,13 +669,55 @@ export class PlannerBot {
     return path[0]?.answer ?? endMainPhase();
   }
 
-  /** A plan that won in our sample: does it win in the other samples too, the opponent answering (lethal.ts)? */
-  private sureWin(node: Node, game: GameSession, me: PlayerId, seed: string): boolean {
-    const steps: LethalStep[] = [];
-    for (let n: Node | null = node; n && n.parent; n = n.parent) steps.unshift(stepOf(n.parent.session, n.answer!));
-    const sure = this.sureFrom(game, me, steps, `${seed}:won`, this.lethalChecks);
-    if (!sure) this.lethalStats.unsurePlans += 1;
-    return sure;
+  /**
+   * The finished plans with each that won in our sample checked (lethal.ts: in the other samples too — a cheating bot: in the
+   * real game — whatever the opponent answers). One that isn't sure is replaced by where it was stopped: its steps given in
+   * the world and against the answers that stopped it, our turn played on to our next main phase decision there (our choices
+   * the fast answers), and scored as a plan that ends there; without that world (too many answers to try), it is left out.
+   */
+  private unsureWinsStopped(finished: Node[], game: GameSession, me: PlayerId, turn: number, seed: string): Node[] {
+    if (!finished.some((node) => node.session.result?.winner === me)) return finished;
+    const out: Node[] = [];
+    for (const node of finished) {
+      if (node.session.result?.winner !== me) {
+        out.push(node);
+        continue;
+      }
+      const steps: LethalStep[] = [];
+      for (let n: Node | null = node; n && n.parent; n = n.parent) steps.unshift(stepOf(n.parent.session, n.answer!));
+      const stopped = this.sureFrom(game, me, steps, `${seed}:won`, this.lethalChecks);
+      if (!stopped) {
+        out.push(node);
+        continue;
+      }
+      this.lethalStats.unsurePlans += 1;
+      if (stopped.script === null) continue;
+      try {
+        const session = stopped.world();
+        replayLine(session, steps, me, stopped.script, stopped.adversary);
+        let stop: Stop = "decide";
+        for (let i = 0; i < 100; i++) {
+          const d = session.decision;
+          if (!d) stop = "gameOver";
+          else if (session.state.turn !== turn || session.state.phase !== "main") stop = "turnOver";
+          else if (d.player !== me) {
+            stop = this.advance(session, me, turn);
+            if (stop === "decide") continue;
+          } else if (d.type !== "mainPhase") {
+            session.act(fastAnswer(d, lookupFromReader(session.reader())));
+            continue;
+          }
+          break;
+        }
+        out.push({ ...this.node(session, node.parent, node.answer, me, turn, stop), unsure: true });
+      } catch (e) {
+        this.stats.simulationFailures += 1;
+        this.stats.lastError = e instanceof Error ? e.message : String(e);
+      }
+    }
+    // Best first again, one plan per position.
+    const seen = new Set<string>();
+    return out.sort((a, b) => b.value - a.value).filter((n) => !seen.has(n.key) && (seen.add(n.key), true));
   }
 
   /**
@@ -889,6 +961,13 @@ export class PlannerBot {
     const result = session.result;
     return result && result.winner !== me && result.winner !== null ? value + Math.max(-1_000, Math.min(1_000, before)) : value;
   }
+}
+
+/** Where a line was stopped: the world, and the opponent's answers there (null: too many to try them all). */
+interface Stopped {
+  world: () => GameSession;
+  script: number[] | null;
+  adversary: Adversary;
 }
 
 /** The Ward followers entering to engage: every subset of up to three, else none or all of them. */

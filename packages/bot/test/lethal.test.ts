@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createEngine, script, type PlayerView } from "../src/core";
-import { HARD_OPTIONS, MEDIUM_BETA_OPTIONS, MEDIUM_OPTIONS, PlannerBot, exactResults, lethalWithinReach, type PlannerBotOptions } from "../src";
+import { GreedyBot, HARD_OPTIONS, MEDIUM_BETA_OPTIONS, MEDIUM_OPTIONS, PlannerBot, exactResults, lethalWithinReach, type PlannerBotOptions } from "../src";
+import { lineWins, lineWinsAgainstAll, stepOf } from "../src/lethal";
 import { drive, testFollower, testSpell, type DriveSpec } from "../../core/src/testing";
 
 // Sure lethal first (lethal.ts): a line that surely wins this turn is played before the turn is planned.
@@ -19,6 +20,7 @@ const cards = createEngine({
     testSpell("SEEK", 1, { text: "Search your deck for a follower and put it into your hand." }),
     testFollower("STORM1", 1, 6, 1),
     testFollower("BIG", 2, 5, 5),
+    testSpell("QBURN", 1, { text: "Quick. Deal 2 damage to an enemy follower." }),
   ],
   scripts: {
     WALL: defineCard({ keywords: ["ward"] }),
@@ -52,6 +54,17 @@ const cards = createEngine({
       ],
     }),
     STORM1: defineCard({ keywords: ["storm"] }),
+    QBURN: defineCard({
+      keywords: ["quick"],
+      abilities: [
+        spell({
+          *resolve(fx) {
+            const [target] = yield* fx.selectCards(fx.game.followers(fx.game.opponent(fx.controller)), 1, 1);
+            if (target !== undefined) yield* fx.dealDamage(target, 2);
+          },
+        }),
+      ],
+    }),
   },
 });
 const fillers = (n: number) => Array<string>(n).fill("FILLER");
@@ -116,6 +129,44 @@ describe("sure lethal first", () => {
     // hidden cards again): matched by what the card is, the line is sure.
     const spec: DriveSpec = { me: { hand: ["SEEK", "BIG"], deck: ["STORM1", ...fillers(9)], playPoints: 2 }, opp: { deck: fillers(10), leaderDefense: 6 } };
     for (const seed of ["a", "b", "c"]) expect(ourTurn(spec, { ...MEDIUM_OPTIONS, seed }).won).toBe(true);
+  });
+
+  /**
+   * 5 defense; our 1/1 and 4/2 at the leader is lethal, unless their Quick spell (2 damage) hits the 4/2 when it attacks
+   * (CR 8.4.7: before the damage). Our engaged 5/5 can't attack, but a model aims the spell at it (the most valuable).
+   */
+  const decoy = (card: string): DriveSpec => ({
+    me: { deck: fillers(10), field: ["FAIRY", "HITTER", { card: "BIG", engaged: true }] },
+    opp: { deck: Array<string>(10).fill(card), hand: [card], leaderDefense: 5, playPoints: 1 },
+  });
+
+  it("is sure only if it wins whatever the opponent answers: a model can be led to aim its Quick spell at a decoy", () => {
+    const t = drive(cards, decoy("QBURN"));
+    const line = [];
+    const s = t.game.clone();
+    for (const [attacker, target] of [["FAIRY", "opp:leader"], ["HITTER", "opp:leader"]] as const) {
+      const d = s.decision!;
+      const action = d.type === "mainPhase" ? d.actions.find((a) => a.type === "attack" && s.state.cards[a.attacker]!.def === attacker && s.state.cards[a.target]!.zone === "leader") : undefined;
+      expect(action, `${attacker} -> ${target}`).toBeDefined();
+      line.push(stepOf(s, { type: "mainPhase", action: action! }));
+      s.act({ type: "mainPhase", action: action! });
+      for (let i = 0; i < 10 && s.decision && s.decision.player === 1; i++) s.act({ type: "quick", action: { type: "pass" } });
+    }
+    const model = new GreedyBot(cards, { seed: "m" });
+    expect(lineWins(t.game.clone(), line, 0, (session) => model.decide(session))).toBe(true);
+    const check = lineWinsAgainstAll(() => t.game.clone(), line, 0, { cap: 50, maxAnswers: 8, seed: "x" });
+    expect(check.won).toBe(false);
+    // Without the spell in their hand it is sure.
+    const safe = drive(cards, decoy("FILLER"));
+    expect(lineWinsAgainstAll(() => safe.game.clone(), line, 0, { cap: 50, maxAnswers: 8, seed: "x" }).won).toBe(true);
+    // The bots don't take it as sure (Hard sees the spell; Medium's samples deal it from their deck: every card of it is one);
+    // they do without it.
+    for (const options of [MEDIUM_OPTIONS, HARD_OPTIONS]) {
+      const risky = ourTurn(decoy("QBURN"), options);
+      expect(risky.first.played).toBe(0);
+      expect(risky.stats.unsurePlans).toBeGreaterThan(0);
+    }
+    expect(ourTurn(decoy("FILLER"), HARD_OPTIONS)).toMatchObject({ won: true, first: { played: 1 } });
   });
 
   it("is off in a planner made without it (the opponent models)", () => {

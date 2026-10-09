@@ -1,5 +1,6 @@
 import { opponentOf, seedRng, validateAnswer, type Answer, type CardId, type Decision, type DefId, type GameSession, type PlayerId, type PlayerView } from "./core";
 import { planBranches } from "./branches";
+import { candidateAnswers } from "./candidates";
 import { evaluate } from "./evaluate";
 import { positionKey } from "./keys";
 import { fastAnswer, lookupFromReader } from "./policy";
@@ -11,8 +12,10 @@ import { fastAnswer, lookupFromReader } from "./policy";
 // opponent's leader keeps once the attacks it can declare land — and plays it at once if it is sure:
 //   - knowing the real game (the cheating bot): the line wins there, the opponent answering its quick windows as modelled;
 //   - knowing what its player knows (a fair bot): the line wins in each of several samples of the hidden cards
-//     (GameSession.determinized), every decision of the opponent answered by a model — so it rests neither on a card drawn
-//     or a random result its player can't know, nor on the opponent passing.
+//     (GameSession.determinized) — so it rests neither on a card drawn or a random result its player can't know;
+//   - and there (a fair bot) or in the real game (the cheating bot) whatever the opponent answers: each of their decisions
+//     in our turn (a Quick card in an attack's window, CR 8.4.7, and its targets) is tried with every answer
+//     (lineWinsAgainstAll), not only with a model's — a model can be led to spend its answer on a decoy.
 // Measured on 961 recorded Medium games (2026-10-03): Medium missed a sure lethal in 121 of them and lost 33 of those games.
 
 /** Who answers the opponent's decisions in a simulation of our turn: a model, or nobody (they pass, the fast answers). */
@@ -38,6 +41,8 @@ export interface LethalSearchOptions {
   searchResponder: () => Responder;
   /** The opponent in the checks: a fresh model for each, answering all their decisions. */
   checkResponder: () => Responder;
+  /** Check against every answer of the opponent instead (also in world 0, and in the real game when `checks` is 0). */
+  adversary?: Adversary;
   /** Winning lines checked at most; the search goes on after one that isn't sure. */
   maxLines: number;
   seed: string;
@@ -186,6 +191,73 @@ export function lineWins(s: GameSession, line: readonly LethalStep[], me: Player
   }
 }
 
+/** Checking a line against every answer of the opponent (lineWinsAgainstAll). */
+export interface Adversary {
+  /** Most replays of the line in one world: past it the line counts as not sure (the check says so). */
+  cap: number;
+  /** Answers tried at each decision of theirs (candidates.ts: every play of a quick window and passing, the targets...). */
+  maxAnswers: number;
+  seed: string;
+}
+
+/** A line checked against every answer: won, or the opponent's answers that stop it (each one's index among its candidates). */
+export interface LineCheck {
+  won: boolean;
+  script?: number[];
+  /** Too many answers to try them all (`cap`). */
+  capped?: boolean;
+}
+
+/**
+ * Play the line from `s`, the opponent's `j`-th decision answered by its candidate `script[j]` (past the script: the first,
+ * passing or the fast answer); `s` is left where the line won or stopped. `counts` gets each decision's number of candidates.
+ */
+export function replayLine(s: GameSession, line: readonly LethalStep[], me: PlayerId, script: readonly number[], o: Adversary, counts: number[] = []): "won" | "stopped" {
+  const turn = s.state.turn;
+  let given = 0;
+  try {
+    for (let steps = 0; steps < 2000; steps++) {
+      const d = s.decision;
+      if (!d) return s.result?.winner === me && s.state.turn === turn ? "won" : "stopped";
+      if (s.state.turn !== turn || s.state.phase !== "main") return "stopped";
+      if (d.player === me) {
+        const answer = given < line.length ? adaptStep(s, line[given]!) : null;
+        if (!answer) return "stopped";
+        s.act(answer);
+        given += 1;
+        continue;
+      }
+      const j = counts.length;
+      const answers = candidateAnswers(d, lookupFromReader(s.reader()), seedRng(`${o.seed}:${j}`), o.maxAnswers);
+      counts.push(answers.length);
+      s.act(answers[Math.min(script[j] ?? 0, answers.length - 1)] ?? fastAnswer(d, lookupFromReader(s.reader())));
+    }
+  } catch {
+    return "stopped";
+  }
+  return "stopped";
+}
+
+/**
+ * Does the line win in the world `world` gives, whatever the opponent answers? Every combination of their answers is played
+ * (each from a fresh copy of the world: a sample can't be copied in the middle of an action), depth first; the first that
+ * stops the line is returned. A line with more than `cap` combinations isn't sure.
+ */
+export function lineWinsAgainstAll(world: () => GameSession, line: readonly LethalStep[], me: PlayerId, o: Adversary): LineCheck {
+  const stack: number[][] = [[]];
+  for (let replays = 0; stack.length > 0; replays++) {
+    if (replays >= o.cap) return { won: false, capped: true };
+    const script = stack.pop()!;
+    const counts: number[] = [];
+    if (replayLine(world(), line, me, script, o, counts) !== "won") return { won: false, script };
+    // The other answers at each decision after the script's (it answered those with their first candidate).
+    for (let j = counts.length - 1; j >= script.length; j--) {
+      for (let k = counts[j]! - 1; k >= 1; k--) stack.push([...script, ...Array<number>(j - script.length).fill(0), k]);
+    }
+  }
+  return { won: true };
+}
+
 interface Node {
   session: GameSession;
   parent: Node | null;
@@ -235,7 +307,11 @@ export function searchSureLethal(me: PlayerId, o: LethalSearchOptions): LethalRe
     return steps;
   };
   const sure = (line: LethalStep[]): boolean => {
-    for (let i = o.checks > 0 ? 0 : 1; i <= o.checks; i++) if (!lineWins(o.world(i), line, me, o.checkResponder())) return false;
+    const adversary = o.adversary;
+    for (let i = o.checks > 0 || adversary ? 0 : 1; i <= o.checks; i++) {
+      const won = adversary ? lineWinsAgainstAll(() => o.world(i), line, me, { ...adversary, seed: `${adversary.seed}:${i}` }).won : lineWins(o.world(i), line, me, o.checkResponder());
+      if (!won) return false;
+    }
     return true;
   };
   const first = node(root, null, null);
