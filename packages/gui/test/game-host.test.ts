@@ -3,14 +3,16 @@ import { createEngine, randomAnswer, seedRng, type PlayerId, type PlayerView } f
 import { ALL_CARDS, ALL_SCRIPTS } from "@sve/core/sets";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { firstPlayerOf, GameHost, type Scheduler } from "../src/engine/game-host";
-import type { FromWorker, GameOptions, GameUpdate, Replay, SeatController } from "../src/engine/protocol";
+import { firstPlayerOf, type Scheduler } from "../src/engine/game-host";
+import type { GameOptions, Replay, SeatController } from "../src/engine/protocol";
+import type { FromWorker, GameUpdate } from "../src/presentation/protocol";
+import { createPresentationHost } from "../src/presentation/host";
 import { parseDeckFile, toDeckList } from "../src/decks/format";
 import { Catalog } from "../src/app/catalog";
 import { describeEntry } from "../src/game/log/format";
 import { translate } from "../src/i18n";
 import { forEachCard } from "../src/engine/view-utils";
-import { cardRuntimeDetails } from "../src/engine/card-details";
+import { cardRuntimeDetails } from "../src/presentation/card-details";
 
 // The engine worker's logic, run in Node with a manual scheduler (bots answer when the test lets them).
 const engine = createEngine({ cards: ALL_CARDS, scripts: ALL_SCRIPTS });
@@ -36,7 +38,7 @@ class ManualScheduler implements Scheduler {
 function harness(controllers: [SeatController, SeatController], seed = "host-test") {
   const messages: FromWorker[] = [];
   const scheduler = new ManualScheduler();
-  const host = new GameHost(engine, (m) => messages.push(m), scheduler);
+  const host = createPresentationHost(engine, (m) => messages.push(m), scheduler);
   const options: GameOptions = { seed, decks: [deck("sd01"), deck("sd02")], deckNames: ["SD01", "SD02"], controllers, deckRestrictions: true };
   const last = (): GameUpdate => {
     const updates = messages.filter((m): m is Extract<FromWorker, { kind: "update" }> => m.kind === "update");
@@ -211,7 +213,7 @@ describe("GameHost (engine worker logic)", () => {
     const messages: FromWorker[] = [];
     const queue: (() => void)[] = [];
     const delays: number[] = [];
-    const host = new GameHost(engine, (m) => messages.push(m), {
+    const host = createPresentationHost(engine, (m) => messages.push(m), {
       schedule: (fn, ms) => {
         delays.push(ms);
         queue.push(fn);
@@ -306,7 +308,7 @@ describe("GameHost (engine worker logic)", () => {
   it("after an attack is declared, shows it a moment before its combat when passing is all the other player can do", () => {
     const messages: FromWorker[] = [];
     const queue: { fn: () => void; ms: number }[] = [];
-    const host = new GameHost(engine, (m) => messages.push(m), {
+    const host = createPresentationHost(engine, (m) => messages.push(m), {
       schedule: (fn, ms) => {
         const job = { fn, ms };
         queue.push(job);
