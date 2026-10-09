@@ -92,9 +92,11 @@ test("who goes first: player 2, without anyone choosing (the setup's advanced op
   // Nobody chooses: the first player (the bot) keeps or redraws first (CR 6.2.1.8), then this player.
   await expect(bar).toHaveAttribute("data-decision", "mulligan");
   await answer(page, "mulligan");
-  // The bot's turn 1, then this player's first main phase in turn 2.
+  // The bot's first turn, then this player's first turn (the second turn overall).
   await expect(bar).toHaveAttribute("data-decision", "mainPhase", { timeout: 20_000 });
-  await expect(page.locator(".sve-center-status")).toContainText("Turn 2");
+  await expect(page.locator(".sve-center-status")).toContainText("Turn 1");
+  await expect(page.getByTestId("player-order-0")).toHaveText("Second");
+  await expect(page.getByTestId("player-order-1")).toHaveText("First");
   await showSidebar(page);
   await expect(page.locator(".sve-log")).toContainText("Player 2 (Bot-Easy) goes first.");
 });

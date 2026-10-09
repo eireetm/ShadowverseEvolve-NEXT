@@ -1109,7 +1109,8 @@ option {
   color: #ffe08a;
 }
 
-.sve-player-counts {
+.sve-player-counts,
+.sve-player-order {
   color: var(--sve-muted);
 }
 
