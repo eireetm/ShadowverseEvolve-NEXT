@@ -434,6 +434,8 @@ export const ja: Record<MessageKey, string> = {
   "decision.up": "上へ",
   "decision.down": "下へ",
   "decision.source": "{card}より",
+  "decision.processingAbility": "処理中の能力：{ability}",
+  "decision.abilityProvider": "能力の付与元：{card}",
   "decision.leaderTarget": "{player}のリーダー",
   "manual.title.deck": "{player} · デッキ",
   "manual.title.leader": "{player} · リーダー",

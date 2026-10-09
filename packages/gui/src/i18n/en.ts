@@ -430,6 +430,8 @@ export const en = {
   "decision.up": "Up",
   "decision.down": "Down",
   "decision.source": "From {card}",
+  "decision.processingAbility": "Processing ability: {ability}",
+  "decision.abilityProvider": "Ability provided by {card}",
   "decision.leaderTarget": "{player}'s leader",
   "manual.title.deck": "{player} · Deck",
   "manual.title.leader": "{player} · Leader",
