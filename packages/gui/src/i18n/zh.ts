@@ -433,6 +433,8 @@ export const zh: Record<MessageKey, string> = {
   "decision.up": "上移",
   "decision.down": "下移",
   "decision.source": "来自 {card}",
+  "decision.processingAbility": "正在处理能力：{ability}",
+  "decision.abilityProvider": "能力由 {card} 提供",
   "decision.leaderTarget": "{player}的主战者",
   "manual.title.deck": "{player} · 牌组",
   "manual.title.leader": "{player} · 主战者",

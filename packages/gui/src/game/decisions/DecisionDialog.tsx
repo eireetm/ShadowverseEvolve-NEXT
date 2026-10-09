@@ -7,11 +7,15 @@ import { useBack } from "../../app/back";
 import type { Answer, CardId, Decision } from "@sve/core";
 import { useSettings } from "../../app/settings";
 import { useApp } from "../../app/store";
-import type { CardInfo, DecisionInfo, GameUpdate } from "../../engine/protocol";
+import type { CardInfo, DecisionInfo } from "../../engine/protocol";
+import type { AbilityUpdate as GameUpdate } from "../../presentation/protocol";
+import { cardName } from "../../app/catalog";
 import { findCard, isOnTable } from "../../engine/view-utils";
 import { useT, type MessageKey, type Translate } from "../../i18n";
 import { inDialog } from "../actions";
 import { locateAbilityText } from "../card/ability-text";
+import { displayAbilityHeading, displayAbilityText } from "../card/ability-display";
+import { AbilityPrompt } from "./AbilityPrompt";
 import { CardTextLine, plainLine } from "../card/CardText";
 import { CardTile } from "../card/CardTile";
 import { setHighlight } from "../focus";
@@ -81,9 +85,10 @@ function Prompt({ text, source, update }: { text: string; source?: CardId | null
   const t = useT();
   const label = useLabel(update);
   return (
-    <div className="sve-prompt">
+    <div className={`sve-prompt${update.effectContext ? " sve-prompt-with-ability" : ""}`}>
+      <AbilityPrompt update={update} />
       <span>{text}</span>
-      {source ? (
+      {source && !update.effectContext ? (
         <span className="sve-prompt-source" onMouseEnter={() => setHighlight([source])} onMouseLeave={() => setHighlight([])}>
           {t("decision.source", { card: label(source) })}
         </span>
@@ -104,22 +109,24 @@ function SelectPending({ d, info, update, answer, busy }: FormProps<"selectPendi
   const { cardLang } = useSettings();
   const options = d.options.map((id) => {
     const summary = info.abilities[id];
-    const source = summary?.source;
-    const head = `${source ? `${label(source)} — ` : ""}${abilityLabel(summary, t)}`;
+    const context = update.pendingAbilities?.[id];
+    const source = context?.source ?? summary?.source;
+    const head = context ? displayAbilityHeading(context, update, catalog, cardLang, t) : `${source ? `${label(source)} — ` : ""}${abilityLabel(summary, t)}`;
     const def = summary?.sourceDef && !summary.granted ? catalog.def(summary.sourceDef) : undefined;
     const [timing, rank, count] = [summary?.timing, summary?.rank, summary?.count];
-    const text =
+    const text = context ? displayAbilityText(context, catalog, cardLang) :
       def && timing !== undefined && rank !== undefined && count !== undefined
         ? locateAbilityText(def, cardLang, timing, rank, count)
         : null;
-    return { id, source, head, text };
+    const provider = context?.providerDef ? t("decision.abilityProvider", { card: cardName(catalog.def(context.providerDef), cardLang) }) : null;
+    return { id, source, head, text, provider };
   });
   return (
     <>
       <Prompt text={t("decision.selectPending")} update={update} />
       <div className="sve-actions sve-actions-column">
         {options.map((o) => {
-          const twins = options.filter((x) => x.head === o.head && x.text?.text === o.text?.text);
+          const twins = options.filter((x) => x.head === o.head && x.text?.text === o.text?.text && x.provider === o.provider);
           return (
             <ActionButton
               key={o.id}
@@ -133,6 +140,7 @@ function SelectPending({ d, info, update, answer, busy }: FormProps<"selectPendi
                 {o.head}
                 {twins.length > 1 ? ` (${twins.indexOf(o) + 1})` : ""}
               </span>
+              {o.provider ? <span className="sve-ability-provider">{o.provider}</span> : null}
               {o.text ? <CardTextLine className="sve-pending-text" line={o.text.text} lang={o.text.lang} /> : null}
             </ActionButton>
           );
@@ -213,7 +221,7 @@ function SelectCards({ d, info, update, answer, busy }: FormProps<"selectCards">
   );
 }
 
-const CHOOSE_KEYS: Record<Of<"choose">["reason"], MessageKey> = {
+export const CHOOSE_KEYS: Record<Of<"choose">["reason"], MessageKey> = {
   mode: "decision.choose.mode",
   playOption: "decision.choose.playOption",
   token: "decision.choose.token",
@@ -273,7 +281,7 @@ function Choose({ d, update, answer, busy }: FormProps<"choose">) {
   );
 }
 
-const CONFIRM_KEYS: Record<Of<"confirm">["reason"], MessageKey> = {
+export const CONFIRM_KEYS: Record<Of<"confirm">["reason"], MessageKey> = {
   optionalCost: "decision.confirm.optionalCost",
   earthRite: "decision.confirm.earthRite",
   effect: "decision.confirm.effect",

@@ -1803,11 +1803,66 @@ option {
   color: var(--sve-muted);
 }
 
+.sve-ability-context {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sve-ability-heading {
+  text-align: left;
+  color: #ffe6a8;
+}
+
+.sve-ability-text {
+  display: block;
+  white-space: pre-line;
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+.sve-ability-provider {
+  display: block;
+  font-size: 11px;
+  color: var(--sve-muted);
+}
+
+.sve-ability-compact summary {
+  cursor: pointer;
+  color: #ffe6a8;
+}
+
+.sve-ability-compact details {
+  position: relative;
+}
+
+.sve-ability-expanded {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 0;
+  z-index: 30;
+  width: min(320px, 45vw);
+  max-height: min(240px, 38vh);
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid rgba(110, 200, 255, 0.35);
+  border-radius: 8px;
+  background: #142033;
+  box-shadow: 0 4px 18px #0008;
+}
+
 .sve-prompt {
   display: flex;
   gap: 12px;
   align-items: baseline;
   font-weight: 600;
+}
+
+.sve-prompt-with-ability {
+  flex-direction: column;
+  align-items: stretch;
 }
 
 .sve-prompt-source {
