@@ -17,6 +17,10 @@ export function matches(g: GameReader, id: CardId, f: FilterNode, self: CardId):
       return !matches(g, id, f.arg, self);
     case "notSelf":
       return id !== self;
+    case "racing":
+      return g.isRacing(id);
+    case "engaged":
+      return g.card(id)?.engaged === true;
     case "other":
       return true;
   }

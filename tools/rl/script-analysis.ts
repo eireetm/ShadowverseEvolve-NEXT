@@ -33,6 +33,8 @@ export type Atom =
   | { t: "unevolved" }
   | { t: "token" }
   | { t: "notSelf" }
+  | { t: "racing" }
+  | { t: "engaged" }
   | { t: "any" }
   | { t: "other"; why: string };
 export type FilterNode = Atom | { t: "and"; args: FilterNode[] } | { t: "or"; args: FilterNode[] } | { t: "not"; arg: FilterNode };
@@ -149,6 +151,8 @@ class Analyzer {
   targetLists: (Extract<V, { k: "list" }> | null)[] = [];
   /** While reading a passive about some card ("it"): the tests on it that decide what it gets. */
   capture: FilterNode[] | null = null;
+  /** While reading the test of an early exit ("if (cost < 5) return;"): a condition on a chosen card is the opposite. */
+  private negate = false;
   private depth = 0;
   private readonly declCache = new Map<string, V>();
 
@@ -172,6 +176,7 @@ class Analyzer {
   }
 
   private asFilter(v: V): FilterNode {
+    v = this.asPred(v);
     if (v.k === "pred") return v.f;
     if (v.k === "filterFn") return v.f;
     if (v.k === "bool") return v.v ? ANY : { t: "other", why: "false" };
@@ -190,6 +195,8 @@ class Analyzer {
     if (fn.k !== "fn") return UNKNOWN;
     if (this.depth > 40) return UNKNOWN;
     this.depth += 1;
+    const savedNegate = this.negate;
+    this.negate = false;
     try {
       const env = new Env(fn.env);
       fn.params.forEach((p, i) => this.bind(p, args[i] ?? UNKNOWN, env, fn.module, args.slice(i)));
@@ -197,6 +204,7 @@ class Analyzer {
       return this.eval(fn.body, env, fn.module);
     } finally {
       this.depth -= 1;
+      this.negate = savedNegate;
     }
   }
 
@@ -204,6 +212,7 @@ class Analyzer {
     if (param.type === "Identifier") env.set(param.name as string, v);
     else if (param.type === "AssignmentPattern") this.bind(param.left as Node, v.k === "unknown" ? this.eval(param.right as Node, env, module) : v, env, module, rest);
     else if (param.type === "RestElement") this.bind(param.argument as Node, { k: "arr", items: rest }, env, module, []);
+    else if (param.type === "ArrayPattern" && v.k === "arr") (param.elements as (Node | null)[]).forEach((e, i) => e && this.bind(e, v.items[i] ?? v.items[0] ?? UNKNOWN, env, module, []));
     else if (param.type === "ObjectPattern" && (v.k === "info" || v.k === "prop")) {
       for (const p of param.properties as Node[]) {
         if (p.type !== "Property") continue;
@@ -221,6 +230,16 @@ class Analyzer {
       });
   }
 
+  /** A helper's parameters bound to its arguments (defaults included). */
+  bindParams(params: Node[], args: V[], env: Env, module: Module): void {
+    params.forEach((p, i) => this.bind(p, args[i] ?? UNKNOWN, env, module, args.slice(i)));
+  }
+
+  /** A value used as a test (if, ?:): "is there such a card" needs one. */
+  private truthy(v: V): void {
+    if ((v.k === "exists" || v.k === "count")) this.threshold(v, ">=", 1);
+  }
+
   /** A declaration statement, bound into `env`. */
   declare(stmt: Node, env: Env, module: Module): void {
     this.statement(stmt, env, module);
@@ -229,10 +248,20 @@ class Analyzer {
   /** A block's statements; the value of its first return that gives something. */
   block(node: Node, env: Env, module: Module): V | null {
     let result: V | null = null;
+    // A predicate's guards ("if (id === self) return false;"): what is left must not match them.
+    const guards: FilterNode[] = [];
     for (const stmt of (node.body as Node[]) ?? []) {
+      if (!result && stmt.type === "IfStatement" && !stmt.alternate && returnsFalse(stmt.consequent as Node)) {
+        const t = this.eval(stmt.test as Node, env, module);
+        if (t.k === "pred") {
+          guards.push(t.f.t === "not" ? t.f.arg : { t: "not", arg: t.f });
+          continue;
+        }
+      }
       const r = this.statement(stmt, env, module);
       if (r && !result) result = r;
     }
+    if (guards.length > 0 && result && !(result.k === "bool" && !result.v)) return { k: "pred", f: and(...guards, this.asFilter(this.asPred(result))) };
     return result;
   }
 
@@ -250,7 +279,12 @@ class Analyzer {
       case "ReturnStatement":
         return stmt.argument ? this.eval(stmt.argument as Node, env, module) : null;
       case "IfStatement": {
+        const exit = isBareReturn(stmt.consequent as Node) && !stmt.alternate;
+        const savedNegate = this.negate;
+        if (exit) this.negate = !this.negate;
         const test = this.asPred(this.eval(stmt.test as Node, env, module));
+        this.negate = savedNegate;
+        this.truthy(test);
         // "if (!isFairy(g, card)) return []": the guard's own filter is what the card must be.
         if (this.capture && test.k === "pred") this.capture.push(test.f.t === "not" ? test.f.arg : test.f);
         const a = this.statement(stmt.consequent as Node, new Env(env), module);
@@ -270,13 +304,15 @@ class Analyzer {
         const inner = new Env(env);
         const over = this.eval(stmt.right as Node, inner, module);
         // An effect for each card of a zone that matches (CR: "for each"): the number of them is a quantity.
-        if (over.k === "list" && over.top === undefined && meaningful(over.filter)) {
+        // A loop inside a cost (matching the cards to pay with) is not an effect "for each".
+        const each = over.k === "list" && over.top === undefined && this.where !== "pay" && this.where !== "canPay";
+        if (each && meaningful(over.filter)) {
           const site = this.site(over, "count");
           site.scaled = true;
           site.where = "each";
         }
         // The loop variable: each card of the list (a test on it inside the loop is a filter of that list).
-        const card: V = over.k === "list" && over.top === undefined ? { k: "card", v: "other", from: { ...over, each: true } } : { k: "card", v: "other" };
+        const card: V = each ? { k: "card", v: "other", from: { ...over, each: true } } : { k: "card", v: "other" };
         const left = stmt.left as Node;
         walk(left, (n) => {
           if (n.type === "Identifier") inner.set(n.name as string, card);
@@ -324,7 +360,7 @@ class Analyzer {
       this.where = saved;
       return;
     }
-    this.recordList({ k: "list", zones: list.zones, side: list.side, filter: and(list.filter, f) }, "targetCondition");
+    this.recordList({ k: "list", zones: list.zones, side: list.side, filter: and(list.filter, f), ...(list.top ? { top: list.top } : {}) }, list.top ? "topCard" : "targetCondition");
   }
 
   /** A card's information read as a filter atom: a predicate on the card being filtered, or a condition on a chosen card. */
@@ -456,6 +492,7 @@ class Analyzer {
         return UNKNOWN;
       case "ConditionalExpression": {
         const test = this.asPred(this.eval(node.test as Node, env, module));
+        this.truthy(test);
         if (this.capture && test.k === "pred") this.capture.push(test.f);
         const a = this.eval(node.consequent as Node, env, module);
         const b = this.eval(node.alternate as Node, env, module);
@@ -503,7 +540,7 @@ class Analyzer {
   private asPred(v: V): V {
     if (v.k !== "prop") return v;
     const last = v.path[v.path.length - 1];
-    const atom: FilterNode | null = last === "token" ? { t: "token" } : last === "evolved" ? { t: "evolved" } : null;
+    const atom: FilterNode | null = last === "token" ? { t: "token" } : last === "evolved" ? { t: "evolved" } : last === "engaged" && v.path.length === 1 ? { t: "engaged" } : null;
     if (!atom) return v;
     return v.of === "it" ? { k: "pred", f: atom } : v.from ? this.onCard(v.of, v.from, atom) : v;
   }
@@ -544,7 +581,9 @@ class Analyzer {
       // A card's information against a value: a filter atom.
       const prop = a.k === "prop" ? a : b.k === "prop" ? b : null;
       const other = prop === a ? b : a;
-      const cmp = prop === a ? COMPARE[op]! : MIRROR[op]!;
+      const cmp0 = prop === a ? COMPARE[op]! : MIRROR[op]!;
+      const NEG: Record<string, NonNullable<RefSite["threshold"]>["op"]> = { ">=": "<", ">": "<=", "<=": ">", "<": ">=", "===": "===" };
+      const cmp = this.negate && prop?.of !== "it" ? NEG[cmp0]! : cmp0;
       if (prop && (prop.of === "it" || prop.from)) {
         const at = (f: FilterNode) => this.onCard(prop.of, prop.from, f);
         const last = prop.path[prop.path.length - 1];
@@ -564,6 +603,7 @@ class Analyzer {
           if (cmp === "<") return at({ t: `${s}Max`, v: other.v - 1 } as FilterNode);
           if (cmp === "===") return at(and({ t: `${s}Min`, v: other.v } as FilterNode, { t: `${s}Max`, v: other.v } as FilterNode));
         }
+        if (last === "engaged" && other.k === "bool" && cmp === "===") return at(other.v ? { t: "engaged" } : { t: "not", arg: { t: "engaged" } });
         if (last === "class" && other.k === "str") return at({ t: "class", v: other.v });
         if (last === "type" && other.k === "str") return at({ t: "type", v: other.v });
         if (last === "name" && other.k === "str") return at({ t: "name", v: other.v });
@@ -610,6 +650,7 @@ class Analyzer {
         // g.card(self).controller: the card's controller (its owner on the field, CR 3.1.2).
         if ((name === "controller" || name === "owner") && object.of === "self") return { k: "side", v: "own" };
         if (name === "def") return { k: "instDef", of: object.of };
+        if (name === "engaged") return { k: "prop", of: object.of, path: ["engaged"] };
         return UNKNOWN;
       case "reader":
         return name === "db" ? { k: "db" } : UNKNOWN;
@@ -646,7 +687,13 @@ class Analyzer {
         for (const v of vs) if (v.k === "fn") this.predicate(v);
         // The top cards of the deck: what is looked for among them is looked for in the deck (their number is no count).
         if (m === "topCards") return { k: "list", zones: ["deck"], side: "own", filter: ANY, top: vs[0]?.k === "num" ? vs[0].v : 0 };
-        if (m === "selectCards" || m === "chooseCards") return { k: "arr", items: [{ k: "card", v: "other" }] };
+        if (m === "selectCards" || m === "chooseCards") {
+          const list = vs[0]?.k === "list" && vs[0].top === undefined ? vs[0] : null;
+          if (list && this.where !== "pay") this.recordList(list, "choose");
+          return { k: "arr", items: [{ k: "card", v: "other", ...(list ? { from: list } : {}) }] };
+        }
+        // The top card of the deck moved somewhere: a test on it is a test on the deck's cards.
+        if (m === "topToEx") return { k: "arr", items: [{ k: "card", v: "other", from: { k: "list", zones: ["deck"], side: vs[1]?.k === "side" ? vs[1].v : "own", filter: ANY, top: vs[0]?.k === "num" ? vs[0].v : 0 } }] };
         return UNKNOWN;
       }
       if (object.k === "reader") return this.readerCall(m, args());
@@ -700,6 +747,23 @@ class Analyzer {
       if (object.k === "arr") {
         const vs = args();
         if (m === "flat") return { k: "arr", items: object.items.flatMap((x) => (x.k === "arr" ? x.items : [x])) };
+        if ((m === "map" || m === "flatMap" || m === "some" || m === "every") && vs[0]?.k === "fn") {
+          // A constant list (zones, names) mapped through a callback: the callback on each item.
+          const results = object.items.map((x, i) => this.apply(vs[0]!, [x, { k: "num", v: i }, object]));
+          if (m === "map") return { k: "arr", items: results };
+          if (m === "flatMap") {
+            const lists = results.filter((r): r is Extract<V, { k: "list" }> => r.k === "list");
+            if (lists.length > 0 && lists.length === results.length && lists.every((l) => l.side === lists[0]!.side && JSON.stringify(l.filter) === JSON.stringify(lists[0]!.filter))) {
+              return { k: "list", zones: [...new Set(lists.flatMap((l) => l.zones))], side: lists[0]!.side, filter: lists[0]!.filter };
+            }
+            return { k: "arr", items: results.flatMap((x) => (x.k === "arr" ? x.items : [x])) };
+          }
+          if (results.length > 0 && results.every((r) => r.k === "pred")) {
+            const fs = results.map((r) => (r as Extract<V, { k: "pred" }>).f);
+            return { k: "pred", f: m === "some" ? or(...fs) : and(...fs) };
+          }
+          return { k: "cond" };
+        }
         if (m === "some" || m === "every" || m === "includes") return { k: "cond" };
         if (m === "filter" && object.items.length > 0) return object.items.length === 1 && object.items[0]!.k === "list" ? { ...(object.items[0] as Extract<V, { k: "list" }>), filter: and((object.items[0] as Extract<V, { k: "list" }>).filter, this.predicate(vs[0] ?? UNKNOWN)) } : UNKNOWN;
         return UNKNOWN;
@@ -800,6 +864,12 @@ class Analyzer {
       }
       case "hasKeyword":
         return vs[0]?.k === "card" && vs[0].v === "it" ? { k: "pred", f: { t: "other", why: "keyword" } } : { k: "cond" };
+      case "isRacing":
+        // CR 14.2.3.1 "a racing follower".
+        return vs[0]?.k === "card" ? this.onCard(vs[0].v, vs[0].from, { t: "racing" }) : { k: "cond" };
+      case "banishableByAbilities":
+        // A rule exception (cards that can't be banished by abilities), not a kind of card: no filter.
+        return vs[0]?.k === "card" && vs[0].v === "it" ? { k: "pred", f: ANY } : { k: "cond" };
       default:
         return UNKNOWN;
     }
@@ -886,12 +956,12 @@ export function analyzeScript(file: string, script: CardScript): CardAnalysis {
   const readValue = (key: string, given: Node, env: Env, givenModule: Module) => {
     az.where = key;
     const found = functionNode(given, givenModule);
-    if (found) {
-      const node = found.node;
-      const mod = found.module;
-      const fn: V = { k: "fn", params: node.params as Node[], body: node.body as Node, module: mod, env };
+    // A closure made by a factory (selfKeywords: withAnotherDuelist(["storm"])): the closure it returns.
+    const made = !found && (given.type === "CallExpression" || given.type === "Identifier") ? az.eval(given, env, givenModule) : null;
+    if (found || made?.k === "fn") {
+      const fn: V = found ? { k: "fn", params: found.node.params as Node[], body: found.node.body as Node, module: found.module, env } : made!;
       // The closure's parameters, by its property (CardScript and FieldPassives in script/types.ts).
-      const params = node.params as Node[];
+      const params = (fn as Extract<V, { k: "fn" }>).params;
       const first = params[0]?.type === "Identifier" ? (params[0].name as string) : "";
       const reader: V = { k: "reader" };
       const own: V = { k: "side", v: "own" };
@@ -927,6 +997,8 @@ export function analyzeScript(file: string, script: CardScript): CardAnalysis {
   const readObject = (obj: Node, env: Env, mod: Module) => {
     if ((obj.properties as Node[]).some((p) => p.type === "Property" && ((p.key as Node).name ?? (p.key as Node).value) === "targets")) az.targetLists = [];
     for (const p of (obj.properties as Node[]) ?? []) {
+      // ...buryFromYourField(...) in a play option: the cost's own object.
+      if (p.type === "SpreadElement") readNode(p.argument as Node, env, mod);
       if (p.type !== "Property") continue;
       const key = ((p.key as Node).name ?? (p.key as Node).value) as string;
       const value = p.value as Node;
@@ -989,10 +1061,7 @@ export function analyzeScript(file: string, script: CardScript): CardAnalysis {
         const r = resolveName(mod, callee.name as string);
         if (r.kind === "decl" && !r.module.file.endsWith("helpers.ts") && !r.module.file.endsWith("targets.ts") && (r.node.type === "ArrowFunctionExpression" || r.node.type === "FunctionDeclaration")) {
           const inner = new Env();
-          (r.node.params as Node[]).forEach((p, i) => {
-            const arg = (n.arguments as Node[])[i];
-            if (p.type === "Identifier" && arg) inner.set(p.name as string, az.eval(arg, env, mod));
-          });
+          az.bindParams(r.node.params as Node[], (n.arguments as Node[]).map((a) => az.eval(a, env, mod)), inner, r.module);
           const body = r.node.body as Node;
           if (body.type === "ObjectExpression" || body.type === "CallExpression") readNode(body, inner, r.module);
           else if (body.type === "BlockStatement") {
@@ -1165,6 +1234,20 @@ function dedupe(refs: RefSite[]): RefSite[] {
     }
   }
   return [...seen.values()];
+}
+
+/** `return false;` or `{ return false; }`. */
+function returnsFalse(n: Node): boolean {
+  if (n.type === "ReturnStatement") return (n.argument as Node | null)?.type === "Literal" && (n.argument as Node).value === false;
+  if (n.type === "BlockStatement") return (n.body as Node[]).length === 1 && returnsFalse((n.body as Node[])[0]!);
+  return false;
+}
+
+/** `return;` or `{ return; }`: an early exit. */
+function isBareReturn(n: Node): boolean {
+  if (n.type === "ReturnStatement") return !n.argument;
+  if (n.type === "BlockStatement") return (n.body as Node[]).length === 1 && isBareReturn((n.body as Node[])[0]!);
+  return false;
 }
 
 /** Whether a filter says anything about a card (a type, trait, class, name, cost...): not only parts it couldn't read. */
