@@ -8,6 +8,11 @@ import type { AbilityDisplayContext } from "./protocol";
 interface Saved {
   context: AbilityDisplayContext;
   visible: [boolean, boolean];
+  /** Only actual zone moves of this processing object; never a reconstructed effect path. */
+  sources?: string[];
+  runtimeIndex?: number;
+  nested?: boolean;
+  played?: boolean;
 }
 
 /** Rules and nested drive/combat decisions are not evidence of the outer ability's identity. */
@@ -22,10 +27,16 @@ function related(d: Decision | null, context: AbilityDisplayContext, sourceMissi
 const sameAbility = (a: AbilityDisplayContext, b: AbilityDisplayContext) =>
   a.source === b.source && a.sourceDef === b.sourceDef && a.abilityIndex === b.abilityIndex && a.controller === b.controller;
 
+const matchesPlayed = (saved: Saved, event: AbilityDisplayContext) =>
+  saved.context.sourceDef === event.sourceDef && saved.context.controller === event.controller &&
+  (saved.context.source === event.source || saved.sources?.includes(event.source)) &&
+  (saved.context.abilityIndex === event.abilityIndex || saved.runtimeIndex === event.abilityIndex);
+
 export class EffectContextObserver {
   private current: Saved | null = null;
   private waiting = new Map<string, Saved>();
   private delayed = new Map<string, Saved>();
+  private serial = 0;
 
   constructor(private readonly engine: Engine, private readonly game: GameSession) {}
 
@@ -36,14 +47,48 @@ export class EffectContextObserver {
     };
   }
 
+  private cardPlay(source: string, controller: PlayerId, def: string, views: readonly PlayerView[]): Saved {
+    const abilities = this.engine.scripts[def]?.abilities ?? [];
+    const spell = abilities.findIndex((a) => a.kind === "spell");
+    if (spell >= 0) return this.save({ source, controller, sourceDef: def, ability: spell }, views);
+    const own = findCard(views[controller]!, source);
+    return { context: { source, controller, sourceDef: def, origin: "printed", kind: "cardPlay",
+      ...(own ? { sourceCard: { def, printing: own.printing } } : {}),
+      textRef: { def, timing: "play", rank: 0, count: 1 } },
+      visible: [!!findCard(views[0]!, source), !!findCard(views[1]!, source)] };
+  }
+
+  /** Actions index the live AbilityRef list, which can include keywords, equipment and grants. */
+  private entry(input: Input, views: readonly PlayerView[]): Saved | null {
+    if (input.type !== "mainPhase" && input.type !== "quick") return null;
+    if (this.game.decision?.type !== input.type) return null;
+    const action = input.action;
+    if (!["activate", "evolve", "play"].includes(action.type) || !("card" in action)) return null;
+    if (!this.game.state.cards[action.card]) return null;
+    const info = this.game.reader().info(action.card);
+    const player = this.game.decision!.player;
+    if (action.type === "play") return this.cardPlay(action.card, player, info.def.id, views);
+    if (action.type !== "activate" && action.type !== "evolve") return null;
+    const ref = info.abilities[action.ability];
+    return ref ? { ...this.save({ source: action.card, controller: player, sourceDef: ref.def, ability: ref.index }, views), runtimeIndex: action.ability } : null;
+  }
+
   /** Commit only after the original act succeeds. A rejected input leaves the prior context intact. */
   act(input: Input, from: PlayerId | undefined, delegate: () => GameEvent[]): GameEvent[] {
     const before = this.game.decision;
-    const beforeViews = this.game.state.pending.length || this.game.state.delayed.length ? [this.game.view(0), this.game.view(1)] : [];
+    const beforeViews = [this.game.view(0), this.game.view(1)];
     const candidates = new Map(this.game.state.pending.map((p) => [p.id, this.waiting.get(p.id) ?? this.save(p, beforeViews)]));
     const delayedBefore = new Map(this.game.state.delayed.map((d) => [d.id, this.delayed.get(d.id) ?? this.save({ ...d, source: d.source ?? "" }, beforeViews)]));
-    const prior = this.current;
+    let prior = this.current;
+    const entry = this.entry(input, beforeViews);
+    if (entry) entry.context = { ...entry.context, instanceId: `action:${this.serial + 1}` };
+    if (prior && before?.type === "choose" && input.type === "choose") {
+      const selection = before.reason === "mode" ? { modeIds: [...input.ids] } :
+        before.reason === "playOption" ? { playOptionId: input.ids[0], playOptionLabel: before.options.find((o) => o.id === input.ids[0])?.label } : {};
+      prior = { ...prior, context: { ...prior.context, ...selection } };
+    }
     const events = delegate();
+    this.serial++;
     const after = this.game.decision;
     const afterViews = [this.game.view(0), this.game.view(1)];
     const remaining = new Set(this.game.state.pending.map((p) => p.id));
@@ -59,7 +104,21 @@ export class EffectContextObserver {
       }
       return cards;
     });
+    let root = entry ?? prior;
+    // Moving into resolution is evidence of play before cardPlayed, including an effect's inner play.
+    for (const event of events) if (event.type === "cardsMoved") for (const m of event.moves) {
+      if (m.reason !== "play" || m.to.zone !== "resolution" || !m.newCard) continue;
+      if (root && (root.context.kind === "spell" || root.context.kind === "cardPlay") && root.context.source === m.card) {
+        root = { ...root, context: { ...root.context, source: m.newCard }, sources: [root.context.source, m.newCard] };
+      } else {
+        root = this.cardPlay(m.newCard, m.to.player, m.def, afterViews);
+        root.context.instanceId = `action:${this.serial}:play:${m.newCard}`;
+        root.nested = true;
+      }
+    }
     const played: Saved[] = [];
+    const claimedPending = new Set<string>();
+    const reportedRoots = new Set<Saved>();
     for (const event of events) {
       if (event.type !== "abilityTriggered" && event.type !== "abilityPlayed") continue;
       const saved = this.save({ controller: event.player, source: event.source, sourceDef: event.sourceDef, ability: event.ability,
@@ -78,39 +137,64 @@ export class EffectContextObserver {
       }
       if (event.type === "abilityTriggered") candidates.set(event.pendingId, saved);
       else {
-        const original = [...candidates].find(([id, s]) => !remaining.has(id) && sameAbility(s.context, saved.context))?.[1] ??
-          (prior && sameAbility(prior.context, saved.context) ? prior : null);
-        played.push(original ? { context: original.context, visible: [original.visible[0] || saved.visible[0], original.visible[1] || saved.visible[1]] } : saved);
+        // The previous instance can finish its cost just as another instance of the
+        // very same ability starts. Claim its one play event before matching new pending IDs.
+        const active = [root, prior].find((s): s is Saved => !!s && !s.played && !reportedRoots.has(s) && !!matchesPlayed(s, saved.context));
+        const original = active ?? [...candidates].find(([id, s]) => !remaining.has(id) && !claimedPending.has(id) && sameAbility(s.context, saved.context))?.[1] ?? null;
+        if (active) reportedRoots.add(active);
+        if (original?.context.pendingId) claimedPending.add(original.context.pendingId);
+        saved.context.instanceId = `action:${this.serial}:ability:${played.length}`;
+        played.push(original ? { ...original, played: true, visible: [original.visible[0] || saved.visible[0], original.visible[1] || saved.visible[1]] } : { ...saved, played: true });
       }
     }
     const consumed = [...candidates].filter(([id]) => !remaining.has(id)).map(([, saved]) => saved);
-    let next: Saved | null = null;
-    if (consumed.length === 1) {
-      // This also covers a newly triggered sole ability, before abilityPlayed (mode/cost/targets).
-      next = consumed[0]!;
-      const last = played.at(-1);
-      if (last && !sameAbility(last.context, next.context)) next = last.context.timing ? last : null;
-    } else if (consumed.length > 1) {
-      const unplayed = [...consumed];
-      for (const event of played) {
-        const index = unplayed.findIndex((s) => sameAbility(s.context, event.context));
-        if (index >= 0) unplayed.splice(index, 1);
-      }
-      // No unreported pre-play boundary: only the last explicit played identity can be used.
-      const last = played.at(-1);
-      if (unplayed.length === 0 && last?.context.timing) next = last;
-    } else if (played.length > 0) {
-      // Could be an activated ability or a nested play. Only automatic text references are supported.
-      const last = played.at(-1)!;
-      if (last.context.timing) next = last;
-    } else next = prior;
-
-    if (next && prior && sameAbility(prior.context, next.context) && next.context.pendingId === prior.context.pendingId) {
-      const modeIds = before?.type === "choose" && before.reason === "mode" && input.type === "choose" ? [...input.ids] : prior.context.modeIds;
-      next = { ...next, context: { ...next.context, ...(modeIds ? { modeIds } : {}) } };
+    const unplayed = [...consumed];
+    for (const event of played) {
+      const index = unplayed.findIndex((s) => s.context.pendingId === event.context.pendingId && sameAbility(s.context, event.context));
+      if (index >= 0) unplayed.splice(index, 1);
     }
-    const nestedCard = events.some((e) => e.type === "cardPlayed" && e.card !== next?.context.source);
-    this.current = next && !(after && "source" in after && after.source === null && nestedCard) &&
+    let next: Saved | null;
+    const last = played.at(-1);
+    if (unplayed.length === 1 &&
+      (!last || (root && sameAbility(last.context, root.context)) ||
+        (last.context.pendingId && claimedPending.has(last.context.pendingId)))) {
+      // One unreported instance remains after excluding every consumed instance with a
+      // play event. The old root's late event cannot override its pre-play questions.
+      next = unplayed[0]!;
+    } else if (unplayed.length > 0) {
+      // Disappearing may also mean skipped. Several unreported boundaries are ambiguous.
+      next = null;
+    } else {
+      // A unique inner card entering resolution supersedes the outer play event, even
+      // when that outer automatic ability both triggered and was played in this act.
+      const innerPlay = root?.nested && root !== prior && after && "source" in after && after.source === root.context.source;
+      next = innerPlay ? root : last ?? root;
+    }
+
+    if (next?.context.pendingId) next.context.instanceId = `pending:${next.context.pendingId}`;
+    if (next && prior && next.context.instanceId === prior.context.instanceId && sameAbility(next.context, prior.context)) {
+      next = { ...next, context: { ...next.context, modeIds: prior.context.modeIds,
+        playOptionId: prior.context.playOptionId, playOptionLabel: prior.context.playOptionLabel } };
+    }
+    // An activated cost may move its own source and continue with the resulting object.
+    // Do not follow an automatic ability's source into unrelated new abilities on that card.
+    if (next && next.context.kind === "activated") {
+      const sources = [...(next.sources ?? [next.context.source])];
+      for (const event of events) if (event.type === "cardsMoved") for (const m of event.moves) {
+        if (m.card && sources.includes(m.card) && m.newCard) sources.push(m.newCard);
+      }
+      if (after && "source" in after && after.source && sources.includes(after.source)) {
+        next = { ...next, sources, context: { ...next.context, source: after.source } };
+      }
+    }
+    if (next) for (const p of [0, 1] as const) {
+      const card = visible[p]!.get(next.context.source);
+      if (card) { next.visible[p] = true; next.context.sourceCard ??= card; }
+    }
+    const completedPlay = next && ["spell", "cardPlay"].includes(next.context.kind ?? "") && events.some((e) =>
+      e.type === "cardsMoved" && e.moves.some((m) => m.card === next!.context.source && m.from?.zone === "resolution" && m.reason === "resolve"));
+    const nestedCard = next?.nested || events.some((e) => e.type === "cardPlayed" && e.card !== next?.context.source);
+    this.current = next && !completedPlay && !(after && "source" in after && after.source === null && nestedCard) &&
       related(after, next.context, !this.game.state.cards[next.context.source]) ? next : null;
     this.waiting = new Map([...candidates].filter(([id]) => remaining.has(id)));
     this.delayed = new Map(this.game.state.delayed.map((d) => {

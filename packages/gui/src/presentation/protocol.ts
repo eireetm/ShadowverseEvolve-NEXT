@@ -21,11 +21,14 @@ export interface GameUpdate extends EngineUpdate {
 
 /** Identity is kept independently of language; the page resolves text when its card language changes. */
 export interface AbilityDisplayContext {
+  instanceId?: string;
+  kind?: "automatic" | "activated" | "spell" | "cardPlay";
   pendingId?: string;
   controller: PlayerId;
   source: CardId;
   sourceDef: DefId;
-  abilityIndex: number;
+  /** Absent for the card's play process (playOptions are not Core ability indexes). */
+  abilityIndex?: number;
   sourceCard?: CardInfo;
   providerDef?: DefId;
   timing?: string;
@@ -33,6 +36,8 @@ export interface AbilityDisplayContext {
   keyword?: string;
   textRef?: { def: DefId; timing: string; rank: number; count: number; quoted?: boolean };
   modeIds?: string[];
+  playOptionId?: string;
+  playOptionLabel?: string;
 }
 
 export type AbilityUpdate = EngineUpdate & Pick<GameUpdate, "pendingAbilities" | "effectContext">;

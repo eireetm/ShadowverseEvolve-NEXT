@@ -2,6 +2,7 @@
 import type { CardView, Engine, GameSession, PendingAbility } from "@sve/core";
 import { findCard } from "../engine/view-utils";
 import type { AbilityDisplayContext } from "./protocol";
+import { abilityTextGroup } from "../game/card/ability-text";
 
 /** Reviewed quote providers for runtime grants, including sources no longer present after Last Words. */
 export const GRANT_TEXT: Readonly<Record<string, { def: string; timing: string }>> = {
@@ -40,11 +41,13 @@ export function abilitySource(engine: Engine, game: GameSession, identity: Ident
     const keyword = sourceDef.slice(3);
     context.origin = "keyword";
     context.keyword = keyword;
+    context.kind = keyword === "stack" ? "activated" : "automatic";
     context.timing = keyword === "drain" ? "other" : ["singleDrive", "twinDrive"].includes(keyword) ? "strike" : undefined;
     return context;
   }
   if (sourceDef.startsWith("grant:")) {
     context.origin = "granted";
+    context.kind = "automatic";
     const grant = sourceDef.slice(6);
     const known = GRANT_TEXT[grant];
     if (!known || abilityIndex !== 0) return context;
@@ -60,14 +63,16 @@ export function abilitySource(engine: Engine, game: GameSession, identity: Ident
   const def = equipment ? sourceDef.slice(6) : sourceDef;
   const abilities = (equipment ? engine.scripts[def]?.equipment?.abilities : engine.scripts[def]?.abilities) ?? [];
   const ability = abilities[abilityIndex];
-  if (ability?.kind !== "automatic") return context;
+  if (!ability) return context;
+  context.kind = ability.kind;
   if (!equipment && context.sourceCard) context.sourceCard = { def, printing: def === shownDef ? printing ?? null : null };
-  context.origin = equipment ? "equipment" : ability.delayed ? "delayed" : "printed";
+  context.origin = equipment ? "equipment" : ability.kind === "automatic" && ability.delayed ? "delayed" : "printed";
   if (equipment) context.providerDef = def;
-  context.timing = ability.timing;
-  const same = (a: (typeof abilities)[number]) => a.kind === "automatic" && a.timing === ability.timing;
+  if (ability.kind === "automatic") context.timing = ability.timing;
+  const group = abilityTextGroup(ability);
+  const same = (a: (typeof abilities)[number]) => a.kind === ability.kind && abilityTextGroup(a) === group;
   context.textRef = {
-    def, timing: ability.timing,
+    def, timing: group,
     rank: abilities.slice(0, abilityIndex).filter(same).length,
     count: abilities.filter(same).length,
     ...(equipment ? { quoted: true } : {}),

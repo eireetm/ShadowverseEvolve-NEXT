@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createEngine, script, randomAnswer, seedRng, type Input, type GameSession, type PlayerId } from "@sve/core";
+import { ALL_AUTO_RESOLVABLE, createEngine, script, randomAnswer, seedRng, type Input, type GameSession, type PlayerId } from "@sve/core";
 import { ALL_CARDS, ALL_SCRIPTS } from "@sve/core/sets";
 import { drive, testFollower } from "@sve/core/testing";
 import { Catalog } from "../src/app/catalog";
@@ -7,7 +7,8 @@ import { displayAbilityText } from "../src/game/card/ability-display";
 import { abilitySource, GRANT_TEXT } from "../src/presentation/ability-source";
 import { EffectContextObserver, observePresentationEngine } from "../src/presentation/effect-context";
 import { createPresentationHost } from "../src/presentation/host";
-import { GameHost, stateHash } from "../src/engine/game-host";
+import { firstPlayerOf, GameHost, stateHash } from "../src/engine/game-host";
+import bp11Replay from "./fixtures/bp11-070-context.json";
 import type { FromWorker as EngineMessage, GameOptions, ToWorker } from "../src/engine/protocol";
 import type { FromWorker, GameUpdate } from "../src/presentation/protocol";
 
@@ -16,9 +17,25 @@ const flow = { ...testFollower("FLOW", 0, 1, 8), text: {
   ja: "自分のエンドフェイズが来たとき、手札1枚を捨てる：チョイスする。\n【1】相手のフォロワーを選ぶ。これを墓場に置き、相手は手札1枚を捨てる。\n【2】1枚引く。",
   cn: "当自己的结束阶段到来时，舍弃1张手牌：抉择。\n【1】选择敌方的从者。将这张卡置入墓场，然后对手舍弃1张手牌。\n【2】抽取1张卡。",
 } };
+const discardTrigger = script.whenYouDiscard({
+  *resolve(fx) { yield* fx.choose([{ id: "new-a", label: "New A" }, { id: "new-b", label: "New B" }]); },
+}, () => true);
+const discardActivation = script.activated({ custom: { canPay: (g, p) => g.cards(p, "hand").length > 0,
+  *pay(fx) { yield* fx.discard(fx.controller, 1, 1); } } }, {
+  *resolve(fx) { yield* fx.choose([{ id: "old-a", label: "Old A" }, { id: "old-b", label: "Old B" }]); },
+});
 const engine = createEngine({ cards: [...ALL_CARDS, flow, testFollower("PLAIN", 0, 1, 8), testFollower("SKIP", 0, 1, 8), testFollower("PRIVATE", 0, 1, 8), testFollower("NESTED", 0, 1, 8),
+  ...["SELF", "ACTIVE", "WATCHER", "CASTER", "DONE"].map((id) => testFollower(id, 0, 1, 8)),
   { ...testFollower("DELAY", 0, 1, 8), text: { en: "{[fanfare]} Set up a delayed ability.\nAt the start of your end phase, choose an option.", ja: null, cn: null } }], scripts: {
   ...ALL_SCRIPTS,
+  SELF: script.defineCard({ abilities: [discardActivation, discardTrigger] }),
+  ACTIVE: script.defineCard({ abilities: [discardActivation] }),
+  WATCHER: script.defineCard({ abilities: [discardTrigger] }),
+  DONE: script.defineCard({ abilities: [script.atStartOfYourEndPhase({ *resolve() {} })] }),
+  CASTER: script.defineCard({ abilities: [script.atStartOfYourEndPhase({ *resolve(fx) {
+    yield* fx.playCard(fx.game.cards(fx.controller, "hand")[0]!);
+    yield* fx.choose([{ id: "outer-a", label: "Outer A" }, { id: "outer-b", label: "Outer B" }]);
+  } })] }),
   FLOW: script.defineCard({ abilities: [script.atStartOfYourEndPhase({
     cost: { canPay: (g, p) => g.cards(p, "hand").length > 0, *pay(fx) { yield* fx.discard(fx.controller, 1, 1); } },
     modes: [
@@ -52,6 +69,218 @@ function flowGame(count = 2) {
   return drive(engine, { me: { field: Array(count).fill("FLOW"), hand: ["PLAIN", "PLAIN"], deck: Array(20).fill("PLAIN") },
     opp: { field: ["PLAIN", "PLAIN"], hand: ["PLAIN", "PLAIN"], deck: Array(20).fill("PLAIN") } });
 }
+
+function mainAction(t: ReturnType<typeof drive>, h: ReturnType<typeof track>, type: "play" | "activate" | "evolve", def: string) {
+  const decision = t.game.decision;
+  if (decision?.type !== "mainPhase") throw new Error("expected mainPhase");
+  const action = decision.actions.find((a) => a.type === type && "card" in a && t.game.state.cards[a.card]?.def === def);
+  if (!action) throw new Error(`missing ${type} ${def}`);
+  return h.act({ type: "mainPhase", action });
+}
+
+describe("activated, spell and card play presentation", () => {
+  it.each(["SELF", "ACTIVE"])("keeps %s's activated cost trigger waiting until the old effect finishes", (def) => {
+    const t = drive(engine, { me: { field: def === "SELF" ? [def] : [def, "WATCHER"], hand: ["PLAIN", "PLAIN"] } });
+    const h = track(t.game);
+    mainAction(t, h, "activate", def);
+    expect(t.decision).toMatchObject({ type: "selectCards", reason: "discard" });
+    h.act({ type: "selectCards", cards: [t.id("PLAIN@hand")] });
+    expect(t.decision).toMatchObject({ type: "choose", options: [{ id: "old-a" }, { id: "old-b" }] });
+    expect(t.game.state.pending).toHaveLength(1);
+    expect(h.context()).toMatchObject({ sourceDef: def, kind: "activated" });
+    h.act({ type: "choose", ids: ["old-a"] });
+    expect(t.decision).toMatchObject({ type: "choose", options: [{ id: "new-a" }, { id: "new-b" }] });
+    expect(h.context()).toMatchObject({ sourceDef: def === "SELF" ? def : "WATCHER", kind: "automatic" });
+  });
+
+  it("identifies a nested card before cardPlayed and clears it at its real resolution boundary", () => {
+    const t = drive(engine, { me: { field: ["CASTER"], hand: ["BP21-026"], playPoints: 10, deck: Array(10).fill("PLAIN") } });
+    const h = track(t.game);
+    h.act({ type: "mainPhase", action: { type: "endMainPhase" } });
+    expect(t.decision).toMatchObject({ type: "choose", reason: "playOption" });
+    expect(h.context()).toMatchObject({ kind: "spell", sourceDef: "BP21-026" });
+    h.act({ type: "choose", ids: ["normal"] });
+    expect(h.context()).toMatchObject({ kind: "spell", sourceDef: "BP21-026" });
+    h.act({ type: "choose", ids: ["amelia"] });
+    expect(t.decision).toMatchObject({ type: "choose", options: [{ id: "outer-a" }, { id: "outer-b" }] });
+    expect(h.context()).toBeNull(); // No guessed outer restoration.
+  });
+
+  it("leaves damageOrder options and display without new ability context", () => {
+    const spec = { me: { hand: ["BP06-080"], field: [{ card: "BP06-073", evolvedInto: "BP06-074" }] }, opp: { field: ["PLAIN", "BP02-004"] } };
+    const t = drive(engine, spec);
+    const h = track(t.game);
+    mainAction(t, h, "play", "BP06-080");
+    expect(h.context()?.timing).toBe("fanfare");
+    h.act({ type: "selectCards", cards: [t.id("opp:PLAIN")] });
+    expect(t.decision).toMatchObject({ type: "choose", reason: "damageOrder", player: 1 });
+    expect(t.decision?.type === "choose" && t.decision.options.map((o) => o.label)).toEqual(["Take 1 damage", "Take no damage"]);
+    expect(h.context()).toBeNull();
+  });
+
+  it("does not guess the free Union Burst's pre-play identity from the outer source or option labels", () => {
+    const t = drive(engine, { me: { universe: "princessConnect", field: ["CP04-113", "CP04-003", "CP04-001"], evolveDeck: ["CP04-114"] } });
+    t.game.state.players[0].thisTurn = { ...t.game.state.players[0].thisTurn, turn: t.game.state.turn, unionBursts: 2 };
+    const h = track(t.game);
+    mainAction(t, h, "evolve", "CP04-113");
+    h.act({ type: "choose", ids: ["2"] });
+    h.act({ type: "selectCards", cards: [t.id("CP04-003")] });
+    expect(t.decision).toMatchObject({ type: "selectCards", reason: "target", source: t.id("CP04-003") });
+    expect(h.context()).toBeNull();
+  });
+
+  it("uses the keyword provider for Stack even when its runtime position differs", () => {
+    const t = drive(engine, { me: { field: ["BP01-T10", "BP01-T10", "BP01-T10"] } });
+    const h = track(t.game);
+    mainAction(t, h, "activate", "BP01-T10");
+    expect(h.context()).toMatchObject({ sourceDef: "kw:stack", kind: "activated", keyword: "stack", abilityIndex: 0 });
+    expect(displayAbilityText(h.context()!, catalog, "cn")?.text).toContain("【蓄积】");
+  });
+  it("keeps the real BP11-070 replay's pre-play and discard-trigger identities, and changes no engine output", () => {
+    const options = bp11Replay.options as unknown as GameOptions;
+    const config = { deckRestrictions: options.deckRestrictions, manualActions: options.manualActions,
+      firstPlayer: firstPlayerOf(options), autoResolve: ALL_AUTO_RESOLVABLE.filter((t) =>
+        !(t === "mainPhase" && options.showEveryMainPhase) && !(t === "quick" && options.askEveryQuickWindow)) };
+    const game = engine.newGame({ seed: options.seed, players: options.decks, config });
+    const plain = engine.newGame({ seed: options.seed, players: options.decks, config });
+    const h = track(game);
+    for (const [i, record] of bp11Replay.inputs.entries()) {
+      const input = record.input as Input;
+      const by = record.by === null ? undefined : record.by as PlayerId;
+      expect(h.act(input, by)).toEqual(plain.act(input, by));
+      expect(stateHash(game.state)).toBe(stateHash(plain.state));
+      expect(game.decision).toEqual(plain.decision);
+      if ([70, 71, 72, 73, 76, 77].includes(i + 1)) {
+        const index = i + 1 === 76 ? 1 : [73, 77].includes(i + 1) ? 2 : 0;
+        expect(h.context(), `input ${i + 1}`).toMatchObject({ sourceDef: "BP11-070", abilityIndex: index, kind: "automatic" });
+        const text = displayAbilityText(h.context()!, catalog, "ja")!.text;
+        expect(text).toMatch(index === 0 ? /^【進化時】/ : index === 1 ? /^これがアクト/ : /^自分のターン中、いずれかのプレイヤー/);
+      }
+    }
+  });
+
+  it.each(["BP01-002", "BP01-004", "BP03-002"])("hands evolve over to %s's on-evolve ability at its first question", (def) => {
+    const evolved = def === "BP01-002" ? "BP01-003" : def === "BP01-004" ? "BP01-005" : "BP03-003";
+    const t = drive(engine, { me: { field: [def, "PLAIN", "PLAIN"], evolveDeck: [evolved] }, opp: { field: ["PLAIN", "PLAIN"] } });
+    const h = track(t.game);
+    mainAction(t, h, "evolve", def);
+    if (def === "BP03-002") {
+      expect(h.context()).toMatchObject({ sourceDef: def, kind: "activated", textRef: { timing: "evolve" } });
+      expect(t.decision).toMatchObject({ type: "selectCards", reason: "pick" });
+      h.act({ type: "selectCards", cards: [t.id("PLAIN")] });
+    }
+    expect(h.context()).toMatchObject({ sourceDef: evolved, kind: "automatic", timing: "onEvolve" });
+    expect(displayAbilityText(h.context()!, catalog, "ja")?.text).toMatch(/^【進化時】/);
+  });
+
+  it("captures an activated mode before its play event and keeps it through target and cost questions", () => {
+    const t = drive(engine, { me: { field: ["BP09-006"], hand: ["BP01-023", "PLAIN"], deck: ["PLAIN", "PLAIN"] }, opp: { field: ["PLAIN", "PLAIN"] } });
+    const h = track(t.game);
+    const events = mainAction(t, h, "activate", "BP09-006");
+    expect(events.some((e) => e.type === "abilityPlayed")).toBe(false);
+    expect(h.context()).toMatchObject({ kind: "activated", abilityIndex: 1, textRef: { timing: "activated" } });
+    const instance = h.context()!.instanceId;
+    expect(displayAbilityText(h.context()!, catalog, "cn")?.text).toContain("【2】");
+    h.act({ type: "choose", ids: ["follower"] });
+    expect(h.context()).toMatchObject({ instanceId: instance, modeIds: ["follower"] });
+    h.act({ type: "selectCards", cards: [t.id("opp:PLAIN")] });
+    expect(t.decision).toMatchObject({ type: "selectCards", reason: "pick" });
+    expect(h.context()?.kind).toBe("activated");
+    h.act({ type: "selectCards", cards: [t.id("PLAIN@hand")] });
+    expect(h.context()).toBeNull();
+  });
+
+  it("tracks spell object migration, selected play option and modes through search", () => {
+    const t = drive(engine, { me: { hand: ["BP21-026"], playPoints: 10, deck: ["BP02-021", "BP02-021", "BP02-021", "PLAIN"] } });
+    const h = track(t.game);
+    const old = t.id("BP21-026@hand");
+    const events = mainAction(t, h, "play", "BP21-026");
+    expect(events.some((e) => e.type === "cardPlayed")).toBe(false);
+    expect(t.decision).toMatchObject({ type: "choose", reason: "playOption" });
+    expect(h.context()).toMatchObject({ kind: "spell", sourceDef: "BP21-026", textRef: { timing: "spell" } });
+    expect(h.context()?.source).not.toBe(old);
+    expect(displayAbilityText(h.context()!, catalog, "ja")).toMatchObject({ match: "body" });
+    expect(displayAbilityText(h.context()!, catalog, "ja")?.text).toContain("コストを+2してよい");
+    const original = h.context();
+    expect(() => h.act({ type: "choose", ids: ["nonexistent"] })).toThrow();
+    expect(h.context()).toEqual(original);
+    h.act({ type: "choose", ids: ["plus2"] });
+    expect(h.context()).toMatchObject({ instanceId: original!.instanceId, playOptionId: "plus2" });
+    h.act({ type: "choose", ids: ["amelia"] });
+    expect(t.decision).toMatchObject({ type: "selectCards", reason: "search" });
+    expect(h.context()).toMatchObject({ instanceId: original!.instanceId, modeIds: ["amelia"], playOptionId: "plus2" });
+  });
+
+  it("keeps the Goblinoid discard cost before the spell's cardPlayed event", () => {
+    const t = drive(engine, { me: { hand: ["BP14-119", "BP01-171", "BP01-171"] }, opp: { field: ["PLAIN", "PLAIN"] } });
+    const h = track(t.game);
+    mainAction(t, h, "play", "BP14-119");
+    expect(t.decision).toMatchObject({ type: "choose", reason: "playOption" });
+    h.act({ type: "choose", ids: ["discard"] });
+    expect(h.context()).toMatchObject({ kind: "spell", playOptionId: "discard" });
+    h.act({ type: "selectCards", cards: [t.id("opp:PLAIN")] });
+    expect(t.decision).toMatchObject({ type: "selectCards", reason: "pick" });
+    expect(displayAbilityText(h.context()!, catalog, "ja")?.text).toContain("手札のゴブリン・カード1枚を捨てる");
+  });
+
+  it("hands a spell's additional discard cost over to a newly started automatic ability", () => {
+    const t = drive(engine, { me: { field: [{ card: "BP11-069", evolvedInto: "BP11-070" }],
+      hand: ["BP14-119", "BP01-171", "BP01-171"] }, opp: { field: ["PLAIN", "PLAIN"] } });
+    const h = track(t.game);
+    mainAction(t, h, "play", "BP14-119");
+    h.act({ type: "choose", ids: ["discard"] });
+    h.act({ type: "selectCards", cards: [t.id("opp:PLAIN")] });
+    expect(h.context()).toMatchObject({ kind: "spell", sourceDef: "BP14-119", playOptionId: "discard" });
+    h.act({ type: "selectCards", cards: [t.id("BP01-171@hand")] });
+    expect(t.decision).toMatchObject({ type: "selectCards", reason: "target" });
+    expect(h.context()).toMatchObject({ kind: "automatic", sourceDef: "BP11-070", abilityIndex: 2 });
+    expect(h.context()?.playOptionId).toBeUndefined();
+  });
+
+  it("starts a fresh activated instance when the same card uses the same mode ability again", () => {
+    const t = drive(engine, { me: { field: ["BP09-006"], hand: Array(4).fill("PLAIN") }, opp: { field: ["PLAIN", "PLAIN"] }, config: { manualActions: true } });
+    const h = track(t.game);
+    mainAction(t, h, "activate", "BP09-006");
+    const first = h.context()!.instanceId;
+    h.act({ type: "choose", ids: ["leader"] });
+    h.act({ type: "selectCards", cards: [t.id("PLAIN@hand")] });
+    expect(h.context()).toBeNull();
+    h.act({ type: "mainPhase", action: { type: "manual", op: { kind: "engage", card: t.id("BP09-006"), engaged: false } } });
+    mainAction(t, h, "activate", "BP09-006");
+    expect(h.context()?.instanceId).not.toBe(first);
+    expect(h.context()?.modeIds).toBeUndefined();
+  });
+
+  it("shows mandatory additional cost without a play-option question", () => {
+    const t = drive(engine, { me: { hand: ["BP11-007"], field: Array(5).fill("BP01-T03"), deck: ["BP01-007", "BP01-007"] } });
+    const h = track(t.game);
+    mainAction(t, h, "play", "BP11-007");
+    expect(t.decision).toMatchObject({ type: "selectCards", reason: "pick", min: 4 });
+    expect(h.context()).toMatchObject({ kind: "spell", sourceDef: "BP11-007" });
+    expect(displayAbilityText(h.context()!, catalog, "ja")?.text).toContain("追加コストとして場の妖精・トークン4体");
+  });
+
+  it.each([0, 10])("shows a follower's alternate cost with %i PP and hands over to its Fanfare", (playPoints) => {
+    const t = drive(engine, { me: { hand: ["CP03-083"], field: ["CP03-084", "CP03-084"], cemetery: Array(15).fill("CP03-083"), playPoints, deck: Array(10).fill("PLAIN") },
+      opp: { field: ["PLAIN", "PLAIN"] } });
+    const h = track(t.game);
+    mainAction(t, h, "play", "CP03-083");
+    if (playPoints === 10) {
+      expect(t.decision).toMatchObject({ type: "choose", reason: "playOption" });
+      expect(h.context()?.kind).toBe("cardPlay");
+      h.act({ type: "choose", ids: ["buryDragon"] });
+    }
+    expect(t.decision).toMatchObject({ type: "selectCards", reason: "pick" });
+    expect(h.context()).toMatchObject({ kind: "cardPlay", textRef: { timing: "play" } });
+    expect(displayAbilityText(h.context()!, catalog, "ja")?.text).toMatch(/^これをプレイする際、.*元のコストを払うのではなく/);
+    h.act({ type: "selectCards", cards: [t.id("CP03-084")] });
+    expect(t.decision).toMatchObject({ type: "selectCards", reason: "wardEnterEngaged" });
+    expect(h.context()).toBeNull();
+    h.act({ type: "selectCards", cards: [] });
+    expect(h.context()).toMatchObject({ kind: "automatic", sourceDef: "CP03-083", timing: "fanfare" });
+    expect(displayAbilityText(h.context()!, catalog, "ja")?.text).toMatch(/^ファンファーレ/);
+  });
+});
 
 describe("presentation ability identity and live input observation", () => {
   it("keeps the selected instance through modes, optional cost, targets, actual cost and the opponent's choice after source departure", () => {
@@ -112,6 +341,17 @@ describe("presentation ability identity and live input observation", () => {
     h.act({ type: "selectPending", id: skip.id });
     expect(t.decision).toMatchObject({ type: "choose", reason: "mode" });
     expect(h.context()).toBeNull();
+  });
+
+  it("hands over after several pending instances disappear when all preceding ones have play events", () => {
+    const t = drive(engine, { me: { field: ["DONE", "FLOW"], hand: ["PLAIN", "PLAIN"] }, opp: { field: ["PLAIN", "PLAIN"] } });
+    const h = track(t.game);
+    h.act({ type: "mainPhase", action: { type: "endMainPhase" } });
+    const done = t.game.state.pending.find((p) => p.sourceDef === "DONE")!;
+    const flow = t.game.state.pending.find((p) => p.sourceDef === "FLOW")!;
+    h.act({ type: "selectPending", id: done.id });
+    expect(t.decision).toMatchObject({ type: "choose", reason: "mode" });
+    expect(h.context()).toMatchObject({ pendingId: flow.id, sourceDef: "FLOW" });
   });
 
   it("hides unrelated hand-limit rules even when the preceding ability's source disappeared", () => {
