@@ -181,6 +181,8 @@ export type RefFilter =
   | { t: "unevolved" }
   | { t: "token" }
   | { t: "notSelf" }
+  | { t: "racing" }
+  | { t: "engaged" }
   | { t: "any" }
   | { t: "other"; why: string }
   | { t: "and"; args: RefFilter[] }
@@ -439,7 +441,7 @@ export function cardFeatureRow(def: CardDefinition, script: CardScript | undefin
       add("ref.scaled", r.scaled);
       add("ref.partial", refPartial(r.filter));
       add(r.timing === "fanfare" ? "ref.t.fanfare" : r.timing === "continuous" || r.timing === "fromHand" ? "ref.t.continuous" : r.timing === "activated" || r.timing === "evolve" ? "ref.t.activated" : "ref.t.other", 1);
-      add("ref.w.target", r.where === "target" || r.where === "targetCondition");
+      add("ref.w.target", r.where === "target" || r.where === "targetCondition" || r.where === "choose" || r.where === "topCard");
       add("ref.w.affects", r.where === "affects" || r.where === "trigger");
       add("ref.w.each", r.where === "each");
       add("ref.top", r.top !== undefined);

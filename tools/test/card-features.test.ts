@@ -103,6 +103,37 @@ describe("what a card counts, read from its script", () => {
     // CP04-038: spells with different names in your cemetery.
     expect(refs("CP04-038").find((r) => r.zones[0] === "cemetery")).toMatchObject({ where: "target", distinct: true });
   }, 120_000);
+  it("for the cards a community player checked by hand", () => {
+    const one = (def: string, where: string) => refs(def).filter((r) => r.where === where);
+    const follower = { t: "type", v: "follower" };
+    // CP01-034: one of your racing followers (CR 14.2.3.1); CSD01-030: whether the chosen Umamusume is racing.
+    expect(one("CP01-034", "resolve")).toMatchObject([{ zones: ["field"], side: "own", filter: { t: "and", args: [follower, { t: "racing" }] } }]);
+    expect(one("CSD01-030", "targetCondition")).toMatchObject([{ filter: { t: "and", args: [follower, { t: "trait", v: "ウマ娘" }, { t: "racing" }] } }]);
+    // DSD01b-012: a closure made by a factory (withAnotherDuelist): another Duelist on your field.
+    expect(one("DSD01b-012", "selfKeywords")).toMatchObject([{ zones: ["field"], filter: { t: "and", args: [{ t: "notSelf" }, { t: "trait", v: "武闘竜人" }] } }]);
+    // CP04-008: engage 3 reserved cards as its cost (CR 10.4.6; a helper's default count n = 3).
+    expect(one("CP04-008", "canPay")).toMatchObject([{ filter: { t: "not", arg: { t: "engaged" } }, agg: "count", threshold: { op: ">=", n: 3 } }]);
+    // CP04-073: banish 5 cards from your cemetery (zones mapped through a callback; a rule exception is not a kind of card).
+    expect(one("CP04-073", "canPay")).toMatchObject([{ zones: ["cemetery"], filter: { t: "any" }, threshold: { op: ">=", n: 5 } }]);
+    // CP04-101: the default count of a cost helper; BP13-019: its default filter, with the caller's filter.
+    expect(one("CP04-101", "canPay")).toMatchObject([{ filter: { t: "type", v: "amulet" }, threshold: { op: ">=", n: 1 } }]);
+    expect(one("BP13-019", "canPay")).toMatchObject([{ filter: { t: "and", args: [{ t: "notSelf" }, follower, { t: "trait", v: "レヴィオン" }] } }]);
+    // BP13-027: a card put from your hand, chosen among a computed list (its cost bound by your max PP is not read yet).
+    expect(one("BP13-027", "choose")).toMatchObject([{ zones: ["hand"], side: "own", filter: { t: "and", args: [follower, { t: "class", v: "Swordcraft" }, { t: "nameIncludes", v: "Albert" }, { t: "other" }] } }]);
+    // BP13-028, DSD01a-014: a play option's cost spread into its object.
+    expect(one("BP13-028", "canPay")).toMatchObject([{ filter: { t: "and", args: [follower, { t: "trait", v: "レヴィオン" }, { t: "costMax", v: 3 }] } }]);
+    expect(one("DSD01a-014", "canPay")).toMatchObject([{ zones: ["hand"], filter: { t: "and", args: [{ t: "notSelf" }, { t: "trait", v: "学院" }] }, threshold: { op: ">=", n: 2 } }]);
+    // BP13-035: the three sisters (a constant list's .some / .map): any of them, then each.
+    expect(one("BP13-035", "search")[0]!.filter).toMatchObject({ t: "or", args: [{ t: "name" }, { t: "name" }, { t: "name" }] });
+    expect(one("BP13-035", "searchEach")).toHaveLength(3);
+    // BP10-054: "if the top card costs less than 5, stop": the top card costs 5 or more.
+    expect(refs("BP10-054")).toMatchObject([{ where: "topCard", zones: ["deck"], top: 1, filter: { t: "costMin", v: 5 } }]);
+    // CP02-103, ECP02-039: loops matching the cards to pay with are not effects "for each".
+    expect(one("CP02-103", "each")).toEqual([]);
+    expect(one("ECP02-039", "each")).toEqual([]);
+    // CP04-016: a predicate's guard ("if (id === self) return false") stays when the rest can't be read.
+    expect(one("CP04-016", "canPay")[0]!.filter).toMatchObject({ t: "and", args: [{ t: "notSelf" }, { t: "other" }] });
+  }, 120_000);
   it("for what a card's targets and searches need", () => {
     // CSD02a-001: a Cute follower costing 4 or less (and one costing 2 or less) in your cemetery.
     expect(refs("CSD02a-001").map((r) => [r.where, r.zones[0], r.agg, JSON.stringify(r.filter)])).toEqual([

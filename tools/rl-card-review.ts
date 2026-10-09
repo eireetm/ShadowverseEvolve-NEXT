@@ -45,6 +45,8 @@ const WHERE: Record<string, string> = {
   when: "能不能选择",
   target: "要选择的对象",
   targetCondition: "对选中的卡的条件",
+  choose: "从中选择",
+  topCard: "牌组顶的卡",
   affects: "受益的卡",
   trigger: "诱发条件的卡",
   each: "对每张",
@@ -139,6 +141,10 @@ function filterText(f: RefFilter): string {
       return "衍生物";
     case "notSelf":
       return "（不含这张卡自己）";
+    case "racing":
+      return "已起跑";
+    case "engaged":
+      return "横置";
     case "other":
       return `（读不懂的条件：${f.why}）`;
     case "and": {
@@ -159,7 +165,7 @@ function filterText(f: RefFilter): string {
     case "or":
       return `（${f.args.map(filterText).join(" 或 ")}）`;
     case "not":
-      return `不是（${filterText(f.arg)}）`;
+      return f.arg.t === "engaged" ? "竖置" : `不是（${filterText(f.arg)}）`;
   }
 }
 
