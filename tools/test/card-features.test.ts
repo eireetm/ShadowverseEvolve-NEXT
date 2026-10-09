@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseAst } from "rolldown/parseAst";
 import { describe, expect, it } from "vitest";
-import { buildCardFeatureFile, cardFeatureFileText, cardFeatureTable, FX_FAMILY_COLUMNS, type CardFeatureFile } from "../../packages/bot/src";
+import { buildCardFeatureFile, CARD_FEATURE_COLUMNS, cardFeatureFileText, cardFeatureRow, cardFeatureTable, FX_FAMILY_COLUMNS, type CardFeatureFile, type RefFilter } from "../../packages/bot/src";
 import { rulesFingerprint } from "../../packages/gui/fingerprint";
 import { FAMILY_OF, FX_FAMILY_NAMES } from "../rl/fx-families";
 import { checkReferences } from "../rl/ref-oracle";
@@ -134,11 +134,83 @@ describe("what a card counts, read from its script", () => {
     // CP04-016: a predicate's guard ("if (id === self) return false") stays when the rest can't be read.
     expect(one("CP04-016", "canPay")[0]!.filter).toMatchObject({ t: "and", args: [{ t: "notSelf" }, { t: "other" }] });
   }, 120_000);
+  it("under the player's choices, and the deck's top as luck", () => {
+    const all = (def: string) => analysis().get(def)!.refs;
+    // BP13-035: one sister to the hand, or (played for 4 more, CR 10.4.7.3) one of each summoned.
+    expect(all("BP13-035").map((r) => [r.where, r.alt])).toEqual([
+      ["searchEach", ["opt:plus4"]],
+      ["searchEach", ["opt:plus4"]],
+      ["searchEach", ["opt:plus4"]],
+      ["search", ["!opt:plus4"]],
+    ]);
+    // DSD01a-014: a required single play option is no choice.
+    expect(all("DSD01a-014")[0]!.alt).toBeUndefined();
+    // BP01-057: the play option's cost, 10 spells in the cemetery (g.spellsInCemetery).
+    expect(all("BP01-057")).toMatchObject([{ where: "canPay", alt: ["opt:banish10"], zones: ["cemetery"], filter: { t: "type", v: "spell" }, threshold: { op: ">=", n: 10 } }]);
+    // CP03-014: its target is needed in either mode (one ref, no tag); mode 2 has its own cost (CR 10.4.7.5), and its
+    // search is luck (the top card).
+    expect(all("CP03-014").map((r) => [r.where, r.alt ?? null, r.chance ?? null])).toEqual([
+      ["target", null, null],
+      ["canPay", ["mode:2", "pay"], null],
+      ["search", ["mode:2", "pay"], "top"],
+    ]);
+    // BP06-017: an optional cost's own requirement (fx.optionalCost, CR 10.4.7.5).
+    expect(all("BP06-017").find((r) => r.where === "canPay")).toMatchObject({ alt: ["pay"], agg: "count", threshold: { op: ">=", n: 2 } });
+    // On Super-Evolve is its own timing (CR 12.17).
+    expect(all("CP04-038").map((r) => r.timing)).toEqual(["onEvolve", "onSuperEvolve"]);
+    // BP10-054: the top card's original cost — luck for a fair player (CR 4.5.2), not a condition.
+    expect(all("BP10-054")).toMatchObject([{ where: "topCard", chance: "top", top: 1, filter: { t: "costMin", v: 5 } }]);
+    // PCS01-048: a PriConne follower on top (the helper's whole filter, one condition); CP02-015: a Cute card taken from the top.
+    expect(all("PCS01-048").find((r) => r.chance)).toMatchObject({ where: "topCard", filter: { t: "and", args: [{ t: "type", v: "follower" }, { t: "trait", v: "プリコネ" }] } });
+    expect(all("CP02-015")).toMatchObject([{ where: "topCard", chance: "top", filter: { t: "trait", v: "キュート" } }]);
+    // BP15-024: the opponent's top card (fx.mill(1, opponent)): a follower, or a spell or an amulet.
+    expect(all("BP15-024").map((r) => [r.side, r.chance, r.filter])).toEqual([
+      ["opp", "top", { t: "type", v: "follower" }],
+      ["opp", "top", { t: "or", args: [{ t: "type", v: "spell" }, { t: "type", v: "amulet" }] }],
+    ]);
+    // A test on a top card negated: BP14-099 "a non-Havencraft card", BP17-045 "a non-Runecraft card".
+    expect(all("BP14-099").find((r) => r.chance)!.filter).toEqual({ t: "not", arg: { t: "class", v: "Havencraft" } });
+    expect(all("BP17-045")[0]!.filter).toEqual({ t: "not", arg: { t: "class", v: "Runecraft" } });
+    // ...given up on when it fails ("if (!milled.some(...)) return;"): BP05-054 goes on with a Rhino on top.
+    expect(all("BP05-054").find((r) => r.chance)!.filter).toEqual({ t: "name", v: "Electromagical Rhino" });
+    // Two tests on one top card are one condition (BP21-066: a Dragoncraft follower).
+    expect(all("BP21-066").map((r) => r.filter)).toEqual([{ t: "and", args: [{ t: "type", v: "follower" }, { t: "class", v: "Dragoncraft" }] }]);
+    // Each player's top card (BP01-083): the side isn't known from the code.
+    expect(all("BP01-083")[0]!.side).toBe("?");
+    // An automatic ability's own optional cost (CR 10.4.7.4): its target is under "pay", its trigger isn't (BP13-027).
+    expect(all("CP04-008").map((r) => [r.where, r.alt])).toEqual([
+      ["canPay", ["pay"]],
+      ["target", ["pay"]],
+    ]);
+    expect(all("BP13-027").find((r) => r.where === "trigger")!.alt).toBeUndefined();
+    // ...nor its condition, checked before paying (BP13-024); a mode's own cost (DSD01a-008 mode 2, CR 10.4.7.5).
+    expect(all("BP13-024").find((r) => r.where === "condition")!.alt).toBeUndefined();
+    expect(all("DSD01a-008").find((r) => r.where === "resolve")!.alt).toEqual(["mode:2", "pay"]);
+    // "if (!machina(g, id)) continue;" in a loop: each Machina follower (BP07-070).
+    expect(all("BP07-070").filter((r) => r.where === "each").map((r) => r.filter)).toEqual([
+      { t: "type", v: "follower" },
+      { t: "and", args: [{ t: "type", v: "follower" }, { t: "trait", v: "機械" }] },
+    ]);
+    // "if it isn't Mjerrabaine: +1/+1, done" then +3/+3: both conditions on the target (BP05-112).
+    expect(all("BP05-112").filter((r) => r.where === "targetCondition").map((r) => JSON.stringify(r.filter))).toEqual([
+      JSON.stringify({ t: "and", args: [{ t: "type", v: "follower" }, { t: "not", arg: { t: "name", v: "Mjerrabaine, Omen of One" } }] }),
+      JSON.stringify({ t: "and", args: [{ t: "type", v: "follower" }, { t: "name", v: "Mjerrabaine, Omen of One" }] }),
+    ]);
+    // In the table: luck is counted in ref.top, not as a target or a threshold.
+    const row = (def: string) => {
+      const r = cardFeatureRow(engine.db.get(def), ALL_SCRIPTS[def], { ...analysis().get(def)!, refs: analysis().get(def)!.refs.map((x) => ({ ...x, filter: x.filter as RefFilter })) });
+      return (c: string) => r[CARD_FEATURE_COLUMNS.indexOf(c)];
+    };
+    const erntz = row("BP10-054");
+    expect([erntz("ref.top"), erntz("ref.w.target"), erntz("ref.threshold")]).toEqual([1, 0, 0]);
+  }, 120_000);
   it("for what a card's targets and searches need", () => {
     // CSD02a-001: a Cute follower costing 4 or less (and one costing 2 or less) in your cemetery.
     expect(refs("CSD02a-001").map((r) => [r.where, r.zones[0], r.agg, JSON.stringify(r.filter)])).toEqual([
       ["target", "cemetery", "exists", JSON.stringify({ t: "and", args: [{ t: "type", v: "follower" }, { t: "trait", v: "キュート" }, { t: "costMax", v: 4 }] })],
       ["target", "cemetery", "exists", JSON.stringify({ t: "and", args: [{ t: "type", v: "follower" }, { t: "trait", v: "キュート" }, { t: "costMax", v: 2 }] })],
+      // Lesson (1) (CR 14.3.2.1): a Magical Item in your EX area.
+      ["canPay", "ex", "count", JSON.stringify({ t: "name", v: "Magical Item" })],
     ]);
     // BP09-060: 5 damage instead of 2 when the chosen enemy follower is a Wyrmkin: is there one.
     expect(refs("BP09-060").filter((r) => r.where === "targetCondition")).toEqual([{ timing: "onEvolve", where: "targetCondition", zones: ["field"], side: "opp", filter: { t: "and", args: [{ t: "type", v: "follower" }, { t: "trait", v: "竜族" }] }, agg: "exists", threshold: { op: ">=", n: 1 }, scaled: false }]);

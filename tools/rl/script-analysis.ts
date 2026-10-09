@@ -39,7 +39,7 @@ export type Atom =
   | { t: "other"; why: string };
 export type FilterNode = Atom | { t: "and"; args: FilterNode[] } | { t: "or"; args: FilterNode[] } | { t: "not"; arg: FilterNode };
 
-export type Timing = "fanfare" | "lastWords" | "onEvolve" | "strike" | "turnStart" | "turnEnd" | "otherTrigger" | "activated" | "evolve" | "spell" | "continuous" | "fromHand";
+export type Timing = "fanfare" | "lastWords" | "onEvolve" | "onSuperEvolve" | "strike" | "turnStart" | "turnEnd" | "otherTrigger" | "activated" | "evolve" | "spell" | "continuous" | "fromHand";
 
 export interface RefSite {
   timing: Timing;
@@ -59,7 +59,47 @@ export interface RefSite {
   top?: number;
   /** The cards must have different names (a target's "with different names"). */
   distinct?: true;
+  /**
+   * The player's choices it is under, all of them (none: whatever is chosen): "opt:<id>" / "!opt:<id>" played with that play
+   * option or not (CR 10.4.7.3), "mode:<n>" the n-th mode chosen (5.18), "pick:<id>" / "!pick:<id>" an answer of a choice
+   * during the effect ("opp.pick" the opponent's), "may" / "!may" a "you may" done or not, "pay" / "!pay" an optional cost
+   * paid or not (10.4.7.2, 10.4.7.5), "rite" / "!rite" Earth Rite paid or not (13.3.3.2), "mem:<key>" a choice remembered
+   * from a cost's payment.
+   */
+  alt?: string[];
+  /**
+   * Its count is luck, known to nobody before it happens (the cheating bot aside): "top" the top cards of a deck, whose order
+   * nobody knows (CR 4.5.2) unless an effect showed them; "random" a random result (5.19, 5.20). Not a condition to meet.
+   */
+  chance?: "top" | "random";
 }
+
+/** A player's choice, while the code under it is read (RefSite.alt). */
+type Alt =
+  | { k: "option"; id: string; neg?: true }
+  | { k: "mode"; index: number }
+  | { k: "choose"; id: string; neg?: true; by?: "opp" }
+  | { k: "may"; how: "confirm" | "cost"; neg?: true; by?: "opp"; ability?: true }
+  | { k: "earthRite"; neg?: true }
+  | { k: "paid"; key: string; neg?: true };
+const negAlt = (a: Alt): Alt => (a.k === "mode" ? a : "neg" in a && a.neg ? (({ neg: _n, ...rest }) => rest as Alt)(a) : ({ ...a, neg: true } as Alt));
+const altToken = (a: Alt): string => {
+  const not = "neg" in a && a.neg ? "!" : "";
+  switch (a.k) {
+    case "option":
+      return `${not}opt:${a.id}`;
+    case "mode":
+      return `mode:${a.index + 1}`;
+    case "choose":
+      return `${not}${a.by === "opp" ? "opp." : ""}pick:${a.id}`;
+    case "may":
+      return `${not}${a.by === "opp" ? "opp." : ""}${a.how === "cost" ? "pay" : "may"}`;
+    case "earthRite":
+      return `${not}rite`;
+    case "paid":
+      return `${not}mem:${a.key}`;
+  }
+};
 
 export interface CardAnalysis {
   fx: Record<FxFamily, number>;
@@ -86,7 +126,7 @@ type V =
   | { k: "fx" }
   | { k: "side"; v: Side }
   | { k: "card"; v: CardRef; from?: Extract<V, { k: "list" }> }
-  | { k: "list"; zones: Zone[]; side: Side; filter: FilterNode; top?: number; each?: true }
+  | { k: "list"; zones: Zone[]; side: Side; filter: FilterNode; top?: number; each?: true; slot?: number }
   | { k: "count"; site: RefSite }
   | { k: "exists"; site: RefSite }
   | { k: "cond" }
@@ -105,6 +145,13 @@ type V =
   | { k: "arr"; items: V[] }
   | { k: "external"; name: string }
   | { k: "gauge"; name: "combo" }
+  | { k: "choice"; src: "option" | "choose" | "memory"; by?: "opp"; key?: string }
+  | { k: "altTest"; t: Alt[]; f: Alt[]; card?: Extract<V, { k: "cardTest" }> }
+  /**
+   * A condition on a chosen or top card, already recorded as `site`: "!", "&&", "||" and early exits rewrite that one site.
+   * `others`: conditions on other cards joined with it (negated along with it).
+   */
+  | { k: "cardTest"; list: Extract<V, { k: "list" }>; f: FilterNode; site: RefSite | null; others?: Extract<V, { k: "cardTest" }>[] }
   | { k: "unknown" };
 
 const UNKNOWN: V = { k: "unknown" };
@@ -122,7 +169,8 @@ class Env {
 }
 
 const and = (...fs: FilterNode[]): FilterNode => {
-  const args = fs.flatMap((f) => (f.t === "and" ? f.args : f.t === "any" ? [] : [f]));
+  const all = fs.flatMap((f) => (f.t === "and" ? f.args : f.t === "any" ? [] : [f]));
+  const args = all.filter((f, i) => all.findIndex((g) => JSON.stringify(g) === JSON.stringify(f)) === i);
   return args.length === 0 ? ANY : args.length === 1 ? args[0]! : { t: "and", args };
 };
 const or = (...fs: FilterNode[]): FilterNode => (fs.some((f) => f.t === "any") ? ANY : fs.length === 1 ? fs[0]! : { t: "or", args: fs });
@@ -143,6 +191,8 @@ const TYPE_FILTERS: Record<string, FilterNode> = {
 /** The analysis of one card: its references and fx sites, gathered while its code is evaluated. */
 class Analyzer {
   refs: RefSite[] = [];
+  /** The player's choices the code being read is under. */
+  alts: Alt[] = [];
   conds = { overflow: 0, necrocharge: 0, spellchain: 0, combo: 0, sanguine: 0 };
   timing: Timing = "otherTrigger";
   ability = -1;
@@ -151,16 +201,30 @@ class Analyzer {
   targetLists: (Extract<V, { k: "list" }> | null)[] = [];
   /** While reading a passive about some card ("it"): the tests on it that decide what it gets. */
   capture: FilterNode[] | null = null;
-  /** While reading the test of an early exit ("if (cost < 5) return;"): a condition on a chosen card is the opposite. */
-  private negate = false;
   private depth = 0;
   private readonly declCache = new Map<string, V>();
 
   private site(list: Extract<V, { k: "list" }>, agg: "count" | "exists"): RefSite {
     const s: RefSite = { timing: this.timing, ability: this.ability, where: this.where, zones: list.zones, side: list.side, filter: list.filter, agg, threshold: null, scaled: false };
     if (list.top !== undefined && list.top > 0) s.top = list.top;
+    if (list.top !== undefined) s.chance = "top";
+    const before = ["trigger", "triggerIf", "condition", "available", "modeCount"].includes(this.where);
+    const alts = before ? this.alts.filter((a) => !(a.k === "may" && a.ability)) : this.alts;
+    if (alts.length > 0) s.alt = [...new Set(alts.map(altToken))].sort();
     this.refs.push(s);
     return s;
+  }
+
+  /** Puts choices in force; returns the depth to cut back to. */
+  pushAlts(as: Alt[]): number {
+    const d = this.alts.length;
+    this.alts.push(...as);
+    return d;
+  }
+
+  private altOf(v: V): Extract<V, { k: "altTest" }> | null {
+    if (v.k === "choice" && v.src === "memory") return { k: "altTest", t: [{ k: "paid", key: v.key ?? "?" }], f: [{ k: "paid", key: v.key ?? "?", neg: true }] };
+    return v.k === "altTest" ? v : null;
   }
 
   /** A filter function's meaning: applied to a card ("it") with the reader. */
@@ -189,14 +253,24 @@ class Analyzer {
       // f(g, id): the filter applied to a card.
       const card = args[1];
       if (card?.k === "card" && card.v === "it") return { k: "pred", f: fn.f };
-      if (card?.k === "card" && card.from) this.targetCondition(card.from, fn.f);
+      if (card?.k === "card" && card.from) return this.cardTest(card.from, fn.f);
       return { k: "cond" };
     }
     if (fn.k !== "fn") return UNKNOWN;
     if (this.depth > 40) return UNKNOWN;
+    // A filter helper applied to a chosen card or a top card (priconneFollower(g, top)): its whole filter is one condition
+    // on that card's list, not one per test inside.
+    const card = args[args.length - 1];
+    if (card?.k === "card" && card.v === "other" && card.from && args.length <= 2 && (args.length === 1 || args[0]!.k === "reader")) {
+      const saved = this.refs.length;
+      const captured = this.capture?.length ?? 0;
+      const f = this.asFilter(this.apply(fn, [...args.slice(0, -1), { k: "card", v: "it" }]));
+      const clean = this.refs.length === saved;
+      this.refs.length = saved;
+      if (this.capture) this.capture.length = captured;
+      if (clean && meaningful(f) && !partial(f)) return this.cardTest(card.from, f);
+    }
     this.depth += 1;
-    const savedNegate = this.negate;
-    this.negate = false;
     try {
       const env = new Env(fn.env);
       fn.params.forEach((p, i) => this.bind(p, args[i] ?? UNKNOWN, env, fn.module, args.slice(i)));
@@ -204,7 +278,6 @@ class Analyzer {
       return this.eval(fn.body, env, fn.module);
     } finally {
       this.depth -= 1;
-      this.negate = savedNegate;
     }
   }
 
@@ -212,6 +285,10 @@ class Analyzer {
     if (param.type === "Identifier") env.set(param.name as string, v);
     else if (param.type === "AssignmentPattern") this.bind(param.left as Node, v.k === "unknown" ? this.eval(param.right as Node, env, module) : v, env, module, rest);
     else if (param.type === "RestElement") this.bind(param.argument as Node, { k: "arr", items: rest }, env, module, []);
+    else if (param.type === "ArrayPattern" && v.k === "list" && v.top !== undefined) {
+      const elements = param.elements as (Node | null)[];
+      elements.forEach((e, i) => e && this.bind(e, { k: "card", v: "other", from: elements.length > 1 ? { ...v, slot: i } : v }, env, module, []));
+    }
     else if (param.type === "ArrayPattern" && v.k === "arr") (param.elements as (Node | null)[]).forEach((e, i) => e && this.bind(e, v.items[i] ?? v.items[0] ?? UNKNOWN, env, module, []));
     else if (param.type === "ObjectPattern" && (v.k === "info" || v.k === "prop")) {
       for (const p of param.properties as Node[]) {
@@ -247,22 +324,40 @@ class Analyzer {
 
   /** A block's statements; the value of its first return that gives something. */
   block(node: Node, env: Env, module: Module): V | null {
+    const d = this.alts.length;
+    try {
+      return this.blockInner(node, env, module);
+    } finally {
+      this.alts.length = d;
+    }
+  }
+
+  private blockInner(node: Node, env: Env, module: Module): V | null {
     let result: V | null = null;
+    // A return of nothing known ("return null" before "return card") gives way to a later one that is.
+    let unknown = false;
     // A predicate's guards ("if (id === self) return false;"): what is left must not match them.
     const guards: FilterNode[] = [];
     for (const stmt of (node.body as Node[]) ?? []) {
       if (!result && stmt.type === "IfStatement" && !stmt.alternate && returnsFalse(stmt.consequent as Node)) {
+        const saved = this.refs.length;
         const t = this.eval(stmt.test as Node, env, module);
         if (t.k === "pred") {
           guards.push(t.f.t === "not" ? t.f.arg : { t: "not", arg: t.f });
           continue;
         }
+        // Not a guard of a filter: read again as a statement below.
+        this.refs.length = saved;
       }
       const r = this.statement(stmt, env, module);
-      if (r && !result) result = r;
+      if (r && !result) {
+        if (r.k === "unknown") unknown = true;
+        else if (!unknown || r.k === "card" || r.k === "arr" || r.k === "list") result = r;
+      }
     }
-    if (guards.length > 0 && result && !(result.k === "bool" && !result.v)) return { k: "pred", f: and(...guards, this.asFilter(this.asPred(result))) };
-    return result;
+    const out = result ?? (unknown ? UNKNOWN : null);
+    if (guards.length > 0 && out && !(out.k === "bool" && !out.v)) return { k: "pred", f: and(...guards, this.asFilter(this.asPred(out))) };
+    return out;
   }
 
   private statement(stmt: Node, env: Env, module: Module): V | null {
@@ -279,16 +374,37 @@ class Analyzer {
       case "ReturnStatement":
         return stmt.argument ? this.eval(stmt.argument as Node, env, module) : null;
       case "IfStatement": {
-        const exit = isBareReturn(stmt.consequent as Node) && !stmt.alternate;
-        const savedNegate = this.negate;
-        if (exit) this.negate = !this.negate;
         const test = this.asPred(this.eval(stmt.test as Node, env, module));
-        this.negate = savedNegate;
+        // "if (cost < 5) return;", "if (!isFollower(g, top)) return false;": what the card goes on with is the opposite.
+        const card = test.k === "cardTest" ? test : test.k === "altTest" ? test.card : undefined;
+        if (card && !stmt.alternate && isGiveUp(stmt.consequent as Node)) this.negateCardTest(card);
+        else if (card && !stmt.alternate && endsInReturn(stmt.consequent as Node)) this.targetCondition(card.list, negateFilter(card.f));
+        // An if / else on a card: the condition in its positive form (both branches do something).
+        else if (card && stmt.alternate && card.f.t === "not") this.setCardTest(card, card.f.arg);
+        this.settle(test);
         this.truthy(test);
         // "if (!isFairy(g, card)) return []": the guard's own filter is what the card must be.
         if (this.capture && test.k === "pred") this.capture.push(test.f.t === "not" ? test.f.arg : test.f);
+        const at = this.altOf(test);
+        if (at) {
+          const d0 = this.pushAlts(at.t);
+          const a = this.statement(stmt.consequent as Node, new Env(env), module);
+          this.alts.length = d0;
+          this.pushAlts(at.f);
+          const b = stmt.alternate ? this.statement(stmt.alternate as Node, new Env(env), module) : null;
+          this.alts.length = d0;
+          const exitsA = endsInReturn(stmt.consequent as Node);
+          const exitsB = stmt.alternate ? endsInReturn(stmt.alternate as Node) : false;
+          if (exitsA && !exitsB) this.pushAlts(at.f);
+          else if (exitsB && !exitsA) this.pushAlts(at.t);
+          return a ?? b;
+        }
+        // Exits inside a plain branch are under that branch only.
+        const d1 = this.alts.length;
         const a = this.statement(stmt.consequent as Node, new Env(env), module);
+        this.alts.length = d1;
         const b = stmt.alternate ? this.statement(stmt.alternate as Node, new Env(env), module) : null;
+        this.alts.length = d1;
         return a ?? b;
       }
       case "BlockStatement":
@@ -323,10 +439,21 @@ class Analyzer {
       case "DoWhileStatement":
         this.eval(stmt.test as Node, env, module);
         return this.statement(stmt.body as Node, new Env(env), module);
-      case "SwitchStatement":
-        this.eval(stmt.discriminant as Node, env, module);
-        for (const c of stmt.cases as Node[]) for (const s of c.consequent as Node[]) this.statement(s, new Env(env), module);
+      case "SwitchStatement": {
+        const disc = this.eval(stmt.discriminant as Node, env, module);
+        for (const c of stmt.cases as Node[]) {
+          const t = c.test ? this.eval(c.test as Node, env, module) : null;
+          const cases = stmt.cases as Node[];
+          const after = cases[cases.indexOf(c) - 1];
+          // Reached only by its own value: the case before it ends with a break, a return... (no fall-through).
+          const prev = after ? (after.consequent as Node[]) : [];
+          const alone = !after || (prev.length > 0 && ["BreakStatement", "ReturnStatement", "ContinueStatement", "ThrowStatement"].includes(prev[prev.length - 1]!.type as string));
+          const d0 = disc.k === "choice" && t?.k === "str" && alone && (c.consequent as Node[]).length > 0 ? this.pushAlts([this.choiceIs(disc, t.v)]) : this.alts.length;
+          for (const s of c.consequent as Node[]) this.statement(s, new Env(env), module);
+          this.alts.length = d0;
+        }
         return null;
+      }
       case "TryStatement":
         return this.block(stmt.block as Node, new Env(env), module);
       case "FunctionDeclaration":
@@ -338,35 +465,80 @@ class Analyzer {
   }
 
   /** "Is there such a card": a reference that needs at least one. */
-  recordList(list: Extract<V, { k: "list" }>, where: string): void {
+  recordList(list: Extract<V, { k: "list" }>, where: string): RefSite {
     const saved = this.where;
     this.where = where;
     const s = this.site(list, "exists");
     s.threshold = { op: ">=", n: 1 };
     this.where = saved;
+    return s;
   }
 
   /**
    * A condition on a chosen card ("if it's a Wyrmkin follower"): is there such a card among its candidates. On each card of a
    * zone (a loop: "give each Pixie token on your field +1/+1"): how many such cards, a quantity.
    */
-  targetCondition(list: Extract<V, { k: "list" }>, f: FilterNode): void {
-    if (!meaningful(f)) return;
+  targetCondition(list: Extract<V, { k: "list" }>, f: FilterNode): RefSite | null {
+    if (!meaningful(f)) return null;
     if (list.each) {
       const saved = this.where;
       this.where = "each";
       const site = this.site({ k: "list", zones: list.zones, side: list.side, filter: and(list.filter, f) }, "count");
       site.scaled = true;
       this.where = saved;
-      return;
+      return site;
     }
-    this.recordList({ k: "list", zones: list.zones, side: list.side, filter: and(list.filter, f), ...(list.top ? { top: list.top } : {}) }, list.top ? "topCard" : "targetCondition");
+    const top = list.top !== undefined;
+    return this.recordList({ k: "list", zones: list.zones, side: list.side, filter: and(list.filter, f), ...(top ? { top: list.top } : {}) }, top ? "topCard" : "targetCondition");
+  }
+
+  /** An open condition on a chosen or top card (recorded now, rewritten by what the code does with it). */
+  private cardTest(list: Extract<V, { k: "list" }>, f: FilterNode): Extract<V, { k: "cardTest" }> {
+    return { k: "cardTest", list, f, site: this.targetCondition(list, f) };
+  }
+
+  /** Sites a test has used: they stay as they are. */
+  private readonly settled = new WeakSet<RefSite>();
+
+  /** The open condition rewritten: its one site gets the new filter (or goes, or is made now). */
+  private setCardTest(v: Extract<V, { k: "cardTest" }>, f: FilterNode): Extract<V, { k: "cardTest" }> {
+    if (v.site && this.settled.has(v.site)) return { ...v, f, site: meaningful(f) ? this.targetCondition(v.list, f) : null };
+    if (v.site && meaningful(f) && this.refs.includes(v.site)) {
+      v.site.filter = and(v.list.filter, f);
+      return { ...v, f };
+    }
+    if (v.site && this.refs.includes(v.site)) this.refs.splice(this.refs.indexOf(v.site), 1);
+    return { ...v, f, site: meaningful(f) ? this.targetCondition(v.list, f) : null };
+  }
+
+  /** "!" on an open condition: its filter and those of the cards joined with it negated. */
+  private negateCardTest(v: Extract<V, { k: "cardTest" }>): Extract<V, { k: "cardTest" }> {
+    const others = v.others?.map((o) => this.negateCardTest(o));
+    return { ...this.setCardTest(v, negateFilter(v.f)), ...(others ? { others } : {}) };
+  }
+
+  /** A test's open conditions are settled once the code has branched on them. */
+  private settle(v: V): void {
+    const tests = v.k === "cardTest" ? [v, ...(v.others ?? [])] : v.k === "altTest" && v.card ? [v.card, ...(v.card.others ?? [])] : [];
+    for (const t of tests) if (t.site) this.settled.add(t.site);
+  }
+
+  /** Two conditions on one card joined: one site. */
+  private joinCardTests(a: Extract<V, { k: "cardTest" }>, b: Extract<V, { k: "cardTest" }>, op: string): V {
+    if (a.site === b.site) return a;
+    // Different cards: kept apart, negated together.
+    if (JSON.stringify(a.list) !== JSON.stringify(b.list) || (b.site && this.settled.has(b.site)) || (a.site && this.settled.has(a.site))) {
+      return { ...a, others: [...(a.others ?? []), b, ...(b.others ?? [])] };
+    }
+    if (b.site && this.refs.includes(b.site)) this.refs.splice(this.refs.indexOf(b.site), 1);
+    if (a.site && !this.refs.includes(a.site)) a = { ...a, site: null };
+    return this.setCardTest(a, op === "&&" ? and(a.f, b.f) : or(a.f, b.f));
   }
 
   /** A card's information read as a filter atom: a predicate on the card being filtered, or a condition on a chosen card. */
   private onCard(of: CardRef, from: Extract<V, { k: "list" }> | undefined, f: FilterNode): V {
     if (of === "it") return { k: "pred", f };
-    if (from) this.targetCondition(from, f);
+    if (from) return this.cardTest(from, f);
     return { k: "cond" };
   }
 
@@ -494,12 +666,26 @@ class Analyzer {
         const test = this.asPred(this.eval(node.test as Node, env, module));
         this.truthy(test);
         if (this.capture && test.k === "pred") this.capture.push(test.f);
+        if (test.k === "cardTest" && test.f.t === "not") this.setCardTest(test, test.f.arg);
+        this.settle(test);
+        const at = this.altOf(test);
+        const d0 = at ? this.pushAlts(at.t) : this.alts.length;
         const a = this.eval(node.consequent as Node, env, module);
+        this.alts.length = d0;
+        if (at) this.pushAlts(at.f);
         const b = this.eval(node.alternate as Node, env, module);
+        this.alts.length = d0;
+        // A filter with two branches (cost >= 5 ? Pixie : Fairy): either, as its test decides.
+        if (a.k === "pred" && b.k === "pred" && JSON.stringify(a.f) !== JSON.stringify(b.f)) {
+          return { k: "pred", f: test.k === "pred" ? or(and(test.f, a.f), and(negateFilter(test.f), b.f)) : or(a.f, b.f) };
+        }
         return a.k !== "unknown" ? a : b;
       }
       case "UnaryExpression": {
         const v = this.asPred(this.eval(node.argument as Node, env, module));
+        if (node.operator === "!" && v.k === "altTest") return { k: "altTest", t: v.f, f: v.t, ...(v.card ? { card: this.negateCardTest(v.card) } : {}) };
+        if (node.operator === "!" && v.k === "cardTest") return this.negateCardTest(v);
+        if (node.operator === "!" && v.k === "choice" && v.src === "memory") return { k: "altTest", t: [{ k: "paid", key: v.key ?? "?", neg: true }], f: [{ k: "paid", key: v.key ?? "?" }] };
         if (node.operator === "!") return v.k === "pred" ? { k: "pred", f: { t: "not", arg: v.f } } : v.k === "exists" ? (this.threshold(v, "<", 1), { k: "cond" }) : { k: "cond" };
         if (node.operator === "-" && v.k === "num") return { k: "num", v: -v.v };
         this.scale(v);
@@ -525,6 +711,12 @@ class Analyzer {
     return v.k === "arr" ? v.items : v.k === "list" ? [v] : [UNKNOWN];
   }
 
+  private choiceIs(c: Extract<V, { k: "choice" }>, v: string): Alt {
+    if (c.src === "option") return { k: "option", id: v };
+    if (c.src === "memory") return { k: "paid", key: v === "true" ? (c.key ?? "?") : `${c.key ?? "?"}=${v}` };
+    return { k: "choose", id: v, ...(c.by ? { by: c.by } : {}) };
+  }
+
   private threshold(v: V, op: NonNullable<RefSite["threshold"]>["op"], n: number): void {
     if (v.k === "gauge") {
       this.conds[v.name] = Math.max(this.conds[v.name], op === ">" ? n + 1 : n);
@@ -548,6 +740,25 @@ class Analyzer {
   private logical(node: Node, env: Env, module: Module): V {
     const a = this.asPred(this.eval(node.left as Node, env, module));
     const b = this.asPred(this.eval(node.right as Node, env, module));
+    // A choice next to a card test inside a filter: the filter (the choice is the same for every card).
+    if ((a.k === "altTest" && b.k === "pred") || (b.k === "altTest" && a.k === "pred")) return a.k === "pred" ? a : b;
+    // Choices joined: "a && b" true means both; "a || b" false means neither (the other branches: nothing known).
+    if ((a.k === "altTest" || b.k === "altTest") && a.k !== "pred" && b.k !== "pred" && node.operator !== "??") {
+      if (a.k === "exists") this.threshold(a, ">=", 1);
+      if (b.k === "exists") this.threshold(b, ">=", 1);
+      const A = a.k === "altTest" ? a : { t: [], f: [] };
+      const B = b.k === "altTest" ? b : { t: [], f: [] };
+      const card = a.k === "cardTest" ? a : b.k === "cardTest" ? b : (a.k === "altTest" && a.card) || (b.k === "altTest" && b.card) || undefined;
+      const tags = node.operator === "&&" ? { t: [...A.t, ...B.t], f: [] } : { t: [], f: [...A.f, ...B.f] };
+      return { k: "altTest", ...tags, ...(card ? { card } : {}) };
+    }
+    // Conditions on one card joined; a card test next to something unknown ("moved === undefined || cost < 5") stays open.
+    if (node.operator !== "??" && a.k === "cardTest" && b.k === "cardTest") return this.joinCardTests(a, b, node.operator as string);
+    if ((a.k === "cardTest" && b.k === "pred") || (b.k === "cardTest" && a.k === "pred")) return a.k === "pred" ? a : b;
+    if (node.operator !== "??" && (a.k === "cardTest" || b.k === "cardTest")) {
+      const other = a.k === "cardTest" ? b : a;
+      if (other.k === "cond" || other.k === "unknown" || other.k === "bool" || other.k === "card") return a.k === "cardTest" ? a : b;
+    }
     if (node.operator === "??" || node.operator === "||") {
       if (a.k === "prop") return a; // (g.info(id).cost ?? 0)
       if (a.k === "pred" && b.k === "pred") return { k: "pred", f: or(a.f, b.f) };
@@ -569,6 +780,18 @@ class Analyzer {
     const op = node.operator as string;
     const a = this.eval(node.left as Node, env, module);
     const b = this.eval(node.right as Node, env, module);
+    // fx.playOption === "plus4", a choice's answer compared with a literal.
+    if ((op === "===" || op === "==" || op === "!==" || op === "!=") && (a.k === "choice" || b.k === "choice")) {
+      const c = (a.k === "choice" ? a : b) as Extract<V, { k: "choice" }>;
+      const lit = a.k === "choice" ? b : a;
+      const v = lit.k === "str" ? lit.v : lit.k === "bool" ? "true" : lit.k === "num" ? String(lit.v) : null;
+      if (v !== null) {
+        let alt = this.choiceIs(c, v);
+        if (lit.k === "bool" && lit.v === false) alt = negAlt(alt);
+        if (op === "!==" || op === "!=") alt = negAlt(alt);
+        return { k: "altTest", t: [alt], f: [negAlt(alt)] };
+      }
+    }
     const itAndSelf = (a.k === "card" && a.v === "it" && b.k === "card" && b.v === "self") || (b.k === "card" && b.v === "it" && a.k === "card" && a.v === "self");
     if ((op === "!==" || op === "!=") && itAndSelf) return { k: "pred", f: { t: "notSelf" } };
     if ((op === "===" || op === "==") && itAndSelf) return { k: "pred", f: { t: "not", arg: { t: "notSelf" } } };
@@ -581,9 +804,7 @@ class Analyzer {
       // A card's information against a value: a filter atom.
       const prop = a.k === "prop" ? a : b.k === "prop" ? b : null;
       const other = prop === a ? b : a;
-      const cmp0 = prop === a ? COMPARE[op]! : MIRROR[op]!;
-      const NEG: Record<string, NonNullable<RefSite["threshold"]>["op"]> = { ">=": "<", ">": "<=", "<=": ">", "<": ">=", "===": "===" };
-      const cmp = this.negate && prop?.of !== "it" ? NEG[cmp0]! : cmp0;
+      const cmp = prop === a ? COMPARE[op]! : MIRROR[op]!;
       if (prop && (prop.of === "it" || prop.from)) {
         const at = (f: FilterNode) => this.onCard(prop.of, prop.from, f);
         const last = prop.path[prop.path.length - 1];
@@ -628,6 +849,7 @@ class Analyzer {
     const name = node.computed ? null : ((node.property as Node).name as string);
     if (name === null) {
       const index = this.eval(node.property as Node, env, module);
+      if (object.k === "list" && object.top !== undefined) return { k: "card", v: "other", from: object };
       if (object.k !== "arr") return UNKNOWN;
       return (index.k === "num" ? object.items[index.v] : undefined) ?? object.items[0] ?? UNKNOWN;
     }
@@ -636,6 +858,9 @@ class Analyzer {
         if (name === "game") return { k: "reader" };
         if (name === "controller") return { k: "side", v: "own" };
         if (name === "self") return { k: "card", v: "self" };
+        if (name === "playOption") return { k: "choice", src: "option" };
+        if (name === "earthRitePaid") return { k: "altTest", t: [{ k: "earthRite" }], f: [{ k: "earthRite", neg: true }] };
+        if (name === "memory") return { k: "obj", props: new Map(), memory: true } as unknown as V;
         if (name === "targets")
           return this.targetLists.length > 0
             ? { k: "arr", items: this.targetLists.map((l) => ({ k: "arr", items: [{ k: "card", v: "other", ...(l ? { from: l } : {}) }] }) as V) }
@@ -657,6 +882,7 @@ class Analyzer {
       case "prop":
         return { k: "prop", of: object.of, path: [...object.path, name], ...(object.from ? { from: object.from } : {}) };
       case "obj":
+        if ((object as unknown as { memory?: true }).memory) return { k: "choice", src: "memory", key: name };
         return object.props.get(name) ?? UNKNOWN;
       case "arr":
         if (name === "length") return UNKNOWN;
@@ -677,6 +903,25 @@ class Analyzer {
       if (object.k === "fx") {
         const vs = args();
         for (const v of vs) this.scale(v);
+        // An optional cost (CR 10.4.7.2, 10.4.7.5): what paying it needs is read as its canPay.
+        if (m === "optionalCost" && vs[0]?.k === "obj") {
+          const canPay = vs[0].props.get("canPay");
+          if (canPay?.k === "fn") {
+            const saved = this.where;
+            this.where = "canPay";
+            const d0 = this.pushAlts([{ k: "may", how: "cost" }]);
+            this.truthy(this.apply(canPay, [{ k: "reader" }, { k: "side", v: "own" }, { k: "card", v: "self" }]));
+            this.alts.length = d0;
+            this.where = saved;
+          }
+        }
+        // "You may": done or not.
+        if (m === "confirm" || m === "optionalCost" || m === "evolve") {
+          const how = m === "optionalCost" ? "cost" : "confirm";
+          const by = m === "confirm" && vs[0]?.k === "side" && vs[0].v === "opp" ? ({ by: "opp" } as const) : {};
+          return { k: "altTest", t: [{ k: "may", how, ...by }], f: [{ k: "may", how, neg: true, ...by }] };
+        }
+        if (m === "choose") return { k: "arr", items: [{ k: "choice", src: "choose", ...(vs[3]?.k === "side" && vs[3].v === "opp" ? { by: "opp" as const } : {}) }] };
         // A search of the deck (CR 5.8) or a pick from the evolve deck: is there such a card there.
         if (m === "search" || m === "searchEach" || m === "fromEvolveDeck") {
           const filters = m === "searchEach" ? (vs[0]?.k === "arr" ? vs[0].items : []) : [vs[0] ?? UNKNOWN];
@@ -686,14 +931,18 @@ class Analyzer {
         // Other closures handed to effects are read for what they count.
         for (const v of vs) if (v.k === "fn") this.predicate(v);
         // The top cards of the deck: what is looked for among them is looked for in the deck (their number is no count).
-        if (m === "topCards") return { k: "list", zones: ["deck"], side: "own", filter: ANY, top: vs[0]?.k === "num" ? vs[0].v : 0 };
+        if (m === "topCards") return { k: "list", zones: ["deck"], side: (vs[1] === undefined ? "own" : vs[1].k === "side" ? vs[1].v : "?"), filter: ANY, top: vs[0]?.k === "num" ? vs[0].v : 0 };
+        // Cards milled from the top (CR 5.13): a test on them is a test on the deck's top cards.
+        if (m === "mill") return { k: "arr", items: [{ k: "card", v: "other", from: { k: "list", zones: ["deck"], side: (vs[1] === undefined ? "own" : vs[1].k === "side" ? vs[1].v : "?"), filter: ANY, top: vs[0]?.k === "num" ? vs[0].v : 0 } }] };
         if (m === "selectCards" || m === "chooseCards") {
-          const list = vs[0]?.k === "list" && vs[0].top === undefined ? vs[0] : null;
-          if (list && this.where !== "pay") this.recordList(list, "choose");
+          const list = vs[0]?.k === "list" ? vs[0] : null;
+          if (list && list.top === undefined && this.where !== "pay") this.recordList(list, "choose");
           return { k: "arr", items: [{ k: "card", v: "other", ...(list ? { from: list } : {}) }] };
         }
         // The top card of the deck moved somewhere: a test on it is a test on the deck's cards.
-        if (m === "topToEx") return { k: "arr", items: [{ k: "card", v: "other", from: { k: "list", zones: ["deck"], side: vs[1]?.k === "side" ? vs[1].v : "own", filter: ANY, top: vs[0]?.k === "num" ? vs[0].v : 0 } }] };
+        // Cards an effect moves are the same cards after it (a test on them afterwards is a test on them).
+        if (["returnToHand", "putOntoField", "putIntoEx", "destroy", "bury", "banish"].includes(m) && vs[0]?.k === "arr" && vs[0].items.some((x) => x.k === "card" && x.from)) return vs[0];
+        if (m === "topToEx") return { k: "arr", items: [{ k: "card", v: "other", from: { k: "list", zones: ["deck"], side: (vs[1] === undefined ? "own" : vs[1].k === "side" ? vs[1].v : "?"), filter: ANY, top: vs[0]?.k === "num" ? vs[0].v : 0 } }] };
         return UNKNOWN;
       }
       if (object.k === "reader") return this.readerCall(m, args());
@@ -712,7 +961,7 @@ class Analyzer {
         const vs = args();
         if (object.top !== undefined && (m === "filter" || m === "some")) {
           const f = this.predicate(vs[0] ?? UNKNOWN);
-          if (meaningful(f)) this.recordList({ k: "list", zones: ["deck"], side: object.side, filter: f, ...(object.top ? { top: object.top } : {}) }, "search");
+          if (meaningful(f)) this.recordList({ k: "list", zones: ["deck"], side: object.side, filter: f, top: object.top }, "search");
           return m === "filter" ? { ...object, filter: and(object.filter, f) } : { k: "cond" };
         }
         if (m === "filter") return { ...object, filter: and(object.filter, this.predicate(vs[0] ?? UNKNOWN)) };
@@ -762,7 +1011,14 @@ class Analyzer {
             const fs = results.map((r) => (r as Extract<V, { k: "pred" }>).f);
             return { k: "pred", f: m === "some" ? or(...fs) : and(...fs) };
           }
+          if ((m === "some" || m === "every") && results.length > 0 && results.every((r) => r.k === "cardTest")) {
+            return (results as Extract<V, { k: "cardTest" }>[]).slice(1).reduce<V>((x, y) => (x.k === "cardTest" ? this.joinCardTests(x, y, m === "some" ? "||" : "&&") : x), results[0]!);
+          }
           return { k: "cond" };
+        }
+        if (m === "includes" && object.items[0]?.k === "choice" && vs[0]?.k === "str") {
+          const alt = this.choiceIs(object.items[0], vs[0].v);
+          return { k: "altTest", t: [alt], f: [negAlt(alt)] };
         }
         if (m === "some" || m === "every" || m === "includes") return { k: "cond" };
         if (m === "filter" && object.items.length > 0) return object.items.length === 1 && object.items[0]!.k === "list" ? { ...(object.items[0] as Extract<V, { k: "list" }>), filter: and((object.items[0] as Extract<V, { k: "list" }>).filter, this.predicate(vs[0] ?? UNKNOWN)) } : UNKNOWN;
@@ -832,6 +1088,12 @@ class Analyzer {
         this.where = saved;
         return { k: "count", site };
       }
+      case "magicalItemsInEx":
+        return { k: "list", zones: ["ex"], side: vs[0]?.k === "side" ? vs[0].v : "own", filter: { t: "name", v: "Magical Item" } };
+      case "hasEvolveAbility":
+        return vs[0]?.k === "instDef" ? this.onCard(vs[0].of, undefined, { t: "other", why: "evolve ability" }) : { k: "cond" };
+      case "spellsInCemetery":
+        return { k: "count", site: this.site({ k: "list", zones: ["cemetery"], side: vs[0]?.k === "side" ? vs[0].v : "own", filter: { t: "type", v: "spell" } }, "count") };
       case "playedThisTurn":
         return { k: "gauge", name: "combo" };
       case "namesOf":
@@ -863,7 +1125,7 @@ class Analyzer {
         return { k: "cond" };
       }
       case "hasKeyword":
-        return vs[0]?.k === "card" && vs[0].v === "it" ? { k: "pred", f: { t: "other", why: "keyword" } } : { k: "cond" };
+        return vs[0]?.k === "card" ? this.onCard(vs[0].v, vs[0].from, { t: "other", why: "keyword" }) : { k: "cond" };
       case "isRacing":
         // CR 14.2.3.1 "a racing follower".
         return vs[0]?.k === "card" ? this.onCard(vs[0].v, vs[0].from, { t: "racing" }) : { k: "cond" };
@@ -905,8 +1167,9 @@ function timingOf(a: AbilityDef, constructor: string | null): Timing {
     case "lastWords":
       return "lastWords";
     case "onEvolve":
-    case "onSuperEvolve":
       return "onEvolve";
+    case "onSuperEvolve":
+      return "onSuperEvolve";
     case "strike":
       return "strike";
     default:
@@ -1014,6 +1277,23 @@ export function analyzeScript(file: string, script: CardScript): CardAnalysis {
         else az.eval(body, env2, found.module);
         continue;
       }
+      // A mode (CR 5.18): what it counts is under it; a mode that needs Earth Rite (13.3.3.2) too.
+      if (key === "modes" && value.type === "ArrayExpression") {
+        (value.elements as Node[]).forEach((e, i) => {
+          if (e.type === "SpreadElement") return readNode(e, env, mod);
+          const saved = az.refs.length;
+          const ev = az.eval(e, env, mod);
+          az.refs.length = saved;
+          const rite = ev.k === "obj" ? ev.props.get("earthRite") : undefined;
+          const extra: Alt[] = [];
+          if (rite?.k === "bool" && rite.v) extra.push({ k: "earthRite" });
+          if (ev.k === "obj" && ev.props.has("cost")) extra.push({ k: "may", how: "cost", ability: true });
+          const d0 = az.pushAlts([{ k: "mode", index: i }, ...extra]);
+          readNode(e, env, mod);
+          az.alts.length = d0;
+        });
+        continue;
+      }
       if (CLOSURE_KEYS.has(key)) readValue(key, value, env, mod);
       else if (value.type === "ObjectExpression" || value.type === "Identifier") readNode(value, env, mod);
       else if (value.type === "ArrayExpression") for (const e of value.elements as Node[]) readNode(e, env, mod);
@@ -1096,12 +1376,27 @@ export function analyzeScript(file: string, script: CardScript): CardAnalysis {
           const constructor = callee?.type === "Identifier" ? (callee.name as string) : null;
           az.timing = exact ? timingOf(runtime[i]!, constructor) : (constructor && CONSTRUCTOR_TIMING[constructor]) || "otherTrigger";
           az.ability = exact ? i : -2;
+          const ra = exact ? runtime[i]! : null;
+          const d0 = az.pushAlts(ra?.kind === "automatic" && ra.cost ? [{ k: "may", how: "cost", ability: true }] : []);
           readNode(e, new Env(), module);
+          az.alts.length = d0;
         });
         continue;
       }
       az.timing = FROM_HAND.has(key) ? "fromHand" : "continuous";
       az.ability = -1;
+      // A play option (CR 10.4.7.3): its cost is under it (a required single option is no choice).
+      if (key === "playOptions" && value.type === "ArrayExpression") {
+        const options = script.playOptions ?? [];
+        const choice = !(script.playOptionsRequired && options.length === 1);
+        (value.elements as Node[]).forEach((e, i) => {
+          const id = options[i]?.id;
+          const d0 = az.pushAlts(choice && id ? [{ k: "option", id }] : []);
+          readNode(e, new Env(), module);
+          az.alts.length = d0;
+        });
+        continue;
+      }
       if (CLOSURE_KEYS.has(key)) readValue(key, value, new Env(), module);
       else readNode(value, new Env(), module);
     }
@@ -1231,6 +1526,9 @@ function dedupe(refs: RefSite[]): RefSite[] {
     else {
       prev.scaled ||= r.scaled;
       prev.threshold ??= r.threshold;
+      const common = (prev.alt ?? []).filter((a) => (r.alt ?? []).includes(a));
+      if (common.length > 0) prev.alt = common;
+      else delete prev.alt;
     }
   }
   return [...seen.values()];
@@ -1243,11 +1541,49 @@ function returnsFalse(n: Node): boolean {
   return false;
 }
 
-/** `return;` or `{ return; }`: an early exit. */
-function isBareReturn(n: Node): boolean {
-  if (n.type === "ReturnStatement") return !n.argument;
-  if (n.type === "BlockStatement") return (n.body as Node[]).length === 1 && isBareReturn((n.body as Node[])[0]!);
+/** The opposite of a filter (De Morgan; cost / attack / defense bounds flipped). */
+function negateFilter(f: FilterNode): FilterNode {
+  switch (f.t) {
+    case "not":
+      return f.arg;
+    case "and":
+      return or(...f.args.map(negateFilter));
+    case "or":
+      return and(...f.args.map(negateFilter));
+    case "costMin":
+      return { t: "costMax", v: f.v - 1 };
+    case "costMax":
+      return { t: "costMin", v: f.v + 1 };
+    case "atkMin":
+      return { t: "atkMax", v: f.v - 1 };
+    case "atkMax":
+      return { t: "atkMin", v: f.v + 1 };
+    case "defMin":
+      return { t: "defMax", v: f.v - 1 };
+    case "defMax":
+      return { t: "defMin", v: f.v + 1 };
+    default:
+      return { t: "not", arg: f };
+  }
+}
+
+/** A statement whose last statement is a return (an exit, with or without a value). */
+function endsInReturn(n: Node): boolean {
+  if (n.type === "ReturnStatement") return true;
+  if (n.type === "BlockStatement") {
+    const b = n.body as Node[];
+    return b.length > 0 && endsInReturn(b[b.length - 1]!);
+  }
   return false;
+}
+
+/** `return;`, `return false;`, `return null;`, `return [];`, `continue;` (or in a block alone): giving up, nothing done. */
+function isGiveUp(n: Node): boolean {
+  if (n.type === "BlockStatement") return (n.body as Node[]).length === 1 && isGiveUp((n.body as Node[])[0]!);
+  if (n.type === "ContinueStatement") return true;
+  if (n.type !== "ReturnStatement") return false;
+  const arg = n.argument as Node | null;
+  return !arg || (arg.type === "Literal" && (arg.value === false || arg.value === null)) || (arg.type === "ArrayExpression" && (arg.elements as Node[]).length === 0);
 }
 
 /** Whether a filter says anything about a card (a type, trait, class, name, cost...): not only parts it couldn't read. */
