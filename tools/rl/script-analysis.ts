@@ -53,16 +53,28 @@ export interface RefSite {
   threshold: { op: ">=" | ">" | "<=" | "<" | "==="; n: number } | null;
   /** The number is used as a quantity (a target's max, an effect's amount, a loop). */
   scaled: boolean;
+  /** Only the top N cards of the deck are looked at (CR 5.11). */
+  top?: number;
+  /** The cards must have different names (a target's "with different names"). */
+  distinct?: true;
 }
 
 export interface CardAnalysis {
   fx: Record<FxFamily, number>;
+  /** The amounts its effects give, where the code writes them as numbers (damage, cards drawn, attack and defense...). */
+  amounts: Record<AmountKind, number>;
   /** fx methods the families don't know (the table test fails on any). */
   unknownFx: string[];
   refs: RefSite[];
-  /** Conditions on one game number the reader computes (CR 13.x keyword conditions). */
+  /**
+   * Conditions on one game number the reader computes (CR 13.2–13.5 keyword conditions): the largest number they ask for
+   * (Combo 3 → 3; Overflow and Sanguine, which ask for none → 1); 0 when not used.
+   */
   conds: Record<"overflow" | "necrocharge" | "spellchain" | "combo" | "sanguine", number>;
 }
+
+export const AMOUNT_KINDS = ["dmg", "aoe", "stats", "debuff", "heal", "draw", "mill", "ex", "summon", "pp"] as const;
+export type AmountKind = (typeof AMOUNT_KINDS)[number];
 
 // ---- Symbolic values ----
 
@@ -72,7 +84,7 @@ type V =
   | { k: "fx" }
   | { k: "side"; v: Side }
   | { k: "card"; v: CardRef; from?: Extract<V, { k: "list" }> }
-  | { k: "list"; zones: Zone[]; side: Side; filter: FilterNode; top?: true }
+  | { k: "list"; zones: Zone[]; side: Side; filter: FilterNode; top?: number; each?: true }
   | { k: "count"; site: RefSite }
   | { k: "exists"; site: RefSite }
   | { k: "cond" }
@@ -90,6 +102,7 @@ type V =
   | { k: "obj"; props: Map<string, V> }
   | { k: "arr"; items: V[] }
   | { k: "external"; name: string }
+  | { k: "gauge"; name: "combo" }
   | { k: "unknown" };
 
 const UNKNOWN: V = { k: "unknown" };
@@ -134,11 +147,14 @@ class Analyzer {
   where = "";
   /** The candidates of the targets of the object being read (fx.targets[i] are chosen among targetLists[i]). */
   targetLists: (Extract<V, { k: "list" }> | null)[] = [];
+  /** While reading a passive about some card ("it"): the tests on it that decide what it gets. */
+  capture: FilterNode[] | null = null;
   private depth = 0;
   private readonly declCache = new Map<string, V>();
 
   private site(list: Extract<V, { k: "list" }>, agg: "count" | "exists"): RefSite {
     const s: RefSite = { timing: this.timing, ability: this.ability, where: this.where, zones: list.zones, side: list.side, filter: list.filter, agg, threshold: null, scaled: false };
+    if (list.top !== undefined && list.top > 0) s.top = list.top;
     this.refs.push(s);
     return s;
   }
@@ -200,7 +216,9 @@ class Analyzer {
         const key = ((p.key as Node).name ?? (p.key as Node).value) as string;
         this.bind(p.value as Node, v.props.get(key) ?? UNKNOWN, env, module, []);
       }
-    } else walk(param, (n) => n.type === "Identifier" && env.set(n.name as string, UNKNOWN));
+    } else walk(param, (n) => {
+        if (n.type === "Identifier") env.set(n.name as string, UNKNOWN);
+      });
   }
 
   /** A declaration statement, bound into `env`. */
@@ -232,7 +250,9 @@ class Analyzer {
       case "ReturnStatement":
         return stmt.argument ? this.eval(stmt.argument as Node, env, module) : null;
       case "IfStatement": {
-        this.eval(stmt.test as Node, env, module);
+        const test = this.asPred(this.eval(stmt.test as Node, env, module));
+        // "if (!isFairy(g, card)) return []": the guard's own filter is what the card must be.
+        if (this.capture && test.k === "pred") this.capture.push(test.f.t === "not" ? test.f.arg : test.f);
         const a = this.statement(stmt.consequent as Node, new Env(env), module);
         const b = stmt.alternate ? this.statement(stmt.alternate as Node, new Env(env), module) : null;
         return a ?? b;
@@ -248,9 +268,19 @@ class Analyzer {
       case "ForOfStatement":
       case "ForInStatement": {
         const inner = new Env(env);
-        this.eval(stmt.right as Node, inner, module);
+        const over = this.eval(stmt.right as Node, inner, module);
+        // An effect for each card of a zone that matches (CR: "for each"): the number of them is a quantity.
+        if (over.k === "list" && over.top === undefined && meaningful(over.filter)) {
+          const site = this.site(over, "count");
+          site.scaled = true;
+          site.where = "each";
+        }
+        // The loop variable: each card of the list (a test on it inside the loop is a filter of that list).
+        const card: V = over.k === "list" && over.top === undefined ? { k: "card", v: "other", from: { ...over, each: true } } : { k: "card", v: "other" };
         const left = stmt.left as Node;
-        walk(left, (n) => n.type === "Identifier" && inner.set(n.name as string, { k: "card", v: "other" }));
+        walk(left, (n) => {
+          if (n.type === "Identifier") inner.set(n.name as string, card);
+        });
         return this.statement(stmt.body as Node, inner, module);
       }
       case "WhileStatement":
@@ -280,9 +310,21 @@ class Analyzer {
     this.where = saved;
   }
 
-  /** A condition on a chosen card ("if it's a Wyrmkin follower"): is there such a card among its candidates. */
+  /**
+   * A condition on a chosen card ("if it's a Wyrmkin follower"): is there such a card among its candidates. On each card of a
+   * zone (a loop: "give each Pixie token on your field +1/+1"): how many such cards, a quantity.
+   */
   targetCondition(list: Extract<V, { k: "list" }>, f: FilterNode): void {
-    if (meaningful(f)) this.recordList({ k: "list", zones: list.zones, side: list.side, filter: and(list.filter, f) }, "targetCondition");
+    if (!meaningful(f)) return;
+    if (list.each) {
+      const saved = this.where;
+      this.where = "each";
+      const site = this.site({ k: "list", zones: list.zones, side: list.side, filter: and(list.filter, f) }, "count");
+      site.scaled = true;
+      this.where = saved;
+      return;
+    }
+    this.recordList({ k: "list", zones: list.zones, side: list.side, filter: and(list.filter, f) }, "targetCondition");
   }
 
   /** A card's information read as a filter atom: a predicate on the card being filtered, or a condition on a chosen card. */
@@ -303,10 +345,20 @@ class Analyzer {
     const list = candidates?.k === "fn" ? this.apply(candidates, [{ k: "reader" }, { k: "side", v: "own" }, { k: "card", v: "self" }]) : UNKNOWN;
     this.targetLists.push(list.k === "list" ? list : null);
     if (list.k !== "list") return;
-    const trivial = (f: FilterNode): boolean =>
-      f.t === "any" || f.t === "notSelf" || (f.t === "type" && f.v === "follower") || (f.t === "and" && f.args.every(trivial));
-    if (list.zones.length === 1 && list.zones[0] === "field" && trivial(list.filter)) return;
     this.recordList(list, "target");
+    if (spec.k === "obj" && ((spec.props.get("distinctNames") as V | undefined)?.k === "bool" || args.some((a) => a.k === "obj" && a.props.get("distinctNames")?.k === "bool"))) {
+      const last = this.refs[this.refs.length - 1];
+      if (last) last.distinct = true;
+    }
+  }
+
+  /** Which of the controller's cards a passive or a trigger is about ("each other Fairy follower gets Rush"): how many there are. */
+  recordAffected(f: FilterNode, zones: Zone[], where: string): void {
+    if (!meaningful(f)) return;
+    const saved = this.where;
+    this.where = where;
+    this.site({ k: "list", zones, side: "own", filter: f }, "count");
+    this.where = saved;
   }
 
   /** A count used as a quantity. */
@@ -403,13 +455,14 @@ class Analyzer {
       case "UpdateExpression":
         return UNKNOWN;
       case "ConditionalExpression": {
-        this.eval(node.test as Node, env, module);
+        const test = this.asPred(this.eval(node.test as Node, env, module));
+        if (this.capture && test.k === "pred") this.capture.push(test.f);
         const a = this.eval(node.consequent as Node, env, module);
         const b = this.eval(node.alternate as Node, env, module);
         return a.k !== "unknown" ? a : b;
       }
       case "UnaryExpression": {
-        const v = this.eval(node.argument as Node, env, module);
+        const v = this.asPred(this.eval(node.argument as Node, env, module));
         if (node.operator === "!") return v.k === "pred" ? { k: "pred", f: { t: "not", arg: v.f } } : v.k === "exists" ? (this.threshold(v, "<", 1), { k: "cond" }) : { k: "cond" };
         if (node.operator === "-" && v.k === "num") return { k: "num", v: -v.v };
         this.scale(v);
@@ -436,16 +489,32 @@ class Analyzer {
   }
 
   private threshold(v: V, op: NonNullable<RefSite["threshold"]>["op"], n: number): void {
+    if (v.k === "gauge") {
+      this.conds[v.name] = Math.max(this.conds[v.name], op === ">" ? n + 1 : n);
+      return;
+    }
     if (v.k !== "count" && v.k !== "exists") return;
+    if (v.site.where === "spellchain" || v.site.where === "necrocharge") this.conds[v.site.where] = Math.max(this.conds[v.site.where], op === ">" ? n + 1 : n);
     if (!v.site.threshold) v.site.threshold = { op, n };
+    else if (v.site.threshold.op !== op || v.site.threshold.n !== n) this.refs.push({ ...v.site, threshold: { op, n } });
+  }
+
+  /** A card's boolean information used as a test (def.token, info.evolved): a filter atom. */
+  private asPred(v: V): V {
+    if (v.k !== "prop") return v;
+    const last = v.path[v.path.length - 1];
+    const atom: FilterNode | null = last === "token" ? { t: "token" } : last === "evolved" ? { t: "evolved" } : null;
+    if (!atom) return v;
+    return v.of === "it" ? { k: "pred", f: atom } : v.from ? this.onCard(v.of, v.from, atom) : v;
   }
 
   private logical(node: Node, env: Env, module: Module): V {
-    const a = this.eval(node.left as Node, env, module);
-    const b = this.eval(node.right as Node, env, module);
+    const a = this.asPred(this.eval(node.left as Node, env, module));
+    const b = this.asPred(this.eval(node.right as Node, env, module));
     if (node.operator === "??" || node.operator === "||") {
       if (a.k === "prop") return a; // (g.info(id).cost ?? 0)
       if (a.k === "pred" && b.k === "pred") return { k: "pred", f: or(a.f, b.f) };
+      if (node.operator === "||" && (a.k === "pred" || b.k === "pred") && (a.k === "cond" || a.k === "unknown" || b.k === "cond" || b.k === "unknown")) return a.k === "pred" ? a : b;
       if (a.k === "exists") this.threshold(a, ">=", 1);
       if (b.k === "exists") this.threshold(b, ">=", 1);
       return a.k !== "unknown" ? (a.k === "pred" || a.k === "cond" ? a : a) : b;
@@ -463,12 +532,15 @@ class Analyzer {
     const op = node.operator as string;
     const a = this.eval(node.left as Node, env, module);
     const b = this.eval(node.right as Node, env, module);
+    const itAndSelf = (a.k === "card" && a.v === "it" && b.k === "card" && b.v === "self") || (b.k === "card" && b.v === "it" && a.k === "card" && a.v === "self");
+    if ((op === "!==" || op === "!=") && itAndSelf) return { k: "pred", f: { t: "notSelf" } };
+    if ((op === "===" || op === "==") && itAndSelf) return { k: "pred", f: { t: "not", arg: { t: "notSelf" } } };
     const COMPARE: Record<string, NonNullable<RefSite["threshold"]>["op"]> = { ">=": ">=", ">": ">", "<=": "<=", "<": "<", "===": "===", "==": "===" };
     const MIRROR: Record<string, NonNullable<RefSite["threshold"]>["op"]> = { ">=": "<=", ">": "<", "<=": ">=", "<": ">", "===": "===", "==": "===" };
     if (COMPARE[op]) {
       // A count against a number: a threshold.
-      if ((a.k === "count" || a.k === "exists") && b.k === "num") return this.threshold(a, COMPARE[op]!, b.v), { k: "cond" };
-      if ((b.k === "count" || b.k === "exists") && a.k === "num") return this.threshold(b, MIRROR[op]!, a.v), { k: "cond" };
+      if ((a.k === "count" || a.k === "exists" || a.k === "gauge") && b.k === "num") return this.threshold(a, COMPARE[op]!, b.v), { k: "cond" };
+      if ((b.k === "count" || b.k === "exists" || b.k === "gauge") && a.k === "num") return this.threshold(b, MIRROR[op]!, a.v), { k: "cond" };
       // A card's information against a value: a filter atom.
       const prop = a.k === "prop" ? a : b.k === "prop" ? b : null;
       const other = prop === a ? b : a;
@@ -501,9 +573,6 @@ class Analyzer {
       if (op === "!==" || op === "!=") return UNKNOWN;
       return { k: "cond" };
     }
-    if ((op === "!==" || op === "!=") && ((a.k === "card" && a.v === "it" && b.k === "card" && b.v === "self") || (b.k === "card" && b.v === "it" && a.k === "card" && a.v === "self"))) {
-      return { k: "pred", f: { t: "notSelf" } };
-    }
     if ((op === "!==" || op === "!=") && (a.k === "count" || a.k === "exists") && b.k === "num") return this.threshold(a, b.v === 0 ? ">=" : ">=", b.v === 0 ? 1 : b.v), { k: "cond" };
     // Arithmetic with a count: it is used as a quantity.
     if (["+", "-", "*", "/", "%"].includes(op)) {
@@ -533,7 +602,7 @@ class Analyzer {
             : { k: "arr", items: [{ k: "arr", items: [{ k: "card", v: "other" }] }] };
         return UNKNOWN;
       case "list":
-        if (name === "length") return object.top ? UNKNOWN : { k: "count", site: this.site(object, "count") };
+        if (name === "length") return object.top !== undefined ? UNKNOWN : { k: "count", site: this.site(object, "count") };
         return { k: "list", zones: object.zones, side: object.side, filter: object.filter };
       case "info":
         return { k: "prop", of: object.of, path: [name], ...(object.from ? { from: object.from } : {}) };
@@ -576,7 +645,7 @@ class Analyzer {
         // Other closures handed to effects are read for what they count.
         for (const v of vs) if (v.k === "fn") this.predicate(v);
         // The top cards of the deck: what is looked for among them is looked for in the deck (their number is no count).
-        if (m === "topCards") return { k: "list", zones: ["deck"], side: "own", filter: ANY, top: true };
+        if (m === "topCards") return { k: "list", zones: ["deck"], side: "own", filter: ANY, top: vs[0]?.k === "num" ? vs[0].v : 0 };
         if (m === "selectCards" || m === "chooseCards") return { k: "arr", items: [{ k: "card", v: "other" }] };
         return UNKNOWN;
       }
@@ -594,9 +663,9 @@ class Analyzer {
       }
       if (object.k === "list") {
         const vs = args();
-        if (object.top && (m === "filter" || m === "some")) {
+        if (object.top !== undefined && (m === "filter" || m === "some")) {
           const f = this.predicate(vs[0] ?? UNKNOWN);
-          if (meaningful(f)) this.recordList({ k: "list", zones: ["deck"], side: object.side, filter: f }, "search");
+          if (meaningful(f)) this.recordList({ k: "list", zones: ["deck"], side: object.side, filter: f, ...(object.top ? { top: object.top } : {}) }, "search");
           return m === "filter" ? { ...object, filter: and(object.filter, f) } : { k: "cond" };
         }
         if (m === "filter") return { ...object, filter: and(object.filter, this.predicate(vs[0] ?? UNKNOWN)) };
@@ -692,6 +761,17 @@ class Analyzer {
       case "typeAndTraits":
       case "statsOf":
         return vs[0]?.k === "card" ? { k: "info", of: vs[0].v, ...(vs[0].from ? { from: vs[0].from } : {}) } : { k: "info", of: "other" };
+      case "spellchainCount": {
+        const saved = this.where;
+        this.where = "spellchain";
+        const site = this.site({ k: "list", zones: ["cemetery"], side: vs[0]?.k === "side" ? vs[0].v : "own", filter: { t: "type", v: "spell" } }, "count");
+        this.where = saved;
+        return { k: "count", site };
+      }
+      case "playedThisTurn":
+        return { k: "gauge", name: "combo" };
+      case "namesOf":
+        return vs[0]?.k === "card" ? { k: "prop", of: vs[0].v, path: ["names"], ...(vs[0].from ? { from: vs[0].from } : {}) } : UNKNOWN;
       case "leader":
         return { k: "card", v: "other" };
       case "card":
@@ -699,12 +779,25 @@ class Analyzer {
       case "controller":
         return { k: "side", v: vs[0]?.k === "card" && vs[0].v === "self" ? "own" : "?" };
       case "overflow":
+      case "sanguine":
+        this.conds[m] = Math.max(this.conds[m], 1);
+        return { k: "cond" };
       case "necrocharge":
       case "spellchain":
-      case "combo":
-      case "sanguine":
-        this.conds[m] += 1;
+      case "combo": {
+        // CR 13.5.1.2 Necrocharge (X): X cards in the cemetery; 13.3.1.2 Spellchain (X): X spells in the cemetery (the
+        // reader also counts what passives add); 13.2.1.2 Combo (X): X cards played this turn.
+        const x = vs[1]?.k === "num" ? vs[1].v : 1;
+        this.conds[m] = Math.max(this.conds[m], x);
+        if (m !== "combo") {
+          const saved = this.where;
+          this.where = m;
+          const s = this.site({ k: "list", zones: ["cemetery"], side: vs[0]?.k === "side" ? vs[0].v : "own", filter: m === "spellchain" ? { t: "type", v: "spell" } : ANY }, "count");
+          s.threshold = { op: ">=", n: x };
+          this.where = saved;
+        }
         return { k: "cond" };
+      }
       case "hasKeyword":
         return vs[0]?.k === "card" && vs[0].v === "it" ? { k: "pred", f: { t: "other", why: "keyword" } } : { k: "cond" };
       default:
@@ -750,6 +843,22 @@ function timingOf(a: AbilityDef, constructor: string | null): Timing {
       return (constructor && CONSTRUCTOR_TIMING[constructor]) || "otherTrigger";
   }
 }
+
+/** Passives about some card of their controller, and where those cards are: the cards they affect. */
+const AFFECTS: Record<string, Zone[] | undefined> = { keywordsFor: ["field"], grantsFor: ["field"], playCostOf: ["hand"] };
+/** Triggers about a card ("when a Fairy follower enters your field"), by constructor: where that card is. */
+const TRIGGER_ZONES: Record<string, Zone[]> = {
+  whenFollowerEntersYourField: ["field"],
+  whenCardEntersYourField: ["field"],
+  whenYourFollowerAttacks: ["field"],
+  whenYourFollowerEvolves: ["field"],
+  whenYourFollowerLeaves: ["field"],
+  whenYourFollowerToCemetery: ["field"],
+  whenYourCardLeaves: ["field"],
+  whenYouPlay: ["hand"],
+  whenYouPlayOrFuse: ["hand"],
+  whenCardPutIntoYourEx: ["ex"],
+};
 
 const CLOSURE_KEYS = new Set(["condition", "triggerIf", "max", "when", "modeCount", "available", "candidates", "filter", "playableIf", "playCost", "selfKeywords", "cannotAttack", "cannotAttackLeader", "keywordsFor", "playCostOf", "typeWhile", "ignoresWard", "cannotBeDestroyedByAbilities", "evolveCostChange", "canPay"]);
 const FROM_HAND = new Set(["playableIf", "playCost", "playOptions", "playOptionsRequired", "playableFromCemetery", "nextPlay"]);
@@ -800,9 +909,17 @@ export function analyzeScript(file: string, script: CardScript): CardAnalysis {
                 : key === "playCostOf"
                   ? [reader, self, other, own]
                   : ["keywordsFor", "grantsFor", "preventsAttack"].includes(key)
-                    ? [reader, self, other]
+                    ? [reader, self, AFFECTS[key] ? { k: "card", v: "it" } : other]
                     : [reader, own, self];
+      if (key === "playCostOf") args[2] = { k: "card", v: "it" };
+      const affects = AFFECTS[key];
+      if (affects) az.capture = [];
       const r = az.apply(fn, args);
+      if (affects) {
+        const captured = az.capture ?? [];
+        az.capture = null;
+        if (captured.length > 0) az.recordAffected(captured.length === 1 ? captured[0]! : { t: "and", args: captured }, affects, "affects");
+      }
       if (key === "max" || key === "modeCount" || key === "playCost" || key === "playCostOf" || key === "evolveCostChange") az.scaleValue(r);
       if (r.k === "exists") az.thresholdOf(r);
     }
@@ -813,7 +930,7 @@ export function analyzeScript(file: string, script: CardScript): CardAnalysis {
       if (p.type !== "Property") continue;
       const key = ((p.key as Node).name ?? (p.key as Node).value) as string;
       const value = p.value as Node;
-      if (key === "resolve" || key === "pay" || (p.method && value.type === "FunctionExpression")) {
+      if (key === "resolve" || key === "pay" || (p.method && value.type === "FunctionExpression" && !CLOSURE_KEYS.has(key))) {
         az.where = key;
         const found = functionNode(value, mod);
         if (!found) continue;
@@ -846,8 +963,27 @@ export function analyzeScript(file: string, script: CardScript): CardAnalysis {
       }
       // A target helper (enemyFollower({...max...})), a constructor (fanfare({...})), a shared ability factory: read its object
       // arguments, and a helper defined in the scripts with its arguments bound.
-      for (const a of n.arguments as Node[]) if (a.type === "ObjectExpression" || a.type === "CallExpression" || a.type === "ArrayExpression") readNode(a, env, mod);
-      else if (a.type === "ArrowFunctionExpression" || a.type === "FunctionExpression") readValue("filter", a, env, mod);
+      const calleeName = (n.callee as Node).type === "Identifier" ? (((n.callee as Node).name as string) ?? "") : "";
+      const triggerZones = TRIGGER_ZONES[calleeName];
+      if (triggerZones) {
+        for (const a of n.arguments as Node[]) {
+          if (a.type !== "ObjectExpression") continue;
+          const filterProp = (a.properties as Node[]).find((q) => q.type === "Property" && ((q.key as Node).name ?? (q.key as Node).value) === "filter");
+          if (filterProp) az.recordAffected(az.predicate(az.eval(filterProp.value as Node, env, mod)), triggerZones, "trigger");
+        }
+      }
+      for (const a of n.arguments as Node[]) {
+        if (a.type === "ObjectExpression" || a.type === "CallExpression" || a.type === "ArrayExpression") readNode(a, env, mod);
+        else if (a.type === "ArrowFunctionExpression" || a.type === "FunctionExpression" || (a.type === "Identifier" && TRIGGER_ZONES[calleeName])) {
+          const zones = TRIGGER_ZONES[calleeName];
+          if (zones) {
+            // "When a [filter] follower enters your field": the cards that trigger it.
+            const found = functionNode(a, mod);
+            const f = found ? az.predicate({ k: "fn", params: found.node.params as Node[], body: found.node.body as Node, module: found.module, env }) : az.predicate(az.eval(a, env, mod));
+            az.recordAffected(f, zones, "trigger");
+          } else if (a.type !== "Identifier") readValue("filter", a, env, mod);
+        }
+      }
       const callee = n.callee as Node;
       if (callee.type === "Identifier") {
         const r = resolveName(mod, callee.name as string);
@@ -903,6 +1039,7 @@ export function analyzeScript(file: string, script: CardScript): CardAnalysis {
   }
   // fx call sites, in the card's code and every script helper it reaches.
   const fx = Object.fromEntries(FX_FAMILY_NAMES.map((f) => [f, 0])) as Record<FxFamily, number>;
+  const amounts = Object.fromEntries(AMOUNT_KINDS.map((k) => [k, 0])) as Record<AmountKind, number>;
   const unknownFx = new Set<string>();
   const seen = new Set<string>();
   const visit = (node: Node, mod: Module) => {
@@ -934,6 +1071,7 @@ export function analyzeScript(file: string, script: CardScript): CardAnalysis {
           const family = FAMILY_OF.get(m);
           if (family === undefined) unknownFx.add(m);
           else if (family !== "none") fx[family] += 1;
+          addAmounts(amounts, m, n.arguments as Node[]);
         }
       }
       if (n.type === "Identifier") {
@@ -955,14 +1093,70 @@ export function analyzeScript(file: string, script: CardScript): CardAnalysis {
   // Local helpers of the card's own file used by its card object.
   for (const [name, node] of module.decls) if (!seen.has(`${module.file}#${name}`)) visit(node, module);
   const refs = dedupe(az.refs).filter((r) => !(r.filter.t === "any" && r.agg === "count" && !r.threshold && !r.scaled));
-  return { fx, unknownFx: [...unknownFx].sort(), refs, conds: az.conds };
+  return { fx, amounts, unknownFx: [...unknownFx].sort(), refs, conds: az.conds };
+}
+
+/** A number written in the code: a literal, a negated one, or the larger branch of `a ? 5 : 2`. */
+function literalNumber(node: Node | undefined): number | null {
+  if (!node) return null;
+  if (node.type === "Literal" && typeof node.value === "number") return node.value;
+  if (node.type === "UnaryExpression" && node.operator === "-") {
+    const v = literalNumber(node.argument as Node);
+    return v === null ? null : -v;
+  }
+  if (node.type === "ConditionalExpression") {
+    const a = literalNumber(node.consequent as Node);
+    const b = literalNumber(node.alternate as Node);
+    return a === null ? b : b === null ? a : Math.max(a, b);
+  }
+  if (node.type === "TSAsExpression" || node.type === "ParenthesizedExpression") return literalNumber(node.expression as Node);
+  return null;
+}
+
+/** The amounts of an effect call, where its code writes them (fx.dealDamage(target, 3), fx.giveStats(id, 1, 1), fx.summon([a, b])). */
+function addAmounts(amounts: Record<AmountKind, number>, method: string, args: Node[]): void {
+  const at = (i: number) => literalNumber(args[i]);
+  const add = (kind: AmountKind, v: number | null) => {
+    if (v !== null && v > 0) amounts[kind] += v;
+  };
+  switch (method) {
+    case "dealDamage":
+    case "dealDividedDamage":
+      return add("dmg", at(1));
+    case "dealDamageEach":
+      return add("aoe", at(1));
+    case "giveStats":
+      for (const v of [at(1), at(2)]) {
+        if (v === null) continue;
+        if (v > 0) amounts.stats += v;
+        else amounts.debuff -= v;
+      }
+      return;
+    case "giveLeaderDefense":
+      return add("heal", at(1));
+    case "draw":
+      return add("draw", at(0));
+    case "mill":
+      return add("mill", at(0));
+    case "topToEx":
+      return add("ex", at(0));
+    case "recoverPlayPoints":
+    case "increaseMaxPlayPoints":
+      return add("pp", at(0));
+    case "summon":
+    case "tokensToEx": {
+      const list = args[0];
+      if (list?.type === "ArrayExpression") add(method === "summon" ? "summon" : "ex", (list.elements as Node[]).length);
+      return;
+    }
+  }
 }
 
 /** Sites read twice (a constant's value, a closure evaluated again) count once. */
 function dedupe(refs: RefSite[]): RefSite[] {
   const seen = new Map<string, RefSite>();
   for (const r of refs) {
-    const key = JSON.stringify([r.timing, r.ability, r.where, r.zones, r.side, r.filter, r.agg]);
+    const key = JSON.stringify([r.timing, r.ability, r.where, r.zones, r.side, r.filter, r.agg, r.threshold, r.top]);
     const prev = seen.get(key);
     if (!prev) seen.set(key, r);
     else {

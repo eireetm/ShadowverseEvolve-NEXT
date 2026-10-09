@@ -124,7 +124,12 @@ export const CARD_FEATURE_COLUMNS_V1: readonly string[] = [
 
 /** What a card's effects do, by family (tools/rl/fx-families.ts: every effect method belongs to one). */
 export const FX_FAMILY_COLUMNS = ["dmg", "aoe", "destroy", "banish", "toHand", "stats", "keyword", "heal", "draw", "search", "summon", "ex", "discard", "mill", "bury", "pp", "cost", "counters", "evolve", "engage", "refresh", "protect", "restrict", "deck", "other"] as const;
-/** The game numbers a card's conditions read (CR 13.2–13.5: Overflow, Necrocharge, Spellchain, Combo, Sanguine). */
+/** The amounts its effects give where the code writes them as numbers (damage, attack and defense given or taken, cards...). */
+export const AMOUNT_COLUMNS = ["dmg", "aoe", "stats", "debuff", "heal", "draw", "mill", "ex", "summon", "pp"] as const;
+/**
+ * The game numbers a card's conditions read (CR 13.2–13.5: Overflow, Necrocharge, Spellchain, Combo, Sanguine): the largest
+ * number asked for (Combo 3 → 3; Overflow and Sanguine → 1).
+ */
 export const COND_COLUMNS = ["overflow", "necrocharge", "spellchain", "combo", "sanguine"] as const;
 const REF_ZONES = ["field", "cemetery", "hand", "deck", "ex", "evolveDeck", "banished"] as const;
 /** What a card counts, in summary: how many references, of which kinds of cards, where, how used, in which abilities. */
@@ -143,12 +148,17 @@ const REF_COLUMNS = [
   "ref.t.continuous",
   "ref.t.activated",
   "ref.t.other",
+  "ref.w.target",
+  "ref.w.affects",
+  "ref.w.each",
+  "ref.top",
 ] as const;
 
-/** The columns, in order: version 1's, then the ones version 2 adds (50). */
+/** The columns, in order: version 1's, then the ones version 2 adds (64). */
 export const CARD_FEATURE_COLUMNS: readonly string[] = [
   ...CARD_FEATURE_COLUMNS_V1,
   ...FX_FAMILY_COLUMNS.map((f) => `fx.${f}`),
+  ...AMOUNT_COLUMNS.map((a) => `amt.${a}`),
   ...COND_COLUMNS.map((c) => `cond.${c}`),
   ...REF_COLUMNS,
 ];
@@ -188,11 +198,16 @@ export interface CardRef {
   agg: "count" | "exists";
   threshold: { op: ">=" | ">" | "<=" | "<" | "==="; n: number } | null;
   scaled: boolean;
+  /** Only the top N cards of the deck are looked at (CR 5.11). */
+  top?: number;
+  /** The cards must have different names. */
+  distinct?: true;
 }
 
 /** What the tools read from a card's script code (tools/rl/script-analysis.ts). */
 export interface ScriptAnalysis {
   fx: Readonly<Record<string, number>>;
+  amounts: Readonly<Record<string, number>>;
   conds: Readonly<Record<string, number>>;
   refs: readonly CardRef[];
 }
@@ -410,6 +425,7 @@ export function cardFeatureRow(def: CardDefinition, script: CardScript | undefin
   add("equip.abilities", script.equipment?.abilities?.length ?? 0);
   if (analysis) {
     for (const f of FX_FAMILY_COLUMNS) add(`fx.${f}`, analysis.fx[f] ?? 0);
+    for (const a of AMOUNT_COLUMNS) add(`amt.${a}`, analysis.amounts[a] ?? 0);
     for (const c of COND_COLUMNS) add(`cond.${c}`, analysis.conds[c] ?? 0);
     const atoms = (f: RefFilter, t: string): number => (f.t === t ? 1 : f.t === "and" || f.t === "or" ? f.args.reduce((n, x) => n + atoms(x, t), 0) : f.t === "not" ? atoms(f.arg, t) : 0);
     for (const r of analysis.refs) {
@@ -423,6 +439,10 @@ export function cardFeatureRow(def: CardDefinition, script: CardScript | undefin
       add("ref.scaled", r.scaled);
       add("ref.partial", refPartial(r.filter));
       add(r.timing === "fanfare" ? "ref.t.fanfare" : r.timing === "continuous" || r.timing === "fromHand" ? "ref.t.continuous" : r.timing === "activated" || r.timing === "evolve" ? "ref.t.activated" : "ref.t.other", 1);
+      add("ref.w.target", r.where === "target" || r.where === "targetCondition");
+      add("ref.w.affects", r.where === "affects" || r.where === "trigger");
+      add("ref.w.each", r.where === "each");
+      add("ref.top", r.top !== undefined);
     }
     const thresholds = analysis.refs.map(refNeeded).filter((n): n is number => n !== null && n <= 20);
     if (thresholds.length > 0) add("ref.threshold", Math.max(...thresholds));
