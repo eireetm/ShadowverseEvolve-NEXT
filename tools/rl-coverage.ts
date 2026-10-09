@@ -28,7 +28,7 @@ const ON_PURPOSE: Record<string, string> = {
   chooseTurnOrder: "always first: the first player wins 54.9% of Medium mirror games",
   mulligan: "a rule (keep with 2 cards of cost 3 or less) until a learned value can compare keep and redraw",
   "orderCards:deckBottom": "the order of cards put at the bottom of the deck hardly matters",
-  "selectCards:wardEnterEngaged": "a Ward follower enters reserved in its controller's turn (the end phase can engage it, CR 12.8.2 ii), engaged in the opponent's turn",
+  "selectCards:wardEnterEngaged": "reserved in its controller's turn before the end phase's engaging (CR 12.8.2 ii, 7.4.3); elsewhere Medium and Hard compare both themselves (the planner), not as candidates",
 };
 
 const args = process.argv.slice(2);
