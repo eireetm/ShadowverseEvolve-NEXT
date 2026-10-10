@@ -567,6 +567,12 @@ option {
   background: var(--sve-class-neutral);
 }
 
+.sve-cost-arrow {
+  font-size: 0.6em;
+  vertical-align: 0.12em;
+  margin-left: 1px;
+}
+
 .sve-stat-cost[data-class="Forestcraft"] {
   background: var(--sve-class-forestcraft);
 }
@@ -630,6 +636,42 @@ option {
   background: #000c;
   border-radius: 3px;
   padding: 0 3px;
+}
+
+.sve-keyword-more {
+  pointer-events: auto;
+  color: inherit;
+  font-family: inherit;
+  border: 1px solid currentColor;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.sve-keyword-more:focus-visible {
+  outline: 2px solid var(--sve-action);
+  outline-offset: 2px;
+}
+
+.sve-keyword-popover {
+  position: fixed;
+  z-index: 310;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  overflow-wrap: anywhere;
+  padding: 10px 14px;
+  border: 1px solid var(--sve-muted);
+  border-radius: 8px;
+  color: var(--sve-text);
+  background: #171c27;
+  box-shadow: 0 4px 20px #0009;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.sve-keyword-popover ul {
+  margin: 0;
+  padding-left: 1.25em;
 }
 
 .sve-card-counters {

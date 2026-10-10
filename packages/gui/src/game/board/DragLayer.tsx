@@ -19,7 +19,7 @@ export function DragLayer({ update }: { update: GameUpdate }) {
   }
   return createPortal(
     <div className={`sve-drag-ghost${drag.over ? " sve-drag-ok" : ""}`} style={{ left: drag.x, top: drag.y }}>
-      <CardTile card={card} side={update.view.players[card.controller]} />
+      <CardTile card={card} side={update.view.players[card.controller]} keywordInteraction={false} />
     </div>,
     document.body,
   );

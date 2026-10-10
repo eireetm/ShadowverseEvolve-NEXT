@@ -5,6 +5,8 @@ import type { FromWorker as EngineMessage, GameUpdate as EngineUpdate } from "..
 
 /** Additional presentation data for a visible instance. Type, stats and gifts remain in CardView. */
 export interface CardRuntimeDetails {
+  /** Current normal play PP, only for visible hand/EX instances (0 is a valid value). */
+  normalPlayCost?: number;
   enteredFieldThisTurn: boolean;
   cannotAttack: boolean;
   cannotAttackLeader: boolean;

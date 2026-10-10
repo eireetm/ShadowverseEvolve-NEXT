@@ -248,8 +248,10 @@ describe("GUI adapter boundaries", () => {
       expect(Object.keys(runtime).sort()).toEqual(visible.sort());
       expect(JSON.parse(JSON.stringify(runtime))).toEqual(runtime);
       for (const detail of Object.values(runtime)) {
-        expect(Object.keys(detail).sort()).toEqual(["cannotAttack", "cannotAttackLeader", "cannotDealDamage", "enteredFieldThisTurn"]);
-        expect(Object.values(detail).every((value) => typeof value === "boolean")).toBe(true);
+        const { normalPlayCost, ...flags } = detail;
+        expect(Object.keys(flags).sort()).toEqual(["cannotAttack", "cannotAttackLeader", "cannotDealDamage", "enteredFieldThisTurn"]);
+        expect(Object.values(flags).every((value) => typeof value === "boolean")).toBe(true);
+        if (normalPlayCost !== undefined) expect(typeof normalPlayCost).toBe("number");
       }
     }
     expect(t.game.snapshot()).toEqual(snapshot);
