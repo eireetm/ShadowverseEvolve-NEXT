@@ -418,6 +418,10 @@ describe("card table v3: where a reference works, and what its comparison means"
     // An activated ability from the hand (BP11-058's discard cost) and from the cemetery (BP10-109's).
     expect(table.refsOf("BP11-058").find((r) => r.where === "canPay")?.from).toEqual(["hand"]);
     expect(table.refsOf("BP10-109").find((r) => r.where === "fromEvolveDeck")?.from).toEqual(["cemetery"]);
+    // A guard in a resolution on where the card is now doesn't move where it triggers (BP20-120: discarded from the hand, then
+    // "if this card is in your cemetery").
+    expect(table.refsOf("BP20-120").find((r) => r.where === "resolve")?.from).toEqual(["hand"]);
+    expect(Object.values(table.file.refs).flat().filter((r) => r.from.length === 0)).toEqual([]);
   });
 
   it("places every comparison, and matches names with a script's other names", () => {
