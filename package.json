@@ -35,7 +35,9 @@
     "rl:features": "tsx tools/rl-card-features.ts",
     "rl:review": "tsx tools/rl-card-review.ts",
     "release:train": "tsx tools/build-train-kit.ts",
-    "rl:verify": "tsx tools/rl-verify.ts"
+    "rl:verify": "tsx tools/rl-verify.ts",
+    "rl:w1": "tsx tools/rl-w1.ts",
+    "rl:sprt": "tsx tools/rl-sprt.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.2",

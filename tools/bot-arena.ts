@@ -4,7 +4,10 @@
  * A bot is a level (easy | medium | hard | medium-beta), one of sve-server's AIs imitated (sve-fool, sve-good,
  * sve-planner; tools/sve-server-ais), or easy / medium / hard with its evaluation swapped, to check the evaluation interface:
  * "medium:identity" plays with the hand-written evaluation passed in from outside (exactly as medium does), and
- * "medium:negated" scores its own positions the other way round (it plays to lose).
+ * "medium:negated" scores its own positions the other way round (it plays to lose). "medium2" is Medium searching two turns
+ * ahead (lookahead 2, samples 2: the bot that generates the training data, without exploring); "medium2:leaf=<weights.json>"
+ * is it with the positions where its searches stop (the leaves, its replyEvaluator) scored by the weights of a file
+ * (npm run rl:w1), everything else as medium2 — the learned evaluations' gate (G1).
  *
  * Decks: the sample decks (packages/gui/decks/samples, all but the Cross Craft one), or a deck set of tools/rl/decksets.json:
  * "train", "holdout" or "legal" (both), played in its format (the engine's deck rules on, and every deck checked against
@@ -31,7 +34,7 @@ import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 import { createEngine, type Answer, type Decision, type DeckList, type PlayerId } from "../packages/core/src";
 import { ALL_CARDS, ALL_SCRIPTS } from "../packages/core/src/sets";
-import { BOT_LEVELS, createBot, evaluate, type Bot, type BotEvaluation, type BotLevel, type BotStats } from "../packages/bot/src";
+import { BOT_LEVELS, MEDIUM_OPTIONS, PlannerBot, createBot, evaluate, weightsEvaluator, type Bot, type BotEvaluation, type BotLevel, type BotStats, type EvalWeights } from "../packages/bot/src";
 import { engineFingerprint } from "../packages/gui/fingerprint";
 import { DECK_SETS, ROOT, allSampleDecks, deckSet, orderedMatchups, sampleDeck, seriesGame, type NamedDeck } from "./rl/series";
 import { SVE_SERVER_AIS, createSveServerBot, type SveServerAI } from "./sve-server-ais";
@@ -56,15 +59,29 @@ const specs = [positional[1] ?? "medium", positional[2] ?? "easy"] as const;
 
 // ---- Bots ----
 
-const SPEC = /^([a-z-]+)(?::(identity|negated))?$/;
+const SPEC = /^([a-z0-9-]+)(?::(identity|negated|leaf=.+))?$/;
 const VARIANT_LEVELS: readonly string[] = ["easy", "medium", "hard"];
+/** Medium searching two turns ahead, as the stage 1 data's bot (tools/rl/jobs/stage1.json) without its exploring. */
+const MEDIUM2 = { ...MEDIUM_OPTIONS, lookahead: 2 as const, samples: 2 };
 function specProblem(spec: string): string | null {
   const m = SPEC.exec(spec);
   if (!m) return `not a bot: ${spec}`;
   const [, level, variant] = m;
-  if (![...BOT_LEVELS, ...SVE_SERVER_AIS].includes(level as never)) return `no such level: ${level}`;
+  if (![...BOT_LEVELS, ...SVE_SERVER_AIS, "medium2"].includes(level as never)) return `no such level: ${level}`;
+  if (variant?.startsWith("leaf=")) {
+    if (level !== "medium2") return "leaf=<weights.json> works with medium2 only";
+    const file = variant.slice(5);
+    if (!existsSync(file)) return `no weights file ${file}`;
+    return null;
+  }
   if (variant && !VARIANT_LEVELS.includes(level!)) return `${variant} works with ${VARIANT_LEVELS.join(", ")} (the default weights) only`;
   return null;
+}
+/** The weights of a file written by npm run rl:w1 (format sve-eval-weights). */
+function leafWeights(file: string): EvalWeights {
+  const data = JSON.parse(readFileSync(file, "utf8")) as { format?: string; weights?: EvalWeights };
+  if (data.format !== "sve-eval-weights" || !data.weights) throw new Error(`${file} isn't an sve-eval-weights file`);
+  return data.weights;
 }
 /** The evaluations of a variant: the hand-written one passed in (the same play), or turned round (the bot plays to lose). */
 function variantEvaluation(variant: string | undefined): BotEvaluation {
@@ -78,6 +95,10 @@ function variantEvaluation(variant: string | undefined): BotEvaluation {
 function makeBot(engine: Engine, spec: string, seed: string): Bot {
   const [, level, variant] = SPEC.exec(spec)!;
   if ((SVE_SERVER_AIS as readonly string[]).includes(level!)) return createSveServerBot(engine, level as SveServerAI);
+  if (level === "medium2") {
+    const leaf = variant?.startsWith("leaf=") ? { replyEvaluator: weightsEvaluator(leafWeights(variant.slice(5))) } : {};
+    return new PlannerBot(engine, { ...MEDIUM2, ...leaf, seed });
+  }
   return createBot(engine, level as BotLevel, seed, 1, variantEvaluation(variant));
 }
 /** The GUI's controller for a replay's seat (only shown while watching). */
@@ -233,7 +254,7 @@ const LEVELS = [...BOT_LEVELS, ...SVE_SERVER_AIS].join("|");
 const fail = (message: string) => {
   console.error(message);
   console.error(
-    `usage: npm run bot:arena -- [games] [${LEVELS}][:identity|:negated] [same] [--decks sd01,sd02|train|holdout|legal] [--mirror] [--independent] [--workers N] [--seed text] [--range a-b] [--out dir] [--replays N]`,
+    `usage: npm run bot:arena -- [games] [${LEVELS}|medium2][:identity|:negated|:leaf=weights.json] [same] [--decks sd01,sd02|train|holdout|legal] [--mirror] [--independent] [--workers N] [--seed text] [--range a-b] [--out dir] [--replays N]`,
   );
   process.exit(1);
 };
