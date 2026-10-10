@@ -3,13 +3,16 @@
 // else about a decision is on the table (lit cards and their menus) or in the decision window (DecisionDialog).
 import type { Answer } from "@sve/core";
 import type { ReactNode } from "react";
-import type { GameUpdate } from "../../engine/protocol";
+import type { AbilityUpdate as GameUpdate } from "../../presentation/protocol";
+import { AbilityPrompt } from "../decisions/AbilityPrompt";
 import { useT, type MessageKey } from "../../i18n";
+import { useApp } from "../../app/store";
+import { useSettings } from "../../app/settings";
 import { isOnTable } from "../../engine/view-utils";
 import { inDialog } from "../actions";
-import { rangeLabel, SELECT_KEYS } from "../decisions/DecisionDialog";
+import { rangeLabel, SELECT_KEYS, CHOOSE_KEYS, CONFIRM_KEYS } from "../decisions/DecisionDialog";
 import { sendAnswer, setRedrawing, useInteraction } from "../interaction";
-import { playerLabel } from "../labels";
+import { cardLabel, playerLabel } from "../labels";
 
 const PHASE_KEYS: Record<string, MessageKey> = {
   setup: "game.phase.setup",
@@ -22,6 +25,8 @@ const PHASE_KEYS: Record<string, MessageKey> = {
 /** `placing`: a card waiting for the person to pick its slot (choose card spots by hand), by name. */
 export function CenterLine({ update, placing = null }: { update: GameUpdate; placing?: string | null }) {
   const t = useT();
+  const catalog = useApp((s) => s.catalog)!;
+  const { cardLang } = useSettings();
   const view = update.view;
   const decision = update.decision?.decision;
   const sent = useInteraction((s) => s.sent);
@@ -36,7 +41,12 @@ export function CenterLine({ update, placing = null }: { update: GameUpdate; pla
     );
   let prompt: string | null = null;
   if (decision && inDialog(decision, (id) => isOnTable(view, id))) {
-    prompt = t("table.answerInDialog");
+    const card = "subject" in decision && decision.subject ? cardLabel(decision.subject.id, update, catalog, cardLang, t) : "";
+    const instruction = decision.type === "choose" ? t(CHOOSE_KEYS[decision.reason], { card }) :
+      decision.type === "confirm" ? t(CONFIRM_KEYS[decision.reason], { card }) :
+      decision.type === "orderCards" ? t(decision.reason === "deckTop" ? "decision.orderCards.deckTop" : "decision.orderCards.deckBottom") :
+      decision.type === "selectCards" ? `${t(SELECT_KEYS[decision.reason])} — ${t("decision.selectCards", { range: rangeLabel(decision.min, decision.max, t) })}` : null;
+    prompt = [instruction, t("table.answerInDialog")].filter(Boolean).join(" ");
   } else if (decision) {
     switch (decision.type) {
       case "mainPhase":
@@ -80,9 +90,10 @@ export function CenterLine({ update, placing = null }: { update: GameUpdate; pla
     <>
       <div className="sve-center-status">
         <div className="sve-center-turn">
-          <strong>{t("game.turn", { n: view.turn })}</strong> · {t(PHASE_KEYS[view.phase] ?? "game.phase.main")}
+          <strong>{t("game.turn", { n: view.players[view.activePlayer].turnsPassed })}</strong> · {t(PHASE_KEYS[view.phase] ?? "game.phase.main")}
         </div>
         {view.phase !== "over" ? <div>{t("game.activePlayer", { player: playerLabel(view.activePlayer, update, t) })}</div> : null}
+        <AbilityPrompt update={update} compact />
         {placing ? (
           <div className="sve-center-prompt sve-your-move" data-testid="table-choose-slot">
             {t("table.chooseSlot", { card: placing })}

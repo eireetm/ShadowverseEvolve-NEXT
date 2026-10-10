@@ -9,6 +9,8 @@ import { counterName } from "../../i18n/counters";
 import { showCard, useFocusSelect, type FocusCard } from "../focus";
 import { CardArt } from "./CardArt";
 import { displayOf } from "./display";
+import { normalPlayCost } from "./play-cost";
+import { KeywordExpander } from "./KeywordExpander";
 
 /**
  * How the pending decision uses a card: it can act ("action"), may be chosen ("candidate") or is chosen ("selected"), is a
@@ -36,12 +38,15 @@ interface Props {
   evolveBack?: boolean;
   /** The printing as it is, not a token's chosen art (CardArt). */
   exact?: boolean;
+  /** A drag ghost shares costs but does not open keyword popovers. */
+  keywordInteraction?: boolean;
 }
 
 const MAX_KEYWORDS = 3;
 
-export function CardTile({ card, info, side, size = "normal", mark = null, onClick, onPointerDown, className, style, children, evolveBack = false, exact = false }: Props) {
+export function CardTile({ card, info, side, size = "normal", mark = null, onClick, onPointerDown, className, style, children, evolveBack = false, exact = false, keywordInteraction = true }: Props) {
   const catalog = useApp((s) => s.catalog);
+  const update = useApp((s) => s.update);
   const { cardLang, uiLang } = useSettings();
   const t = useT();
   const id = card && !card.hidden ? card.id : null;
@@ -72,7 +77,8 @@ export function CardTile({ card, info, side, size = "normal", mark = null, onCli
   if (mark) classes.push(`sve-card-${mark}`);
   if (highlighted) classes.push("sve-card-highlight");
   if (onClick) classes.push("sve-card-clickable");
-  const cost = view ? view.cost : (def?.cost ?? null);
+  const playCost = normalPlayCost(update, view);
+  const cost = playCost ?? (view ? view.cost : (def?.cost ?? null));
   const attack = view ? view.attack : (def?.attack ?? null);
   const defense = view ? view.defense : (def?.defense ?? null);
   const compare = (now: number | null, printed: number | null | undefined) =>
@@ -110,7 +116,9 @@ export function CardTile({ card, info, side, size = "normal", mark = null, onCli
                   {t(`keyword.${k}` as const)}
                 </span>
               ))}
-              {keywords.length > MAX_KEYWORDS ? <span className="sve-kw">+{keywords.length - MAX_KEYWORDS}</span> : null}
+              {keywords.length > MAX_KEYWORDS ? keywordInteraction && view ? (
+                <KeywordExpander card={view} keywords={keywords} remaining={keywords.length - MAX_KEYWORDS} />
+              ) : <span className="sve-kw">+{keywords.length - MAX_KEYWORDS}</span> : null}
             </div>
           ) : null}
           {counters.length > 0 ? (
