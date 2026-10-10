@@ -8,11 +8,13 @@ import { rulesFingerprint } from "../../packages/gui/fingerprint";
 import { FAMILY_OF, FX_FAMILY_NAMES } from "../rl/fx-families";
 import { checkReferences } from "../rl/ref-oracle";
 import { analyzeScripts, type CardAnalysis } from "../rl/script-analysis";
-import { createEngine, randomAnswer, seedRng, type AbilityDef, type GameSession } from "../../packages/core/src";
+import { moduleOf, scriptFiles, textOf, walk, type Module, type Node } from "../rl/script-source";
+import { createEngine, PLAYER_ZONES, randomAnswer, seedRng, type AbilityDef, type GameSession } from "../../packages/core/src";
 import { correspondingEvolveCards } from "../../packages/core/src/engine/abilities/evolve";
 import type { G } from "../../packages/core/src/engine/runtime/context";
-import { characteristics } from "../../packages/core/src/engine/state/characteristics";
-import type { GameState } from "../../packages/core/src/model/state";
+import type { Env } from "../../packages/core/src/engine/state/access";
+import { abilityZones, characteristics } from "../../packages/core/src/engine/state/characteristics";
+import type { GameState, ZoneName } from "../../packages/core/src/model/state";
 import { ALL_CARDS, ALL_SCRIPTS } from "../../packages/core/src/sets";
 import { deckPool, randomDeck } from "../../packages/core/src/testing";
 import { DECK_SETS, sampleDeck } from "../rl/series";
@@ -290,4 +292,171 @@ describe("card-features.json, against the card data and the engine", () => {
     expect(followers).toBeGreaterThan(1000);
     expect(withOptions).toBeGreaterThan(200);
   }, 300_000);
+});
+
+describe("card table v3: where a reference works, and what its comparison means", () => {
+  const test = (def: string) => table.refsOf(def).map((r) => [r.where, r.test && `${r.test.kind} ${r.test.n} ${r.test.role}`]);
+  it("reads each comparison in the direction its effect needs", () => {
+    // BP10-109: "if you have another follower, stop" — the effect needs none.
+    expect(test("BP10-109")).toContainEqual(["resolve", "atMost 0 gate"]);
+    // CSD02b-003: the same, for another Cool follower.
+    expect(test("CSD02b-003")).toContainEqual(["resolve", "atMost 0 gate"]);
+    // BP03-020: evolve only with 2 cards or fewer in your hand.
+    expect(test("BP03-020")).toContainEqual(["condition", "atMost 2 gate"]);
+    // DSD01b-001: "if there is no Aftershock" picks one of two effects.
+    expect(test("DSD01b-001")).toContainEqual(["resolve", "atMost 0 branch"]);
+    // CP04-088: "if the opponent has no follower, stop" — the effect needs one.
+    expect(test("CP04-088")).toContainEqual(["resolve", "atLeast 1 gate"]);
+    // CP01-076: returned to the hand when there is no other Mejiro follower (more done under an if).
+    expect(test("CP01-076")).toContainEqual(["resolve", "atMost 0 bonus"]);
+    // BP12-045: a fanfare for when there is no follower in your cemetery.
+    expect(test("BP12-045")).toContainEqual(["condition", "atMost 0 gate"]);
+    // BP22-011: "if you don't have exactly 5 Fairies in your EX area, stop".
+    expect(test("BP22-011")).toContainEqual(["resolve", "exactly 5 gate"]);
+    // CSD02a-004 / DSD01a-002: "if fewer than N, stop".
+    expect(test("CSD02a-004")).toContainEqual(["resolve", "atLeast 5 gate"]);
+    expect(test("DSD01a-002")).toContainEqual(["resolve", "atLeast 10 gate"]);
+    // CP04-069: "Storm while there is another PriConne follower" (an exists test inside a helper with a guard of its own).
+    expect(test("CP04-069")).toEqual([["keywordsFor", "atLeast 1 gate"]]);
+    // BP20-008: one comparison used twice ("six ? 3 : 2" and "if (six)") is one reference, a branch.
+    expect(test("BP20-008")).toEqual([["target", null], ["resolve", "atLeast 6 branch"]]);
+    // BP01-070: Spellchain only ever adds.
+    expect(test("BP01-070").filter(([w]) => w === "spellchain")).toEqual([["spellchain", "atLeast 5 bonus"], ["spellchain", "atLeast 10 bonus"]]);
+    // The table's ref.threshold reads the gates: BP10-109's guard needs no follower, so its largest "at least" is none.
+    expect(table.row("BP10-109")[CARD_FEATURE_COLUMNS.indexOf("ref.threshold")]).toBe(0);
+    expect(table.row("DSD01a-002")[CARD_FEATURE_COLUMNS.indexOf("ref.threshold")]).toBe(10);
+  });
+
+  it("gives every give-up guard and boolean closure on a count a test in that direction (all scripts)", () => {
+    // The source read on its own: "if (X op n) return" needs the opposite of "X op n"; a condition closure needs it as written.
+    type K = { kind: string; n: number };
+    const norm = (k: K): K => (k.kind === "exactly" && k.n === 0 ? { kind: "atMost", n: 0 } : k.kind === "notExactly" && k.n === 0 ? { kind: "atLeast", n: 1 } : k);
+    const neg = (k: K): K => norm(k.kind === "atLeast" ? { kind: "atMost", n: k.n - 1 } : k.kind === "atMost" ? { kind: "atLeast", n: k.n + 1 } : k.kind === "exactly" ? { kind: "notExactly", n: k.n } : { kind: "exactly", n: k.n });
+    const MIRROR: Record<string, string> = { "<": ">", "<=": ">=", ">": "<", ">=": "<=", "===": "===", "!==": "!==" };
+    const written = (m: Module, t: Node): K | null => {
+      if (t.type === "UnaryExpression" && t.operator === "!") {
+        const inner = written(m, t.argument as Node);
+        return inner && neg(inner);
+      }
+      if (t.type === "ChainExpression" || t.type === "ParenthesizedExpression") return written(m, t.expression as Node);
+      if (t.type === "CallExpression" && (t.callee as Node).type === "MemberExpression" && ((t.callee as Node).property as Node).name === "some") return { kind: "atLeast", n: 1 };
+      if (t.type !== "BinaryExpression" || !MIRROR[t.operator as string]) return null;
+      const num = (x: Node) => (x.type === "Literal" && typeof x.value === "number" ? (x.value as number) : null);
+      let [op, side, n] = [t.operator as string, t.left as Node, num(t.right as Node)];
+      if (n === null && num(t.left as Node) !== null) [op, side, n] = [MIRROR[op]!, t.right as Node, num(t.left as Node)];
+      if (n === null || !/\.(some|length)\b/.test(textOf(m, side))) return null;
+      return norm(op === ">=" ? { kind: "atLeast", n } : op === ">" ? { kind: "atLeast", n: n + 1 } : op === "<=" ? { kind: "atMost", n } : op === "<" ? { kind: "atMost", n: n - 1 } : op === "===" ? { kind: "exactly", n } : { kind: "notExactly", n });
+    };
+    const giveUp = (n: Node): boolean =>
+      n.type === "BlockStatement"
+        ? (n.body as Node[]).length === 1 && giveUp((n.body as Node[])[0]!)
+        : n.type === "ContinueStatement" || (n.type === "ReturnStatement" && (!n.argument || ((n.argument as Node).type === "Literal" && ((n.argument as Node).value === false || (n.argument as Node).value === null)) || ((n.argument as Node).type === "ArrayExpression" && ((n.argument as Node).elements as Node[]).length === 0)));
+    // Counts the table doesn't read as a zone's cards, so no reference has the test (each with the reason).
+    const NOT_A_ZONE_COUNT: Record<string, string> = {
+      // The cards just looked at, chosen or milled (a list the effect holds, not a zone).
+      "BP03-107": "two zones spread into one list", "BP03-108": "two zones spread into one list", "BP04-041": "top cards", "BP05-054": "milled cards",
+      "BP09-050": "top / chosen cards", "BP14-039": "top cards", "BP14-071": "chosen cards", "BP15-072": "chosen cards", "BP17-099": "chosen cards",
+      "BP19-110": "top cards", "BP22-036": "the options of a choice", "CP01-006": "top cards", "CP01-070": "top cards", "CP01-080": "top cards",
+      // Reader methods the analysis doesn't read (face-up / face-down evolve deck, cards that left the field or were played this turn).
+      "BP08-053": "face-down evolve deck", "BP11-021": "face-up evolve deck", "BP13-110": "face-up evolve deck", "BP15-004": "face-up evolve deck",
+      "BP16-011": "cards that left the field this turn", "BP17-116": "face-down evolve deck", "BP17-T07": "cards played this turn", "CP03-029": "face-up evolve deck",
+      // Two zones spread into one list; a count with arithmetic.
+      "BP11-089": "two zones spread into one list", "BP12-074": "two zones spread into one list", "BP19-074": "a count with arithmetic",
+    };
+    const byFile = new Map<string, string[]>();
+    for (const [def, f] of scriptFiles()) byFile.set(f, [...(byFile.get(f) ?? []), def]);
+    const missing: string[] = [];
+    let found = 0;
+    for (const [f, defs] of byFile) {
+      const m = moduleOf(f);
+      walk(m.ast, (n) => {
+        let want: K | null = null;
+        if (n.type === "IfStatement" && !n.alternate && giveUp(n.consequent as Node)) {
+          const w = written(m, n.test as Node);
+          want = w && neg(w);
+        }
+        const key = n.type === "Property" ? ((n.key as Node).name as string) : "";
+        if (["condition", "triggerIf", "playableIf", "available", "canPay"].includes(key) && (n.value as Node).type === "ArrowFunctionExpression" && ((n.value as Node).body as Node).type !== "BlockStatement") want = written(m, (n.value as Node).body as Node);
+        if (!want) return true;
+        for (const def of defs) {
+          if (!table.known(def) || !ALL_SCRIPTS[def]) continue;
+          if (table.refsOf(def).some((r) => r.test && r.test.kind === want!.kind && r.test.n === want!.n && r.test.role !== "branch")) found += 1;
+          else if (!NOT_A_ZONE_COUNT[def]) missing.push(`${def}: ${textOf(m, n).replace(/\s+/g, " ").slice(0, 100)} → ${want!.kind} ${want!.n}`);
+        }
+        return true;
+      });
+    }
+    expect(missing).toEqual([]);
+    expect(found).toBeGreaterThan(140);
+  }, 120_000);
+
+  it("says where each reference's ability works, as Core does", () => {
+    const env = { db: engine.db } as unknown as Env;
+    let abilities = 0;
+    for (const def of Object.keys(table.file.refs)) {
+      const script = ALL_SCRIPTS[def]!;
+      for (const r of table.refsOf(def)) {
+        if (r.ability < 0) continue;
+        abilities += 1;
+        const core = [...abilityZones(env, def, (script.abilities![r.ability] ?? {}) as { validIn?: readonly ZoneName[] })];
+        // A guard on where the card itself is ("if (g.card(self)?.zone !== 'field') return") can only narrow it.
+        expect(r.from.every((z) => core.includes(z as ZoneName)), `${def} #${r.ability}`).toBe(true);
+        if (!table.refsOf(def).some((x) => x.ability === r.ability && x.from.length !== core.length)) expect(r.from, `${def} #${r.ability}`).toEqual(core);
+      }
+    }
+    expect(abilities).toBeGreaterThan(3000);
+    const from = (def: string, key: string) => table.refsOf(def).find((r) => r.ability === -1 && r.key === key)?.from;
+    // selfKeywords: Core reads it in every zone (BP13-033: five Levin cards in the cemetery give it Assail anywhere)...
+    expect(from("BP13-033", "selfKeywords")).toEqual([...PLAYER_ZONES]);
+    // ...unless its code checks where the card is (CSD02a-003: "if this isn't on the field, nothing").
+    expect(from("CSD02a-003", "selfKeywords")).toEqual(["field"]);
+    // A play option's cost is paid where the card is played from; an EX area passive works there; an equipment token's.
+    expect(from("BP08-037", "playOptions")).toEqual(["hand", "ex"]);
+    expect(from("BP13-003", "exPassives")).toEqual(["ex"]);
+    expect(from("BP13-003", "field")).toEqual(["field"]);
+    expect(from("CP04-T01", "equipment")).toEqual(["equipmentZone"]);
+    // An activated ability from the hand (BP11-058's discard cost) and from the cemetery (BP10-109's).
+    expect(table.refsOf("BP11-058").find((r) => r.where === "canPay")?.from).toEqual(["hand"]);
+    expect(table.refsOf("BP10-109").find((r) => r.where === "fromEvolveDeck")?.from).toEqual(["cemetery"]);
+  });
+
+  it("places every comparison, and matches names with a script's other names", () => {
+    const AVAIL = new Set(["target", "targetCondition", "choose", "search", "searchEach", "fromEvolveDeck", "topCard"]);
+    const deckDefs = new Set([...DECK_SETS.train, ...DECK_SETS.holdout].flatMap((name) => [...sampleDeck(name)!.deck.main, ...sampleDeck(name)!.deck.evolve].map((p) => engine.db.ofPrinting(p).id)));
+    const unplaced: string[] = [];
+    let partialPool = 0;
+    for (const def of Object.keys(table.file.refs)) {
+      for (const r of table.refsOf(def)) {
+        if (r.threshold && !r.test && !r.scaled && !AVAIL.has(r.where)) unplaced.push(def);
+        if (JSON.stringify(r.filter).includes('"why":"test"')) {
+          partialPool += 1;
+          if (deckDefs.has(def)) unplaced.push(`${def} (in a sample deck)`);
+        }
+      }
+    }
+    expect(unplaced).toEqual([]);
+    expect(partialPool).toBe(0);
+    // Every name compiled into definitions includes the definitions that also bear that name (alsoNames).
+    const also = new Map<string, string[]>();
+    for (const d of ALL_CARDS) for (const n of ALL_SCRIPTS[d.id]?.alsoNames ?? []) also.set(n, [...(also.get(n) ?? []), d.id]);
+    const defsAtoms = (f: RefFilter): string[][] => (f.t === "defs" ? [f.v] : f.t === "and" || f.t === "or" ? f.args.flatMap(defsAtoms) : f.t === "not" ? defsAtoms(f.arg) : []);
+    let checked = 0;
+    for (const [def, a] of analysis()) {
+      const names: string[] = [];
+      const walkNames = (f: { t: string; v?: unknown; args?: unknown[]; arg?: unknown }) => {
+        if (f.t === "name") names.push(f.v as string);
+        for (const x of (f.args ?? []) as never[]) walkNames(x);
+        if (f.arg) walkNames(f.arg as never);
+      };
+      a.refs.forEach((r) => walkNames(r.filter));
+      const compiled = table.refsOf(def).flatMap((r) => defsAtoms(r.filter)).flat();
+      for (const n of names) {
+        for (const other of also.get(n) ?? []) {
+          checked += 1;
+          expect(compiled, `${def}: ${n} → ${other}`).toContain(other);
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(10);
+  }, 120_000);
 });

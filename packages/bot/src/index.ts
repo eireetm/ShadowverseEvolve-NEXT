@@ -28,10 +28,13 @@ export {
   cardFeatureFileText,
   refPartial,
   refNeeded,
+  refFrom,
+  type AnalyzedRef,
   type CardFeatureFile,
   type CardFeatureTable,
   type CardRef,
   type RefFilter,
+  type RefTest,
   type ScriptAnalysis,
 } from "./card-features";
 export { ENCODER_VERSION, ENCODER_LAYOUT, PLAYER_TYPES_V1, COUNTER_KINDS, encode, decode, describe, encoderSchema, infoDefOf, knownDeck, type EncoderContext, type EncoderSchema, type EncodeDiagnostics, type KnownDeck, type PlayerType, type DescribeNames } from "./encoder";

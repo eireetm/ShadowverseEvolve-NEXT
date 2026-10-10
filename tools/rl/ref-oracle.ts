@@ -2,7 +2,7 @@
 // own closures (a condition, a target's max, a play condition...) are called with the real game, and compared with what the
 // reference says (the number of matching cards; whether it reaches the threshold). Tools only (it reads the real game).
 import type { AbilityDef, CardId, CardScript, GameReader, GameSession, PlayerId } from "../../packages/core/src";
-import type { FilterNode, RefSite, Zone } from "./script-analysis";
+import type { FilterNode, RefSite, RefTest, Zone } from "./script-analysis";
 
 /** Does a card match a reference's filter, read with the engine (its current information, as the scripts read it). */
 export function matches(g: GameReader, id: CardId, f: FilterNode, self: CardId): boolean {
@@ -70,11 +70,18 @@ export function refCount(g: GameReader, site: RefSite, controller: PlayerId, sel
   return n;
 }
 
-/** Whether a count reaches a reference's threshold, read as the number of cards needed (a guard "if fewer than 3, stop" needs 3). */
-export function needed(site: RefSite): number | null {
-  const t = site.threshold;
-  if (!t) return null;
-  return t.op === ">" || t.op === "<=" ? t.n + 1 : t.n;
+/** Whether a count meets a reference's test (RefSite.test: "if fewer than 3, stop" is met by 3 or more). */
+export function holds(t: Pick<RefTest, "kind" | "n">, count: number): boolean {
+  switch (t.kind) {
+    case "atLeast":
+      return count >= t.n;
+    case "atMost":
+      return count <= t.n;
+    case "exactly":
+      return count === t.n;
+    case "notExactly":
+      return count !== t.n;
+  }
 }
 
 export interface OracleResult {
@@ -122,8 +129,7 @@ export function checkReferences(positions: Iterable<GameSession>, refsOf: (def: 
           const script = scripts[def];
           if (!refs || !script) continue;
           for (const c of closuresOf(script)) {
-            // A passive of the card itself (selfKeywords) works on the field only (CR 10.3.5).
-            if (c.where === "selfKeywords" && zone !== "field") continue;
+            // selfKeywords is read in every zone (Core's characteristics), so it is checked in each.
             const sites = refs.filter((r) => r.ability === c.ability && r.where === c.where);
             if (sites.length !== 1) continue;
             const site = sites[0]!;
@@ -135,8 +141,10 @@ export function checkReferences(positions: Iterable<GameSession>, refsOf: (def: 
             }
             calls += 1;
             const count = refCount(g, site, p, id);
-            const need = needed(site);
-            const predicted: unknown = c.where === "max" ? count : site.agg === "exists" ? count >= (need ?? 1) : need === null ? count > 0 : count >= need;
+            // The test as the code around it reads it (none: "is there one"), where the code runs at all (RefSite.selfZone).
+            const z = site.selfZone;
+            const runs = !z || z.zones.includes(zone) !== (z.not === true);
+            const predicted: unknown = c.where === "max" ? count : runs && (site.test ? holds(site.test, count) : count >= 1);
             const actual = c.where === "max" ? value : Boolean(value);
             const key = `${def} ${c.where}${c.ability >= 0 ? `#${c.ability}` : ""}`;
             const entry = byClosure.get(key) ?? { agree: 0, disagree: 0, examples: [] };

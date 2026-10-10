@@ -4,11 +4,12 @@
  * family), and what it counts (tools/rl/script-analysis.ts) written out in words — the zone, whose, which cards, a threshold
  * or a quantity, in which ability — with the check against the engine (tools/rl/ref-oracle.ts, on recorded games when the run
  * folders are there, else on generated ones) and marks where the text speaks of a cemetery, a trait or a class that no
- * reference covers. Writes docs/card-table-review.md (a local note; nothing in the repository reads it).
+ * reference covers. Writes docs/card-table-review.md (a local note; nothing in the repository reads it) and prints the lines
+ * that changed since the file there, card by card.
  */
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { CARD_FEATURE_COLUMNS, refNeeded, refPartial, type CardRef, type RefFilter } from "../packages/bot/src";
+import { CARD_FEATURE_COLUMNS, refFrom, refPartial, type CardRef, type RefFilter } from "../packages/bot/src";
 import { createEngine, randomAnswer, seedRng, type GameSession } from "../packages/core/src";
 import { ALL_CARDS, ALL_SCRIPTS } from "../packages/core/src/sets";
 import { TRAIT_NAMES } from "../packages/gui/src/app/traits";
@@ -229,6 +230,25 @@ function altText(token: string, def: string, costLine = false): string {
   }
 }
 
+/** A reference's test (CardRef.test) in words: the count it needs and what it does with it. */
+const ROLE: Record<string, string> = { gate: "门槛", branch: "分支", bonus: "额外" };
+function testText(r: CardRef): string | null {
+  const t = r.test;
+  if (!t) return null;
+  // "At least n" as a gate reads as version 2 did; the other comparisons and roles are written out.
+  if (t.kind === "atLeast" && t.role === "gate") return t.n === 1 ? "有没有" : `张数 ≥${t.n}`;
+  const n = t.kind === "atLeast" ? (t.n === 1 ? "有" : `张数 ≥${t.n}`) : t.kind === "atMost" ? (t.n === 0 ? "没有" : `张数 ≤${t.n}`) : t.kind === "exactly" ? `张数 =${t.n}` : `张数 ≠${t.n}`;
+  return `${n}（${ROLE[t.role]}）`;
+}
+
+/** Where a reference's ability works, when that is not only the field (CardRef.from); played cards' abilities say nothing. */
+function fromText(r: CardRef): string {
+  if (["fanfare", "spell", "fromHand"].includes(r.timing) || (r.from.length === 1 && r.from[0] === "field")) return "";
+  if (r.from.length >= 10) return "（在任何区域都起作用）";
+  const ZONE_FROM: Record<string, string> = { ...ZONE, equipmentZone: "装备区" };
+  return `（在${r.from.map((z) => ZONE_FROM[z] ?? z).join("、")}起作用）`;
+}
+
 /** A reference in words. */
 function refText(r: CardRef, def: string): string {
   const zones = r.zones.map((z) => (z === "deck" && r.top ? `牌组顶 ${r.top} 张` : (ZONE[z] ?? z))).join("、");
@@ -240,11 +260,10 @@ function refText(r: CardRef, def: string): string {
   if (r.chance) alts.push("**靠运气**");
   const when = alts.length > 0 ? `（${alts.join("、")}）` : "";
   const where = r.chance === "top" && r.where === "search" ? "查看牌组顶部" : (WHERE[r.where] ?? r.where);
-  const place = `${TIMING[r.timing] ?? r.timing} · ${where}${when}`;
+  const place = `${TIMING[r.timing] ?? r.timing} · ${where}${when}${fromText(r)}`;
   if (r.chance === "top") return `${place}：${SIDE[r.side]}牌组顶部 ${r.top ?? "几"} 张里有${cards}的机会${refPartial(r.filter) ? "（**有读不懂的部分**）" : ""}`;
   if (r.chance === "random") return `${place}：随机的结果，按均匀概率算${refPartial(r.filter) ? "（**有读不懂的部分**）" : ""}`;
-  const need = refNeeded(r);
-  const how = r.agg === "exists" || (need === 1 && !r.scaled) ? "有没有" : r.scaled ? "张数 → 按数量起作用" : need !== null ? `张数 ≥${need}` : "张数";
+  const how = r.scaled ? "张数 → 按数量起作用" : (testText(r) ?? (r.agg === "exists" ? "有没有" : "张数"));
   return `${place}：${what}，${how}${refPartial(r.filter) ? "（**有读不懂的部分**）" : ""}`;
 }
 
@@ -323,7 +342,8 @@ for (const name of decks) {
         const key = `${def} ${r.where}${r.ability >= 0 ? `#${r.ability}` : ""}`;
         const check = oracle.byClosure.get(key);
         const checked = check ? (check.disagree === 0 ? `（和引擎对过 ${check.agree} 次，一致）` : `（**和引擎不一致** ${check.disagree} 次：${check.examples[0]}）`) : "";
-        lines.push(`  - ${refText(r as CardRef, def)}${checked}`);
+        const ref: CardRef = { ...r, filter: r.filter as RefFilter, test: r.test ?? null, from: refFrom(d, ALL_SCRIPTS[def]!, r) };
+        lines.push(`  - ${refText(ref, def)}${checked}`);
       }
     }
     // The text counts cards of a cemetery, a trait or a class that no reference covers: maybe something the analysis missed.
@@ -347,12 +367,13 @@ for (const name of decks) {
   }
 }
 const head = [
-  "# 卡牌特征表 v2 审查表",
+  "# 卡牌特征表 v3 审查表",
   "",
   `由 \`npm run rl:review\` 生成（${new Date().toISOString().slice(0, 10)}）。列出 ${DECK_SETS.train.length + DECK_SETS.holdout.length} 套示例卡组的 ${where.size} 张卡（每张只列在它出现的第一套卡组下），每张卡：卡面、AI 从脚本里读到的效果类别，以及它"在数什么"。表有 ${CARD_FEATURE_COLUMNS.length} 列。`,
   "",
   "怎么看：",
-  "- **数的东西**：卡的效果或条件要数的卡，写成「时机 · 用在哪：哪一方的哪个区域里的什么卡，张数 / 有没有」。「按数量起作用」= 张数直接决定效果大小（例如能消失几个）；「张数 ≥3」= 至少要 3 张；「要选择的对象 / 从牌组寻找：有没有」= 有没有能选、能找到的卡；「对选中的卡的条件：有没有」= 效果对某种卡更强（例如目标是龙裔就改成 5 点伤害），对方场上有没有这种卡。",
+  "- **数的东西**：卡的效果或条件要数的卡，写成「时机 · 用在哪：哪一方的哪个区域里的什么卡，张数 / 有没有」。「按数量起作用」= 张数直接决定效果大小（例如能消失几个）；「张数 ≥3」= 至少要 3 张效果才发生；「没有（门槛）」= 一张都没有才发生（例如「如果没有其他从者」），「张数 ≤2（门槛）」「张数 =5（门槛）」同理；（分支）= 张数决定走两种效果中的哪一种；（额外）= 效果照常发生，张数够了再多做一点；「要选择的对象 / 从牌组寻找：有没有」= 有没有能选、能找到的卡；「对选中的卡的条件：有没有」= 效果对某种卡更强（例如目标是龙裔就改成 5 点伤害），对方场上有没有这种卡。",
+  "- **（在…起作用）**：能力不在战场上起作用时，写出它在哪里起作用（例如在手牌里就能启动的能力、墓场里的能力、额外区的纹章）；入场曲和法术不写（它们在使用时起作用）。",
   "- **括号里的（…时）**：这个计数只在玩家这样选的时候才用到；「没…时」是没这样选的时候。使用时选的：将消费 +N / −N 或用别的方式使用（CR 10.4.7.3）、抉择【n】（有的卡可以选不止一项）、土之秘术、追加费用（CR 10.6.2.2.2）。「支付了费用时」：入场曲等能力自己的可选费用（「费用：效果」，CR 10.4.7.4）或抉择项的费用（CR 10.4.7.5），要付了才有后面的效果。「执行时」：处理中问「要不要执行」的效果。「最多选 N 张 / 可以将 1 张……加入手牌」这种选择不单独标。费用那一行的（……使用的费用）是说这是哪种使用方式的费用：付不起就不能这样使用。",
   "- **靠运气**：要用到牌组顶部的卡，谁都不知道顺序（CR 4.5.2；之前的效果让自己看过的除外），处理前没法确定。公平的 AI 按自己牌组里剩下的卡算概率（对方的牌组：按对方还没出现的卡），只有作弊的 AI 看得到。「查看牌组顶部」= 看顶部几张、从中找（找不到就算了）；「牌组顶的卡」= 对放出去的那张卡有「如果是……的话」（例如 BP10-054：原始消费 5 及以上才进化或回手）。",
   `- **和引擎对过**：用${recorded.length > 0 ? `已录对局（每份数据 ${games} 局）` : "生成的对局"}的每个主要阶段，直接调用卡自己的条件函数，和这里写的数比较。一共调用 ${oracle.calls} 次。只有一个条件函数里正好一处计数的才能这样对；效果处理中间的计数没法直接调用，只能靠人看。`,
@@ -364,5 +385,32 @@ const head = [
 ];
 const out = join(ROOT, "docs", "card-table-review.md");
 mkdirSync(join(ROOT, "docs"), { recursive: true });
+// The lines that changed since the file there, under their card (the head and the counts of checks aside).
+const sections = (text: string) => {
+  const m = new Map<string, string[]>();
+  let card = "";
+  for (const l of text.split("\n")) {
+    if (l.startsWith("### ")) card = l;
+    else if (card && l.startsWith("  - ")) m.set(card, [...(m.get(card) ?? []), l.replace(/（和引擎对过 \d+ 次，一致）$/, "")]);
+  }
+  return m;
+};
+const before = existsSync(out) ? sections(readFileSync(out, "utf8").replace(/\r\n/g, "\n")) : null;
 writeFileSync(out, [...head, ...lines].join("\n"), "utf8");
+if (before) {
+  const now = sections([...head, ...lines].join("\n"));
+  let changed = 0;
+  for (const card of new Set([...before.keys(), ...now.keys()])) {
+    const a = before.get(card) ?? [];
+    const b = now.get(card) ?? [];
+    const gone = a.filter((l) => !b.includes(l));
+    const added = b.filter((l) => !a.includes(l));
+    if (gone.length === 0 && added.length === 0) continue;
+    changed += 1;
+    console.log(card);
+    for (const l of gone) console.log(`  - ${l.slice(4)}`);
+    for (const l of added) console.log(`  + ${l.slice(4)}`);
+  }
+  console.log(`${changed} cards with changed lines since the last review file`);
+}
 console.log(`${where.size} cards, ${withRefs} counting something (${partialCards} partly unread), ${flagged} flagged; oracle ${oracle.calls} calls over ${oracle.byClosure.size} closures -> ${out}`);
