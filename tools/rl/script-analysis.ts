@@ -52,7 +52,7 @@ export interface RefSite {
   filter: FilterNode;
   /** A number of cards, or whether there is one. */
   agg: "count" | "exists";
-  threshold: { op: ">=" | ">" | "<=" | "<" | "==="; n: number } | null;
+  threshold: { op: ">=" | ">" | "<=" | "<" | "===" | "!=="; n: number } | null;
   /** The number is used as a quantity (a target's max, an effect's amount, a loop). */
   scaled: boolean;
   /** Only the top N cards of the deck are looked at (CR 5.11). */
@@ -72,7 +72,75 @@ export interface RefSite {
    * nobody knows (CR 4.5.2) unless an effect showed them; "random" a random result (5.19, 5.20). Not a condition to meet.
    */
   chance?: "top" | "random";
+  /**
+   * The count under which the effect, or the branch it selects, happens: `threshold` is the comparison as written, this is its
+   * meaning in the statement around it ("if (n < 3) return" → at least 3). `role`: "gate" the effect needs it, "branch" it
+   * picks one of two effects, "bonus" it adds to an effect that happens anyway. Unset: no comparison (a quantity, a filter).
+   */
+  test?: RefTest;
+  /** A script-level field's key (ability -1: playableIf, selfKeywords, field, equipment...): where the reference works. */
+  key?: string;
+  /**
+   * The code counts only while the card itself is in these zones, or (`not`) out of them: "if (g.card(self)?.zone !== "field")
+   * return []" before it. Narrows where its ability works.
+   */
+  selfZone?: { zones: string[]; not?: true };
 }
+
+export interface RefTest {
+  kind: "atLeast" | "atMost" | "exactly" | "notExactly";
+  n: number;
+  role: "gate" | "branch" | "bonus";
+}
+
+/** A comparison on a reference's count, not yet placed in its statement (RefSite.test). */
+interface CItem {
+  site: RefSite;
+  kind: RefTest["kind"];
+  n: number;
+}
+
+/** The comparison as written: `count op n`. */
+function kindOf(op: string, n: number): Pick<CItem, "kind" | "n"> {
+  switch (op) {
+    case ">=":
+      return norm("atLeast", n);
+    case ">":
+      return norm("atLeast", n + 1);
+    case "<=":
+      return norm("atMost", n);
+    case "<":
+      return norm("atMost", n - 1);
+    case "===":
+    case "==":
+      return norm("exactly", n);
+    default:
+      return norm("notExactly", n);
+  }
+}
+
+/** A count is never negative: "exactly 0" is "at most 0", "not 0" is "at least 1". */
+function norm(kind: CItem["kind"], n: number): Pick<CItem, "kind" | "n"> {
+  if (kind === "exactly" && n === 0) return { kind: "atMost", n: 0 };
+  if (kind === "notExactly" && n === 0) return { kind: "atLeast", n: 1 };
+  return { kind, n };
+}
+
+/** The opposite comparison. */
+function negKind(c: Pick<CItem, "kind" | "n">): Pick<CItem, "kind" | "n"> {
+  switch (c.kind) {
+    case "atLeast":
+      return norm("atMost", c.n - 1);
+    case "atMost":
+      return norm("atLeast", c.n + 1);
+    case "exactly":
+      return norm("notExactly", c.n);
+    case "notExactly":
+      return norm("exactly", c.n);
+  }
+}
+
+const negItems = (items: CItem[] | undefined): CItem[] | undefined => items?.map((it) => ({ ...it, ...negKind(it) }));
 
 /** A player's choice, while the code under it is read (RefSite.alt). */
 type Alt =
@@ -129,8 +197,15 @@ type V =
   | { k: "list"; zones: Zone[]; side: Side; filter: FilterNode; top?: number; each?: true; slot?: number }
   | { k: "count"; site: RefSite }
   | { k: "exists"; site: RefSite }
-  | { k: "cond" }
-  | { k: "pred"; f: FilterNode }
+  /**
+   * A truth value; `tests`: the comparisons on counts it is made of, as written (placed by the statement that uses it);
+   * `zone`: it says where the card itself is ("g.card(self)?.zone === 'field'").
+   */
+  | { k: "cond"; tests?: CItem[]; zone?: NonNullable<RefSite["selfZone"]> }
+  /** The zone the card itself is in. */
+  | { k: "selfZone" }
+  /** A test on the card being filtered; `tests`: comparisons on counts joined with it ("isFollower(it) && n >= 3"). */
+  | { k: "pred"; f: FilterNode; tests?: CItem[] }
   | { k: "info"; of: CardRef; from?: Extract<V, { k: "list" }> }
   | { k: "inst"; of: CardRef }
   | { k: "instDef"; of: CardRef }
@@ -146,12 +221,12 @@ type V =
   | { k: "external"; name: string }
   | { k: "gauge"; name: "combo" }
   | { k: "choice"; src: "option" | "choose" | "memory"; by?: "opp"; key?: string }
-  | { k: "altTest"; t: Alt[]; f: Alt[]; card?: Extract<V, { k: "cardTest" }> }
+  | { k: "altTest"; t: Alt[]; f: Alt[]; card?: Extract<V, { k: "cardTest" }>; tests?: CItem[] }
   /**
    * A condition on a chosen or top card, already recorded as `site`: "!", "&&", "||" and early exits rewrite that one site.
    * `others`: conditions on other cards joined with it (negated along with it).
    */
-  | { k: "cardTest"; list: Extract<V, { k: "list" }>; f: FilterNode; site: RefSite | null; others?: Extract<V, { k: "cardTest" }>[] }
+  | { k: "cardTest"; list: Extract<V, { k: "list" }>; f: FilterNode; site: RefSite | null; others?: Extract<V, { k: "cardTest" }>[]; tests?: CItem[] }
   | { k: "unknown" };
 
 const UNKNOWN: V = { k: "unknown" };
@@ -196,6 +271,10 @@ class Analyzer {
   conds = { overflow: 0, necrocharge: 0, spellchain: 0, combo: 0, sanguine: 0 };
   timing: Timing = "otherTrigger";
   ability = -1;
+  /** The script-level field being read (ability -1). */
+  key: string | undefined = undefined;
+  /** Where the card itself must be for the code being read to run (RefSite.selfZone). */
+  selfZone: RefSite["selfZone"] = undefined;
   where = "";
   /** The candidates of the targets of the object being read (fx.targets[i] are chosen among targetLists[i]). */
   targetLists: (Extract<V, { k: "list" }> | null)[] = [];
@@ -211,8 +290,37 @@ class Analyzer {
     const before = ["trigger", "triggerIf", "condition", "available", "modeCount"].includes(this.where);
     const alts = before ? this.alts.filter((a) => !(a.k === "may" && a.ability)) : this.alts;
     if (alts.length > 0) s.alt = [...new Set(alts.map(altToken))].sort();
+    if (this.ability === -1 && this.key) s.key = this.key;
+    if (this.selfZone) s.selfZone = this.selfZone;
     this.refs.push(s);
     return s;
+  }
+
+  /** A value's comparisons on counts, as written; "is there one" (exists, a count used as a truth value) is "at least 1". */
+  testsOf(v: V): CItem[] {
+    if (v.k === "cond" || v.k === "altTest" || v.k === "cardTest" || v.k === "pred") return v.tests ?? [];
+    if (v.k === "exists" || v.k === "count") {
+      const s = this.threshold(v, ">=", 1);
+      return s ? [{ site: s, kind: "atLeast", n: 1 }] : [];
+    }
+    return [];
+  }
+
+  /**
+   * Comparisons placed in the statement that uses them (RefSite.test): negated under a give-up guard, with the role the
+   * statement gives them. Spellchain (CR 13.3) and Necrocharge (13.5) counts and a mode count are read as adding to the
+   * effect (a choice of design: their cards mostly do more with them). One comparison used in two statements ("six ? 3 : 2"
+   * and "if (six)") keeps the strongest role; a site placed in the other direction is another reference.
+   */
+  place(items: readonly CItem[], negate: boolean, role: RefTest["role"]): void {
+    for (const it of items) {
+      const c = negate ? negKind(it) : it;
+      const t: RefTest = { kind: c.kind, n: c.n, role: ["spellchain", "necrocharge", "modeCount"].includes(it.site.where) ? "bonus" : role };
+      const s = it.site;
+      if (!s.test) s.test = t;
+      else if (s.test.kind === t.kind && s.test.n === t.n) s.test.role = strongerRole(s.test.role, t.role);
+      else if (this.refs.includes(s)) this.refs.push({ ...s, test: t });
+    }
   }
 
   /** Puts choices in force; returns the depth to cut back to. */
@@ -241,6 +349,8 @@ class Analyzer {
 
   private asFilter(v: V): FilterNode {
     v = this.asPred(v);
+    // A filter that matches nothing unless a count holds: the count gates it.
+    if (v.k === "pred" && v.tests) this.place(v.tests, false, "gate");
     if (v.k === "pred") return v.f;
     if (v.k === "filterFn") return v.f;
     if (v.k === "bool") return v.v ? ANY : { t: "other", why: "false" };
@@ -312,10 +422,6 @@ class Analyzer {
     params.forEach((p, i) => this.bind(p, args[i] ?? UNKNOWN, env, module, args.slice(i)));
   }
 
-  /** A value used as a test (if, ?:): "is there such a card" needs one. */
-  private truthy(v: V): void {
-    if ((v.k === "exists" || v.k === "count")) this.threshold(v, ">=", 1);
-  }
 
   /** A declaration statement, bound into `env`. */
   declare(stmt: Node, env: Env, module: Module): void {
@@ -325,10 +431,12 @@ class Analyzer {
   /** A block's statements; the value of its first return that gives something. */
   block(node: Node, env: Env, module: Module): V | null {
     const d = this.alts.length;
+    const zone = this.selfZone;
     try {
       return this.blockInner(node, env, module);
     } finally {
       this.alts.length = d;
+      this.selfZone = zone;
     }
   }
 
@@ -336,6 +444,7 @@ class Analyzer {
     let result: V | null = null;
     // A return of nothing known ("return null" before "return card") gives way to a later one that is.
     let unknown = false;
+    let gaveUp: V | null = null;
     // A predicate's guards ("if (id === self) return false;"): what is left must not match them.
     const guards: FilterNode[] = [];
     for (const stmt of (node.body as Node[]) ?? []) {
@@ -344,18 +453,24 @@ class Analyzer {
         const t = this.eval(stmt.test as Node, env, module);
         if (t.k === "pred") {
           guards.push(t.f.t === "not" ? t.f.arg : { t: "not", arg: t.f });
+          if (t.tests) this.place(t.tests, true, "gate");
           continue;
         }
         // Not a guard of a filter: read again as a statement below.
         this.refs.length = saved;
       }
       const r = this.statement(stmt, env, module);
+      // "if (!c) return false;" before the real return: a guard giving up is not what the function gives.
+      if (r && stmt.type === "IfStatement" && ((r.k === "bool" && !r.v) || (r.k === "arr" && r.items.length === 0))) {
+        gaveUp ??= r;
+        continue;
+      }
       if (r && !result) {
         if (r.k === "unknown") unknown = true;
         else if (!unknown || r.k === "card" || r.k === "arr" || r.k === "list") result = r;
-      }
+      } else if (r && result) result = joinTests(result, r);
     }
-    const out = result ?? (unknown ? UNKNOWN : null);
+    const out = result ?? (unknown ? UNKNOWN : gaveUp);
     if (guards.length > 0 && out && !(out.k === "bool" && !out.v)) return { k: "pred", f: and(...guards, this.asFilter(this.asPred(out))) };
     return out;
   }
@@ -382,7 +497,25 @@ class Analyzer {
         // An if / else on a card: the condition in its positive form (both branches do something).
         else if (card && stmt.alternate && card.f.t === "not") this.setCardTest(card, card.f.arg);
         this.settle(test);
-        this.truthy(test);
+        // The counts it compares (RefSite.test): a give-up guard's effect needs the opposite; "return true" in a condition, or
+        // an else that gives up, needs it as written; two effects to pick from are a branch; more done under it, a bonus.
+        const items = this.testsOf(test);
+        const consequent = stmt.consequent as Node;
+        const alternate = stmt.alternate as Node | null;
+        // Where the card itself is: a guard giving up elsewhere holds for the rest of the block, a plain if for its body.
+        const zone = test.k === "cond" ? test.zone : undefined;
+        const otherZone = zone && (zone.not ? { zones: zone.zones } : { zones: zone.zones, not: true as const });
+        if (zone && !alternate && isGiveUp(consequent)) {
+          this.selfZone = otherZone;
+          return null;
+        }
+        // "if (options.length === 0) break;" in a loop: how many times, a quantity like a loop's own test (no test).
+        if (!alternate && isBreak(consequent)) for (const it of items) it.site.scaled = true;
+        else if (isGiveUp(consequent) && !(alternate && isGiveUp(alternate))) this.place(items, true, "gate");
+        else if (alternate && isGiveUp(alternate)) this.place(items, false, "gate");
+        else if (!alternate && returnsTrue(consequent)) this.place(items, false, "gate");
+        else if (alternate || endsInReturn(consequent)) this.place(items, false, "branch");
+        else this.place(items, false, "bonus");
         // "if (!isFairy(g, card)) return []": the guard's own filter is what the card must be.
         if (this.capture && test.k === "pred") this.capture.push(test.f.t === "not" ? test.f.arg : test.f);
         const at = this.altOf(test);
@@ -397,22 +530,31 @@ class Analyzer {
           const exitsB = stmt.alternate ? endsInReturn(stmt.alternate as Node) : false;
           if (exitsA && !exitsB) this.pushAlts(at.f);
           else if (exitsB && !exitsA) this.pushAlts(at.t);
-          return a ?? b;
+          return a && b ? joinTests(a, b) : (a ?? b);
         }
         // Exits inside a plain branch are under that branch only.
         const d1 = this.alts.length;
+        const z1 = this.selfZone;
+        if (zone) this.selfZone = zone;
         const a = this.statement(stmt.consequent as Node, new Env(env), module);
         this.alts.length = d1;
+        this.selfZone = zone ? otherZone : z1;
         const b = stmt.alternate ? this.statement(stmt.alternate as Node, new Env(env), module) : null;
         this.alts.length = d1;
-        return a ?? b;
+        this.selfZone = z1;
+        return a && b ? joinTests(a, b) : (a ?? b);
       }
       case "BlockStatement":
         return this.block(stmt, new Env(env), module);
       case "ForStatement": {
         const inner = new Env(env);
         if (stmt.init) (stmt.init as Node).type === "VariableDeclaration" ? this.statement(stmt.init as Node, inner, module) : this.eval(stmt.init as Node, inner, module);
-        if (stmt.test) this.scale(this.eval(stmt.test as Node, inner, module));
+        if (stmt.test) {
+          // A loop's test: how many times, a quantity (no test).
+          const t = this.eval(stmt.test as Node, inner, module);
+          this.scale(t);
+          if (t.k === "cond") for (const it of t.tests ?? []) it.site.scaled = true;
+        }
         return this.statement(stmt.body as Node, inner, module);
       }
       case "ForOfStatement":
@@ -436,9 +578,11 @@ class Analyzer {
         return this.statement(stmt.body as Node, inner, module);
       }
       case "WhileStatement":
-      case "DoWhileStatement":
-        this.eval(stmt.test as Node, env, module);
+      case "DoWhileStatement": {
+        const t = this.eval(stmt.test as Node, env, module);
+        if (t.k === "cond") for (const it of t.tests ?? []) it.site.scaled = true;
         return this.statement(stmt.body as Node, new Env(env), module);
+      }
       case "SwitchStatement": {
         const disc = this.eval(stmt.discriminant as Node, env, module);
         for (const c of stmt.cases as Node[]) {
@@ -579,11 +723,6 @@ class Analyzer {
     this.scale(v);
   }
 
-  /** A closure that answers whether there is such a card: at least 1. */
-  thresholdOf(v: V): void {
-    this.threshold(v, ">=", 1);
-  }
-
   private nameOf(module: Module, name: string, env: Env): V {
     const local = env.get(name);
     if (local) return local;
@@ -664,7 +803,11 @@ class Analyzer {
         return UNKNOWN;
       case "ConditionalExpression": {
         const test = this.asPred(this.eval(node.test as Node, env, module));
-        this.truthy(test);
+        // "n >= 5 ? ["assail"] : []": nothing unless (a gate); two values to pick from: a branch.
+        const items = this.testsOf(test);
+        if (isNothing(node.alternate as Node) && !isNothing(node.consequent as Node)) this.place(items, false, "gate");
+        else if (isNothing(node.consequent as Node) && !isNothing(node.alternate as Node)) this.place(items, true, "gate");
+        else this.place(items, false, "branch");
         if (this.capture && test.k === "pred") this.capture.push(test.f);
         if (test.k === "cardTest" && test.f.t === "not") this.setCardTest(test, test.f.arg);
         this.settle(test);
@@ -683,10 +826,12 @@ class Analyzer {
       }
       case "UnaryExpression": {
         const v = this.asPred(this.eval(node.argument as Node, env, module));
-        if (node.operator === "!" && v.k === "altTest") return { k: "altTest", t: v.f, f: v.t, ...(v.card ? { card: this.negateCardTest(v.card) } : {}) };
-        if (node.operator === "!" && v.k === "cardTest") return this.negateCardTest(v);
+        if (node.operator === "!" && v.k === "altTest") return { k: "altTest", t: v.f, f: v.t, ...(v.card ? { card: this.negateCardTest(v.card) } : {}), ...(v.tests ? { tests: negItems(v.tests) } : {}) };
+        if (node.operator === "!" && v.k === "cardTest") return { ...this.negateCardTest(v), ...(v.tests ? { tests: negItems(v.tests) } : {}) };
         if (node.operator === "!" && v.k === "choice" && v.src === "memory") return { k: "altTest", t: [{ k: "paid", key: v.key ?? "?", neg: true }], f: [{ k: "paid", key: v.key ?? "?" }] };
-        if (node.operator === "!") return v.k === "pred" ? { k: "pred", f: { t: "not", arg: v.f } } : v.k === "exists" ? (this.threshold(v, "<", 1), { k: "cond" }) : { k: "cond" };
+        if (node.operator === "!" && (v.k === "exists" || v.k === "count")) return this.compare(v, "<", 1);
+        if (node.operator === "!" && v.k === "cond" && v.zone) return { k: "cond", zone: v.zone.not ? { zones: v.zone.zones } : { zones: v.zone.zones, not: true } };
+        if (node.operator === "!") return v.k === "pred" ? { k: "pred", f: { t: "not", arg: v.f }, ...(v.tests ? { tests: negItems(v.tests) } : {}) } : { k: "cond", ...(v.k === "cond" && v.tests ? { tests: negItems(v.tests) } : {}) };
         if (node.operator === "-" && v.k === "num") return { k: "num", v: -v.v };
         this.scale(v);
         return UNKNOWN;
@@ -717,15 +862,28 @@ class Analyzer {
     return { k: "choose", id: v, ...(c.by ? { by: c.by } : {}) };
   }
 
-  private threshold(v: V, op: NonNullable<RefSite["threshold"]>["op"], n: number): void {
+  /** A count compared with a number, as written (RefSite.threshold): the site that has it (a copy if it had another). */
+  private threshold(v: V, op: NonNullable<RefSite["threshold"]>["op"], n: number): RefSite | null {
     if (v.k === "gauge") {
       this.conds[v.name] = Math.max(this.conds[v.name], op === ">" ? n + 1 : n);
-      return;
+      return null;
     }
-    if (v.k !== "count" && v.k !== "exists") return;
+    if (v.k !== "count" && v.k !== "exists") return null;
     if (v.site.where === "spellchain" || v.site.where === "necrocharge") this.conds[v.site.where] = Math.max(this.conds[v.site.where], op === ">" ? n + 1 : n);
     if (!v.site.threshold) v.site.threshold = { op, n };
-    else if (v.site.threshold.op !== op || v.site.threshold.n !== n) this.refs.push({ ...v.site, threshold: { op, n } });
+    else if (v.site.threshold.op !== op || v.site.threshold.n !== n) {
+      const { test: _t, ...rest } = v.site;
+      const copy: RefSite = { ...rest, threshold: { op, n } };
+      this.refs.push(copy);
+      return copy;
+    }
+    return v.site;
+  }
+
+  /** A comparison `count op n` as a truth value. */
+  private compare(v: V, op: NonNullable<RefSite["threshold"]>["op"], n: number): V {
+    const s = this.threshold(v, op, n);
+    return { k: "cond", ...(s ? { tests: [{ site: s, ...kindOf(op, n) }] } : {}) };
   }
 
   /** A card's boolean information used as a test (def.token, info.evolved): a filter atom. */
@@ -740,40 +898,39 @@ class Analyzer {
   private logical(node: Node, env: Env, module: Module): V {
     const a = this.asPred(this.eval(node.left as Node, env, module));
     const b = this.asPred(this.eval(node.right as Node, env, module));
+    // The comparisons on counts of both sides ("is there one" is at least 1), carried by what this gives (RefSite.test).
+    const own = (v: V): CItem[] => (v.k === "exists" ? this.testsOf(v) : v.k === "cond" || v.k === "altTest" || v.k === "cardTest" || v.k === "pred" ? (v.tests ?? []) : []);
+    const tests = node.operator === "??" && a.k !== "exists" && b.k !== "exists" ? [] : [...own(a), ...own(b)];
+    const carry = (v: V): V => (tests.length === 0 || !(v.k === "cond" || v.k === "altTest" || v.k === "cardTest" || v.k === "pred") ? v : { ...v, tests });
     // A choice next to a card test inside a filter: the filter (the choice is the same for every card).
-    if ((a.k === "altTest" && b.k === "pred") || (b.k === "altTest" && a.k === "pred")) return a.k === "pred" ? a : b;
+    if ((a.k === "altTest" && b.k === "pred") || (b.k === "altTest" && a.k === "pred")) return carry(a.k === "pred" ? a : b);
     // Choices joined: "a && b" true means both; "a || b" false means neither (the other branches: nothing known).
     if ((a.k === "altTest" || b.k === "altTest") && a.k !== "pred" && b.k !== "pred" && node.operator !== "??") {
-      if (a.k === "exists") this.threshold(a, ">=", 1);
-      if (b.k === "exists") this.threshold(b, ">=", 1);
       const A = a.k === "altTest" ? a : { t: [], f: [] };
       const B = b.k === "altTest" ? b : { t: [], f: [] };
       const card = a.k === "cardTest" ? a : b.k === "cardTest" ? b : (a.k === "altTest" && a.card) || (b.k === "altTest" && b.card) || undefined;
       const tags = node.operator === "&&" ? { t: [...A.t, ...B.t], f: [] } : { t: [], f: [...A.f, ...B.f] };
-      return { k: "altTest", ...tags, ...(card ? { card } : {}) };
+      return carry({ k: "altTest", ...tags, ...(card ? { card } : {}) });
     }
     // Conditions on one card joined; a card test next to something unknown ("moved === undefined || cost < 5") stays open.
-    if (node.operator !== "??" && a.k === "cardTest" && b.k === "cardTest") return this.joinCardTests(a, b, node.operator as string);
-    if ((a.k === "cardTest" && b.k === "pred") || (b.k === "cardTest" && a.k === "pred")) return a.k === "pred" ? a : b;
+    if (node.operator !== "??" && a.k === "cardTest" && b.k === "cardTest") return carry(this.joinCardTests(a, b, node.operator as string));
+    if ((a.k === "cardTest" && b.k === "pred") || (b.k === "cardTest" && a.k === "pred")) return carry(a.k === "pred" ? a : b);
     if (node.operator !== "??" && (a.k === "cardTest" || b.k === "cardTest")) {
       const other = a.k === "cardTest" ? b : a;
-      if (other.k === "cond" || other.k === "unknown" || other.k === "bool" || other.k === "card") return a.k === "cardTest" ? a : b;
+      if (other.k === "cond" || other.k === "unknown" || other.k === "bool" || other.k === "card") return carry(a.k === "cardTest" ? a : b);
     }
     if (node.operator === "??" || node.operator === "||") {
       if (a.k === "prop") return a; // (g.info(id).cost ?? 0)
-      if (a.k === "pred" && b.k === "pred") return { k: "pred", f: or(a.f, b.f) };
-      if (node.operator === "||" && (a.k === "pred" || b.k === "pred") && (a.k === "cond" || a.k === "unknown" || b.k === "cond" || b.k === "unknown")) return a.k === "pred" ? a : b;
-      if (a.k === "exists") this.threshold(a, ">=", 1);
-      if (b.k === "exists") this.threshold(b, ">=", 1);
-      return a.k !== "unknown" ? (a.k === "pred" || a.k === "cond" ? a : a) : b;
+      if (a.k === "pred" && b.k === "pred") return carry({ k: "pred", f: or(a.f, b.f) });
+      if (node.operator === "||" && (a.k === "pred" || b.k === "pred") && (a.k === "cond" || a.k === "unknown" || b.k === "cond" || b.k === "unknown")) return carry(a.k === "pred" ? a : b);
+      const r = a.k !== "unknown" ? a : b;
+      return tests.length > 0 && (r.k === "cond" || r.k === "exists" || r.k === "unknown" || r.k === "bool") ? { k: "cond", tests } : carry(r);
     }
     // &&
-    if (a.k === "pred" && b.k === "pred") return { k: "pred", f: and(a.f, b.f) };
-    if (a.k === "pred" && (b.k === "bool" || b.k === "cond" || b.k === "unknown")) return a;
-    if (b.k === "pred" && (a.k === "bool" || a.k === "cond" || a.k === "unknown")) return b;
-    if (a.k === "exists") this.threshold(a, ">=", 1);
-    if (b.k === "exists") this.threshold(b, ">=", 1);
-    return { k: "cond" };
+    if (a.k === "pred" && b.k === "pred") return carry({ k: "pred", f: and(a.f, b.f) });
+    if (a.k === "pred" && (b.k === "bool" || b.k === "cond" || b.k === "unknown")) return carry(a);
+    if (b.k === "pred" && (a.k === "bool" || a.k === "cond" || a.k === "unknown")) return carry(b);
+    return { k: "cond", ...(tests.length > 0 ? { tests } : {}) };
   }
 
   private binary(node: Node, env: Env, module: Module): V {
@@ -792,6 +949,11 @@ class Analyzer {
         return { k: "altTest", t: [alt], f: [negAlt(alt)] };
       }
     }
+    // g.card(self)?.zone === "field": where the card itself is.
+    if ((op === "===" || op === "==" || op === "!==" || op === "!=") && ((a.k === "selfZone" && b.k === "str") || (b.k === "selfZone" && a.k === "str"))) {
+      const z = (a.k === "str" ? a.v : (b as Extract<V, { k: "str" }>).v) as string;
+      return { k: "cond", zone: op === "!==" || op === "!=" ? { zones: [z], not: true } : { zones: [z] } };
+    }
     const itAndSelf = (a.k === "card" && a.v === "it" && b.k === "card" && b.v === "self") || (b.k === "card" && b.v === "it" && a.k === "card" && a.v === "self");
     if ((op === "!==" || op === "!=") && itAndSelf) return { k: "pred", f: { t: "notSelf" } };
     if ((op === "===" || op === "==") && itAndSelf) return { k: "pred", f: { t: "not", arg: { t: "notSelf" } } };
@@ -799,8 +961,8 @@ class Analyzer {
     const MIRROR: Record<string, NonNullable<RefSite["threshold"]>["op"]> = { ">=": "<=", ">": "<", "<=": ">=", "<": ">", "===": "===", "==": "===" };
     if (COMPARE[op]) {
       // A count against a number: a threshold.
-      if ((a.k === "count" || a.k === "exists" || a.k === "gauge") && b.k === "num") return this.threshold(a, COMPARE[op]!, b.v), { k: "cond" };
-      if ((b.k === "count" || b.k === "exists" || b.k === "gauge") && a.k === "num") return this.threshold(b, MIRROR[op]!, a.v), { k: "cond" };
+      if ((a.k === "count" || a.k === "exists" || a.k === "gauge") && b.k === "num") return this.compare(a, COMPARE[op]!, b.v);
+      if ((b.k === "count" || b.k === "exists" || b.k === "gauge") && a.k === "num") return this.compare(b, MIRROR[op]!, a.v);
       // A card's information against a value: a filter atom.
       const prop = a.k === "prop" ? a : b.k === "prop" ? b : null;
       const other = prop === a ? b : a;
@@ -834,7 +996,7 @@ class Analyzer {
       if (op === "!==" || op === "!=") return UNKNOWN;
       return { k: "cond" };
     }
-    if ((op === "!==" || op === "!=") && (a.k === "count" || a.k === "exists") && b.k === "num") return this.threshold(a, b.v === 0 ? ">=" : ">=", b.v === 0 ? 1 : b.v), { k: "cond" };
+    if ((op === "!==" || op === "!=") && (a.k === "count" || a.k === "exists") && b.k === "num") return this.compare(a, "!==", b.v);
     // Arithmetic with a count: it is used as a quantity.
     if (["+", "-", "*", "/", "%"].includes(op)) {
       this.scale(a);
@@ -876,6 +1038,7 @@ class Analyzer {
         if ((name === "controller" || name === "owner") && object.of === "self") return { k: "side", v: "own" };
         if (name === "def") return { k: "instDef", of: object.of };
         if (name === "engaged") return { k: "prop", of: object.of, path: ["engaged"] };
+        if (name === "zone" && object.of === "self") return { k: "selfZone" };
         return UNKNOWN;
       case "reader":
         return name === "db" ? { k: "db" } : UNKNOWN;
@@ -910,7 +1073,7 @@ class Analyzer {
             const saved = this.where;
             this.where = "canPay";
             const d0 = this.pushAlts([{ k: "may", how: "cost" }]);
-            this.truthy(this.apply(canPay, [{ k: "reader" }, { k: "side", v: "own" }, { k: "card", v: "self" }]));
+            this.place(this.testsOf(this.apply(canPay, [{ k: "reader" }, { k: "side", v: "own" }, { k: "card", v: "self" }])), false, "gate");
             this.alts.length = d0;
             this.where = saved;
           }
@@ -961,8 +1124,8 @@ class Analyzer {
         const vs = args();
         if (object.top !== undefined && (m === "filter" || m === "some")) {
           const f = this.predicate(vs[0] ?? UNKNOWN);
-          if (meaningful(f)) this.recordList({ k: "list", zones: ["deck"], side: object.side, filter: f, top: object.top }, "search");
-          return m === "filter" ? { ...object, filter: and(object.filter, f) } : { k: "cond" };
+          const site = meaningful(f) ? this.recordList({ k: "list", zones: ["deck"], side: object.side, filter: f, top: object.top }, "search") : null;
+          return m === "filter" ? { ...object, filter: and(object.filter, f) } : { k: "cond", ...(site ? { tests: [{ site, kind: "atLeast" as const, n: 1 }] } : {}) };
         }
         if (m === "filter") return { ...object, filter: and(object.filter, this.predicate(vs[0] ?? UNKNOWN)) };
         if (m === "some") return { k: "exists", site: this.site({ ...object, filter: and(object.filter, this.predicate(vs[0] ?? UNKNOWN)) }, "exists") };
@@ -1014,7 +1177,8 @@ class Analyzer {
           if ((m === "some" || m === "every") && results.length > 0 && results.every((r) => r.k === "cardTest")) {
             return (results as Extract<V, { k: "cardTest" }>[]).slice(1).reduce<V>((x, y) => (x.k === "cardTest" ? this.joinCardTests(x, y, m === "some" ? "||" : "&&") : x), results[0]!);
           }
-          return { k: "cond" };
+          const tests = results.flatMap((r) => (r.k === "exists" ? this.testsOf(r) : r.k === "cond" || r.k === "altTest" || r.k === "cardTest" || r.k === "pred" ? (r.tests ?? []) : []));
+          return { k: "cond", ...(tests.length > 0 ? { tests } : {}) };
         }
         if (m === "includes" && object.items[0]?.k === "choice" && vs[0]?.k === "str") {
           const alt = this.choiceIs(object.items[0], vs[0].v);
@@ -1121,6 +1285,7 @@ class Analyzer {
           const s = this.site({ k: "list", zones: ["cemetery"], side: vs[0]?.k === "side" ? vs[0].v : "own", filter: m === "spellchain" ? { t: "type", v: "spell" } : ANY }, "count");
           s.threshold = { op: ">=", n: x };
           this.where = saved;
+          return { k: "cond", tests: [{ site: s, kind: "atLeast", n: x }] };
         }
         return { k: "cond" };
       }
@@ -1193,6 +1358,8 @@ const TRIGGER_ZONES: Record<string, Zone[]> = {
   whenCardPutIntoYourEx: ["ex"],
 };
 
+/** Where a reference asks "is there a card to choose, pay or find" (recordList): at least 1, no comparison to place. */
+const AVAIL_WHERE = new Set(["target", "targetCondition", "choose", "search", "searchEach", "fromEvolveDeck", "topCard"]);
 const CLOSURE_KEYS = new Set(["condition", "triggerIf", "max", "when", "modeCount", "available", "candidates", "filter", "playableIf", "playCost", "selfKeywords", "cannotAttack", "cannotAttackLeader", "keywordsFor", "playCostOf", "typeWhile", "ignoresWard", "cannotBeDestroyedByAbilities", "evolveCostChange", "canPay"]);
 const FROM_HAND = new Set(["playableIf", "playCost", "playOptions", "playOptionsRequired", "playableFromCemetery", "nextPlay"]);
 
@@ -1253,8 +1420,10 @@ export function analyzeScript(file: string, script: CardScript): CardAnalysis {
         az.capture = null;
         if (captured.length > 0) az.recordAffected(captured.length === 1 ? captured[0]! : { t: "and", args: captured }, affects, "affects");
       }
-      if (key === "max" || key === "modeCount" || key === "playCost" || key === "playCostOf" || key === "evolveCostChange") az.scaleValue(r);
-      if (r.k === "exists") az.thresholdOf(r);
+      const quantity = key === "max" || key === "modeCount" || key === "playCost" || key === "playCostOf" || key === "evolveCostChange";
+      if (quantity) az.scaleValue(r);
+      // A closure's truth value: what the ability, the play or the passive needs, as written; a target's `when` adds a target.
+      if (r.k === "exists" || r.k === "cond" || r.k === "altTest" || r.k === "cardTest" || r.k === "pred" || (r.k === "count" && !quantity)) az.place(az.testsOf(r), false, key === "when" ? "bonus" : "gate");
     }
   };
   const readObject = (obj: Node, env: Env, mod: Module) => {
@@ -1376,6 +1545,8 @@ export function analyzeScript(file: string, script: CardScript): CardAnalysis {
           const constructor = callee?.type === "Identifier" ? (callee.name as string) : null;
           az.timing = exact ? timingOf(runtime[i]!, constructor) : (constructor && CONSTRUCTOR_TIMING[constructor]) || "otherTrigger";
           az.ability = exact ? i : -2;
+          az.key = undefined;
+          az.selfZone = undefined;
           const ra = exact ? runtime[i]! : null;
           const d0 = az.pushAlts(ra?.kind === "automatic" && ra.cost ? [{ k: "may", how: "cost", ability: true }] : []);
           readNode(e, new Env(), module);
@@ -1385,6 +1556,8 @@ export function analyzeScript(file: string, script: CardScript): CardAnalysis {
       }
       az.timing = FROM_HAND.has(key) ? "fromHand" : "continuous";
       az.ability = -1;
+      az.key = key;
+      az.selfZone = undefined;
       // A play option (CR 10.4.7.3): its cost is under it (a required single option is no choice).
       if (key === "playOptions" && value.type === "ArrayExpression") {
         const options = script.playOptions ?? [];
@@ -1456,6 +1629,9 @@ export function analyzeScript(file: string, script: CardScript): CardAnalysis {
   if (root) visit(root, module);
   // Local helpers of the card's own file used by its card object.
   for (const [name, node] of module.decls) if (!seen.has(`${module.file}#${name}`)) visit(node, module);
+  // Every comparison is placed in its statement (RefSite.test); one the reading couldn't place is partial. A quantity (a loop's
+  // test) has none.
+  for (const r of az.refs) if (r.threshold && !r.test && !r.scaled && !AVAIL_WHERE.has(r.where)) r.filter = and(r.filter, { t: "other", why: "test" });
   const refs = dedupe(az.refs).filter((r) => !(r.filter.t === "any" && r.agg === "count" && !r.threshold && !r.scaled));
   return { fx, amounts, unknownFx: [...unknownFx].sort(), refs, conds: az.conds };
 }
@@ -1520,10 +1696,11 @@ function addAmounts(amounts: Record<AmountKind, number>, method: string, args: N
 function dedupe(refs: RefSite[]): RefSite[] {
   const seen = new Map<string, RefSite>();
   for (const r of refs) {
-    const key = JSON.stringify([r.timing, r.ability, r.where, r.zones, r.side, r.filter, r.agg, r.threshold, r.top]);
+    const key = JSON.stringify([r.timing, r.ability, r.key, r.selfZone, r.where, r.zones, r.side, r.filter, r.agg, r.threshold, r.test?.kind, r.test?.n, r.top]);
     const prev = seen.get(key);
     if (!prev) seen.set(key, r);
     else {
+      if (prev.test && r.test) prev.test = { ...prev.test, role: strongerRole(prev.test.role, r.test.role) };
       prev.scaled ||= r.scaled;
       prev.threshold ??= r.threshold;
       const common = (prev.alt ?? []).filter((a) => (r.alt ?? []).includes(a));
@@ -1532,6 +1709,40 @@ function dedupe(refs: RefSite[]): RefSite[] {
     }
   }
   return [...seen.values()];
+}
+
+/** Of two roles one comparison has, the one that says more: a gate, then a branch, then a bonus. */
+function strongerRole(a: RefTest["role"], b: RefTest["role"]): RefTest["role"] {
+  const order = ["gate", "branch", "bonus"];
+  return order.indexOf(a) <= order.indexOf(b) ? a : b;
+}
+
+/** Two values a statement may give (an if's branches, a block's returns): the first, with the comparisons of both. */
+function joinTests(a: V, b: V): V {
+  const tb = b.k === "cond" || b.k === "altTest" || b.k === "cardTest" || b.k === "pred" ? b.tests : undefined;
+  if (!tb || !(a.k === "cond" || a.k === "altTest" || a.k === "cardTest" || a.k === "pred")) return a;
+  return { ...a, tests: [...(a.tests ?? []), ...tb] };
+}
+
+/** `break;` (or in a block alone). */
+function isBreak(n: Node): boolean {
+  if (n.type === "BlockStatement") return (n.body as Node[]).length === 1 && isBreak((n.body as Node[])[0]!);
+  return n.type === "BreakStatement";
+}
+
+/** `return true;` or `{ return true; }`. */
+function returnsTrue(n: Node): boolean {
+  if (n.type === "ReturnStatement") return (n.argument as Node | null)?.type === "Literal" && (n.argument as Node).value === true;
+  if (n.type === "BlockStatement") return (n.body as Node[]).length === 1 && returnsTrue((n.body as Node[])[0]!);
+  return false;
+}
+
+/** A value meaning "nothing": false, null, undefined, []. */
+function isNothing(n: Node): boolean {
+  if (n.type === "TSAsExpression" || n.type === "ParenthesizedExpression") return isNothing(n.expression as Node);
+  if (n.type === "Literal") return n.value === false || n.value === null;
+  if (n.type === "Identifier") return n.name === "undefined";
+  return n.type === "ArrayExpression" && (n.elements as Node[]).length === 0;
 }
 
 /** `return false;` or `{ return false; }`. */
