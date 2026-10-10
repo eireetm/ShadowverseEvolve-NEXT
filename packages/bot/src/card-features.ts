@@ -276,7 +276,9 @@ const PLAYED_FROM: readonly string[] = ["hand", "ex"];
  * field); a script field where Core reads it.
  */
 export function refFrom(def: CardDefinition, script: CardScript, r: Pick<AnalyzedRef, "ability" | "key" | "selfZone">): string[] {
-  const z = r.selfZone;
+  // Only a script field is read where the card is (selfKeywords...); an ability's resolution may find the card moved since it
+  // was triggered (BP20-120: triggered in the hand when discarded, resolved from the cemetery).
+  const z = r.ability < 0 ? r.selfZone : undefined;
   return zonesOf(def, script, r).filter((x) => !z || z.zones.includes(x) !== (z.not === true));
 }
 
