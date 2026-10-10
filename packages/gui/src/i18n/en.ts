@@ -737,8 +737,6 @@ export const en = {
   "timing.other": "Triggered",
 
   "card.cost": "Cost",
-  "card.cardCost": "Card cost",
-  "card.playCost": "Current play cost",
   "card.expandKeywords": "Show all keywords",
   "card.attack": "Attack",
   "card.defense": "Defense",

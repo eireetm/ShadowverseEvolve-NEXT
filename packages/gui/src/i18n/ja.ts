@@ -741,8 +741,6 @@ export const ja: Record<MessageKey, string> = {
   "timing.other": "誘発",
 
   "card.cost": "コスト",
-  "card.cardCost": "カードのコスト",
-  "card.playCost": "現在のプレイコスト",
   "card.expandKeywords": "すべてのキーワードを表示",
   "card.attack": "攻撃力",
   "card.defense": "体力",

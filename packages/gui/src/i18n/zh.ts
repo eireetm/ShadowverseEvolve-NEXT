@@ -740,12 +740,10 @@ export const zh: Record<MessageKey, string> = {
   "timing.other": "诱发",
 
   "card.cost": "费用",
-  "card.cardCost": "卡牌费用",
-  "card.playCost": "当前 play 费用",
   "card.expandKeywords": "展开全部关键词",
   "card.attack": "攻击力",
   "card.defense": "生命值",
-  "card.printed": "印刷值 {value}",
+  "card.printed": "原本值 {value}",
   "card.keywords": "关键词",
   "card.counters": "指示物",
   "card.noText": "（没有卡面文本）",
