@@ -52,6 +52,7 @@ export {
   encoderV2Schema,
   prepareV2,
   gdefRow,
+  gdIndexOf,
   encodeV2,
   poolV2,
   decodeV2,
@@ -62,4 +63,4 @@ export {
   type EncodedV2,
   type DescribeV2Names,
 } from "./encoder-v2";
-export { REL_COLUMNS_V2, emptyDiagnosticsV2, type EncodeDiagnosticsV2, type RefTrace } from "./encoder-v2-refs";
+export { REL_COLUMNS_V2, emptyDiagnosticsV2, refDomain, cardToken, evaluateRef, refClass, odds, meets, e16, defFacts, IN_PLACE, type EncodeDiagnosticsV2, type RefTrace, type RefDomain, type RefToken } from "./encoder-v2-refs";
