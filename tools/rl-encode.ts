@@ -17,6 +17,16 @@
  * the position (also copied into the GUI's replays folder), and pick/NN.txt, the encoder's reading of it.
  * A game whose bucket (tools/rl/sampling.ts) is 0–79 is training data, 80–89 validation, 90–99 test; a job with holdout decks
  * (its job file has withOne) is a test set of its own (split 3).
+ * --encoder 2 (default output <run dir>/enc-v2): encoder v2 (packages/bot/src/encoder-v2.ts) instead of x — per shard
+ * glob-NNNN.npy (int16 [n, 159]), card-NNNN.npy (int16 card tokens [Nc, 103]), pile-NNNN.npy (int16 [Np, 4]), off-NNNN.npy
+ * (int32 [n + 1, 2]: each sample's first card and pile row), gbase-NNNN.npy (int32 [n]: its game's first gdef row),
+ * gdef-NNNN.npy (int16 [Ng, 25]), with the same y / side / w1; static.npy and defs.json (the card table's rows by
+ * definition index), pooled-check (poolV2 of fixed samples, recomputed from the written arrays), goldens, stats.json, and
+ * the checks C1–C24 (tools/rl/enc-v2-writer.ts). --compare-with <dir> compares every file with another encoding of the same
+ * games (C22: 1 and 8 processes give the same bytes); --compare-to <dir> lists features always 0 there but not here (C19);
+ * --pick-from <enc-v1 dir> prints that encoding's picked positions under v2.
+ * Every run adds a line to ../rl-runs/registry.jsonl (the command, the code, the input and output, the checks), except with
+ * --no-registry (tests).
  */
 import { execFileSync, fork } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -32,8 +42,17 @@ import {
   cardFeatureTable,
   decode,
   describe,
+  describeV2,
+  emptyDiagnosticsV2,
   encode,
+  encodeV2,
   encoderSchema,
+  encoderV2Schema,
+  poolV2,
+  prepareV2,
+  type EncodedV2,
+  type EncodeDiagnosticsV2,
+  type PreparedV2,
   evaluate,
   infoDefOf,
   knownDeck,
@@ -49,6 +68,9 @@ import { COUNTER_NAMES } from "../packages/gui/src/i18n/counters";
 import { zh } from "../packages/gui/src/i18n/zh";
 import { certifiedRules } from "./rl/certificate";
 import { readNpy, writeNpy } from "./rl/npy";
+import * as V2 from "./rl/enc-v2-writer";
+import { appendRegistry, finishV2, pythonCheck, type PickReplay } from "./rl/enc-v2-finish";
+import { analyzeScripts } from "./rl/script-analysis";
 import { gameLines } from "./rl/records";
 import { bucketOf, labelOf, replaySamples, splitOf } from "./rl/sampling";
 import { DECK_SETS, ROOT, sampleDeck } from "./rl/series";
@@ -61,20 +83,22 @@ const option = (name: string) => {
   const at = args.indexOf(name);
   return at >= 0 ? (args[at + 1] ?? null) : null;
 };
-const VALUED = ["--out", "--workers", "--limit", "--worker", "--workers-total", "--pick", "--leak-every", "--leaf-check"];
+const VALUED = ["--out", "--workers", "--limit", "--worker", "--workers-total", "--pick", "--leak-every", "--leaf-check", "--encoder", "--compare-with", "--compare-to", "--pick-from", "--games-total"];
 const runDir = args.find((a, i) => !a.startsWith("--") && !(i > 0 && VALUED.includes(args[i - 1]!)));
 const workers = Number(option("--workers") ?? Math.min(4, Math.max(1, Math.floor(availableParallelism() / 4))));
 const limit = option("--limit") === null ? Infinity : Number(option("--limit"));
 const withX = !args.includes("--no-x");
 const pick = Number(option("--pick") ?? 0);
-const leakEvery = Number(option("--leak-every") ?? 500);
+const encoderVersion = Number(option("--encoder") ?? 1);
+const v2 = encoderVersion === 2;
+const leakEvery = Number(option("--leak-every") ?? (v2 ? 250 : 500));
 const leafCheck = Number(option("--leaf-check") ?? 0);
 const records = runDir ? join(resolve(runDir), "games.jsonl.gz") : "";
-if (!runDir || !existsSync(records) || !(Number.isInteger(workers) && workers >= 1) || !(limit > 0) || !(pick >= 0) || !(leakEvery >= 1) || !(leafCheck >= 0)) {
-  console.error("usage: npm run rl:encode -- <run dir with games.jsonl.gz> [--out <dir>] [--workers N] [--limit N] [--no-x] [--pick N] [--leak-every N] [--leaf-check N] [--force]");
+if (!runDir || !existsSync(records) || !(Number.isInteger(workers) && workers >= 1) || !(limit > 0) || !(pick >= 0) || !(leakEvery >= 1) || !(leafCheck >= 0) || ![1, 2].includes(encoderVersion) || (v2 && !withX)) {
+  console.error("usage: npm run rl:encode -- <run dir with games.jsonl.gz> [--out <dir>] [--workers N] [--limit N] [--no-x] [--pick N] [--leak-every N] [--leaf-check N] [--force] [--encoder 2 [--compare-with <dir>] [--compare-to <dir>] [--pick-from <enc-v1 dir>]]");
   process.exit(1);
 }
-const out = resolve(option("--out") ?? join(resolve(runDir), "enc-v1"));
+const out = resolve(option("--out") ?? join(resolve(runDir), v2 ? "enc-v2" : "enc-v1"));
 const SHARD = 1000;
 const TABLE_PATH = join(ROOT, "packages", "bot", "src", "card-features.json");
 
@@ -168,6 +192,32 @@ interface ShardResult {
   nonzero?: number[];
   /** Encode times (µs) measured by worker 0. */
   times?: number[];
+  /** Encoder v2's part. */
+  v2?: ShardV2Result;
+}
+
+/** What a worker found in a shard with encoder v2. */
+interface ShardV2Result {
+  sizes: { cardRows: number; pileRows: number; gdefRows: number };
+  diag: EncodeDiagnosticsV2;
+  maskBad: number;
+  checks: V2.V2Checks;
+  rangeNames: Record<string, number>;
+  oracleDiffer: Record<string, number>;
+  closures: Record<string, { agree: number; disagree: number; examples: string[] }>;
+  cal: V2.Calibration;
+  nonzeroGlobal: number[];
+  nonzeroCard: Record<string, number[]>;
+  nonzeroGdef: number[];
+  relSums: number[];
+  /** Per zone code: card tokens (or pile copies) per sample, as [Σ, Σ², max, histogram up to 63] by split and activeness. */
+  perZone: Record<string, Record<string, number[]>>;
+  /** Fixed samples (by hash) whose pooled vectors the worker kept: row in the shard, hash, game, input, viewer. */
+  candidates: { row: number; hash: number; game: number; input: number; viewer: number }[];
+  /** Encode times (µs, worker 0): v2, v1 on the same views, poolV2. */
+  timesV2?: number[];
+  timesV1?: number[];
+  timesPool?: number[];
 }
 
 /** JSON with every object's keys in order (the same value, the same text). */
@@ -261,10 +311,43 @@ function runWorker(k: number): void {
   const weights = termWeights(DEFAULT_WEIGHTS);
   const holdoutDecks = new Set(DECK_SETS.holdout);
   const times: number[] = [];
+  const timesV2: number[] = [];
+  const timesV1: number[] = [];
+  const timesPool: number[] = [];
+  // Encoder v2: the references as the analysis reads them (the oracle's sites, by definition, in the table's order), the
+  // declared ranges, and the share of samples whose pooled vector is kept for the fixed pooled check (about 4,000 over the
+  // run: the 2,000 with the smallest hash are kept).
+  const analyses = v2 ? analyzeScripts(ALL_SCRIPTS) : null;
+  const sitesOf = (def: DefId) => analyses?.get(def)?.refs;
+  const maxRefs = Math.max(10, ...Object.values(table.file.refs).map((r) => r.length));
+  const ranges = V2.declaredRanges(maxRefs);
+  const gamesTotal = Number(option("--games-total") ?? 1);
+  const candidateBound = Math.min(1, 4000 / Math.max(1, gamesTotal * 58)) * 2 ** 32;
+  const pooledBuffer = new Float64Array(v2 ? encoderV2Schema().pooled.dims : 0);
   let shard = -1;
   let acc: ReturnType<typeof freshShard> | null = null;
   function freshShard(s: number) {
-    return { s, y: [] as number[], side: [] as number[], w1: [] as number[], x: [] as Int16Array[], nonzero: new Array<number>(schema.dims).fill(0), games: [] as GameInfo[], dropped: {} as Record<string, number>, checks: freshChecks() };
+    return {
+      s,
+      y: [] as number[],
+      side: [] as number[],
+      w1: [] as number[],
+      x: [] as Int16Array[],
+      nonzero: new Array<number>(schema.dims).fill(0),
+      games: [] as GameInfo[],
+      dropped: {} as Record<string, number>,
+      checks: freshChecks(),
+      v2: v2 ? new V2.ShardV2() : null,
+      v2diag: emptyDiagnosticsV2(),
+      v2maskBad: 0,
+      v2checks: V2.freshV2Checks(),
+      v2rangeNames: new Map<string, number>(),
+      v2differ: new Map<string, number>(),
+      v2closures: {} as Record<string, { agree: number; disagree: number; examples: string[] }>,
+      v2cal: V2.freshCalibration(),
+      v2perZone: {} as Record<string, Record<string, number[]>>,
+      v2candidates: [] as { row: number; hash: number; game: number; input: number; viewer: number; pooled: Int32Array }[],
+    };
   }
   const flush = () => {
     if (!acc) return;
@@ -274,14 +357,41 @@ function runWorker(k: number): void {
     writeNpy(join(out, name("y")), Float32Array.from(acc.y), [rows]);
     writeNpy(join(out, name("side")), Float32Array.from(acc.side), [rows, SIDE_COLUMNS.length]);
     writeNpy(join(out, name("w1")), Int16Array.from(acc.w1), [rows, W1_COLUMNS.length]);
-    if (withX) {
+    if (withX && !v2) {
       const x = new Int16Array(rows * schema.dims);
       for (const [r, v] of acc.x.entries()) x.set(v, r * schema.dims);
       writeNpy(join(out, name("x")), x, [rows, schema.dims]);
       kinds.unshift("x");
     }
     const files = Object.fromEntries(kinds.map((kind) => [name(kind), createHash("sha256").update(readFileSync(join(out, name(kind)))).digest("hex")]));
-    const result: ShardResult = { shard: acc.s, rows, games: acc.games, files, dropped: acc.dropped, checks: acc.checks, nonzero: acc.nonzero };
+    let v2result: ShardV2Result | undefined;
+    if (acc.v2) {
+      Object.assign(files, acc.v2.write(out, acc.s));
+      // The kept pooled vectors (a temporary file the main process reads and removes).
+      const cands = acc.v2candidates;
+      const dims = encoderV2Schema().pooled.dims;
+      const data = new Int32Array(cands.length * dims);
+      cands.forEach((c, i) => data.set(c.pooled, i * dims));
+      mkdirSync(join(out, "tmp"), { recursive: true });
+      writeNpy(join(out, "tmp", name("pooled")), data, [cands.length, dims]);
+      v2result = {
+        sizes: acc.v2.sizes(),
+        diag: acc.v2diag,
+        maskBad: acc.v2maskBad,
+        checks: acc.v2checks,
+        rangeNames: Object.fromEntries(acc.v2rangeNames),
+        oracleDiffer: Object.fromEntries(acc.v2differ),
+        closures: acc.v2closures,
+        cal: acc.v2cal,
+        nonzeroGlobal: acc.v2.nonzeroGlobal,
+        nonzeroCard: Object.fromEntries([...acc.v2.nonzeroCard].map(([z, a]) => [String(z), a])),
+        nonzeroGdef: acc.v2.nonzeroGdef,
+        relSums: acc.v2.relSums,
+        perZone: acc.v2perZone,
+        candidates: cands.map(({ pooled: _p, ...c }) => c),
+      };
+    }
+    const result: ShardResult = { shard: acc.s, rows, games: acc.games, files, dropped: acc.dropped, checks: acc.checks, nonzero: acc.nonzero, ...(v2result ? { v2: v2result } : {}) };
     process.send!(result);
     acc = null;
   };
@@ -330,7 +440,9 @@ function runWorker(k: number): void {
     const checkThis = index % 25 === 0;
     const leakThis = index % leakEvery === 0;
     // The samples of this game, then their rows (the leader defense differences ahead need the later samples).
-    const samples: { input: number; turn: number; active: PlayerId; first: PlayerId; hp: [number, number]; terms: [ReturnType<typeof evalTerms>, ReturnType<typeof evalTerms>]; hand: [number, number]; x: [Int16Array, Int16Array] | null; mismatch: [number, number] }[] = [];
+    const samples: { input: number; turn: number; active: PlayerId; first: PlayerId; hp: [number, number]; terms: [ReturnType<typeof evalTerms>, ReturnType<typeof evalTerms>]; hand: [number, number]; x: [Int16Array, Int16Array] | null; e2: [EncodedV2, EncodedV2] | null; pooled: [Int32Array | null, Int32Array | null]; mismatch: [number, number] }[] = [];
+    // Encoder v2: one prepared context per game (its gdef rows are the game's own).
+    const prep: PreparedV2 | null = v2 ? prepareV2(ctx) : null;
     let lastTurn = -1;
     const it = replaySamples(game, g.inputs);
     let step = it.next();
@@ -340,8 +452,61 @@ function runWorker(k: number): void {
       lastTurn = point.turn;
       const views = [at.view(0), at.view(1)] as const;
       let xs: [Int16Array, Int16Array] | null = null;
+      let e2: [EncodedV2, EncodedV2] | null = null;
+      const pooled: [Int32Array | null, Int32Array | null] = [null, null];
       const mismatch: [number, number] = [0, 0];
-      if (withX) {
+      if (v2 && prep) {
+        const pair: EncodedV2[] = [];
+        for (const v of [0, 1] as const) {
+          const diag = emptyDiagnosticsV2();
+          const t0 = performance.now();
+          const e = encodeV2(views[v], v, prep, diag);
+          const t1 = performance.now();
+          pair.push(e);
+          if (k === 0 && timesV2.length < 3000) {
+            timesV2.push((t1 - t0) * 1000);
+            const t2 = performance.now();
+            encode(views[v], v, ctx);
+            timesV1.push((performance.now() - t2) * 1000);
+            const t3 = performance.now();
+            poolV2(e, prep, pooledBuffer);
+            timesPool.push((performance.now() - t3) * 1000);
+          }
+          mismatch[v] = diag.poolMismatch;
+          for (const key of Object.keys(diag) as (keyof EncodeDiagnosticsV2)[]) a.v2diag[key] += diag[key];
+          // The "not known" mask: global act.* and the applicable A columns are −1 exactly when I'm not deciding.
+          const deciding = views[v].decision?.type === "mainPhase" && views[v].decision.player === v;
+          const sch = encoderV2Schema();
+          let bad = e.global[0] !== (deciding ? 1 : 0) || sch.global.masked.some((j) => (deciding ? e.global[j]! < 0 : e.global[j] !== -1));
+          for (let r = 0; r < e.nCards && !bad; r++) for (const col of sch.card.applies[e.cards[r * sch.card.width]!] ?? []) {
+            const val = e.cards[r * sch.card.width + 3 + sch.card.body.indexOf(col)]!;
+            if (deciding ? val < 0 : val !== -1) bad = true;
+          }
+          if (bad) a.v2maskBad += 1;
+          a.v2checks.rangeBad += V2.rangeViolations(e, prep, ranges, a.v2rangeNames);
+          if (checkThis) {
+            V2.oracleAtView(at, views[v], v, table, ctx.decks, sitesOf, a.v2checks, a.v2cal, index, a.v2differ);
+            V2.poolsAtView(at, views[v], v, table, ctx.decks, a.v2checks);
+            V2.evoAtView(at, views[v], v, e, a.v2checks, engine, ALL_SCRIPTS as never);
+          }
+          if (leakThis) V2.leakAtView(at, views[v], v, prep, e, a.v2checks);
+          // The fixed pooled-check samples: the encoder's own pooled vector, kept to compare with one rebuilt from the files.
+          if (V2.sampleHash(index, point.input, v) < candidateBound) pooled[v] = Int32Array.from(poolV2(e, prep, pooledBuffer));
+        }
+        e2 = [pair[0]!, pair[1]!];
+        // The cards' own conditions against the tests (C13), on the real game at this point.
+        if (checkThis) {
+          const r = V2.closuresAt([at], sitesOf, ALL_SCRIPTS);
+          a.v2checks.closureCalls += r.calls;
+          for (const [key, val] of r.byClosure) {
+            const e = (a.v2closures[key] ??= { agree: 0, disagree: 0, examples: [] });
+            e.agree += val.agree;
+            e.disagree += val.disagree;
+            if (e.examples.length < 3) e.examples.push(...val.examples.slice(0, 3 - e.examples.length));
+          }
+        }
+      }
+      if (withX && !v2) {
         xs = [new Int16Array(0), new Int16Array(0)];
         for (const v of [0, 1] as const) {
           const diag: EncodeDiagnostics = { saturations: 0, poolClamps: 0, poolMismatch: 0, unknownDefs: 0 };
@@ -389,6 +554,8 @@ function runWorker(k: number): void {
         terms: [evalTerms(views[0], 0), evalTerms(views[1], 1)],
         hand: [evaluate(views[0], 0), evaluate(views[1], 1)],
         x: xs,
+        e2,
+        pooled,
         mismatch,
       });
     }
@@ -471,6 +638,31 @@ function runWorker(k: number): void {
       a.checks.labelPairs += 1;
       if (ys[0]! + ys[1]! !== 1) a.checks.labelBad += 1;
     }
+    if (a.v2 && prep) {
+      const encs = samples.flatMap((smp) => [smp.e2![0], smp.e2![1]]);
+      a.v2.addGame(prep, encs);
+      // Tokens and entries per zone (stats.json), by split and by whether the viewer is the active player.
+      samples.forEach((smp, n) => {
+        for (const viewer of [0, 1] as const) {
+          const e = smp.e2![viewer];
+          const counts = new Map<number, number>();
+          for (let r = 0; r < e.nCards; r++) counts.set(e.cards[r * 103]!, (counts.get(e.cards[r * 103]!) ?? 0) + 1);
+          for (let r = 0; r < e.nPiles; r++) counts.set(e.piles[r * 4]!, (counts.get(e.piles[r * 4]!) ?? 0) + e.piles[r * 4 + 3]!);
+          const group = `${split}:${smp.active === viewer ? "active" : "waiting"}`;
+          const zones = (a.v2perZone[group] ??= {});
+          for (const z of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27]) {
+            const c = counts.get(z) ?? 0;
+            const st = (zones[String(z)] ??= [0, 0, 0, ...new Array<number>(64).fill(0)]);
+            st[0]! += c;
+            st[1]! += c * c;
+            st[2] = Math.max(st[2]!, c);
+            st[3 + Math.min(63, c)]! += 1;
+          }
+          const pv = smp.pooled[viewer];
+          if (pv) a.v2candidates.push({ row: firstRow + 2 * n + viewer, hash: V2.sampleHash(index, smp.input, viewer), game: index, input: smp.input, viewer, pooled: pv });
+        }
+      });
+    }
     a.games.push({
       game: index,
       seed: g.seed,
@@ -496,7 +688,7 @@ function runWorker(k: number): void {
   if (k === 0) {
     const none = freshChecks();
     none.broken = readStats.broken;
-    process.send!({ shard: -1, rows: 0, games: [], files: {}, dropped: {}, checks: none, times } satisfies ShardResult);
+    process.send!({ shard: -1, rows: 0, games: [], files: {}, dropped: {}, checks: none, times, ...(v2 ? { v2: { timesV2, timesV1, timesPool } as unknown as ShardV2Result } : {}) } satisfies ShardResult);
   }
 }
 function workersOf(): number {
@@ -629,10 +821,21 @@ if (option("--worker") !== null) {
     console.error(`${out} isn't empty: --force to write over it, or --out elsewhere`);
     process.exit(1);
   }
+  // Never over another encoder version's files (nothing a model was trained on is overwritten by mistake).
+  if (existsSync(join(out, "meta.json"))) {
+    const old = JSON.parse(readFileSync(join(out, "meta.json"), "utf8")) as { encoder?: { version?: number } | null };
+    if (old.encoder && old.encoder.version !== encoderVersion) {
+      console.error(`${out} holds encoder v${old.encoder.version}'s files: --out elsewhere`);
+      process.exit(1);
+    }
+  }
   mkdirSync(out, { recursive: true });
   // What an earlier run left (a smaller run would leave its extra shards next to a meta.json that doesn't list them).
-  for (const name of readdirSync(out)) if (/^(x|y|side|w1)-\d{4}\.npy$|^(games\.csv|meta\.json|report\.txt)$/.test(name)) rmSync(join(out, name));
+  for (const name of readdirSync(out)) {
+    if (/^(x|y|side|w1|glob|card|pile|off|gbase|gdef)-\d{4}\.npy$|^(games\.csv|meta\.json|report\.txt|stats\.json|static\.npy|defs\.json|pooled-check\.npy|pooled-check-idx\.npy|golden-(cards|piles|index)\.npy)$/.test(name)) rmSync(join(out, name));
+  }
   rmSync(join(out, "pick"), { recursive: true, force: true });
+  rmSync(join(out, "tmp"), { recursive: true, force: true });
   const started = Date.now();
   let total = 0;
   for (const _ of gameLines(records)) if (++total >= limit) break;
@@ -643,7 +846,7 @@ if (option("--worker") !== null) {
   await Promise.all(
     Array.from({ length: n }, (_, k) =>
       new Promise<void>((done, fail) => {
-        const child = fork(process.argv[1]!, [...args, "--worker", String(k), "--workers-total", String(n)], { stdio: ["ignore", "inherit", "inherit", "ipc"] });
+        const child = fork(process.argv[1]!, [...args, "--worker", String(k), "--workers-total", String(n), "--games-total", String(total)], { stdio: ["ignore", "inherit", "inherit", "ipc"] });
         child.on("message", (r: ShardResult) => {
           results.push(r);
           if (r.shard >= 0) console.log(`  shard ${r.shard}: ${r.games.length} games, ${r.rows} samples`);
@@ -678,7 +881,7 @@ if (option("--worker") !== null) {
   const kept = games.length;
   const share = (s: number) => (kept > 0 ? (100 * bySplit[s]!) / kept : 0);
   const holdoutData = bySplit[3]! > 0;
-  const zeros = withX ? zeroFeatures(nonzero, [...new Set(games.flatMap((g) => [g.deck0, g.deck1]))]) : { explained: {}, unexplained: [] };
+  const zeros = withX && !v2 ? zeroFeatures(nonzero, [...new Set(games.flatMap((g) => [g.deck0, g.deck1]))]) : { explained: {}, unexplained: [] };
   const explainedCount = Object.values(zeros.explained).reduce((n, names) => n + names.length, 0);
   // The search's leaves: positions spread evenly over the kept games, each at the middle sample point of its game.
   const leafGames = leafCheck > 0 ? games.filter((_, i) => i % Math.max(1, Math.floor(kept / leafCheck)) === 0).slice(0, leafCheck) : [];
@@ -723,7 +926,44 @@ if (option("--worker") !== null) {
     ],
     [checks.w1MaxError < 1e-9, `W1 的项：默认权重乘以双方的项，和手写估值的差最大 ${checks.w1MaxError.toExponential(1)}（应 < 1e-9）。`],
   ];
-  if (withX) {
+  // Encoder v2: its files and checks C10–C24.
+  let finished: ReturnType<typeof finishV2> | null = null;
+  if (v2) {
+    const extraV2 = extra?.v2 as unknown as { timesV2: number[]; timesV1: number[]; timesPool: number[] } | undefined;
+    const first = games[0] ? gamesAt([games[0].game]).get(games[0].game) : undefined;
+    let calibrationView: Parameters<typeof finishV2>[0]["calibrationView"] = null;
+    if (first) {
+      const step = replaySamples(newGameOf(first), first.inputs).next();
+      if (!step.done) calibrationView = { view: step.value.game.view(0), me: 0, ctx: contextOf(first) };
+    }
+    finished = finishV2({
+      out,
+      runDir: resolve(runDir),
+      results: results as never,
+      table,
+      rulesFingerprint: rulesFingerprint(join(ROOT, "packages", "gui")),
+      times: { v2: extraV2?.timesV2 ?? [], v1: extraV2?.timesV1 ?? [], pool: extraV2?.timesPool ?? [] },
+      workers: n,
+      limit,
+      compareWith: option("--compare-with"),
+      compareTo: option("--compare-to"),
+      pickFrom: option("--pick-from"),
+      engine,
+      calibrationView,
+      guiReplays: join(ROOT, "packages", "gui", "replays"),
+      root: ROOT,
+      cardName: (d) => engine.db.get(d).names.cn ?? engine.db.get(d).name,
+      pickPosition: (replay: PickReplay, index: number) => {
+        // The record itself (the replay has the GUI's options): its inputs up to the replay's end.
+        const g = gamesAt([index]).get(index)!;
+        const game = newGameOf(g);
+        for (const [, input] of g.inputs.slice(0, replay.inputs.length)) game.act(input as never);
+        return { game, ctx: contextOf(g) };
+      },
+    });
+    lines.push(...finished.lines);
+  }
+  if (withX && !v2) {
     lines.push(
       [checks.saturations + checks.poolClamps + checks.poolMismatch + checks.unknownDefs + checks.maskBad === 0, `编码：${rows} 个向量，每个 ${schema.dims} 维；超出范围 ${checks.saturations}、看不到的牌算成负数 ${checks.poolClamps}、张数对不上 ${checks.poolMismatch}、表里没有的卡 ${checks.unknownDefs}、"现在能做什么"的掩码不对 ${checks.maskBad}（都应为 0）。`],
       [checks.engineChecked > 0 && checks.engineBad === 0, `和引擎对照：${checks.engineChecked} 个视角，向量里的随从数、攻击力和防御力合计、场上每张卡的信息定义和引擎一致（不一致的 ${checks.engineBad} 个）。`],
@@ -738,8 +978,8 @@ if (option("--worker") !== null) {
   }
   // A few positions for a person to check (the user check of stage 1): at random, and where the hand-written evaluation was
   // most wrong (a one-variable logistic fit of it on the training split; its largest losses in Medium-vs-Medium games, turn 9 on).
-  const picked: string[] = [];
-  if (withX && pick > 0) {
+  const picked: string[] = [...(finished?.picked ?? [])];
+  if (withX && !v2 && pick > 0) {
     const side: number[][] = [];
     const ys: number[] = [];
     for (const r of results) {
@@ -848,8 +1088,11 @@ if (option("--worker") !== null) {
   writeFileSync(join(out, "report.txt"), report + "\n", "utf8");
   const meta = {
     format: "sve-samples",
-    formatVersion: 1,
-    encoder: withX
+    formatVersion: v2 ? 2 : 1,
+    ...(finished ? { ...finished.meta } : {}),
+    encoder: v2
+      ? finished!.meta.encoder
+      : withX
       ? {
           version: schema.version,
           dims: schema.dims,
@@ -867,7 +1110,7 @@ if (option("--worker") !== null) {
       : null,
     cardFeatures: { version: CARD_FEATURES_VERSION, columnsHash: table.file.columnsHash, hash: table.file.hash },
     columns: {
-      x: withX ? "int16 [n, dims]: encoder v1 of the viewer's view (encoder.names)" : "not written (--no-x)",
+      x: v2 ? "not written: encoder v2's glob / card / pile / off / gbase / gdef arrays (encoder.arrays)" : withX ? "int16 [n, dims]: encoder v1 of the viewer's view (encoder.names)" : "not written (--no-x)",
       y: "1 won, 0.5 drawn, 0 lost, from the viewer's side",
       side: SIDE_COLUMNS,
       w1: W1_COLUMNS,
@@ -897,6 +1140,29 @@ if (option("--worker") !== null) {
     picked,
   };
   writeFileSync(join(out, "meta.json"), JSON.stringify(meta, null, 1) + "\n");
-  console.log(report);
+  // C20's Python part reads the written files (meta.json included): its line goes at the end of the report.
+  if (v2) {
+    const py = pythonCheck(ROOT, out);
+    lines.push(py);
+    writeFileSync(join(out, "report.txt"), `${report}\n${py[0] ? "通过" : "不通过"}  ${py[1]}\n`, "utf8");
+  }
+  // The run registry: one line per rl:* run (not for tests: --no-registry).
+  if (!args.includes("--no-registry")) appendRegistry(join(ROOT, "..", "rl-runs", "registry.jsonl"), {
+    date: new Date(started).toISOString(),
+    tool: "rl:encode",
+    command: `rl:encode ${args.join(" ")}`,
+    commit: git("rev-parse", "--short", "HEAD"),
+    dirty: git("status", "--porcelain", "--", "packages/core", "packages/bot", "tools") !== "",
+    rulesFingerprint: rulesNow,
+    botFingerprint: botFingerprint(ROOT),
+    cardFeatures: { version: CARD_FEATURES_VERSION, columnsHash: table.file.columnsHash, hash: table.file.hash },
+    encoder: { version: encoderVersion, layoutHash: (meta.encoder as { layoutHash?: string } | null)?.layoutHash ?? (meta.encoder as { namesHash?: string } | null)?.namesHash ?? null },
+    input: { path: records, sha256: meta.source.sha256, games: total },
+    output: { dir: out, metaSha256: createHash("sha256").update(readFileSync(join(out, "meta.json"))).digest("hex"), rows },
+    checks: lines.map(([ok, text]) => ({ ok, check: text.slice(0, 40) })),
+    pass: lines.every(([ok]) => ok),
+    minutes: (Date.now() - started) / 60000,
+  });
+  console.log(readFileSync(join(out, "report.txt"), "utf8"));
   if (lines.some(([ok]) => !ok)) process.exitCode = 1;
 }

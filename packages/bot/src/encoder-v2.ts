@@ -360,7 +360,7 @@ export function prepareV2(ctx: EncoderV2Context): PreparedV2 {
   return { ctx, defIds: Object.keys(table.file.rows).sort(), slots: [s0.slots, s1.slots], slotCopies: [s0.copies, s1.copies], gdKeys: [], gdRows: [], gdIndex: [new Map(), new Map()], sparse: new Map() };
 }
 
-/** A (seat, definition) row (§5 of the plan's encoder v2): copies in the seat's lists, trait slots, evolve partners listed. */
+/** A (seat, definition) row: copies in the seat's lists, which of both sides' trait slots it has (and looks for), evolve partners listed. */
 export function gdefRow(prep: PreparedV2, seat: PlayerId, def: DefId): Int16Array {
   const table = prep.ctx.table;
   const r = new Int16Array(GDEF_COLUMNS_V2.length);
@@ -397,6 +397,10 @@ export function gdefRow(prep: PreparedV2, seat: PlayerId, def: DefId): Int16Arra
 }
 
 /** The game-local index of a (seat, definition) row, made when first used. */
+export function gdIndexOf(prep: PreparedV2, seat: PlayerId, def: DefId): number {
+  return gdOf(prep, seat, def);
+}
+
 function gdOf(prep: PreparedV2, seat: PlayerId, def: DefId): number {
   let gd = prep.gdIndex[seat].get(def);
   if (gd === undefined) {
@@ -468,7 +472,7 @@ function matching(left: readonly (readonly number[])[], nRight: number): number 
 }
 
 const FAMILIES = new WeakMap<CardFeatureTable, Map<DefId, number>>();
-/** The odds families (§6.4) a definition is in, as bits in ODDS order (cached per table). */
+/** The odds families a definition is in (quick, ward, charge, removal, aoe, heal, summon, draw), as bits in ODDS order (cached per table). */
 function familiesOf(table: CardFeatureTable, def: DefId): number {
   let m = FAMILIES.get(table);
   if (!m) FAMILIES.set(table, (m = new Map()));
@@ -483,7 +487,7 @@ function familiesOf(table: CardFeatureTable, def: DefId): number {
   return bits;
 }
 
-/** Odds families (§6.4) on a definition's table row. */
+/** Whether a definition is in an odds family, from its table row. */
 function inFamily(table: CardFeatureTable, def: DefId, f: (typeof ODDS)[number]): boolean {
   const r = table.row(def);
   const v = (n: string) => r[col(n)]!;
@@ -1075,6 +1079,8 @@ const ZONE_CN: Record<string, string> = {
   "misc.opp": "对方其他区（赛道 / 驾驶 / 判定）",
 };
 const CLASS_CN = ["中立", "精灵", "皇家护卫", "巫师", "龙族", "梦魇", "主教"];
+const TYPE_CN: Record<string, string> = { follower: "从者", amulet: "护符", spell: "法术", crest: "纹章", equipment: "装备" };
+const UNIVERSE_CN: Record<string, string> = { umamusume: "赛马娘", cinderellaGirls: "灰姑娘女孩", vanguard: "先导者", princessConnect: "公主连结" };
 const DEAD_CN: Record<string, string> = { resolved: "已结算，不计", notOnField: "只在场上起作用", abilitiesLost: "能力已失去", onEvolve: "进化时才计（看进化列）", notInZone: "不在这里起作用", notPlayable: "不能从这里使用", notSuperEvolvable: "不能超进化", notEvolvable: "已进化" };
 const CLS_CN: Record<string, string> = { gate: "门槛", avail: "可选的对象", scale: "按数量", aff: "受影响的", bonus: "额外 / 分支", luck: "靠运气" };
 
@@ -1106,7 +1112,7 @@ export function describeV2(view: PlayerView, me: PlayerId, prep: PreparedV2, nam
     const cls = leader ? defFacts(table, infoDefOf(view, leader, table)).cls : -1;
     const universe = view.players[side].universe;
     L.push(
-      `[向量里有] ${s === "me" ? "我" : "对手"}：${cls >= 0 ? CLASS_CN[cls] : "无主战者"}${universe ? ` · ${universe}` : ""} · 体力 ${g(`g.${s}.leaderDefense`)} · PP ${g(`g.${s}.pp`)}/${g(`g.${s}.maxPp`)} · 手牌 ${g(`g.${s}.hand.count`)}${s === "opp" ? `（背面 ${g("g.opp.hand.hidden")}，看得到或记得 ${g("g.opp.hand.known")}）` : ""} · 牌组 ${g(`g.${s}.deckCount`)}${s === "opp" ? ` · 对手没见过的牌 ${g("g.opp.unseen")} 张` : ""} · 进化：场上能同时进化 ${g(`g.${s}.evo.matchField`)} 个，算上手牌 ${g(`g.${s}.evo.matchAll`)} 个`,
+      `[向量里有] ${s === "me" ? "我" : "对手"}：${cls >= 0 ? CLASS_CN[cls] : "无主战者"}${universe ? ` · ${UNIVERSE_CN[universe] ?? universe}` : ""} · 体力 ${g(`g.${s}.leaderDefense`)} · PP ${g(`g.${s}.pp`)}/${g(`g.${s}.maxPp`)} · 手牌 ${g(`g.${s}.hand.count`)}${s === "opp" ? `（背面 ${g("g.opp.hand.hidden")}，看得到或记得 ${g("g.opp.hand.known")}）` : ""} · 牌组 ${g(`g.${s}.deckCount`)}${s === "opp" ? ` · 对手没见过的牌 ${g("g.opp.unseen")} 张` : ""} · 进化：场上能同时进化 ${g(`g.${s}.evo.matchField`)} 个，算上手牌 ${g(`g.${s}.evo.matchAll`)} 个`,
     );
     L.push(`  [向量里有] 类型槽（张数）${[1, 2, 3, 4].map((k) => g(`g.${s}.slot.${k}`)).join(" / ")} · [只打印] 名称 ${prep.slots[side].map(traitName).join(" / ")}`);
   }
@@ -1131,7 +1137,7 @@ export function describeV2(view: PlayerView, me: PlayerId, prep: PreparedV2, nam
             : " · 不可进化（剩 0 张）"
           : "";
       L.push(
-        `  · [只打印] ${cardName(def)}（${CLASS_CN[R.cls]} · ${R.type}）[向量里有] 费用 ${c("cost.now")}${stats}${kws.length ? ` · ${kws.join("、")}` : ""}${c("hiddenKnown") ? " · 记得的手牌" : ""}${slotBits.length ? ` · 本方类型槽 ${slotBits.join(",")}` : ""}${evo} · 同类型：场上 ${c("share.trait.field")} 手牌 ${c("share.trait.hand")} 墓场 ${c("share.trait.cemetery")} 牌池 ${c("share.trait.pool")} · 剩 ${c("self.left")} 张、墓场 ${c("self.cem")} 张`,
+        `  · [只打印] ${cardName(def)}（${CLASS_CN[R.cls]} · ${TYPE_CN[R.type] ?? R.type}）[向量里有] 费用 ${c("cost.now")}${stats}${kws.length ? ` · ${kws.join("、")}` : ""}${c("hiddenKnown") ? " · 记得的手牌" : ""}${slotBits.length ? ` · 本方类型槽 ${slotBits.join(",")}` : ""}${evo} · 同类型：场上 ${c("share.trait.field")} 手牌 ${c("share.trait.hand")} 墓场 ${c("share.trait.cemetery")} 牌池 ${c("share.trait.pool")} · 剩 ${c("self.left")} 张、墓场 ${c("self.cem")} 张`,
       );
       const rel = REL_COLUMNS_V2.map((n) => [n, c(n)] as const).filter(([, v]) => v !== 0);
       if (rel.length) L.push(`      [向量里有] ${rel.map(([n, v]) => `${n}=${v}`).join(" ")}`);

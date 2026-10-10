@@ -2,10 +2,10 @@
 // numpy reads them with np.load(path, mmap_mode="r").
 import { writeFileSync } from "node:fs";
 
-/** The bytes of a .npy file of `data` (int16 or float32) with this shape. */
-export function npyBytes(data: Int16Array | Float32Array, shape: readonly number[]): Buffer {
+/** The bytes of a .npy file of `data` (int16, int32 or float32) with this shape. */
+export function npyBytes(data: Int16Array | Int32Array | Float32Array, shape: readonly number[]): Buffer {
   if (shape.reduce((a, b) => a * b, 1) !== data.length) throw new Error(`shape ${shape.join("x")} doesn't hold ${data.length} values`);
-  const descr = data instanceof Int16Array ? "<i2" : "<f4";
+  const descr = data instanceof Int16Array ? "<i2" : data instanceof Int32Array ? "<i4" : "<f4";
   const dims = shape.length === 1 ? `(${shape[0]},)` : `(${shape.join(", ")})`;
   let header = `{'descr': '${descr}', 'fortran_order': False, 'shape': ${dims}, }`;
   // Magic (6) + version (2) + header length (2) + header, padded with spaces and a newline to a multiple of 64.
@@ -20,12 +20,12 @@ export function npyBytes(data: Int16Array | Float32Array, shape: readonly number
   return Buffer.concat([head, Buffer.from(header, "latin1"), Buffer.from(data.buffer, data.byteOffset, data.byteLength)]);
 }
 
-export function writeNpy(path: string, data: Int16Array | Float32Array, shape: readonly number[]): void {
+export function writeNpy(path: string, data: Int16Array | Int32Array | Float32Array, shape: readonly number[]): void {
   writeFileSync(path, npyBytes(data, shape));
 }
 
-/** A .npy file of int16 or float32 values (as npyBytes writes them): its shape and values. */
-export function readNpy(bytes: Buffer): { shape: number[]; data: Int16Array | Float32Array } {
+/** A .npy file of int16, int32 or float32 values (as npyBytes writes them): its shape and values. */
+export function readNpy(bytes: Buffer): { shape: number[]; data: Int16Array | Int32Array | Float32Array } {
   if (bytes.subarray(0, 6).toString("latin1") !== "\x93NUMPY") throw new Error("not a .npy file");
   const length = bytes.readUInt16LE(8);
   const header = bytes.subarray(10, 10 + length).toString("latin1");
@@ -34,6 +34,7 @@ export function readNpy(bytes: Buffer): { shape: number[]; data: Int16Array | Fl
   const body = bytes.subarray(10 + length);
   const copy = body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength);
   if (descr === "<i2") return { shape, data: new Int16Array(copy) };
+  if (descr === "<i4") return { shape, data: new Int32Array(copy) };
   if (descr === "<f4") return { shape, data: new Float32Array(copy) };
-  throw new Error(`a .npy of ${descr}: only int16 and float32 are read`);
+  throw new Error(`a .npy of ${descr}: only int16, int32 and float32 are read`);
 }

@@ -604,13 +604,15 @@ export function liveness(dom: RefDomain, t: RefToken, r: CardRef): { live: boole
 }
 
 /** A change of the counting domain: the token's card leaves its zone, and a card enters one. */
-interface Move {
+export interface Move {
   remove: { side: PlayerId; zone: CountedZone; id: string } | null;
   add: { side: PlayerId; zone: CountedZone; f: Facts } | null;
   /** Evolve: the card itself counts with these facts. */
   replace: { id: string; f: Facts } | null;
 }
 const STAY: Move = { remove: null, add: null, replace: null };
+/** No move: a reference counted where the card is (for the tools' checks against the real game). */
+export const IN_PLACE: { placement: Placement; move: Move; live: boolean; why: string } = { placement: "inPlace", move: STAY, live: true, why: "" };
 
 /** The move a placement makes for a token (CR: a played card leaves its zone, a follower or amulet enters the field...). */
 function moveOf(dom: RefDomain, t: RefToken, placement: Placement, timing: string): Move {
@@ -640,8 +642,8 @@ export interface RefCount {
   m: number;
   /** The certain count where the card is (no move). */
   inPlace: number;
-  /** Certain counts by (own / opp relative to the token's controller, zone). */
-  byZone: Map<string, number>;
+  /** Certain counts by (own / opp relative to the token's controller) × COUNTED_ZONES: index who * 8 + zone. */
+  byZone: Int32Array;
   /** Slots of the opponent's unseen cards the reference counts, and how many of their unseen cards match. */
   slots: number;
   K: number;
@@ -662,20 +664,21 @@ function countRef(dom: RefDomain, r: CardRef, t: RefToken, self: string, move: M
     let K = 0;
     for (const [d, n] of pool) if (pred(poolFact(dom, d), self)) K += n;
     const deckCount = dom.view.players[q].deckCount;
-    return { m: 0, inPlace: 0, byZone: new Map(), slots: 0, K: 0, luck: { N, K, t: Math.min(r.top ?? 1, deckCount, N) } };
+    return { m: 0, inPlace: 0, byZone: new Int32Array(16), slots: 0, K: 0, luck: { N, K, t: Math.min(r.top ?? 1, deckCount, N) } };
   }
   let m = 0;
   let inPlace = 0;
   let slots = 0;
-  const byZone = new Map<string, number>();
+  const byZone = new Int32Array(16);
+  const zones = refStatic(r).counted;
   // "With different names": the certain part counts distinct information definitions (the table has no names; a name's
   // definitions are its printings, merged).
   const distinctNow = r.distinct ? new Set<DefId>() : null;
   const distinctMoved = r.distinct ? new Set<DefId>() : null;
   for (const q of sides) {
-    for (const z of r.zones) {
-      if (!(COUNTED_ZONES as readonly string[]).includes(z)) continue;
-      const part = dom.zones[q][z as CountedZone];
+    for (const zi of zones) {
+      const z = COUNTED_ZONES[zi]!;
+      const part = dom.zones[q][z];
       let here = 0;
       let moved = 0;
       for (const e of part.exact) {
@@ -695,8 +698,7 @@ function countRef(dom: RefDomain, r: CardRef, t: RefToken, self: string, move: M
       slots += part.unknown;
       inPlace += here;
       m += moved;
-      const key = `${q === ctrl ? "own" : "opp"}.${z}`;
-      byZone.set(key, (byZone.get(key) ?? 0) + moved);
+      byZone[(q === ctrl ? 0 : 8) + zi]! += moved;
     }
   }
   if (distinctNow && distinctMoved) {
@@ -741,21 +743,51 @@ function testOf(r: CardRef, cls: RefClass): Pick<RefTest, "kind" | "n"> | null {
   return cls === "avail" || cls === "luck" ? { kind: "atLeast", n: 1 } : null;
 }
 
-const ZONE_BUCKET: Record<string, "field" | "cemetery" | "hand" | "deck" | "other"> = { field: "field", cemetery: "cemetery", hand: "hand", deck: "deck" };
+/** rz.* buckets (in REL_COLUMNS_V2 order from rz.own.field) by byZone index: own field, cemetery, hand, deck, other; opp field, other. */
+const RZ0 = REL_COLUMNS_V2.indexOf("rz.own.field");
+const RZ_BUCKET = [...COUNTED_ZONES.map((z) => (z === "field" ? 0 : z === "cemetery" ? 1 : z === "hand" ? 2 : z === "deck" ? 3 : 4)), ...COUNTED_ZONES.map((z) => (z === "field" ? 5 : 6))];
 const cap = (v: number, hi: number) => Math.min(hi, Math.max(0, v));
+
+/** What a reference is, whatever the position (cached by the reference object). */
+interface RefStatic {
+  zonesOk: boolean;
+  /** Indices into COUNTED_ZONES of the zones it names. */
+  counted: number[];
+  oppChoice: boolean;
+  key: string[];
+  partial: boolean;
+  cls: RefClass | null;
+}
+const STATIC = new WeakMap<CardRef, RefStatic>();
+function refStatic(r: CardRef): RefStatic {
+  let st = STATIC.get(r);
+  if (st) return st;
+  const zonesOk = r.zones.every((z) => (COUNTED_ZONES as readonly string[]).includes(z));
+  const isOpp = (a: string) => a.startsWith("opp") || a.startsWith("!opp");
+  // A side "?" or a deck-top look at both decks can't be counted as written.
+  const partial = refPartial(r.filter) || r.side === "?" || !zonesOk || (r.chance !== undefined && r.side !== "own" && r.side !== "opp") || r.chance === "random";
+  st = {
+    zonesOk,
+    counted: r.zones.map((z) => (COUNTED_ZONES as readonly string[]).indexOf(z)).filter((i) => i >= 0),
+    oppChoice: (r.alt ?? []).some(isOpp),
+    key: (r.alt ?? []).filter((a) => !isOpp(a)).sort(),
+    partial,
+    cls: partial ? null : refClass(r),
+  };
+  STATIC.set(r, st);
+  return st;
+}
 
 /** Evaluates one reference of a token with a placement (exported for the evolve columns and the tests). */
 export function evaluateRef(dom: RefDomain, t: RefToken, r: CardRef, index: number, diag?: EncodeDiagnosticsV2, override?: { placement: Placement; move: Move; live: boolean; why: string }): RefTrace {
-  const zonesOk = r.zones.every((z) => (COUNTED_ZONES as readonly string[]).includes(z));
-  if (!zonesOk && diag) diag.refZoneOther += 1;
+  const st = refStatic(r);
+  if (!st.zonesOk && diag) diag.refZoneOther += 1;
   if (r.chance === "random" && diag) diag.refRandom += 1;
-  const opp = (r.alt ?? []).filter((a) => a.startsWith("opp") || a.startsWith("!opp"));
-  if (opp.length > 0 && diag) diag.oppAlt += 1;
-  const key = (r.alt ?? []).filter((a) => !(a.startsWith("opp") || a.startsWith("!opp"))).sort();
+  if (st.oppChoice && diag) diag.oppAlt += 1;
+  const key = st.key;
   const lv = override ?? liveness(dom, t, r);
-  // A side "?" or a deck-top look at both decks can't be counted as written.
-  const partial = refPartial(r.filter) || r.side === "?" || !zonesOk || (r.chance !== undefined && r.side !== "own" && r.side !== "opp") || r.chance === "random";
-  const cls = partial ? null : refClass(r);
+  const partial = st.partial;
+  const cls = st.cls;
   if (cls === "aff" && r.threshold && diag) diag.noTest += 1;
   const trace: RefTrace = { index, ref: r, live: lv.live, why: lv.why, partial, cls, key, placement: lv.placement, count: null, test: null, odds: null, e16: 0, unc: false };
   if (!lv.live || partial) return trace;
@@ -813,10 +845,8 @@ export function relColumns(dom: RefDomain, t: RefToken, out: Int32Array | number
   const refs = dom.table.refsOf(t.def);
   const R = defFacts(dom.table, t.def);
   const put = (name: string, v: number) => {
-    out[at + REL.get(name)!] = (out[at + REL.get(name)!] ?? 0) + v;
-  };
-  const max = (name: string, v: number) => {
-    out[at + REL.get(name)!] = Math.max(out[at + REL.get(name)!] ?? 0, Math.min(63, v));
+    const j = at + REL.get(name)!;
+    out[j] = out[j]! + v;
   };
   for (let i = 0; i < REL_COLUMNS_V2.length; i++) out[at + i] = 0;
   const traces = refs.map((r, i) => evaluateRef(dom, t, r, i, diag));
@@ -836,13 +866,13 @@ export function relColumns(dom: RefDomain, t: RefToken, out: Int32Array | number
     const oppChoice = (x.ref.alt ?? []).some((a) => a.startsWith("opp") || a.startsWith("!opp"));
     if (x.unc || oppChoice) put("rel.unc", 1);
     if (x.cls !== "luck") {
-      const buckets = new Map<string, number>();
-      for (const [k, v] of c.byZone) {
-        const [who, zone] = k.split(".") as [string, string];
-        const b = who === "own" ? `rz.own.${ZONE_BUCKET[zone] ?? "other"}` : zone === "field" ? "rz.opp.field" : "rz.opp.other";
-        buckets.set(b, (buckets.get(b) ?? 0) + v);
+      // Per reference, each rz bucket's total (own: field, cemetery, hand, deck, the rest; opp: field, the rest), then the max.
+      const buckets = [0, 0, 0, 0, 0, 0, 0];
+      for (let i = 0; i < 16; i++) buckets[RZ_BUCKET[i]!]! += c.byZone[i]!;
+      for (let b = 0; b < 7; b++) {
+        const j = at + RZ0 + b;
+        out[j] = Math.max(out[j]!, Math.min(63, buckets[b]!));
       }
-      for (const [b, v] of buckets) max(b, v);
     }
     if (x.key.length > 0) continue;
     const o = x.odds;
