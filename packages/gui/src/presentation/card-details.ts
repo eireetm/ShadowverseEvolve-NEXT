@@ -1,6 +1,7 @@
 import type { CardId, CardScript, Characteristics, GameReader, PersistentEffect, PlayerView, ScriptRegistry } from "@sve/core";
 import type { CardRuntimeDetails } from "./protocol";
 import { forEachCard } from "../engine/view-utils";
+import { createPlayCostQuery } from "./play-cost";
 
 /**
  * GUI-only queries, aligned with main 0.4.1 (2aebbba): flow/attack.ts, state/characteristics.ts,
@@ -66,5 +67,15 @@ export function cardRuntimeDetails(reader: GameReader, scripts: ScriptRegistry, 
       cannotDealDamage: applied.some((e) => e.change.kind === "cannotDealDamage"),
     };
   });
+  // Recompute the complete visible hand/EX on every update, including all candidates
+  // affected by a consumed next-card offer, first-card condition or shared cost group.
+  const playCost = createPlayCostQuery(reader, scripts);
+  for (const side of view.players) {
+    for (const card of [...side.hand, ...side.ex]) {
+      if (card.hidden) continue;
+      const cost = playCost(card.id, side.id);
+      if (cost !== undefined) details[card.id]!.normalPlayCost = cost;
+    }
+  }
   return details;
 }

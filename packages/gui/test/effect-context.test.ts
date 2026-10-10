@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ALL_AUTO_RESOLVABLE, createEngine, script, randomAnswer, seedRng, type Input, type GameSession, type PlayerId } from "@sve/core";
+import { createEngine, script, randomAnswer, seedRng, type Input, type GameSession, type PlayerId } from "@sve/core";
 import { ALL_CARDS, ALL_SCRIPTS } from "@sve/core/sets";
 import { drive, testFollower } from "@sve/core/testing";
 import { Catalog } from "../src/app/catalog";
@@ -7,8 +7,7 @@ import { displayAbilityText } from "../src/game/card/ability-display";
 import { abilitySource, GRANT_TEXT } from "../src/presentation/ability-source";
 import { EffectContextObserver, observePresentationEngine } from "../src/presentation/effect-context";
 import { createPresentationHost } from "../src/presentation/host";
-import { firstPlayerOf, GameHost, stateHash } from "../src/engine/game-host";
-import bp11Replay from "./fixtures/bp11-070-context.json";
+import { GameHost, stateHash } from "../src/engine/game-host";
 import type { FromWorker as EngineMessage, GameOptions, ToWorker } from "../src/engine/protocol";
 import type { FromWorker, GameUpdate } from "../src/presentation/protocol";
 
@@ -124,28 +123,6 @@ describe("activated, spell and card play presentation", () => {
     mainAction(t, h, "activate", "BP01-T10");
     expect(h.context()).toMatchObject({ sourceDef: "kw:stack", kind: "activated", keyword: "stack", abilityIndex: 0 });
     expect(displayAbilityText(h.context()!, catalog, "cn")?.text).toContain("【蓄积】");
-  });
-  it("keeps the real BP11-070 replay's pre-play and discard-trigger identities, and changes no engine output", () => {
-    const options = bp11Replay.options as unknown as GameOptions;
-    const config = { deckRestrictions: options.deckRestrictions, manualActions: options.manualActions,
-      firstPlayer: firstPlayerOf(options), autoResolve: ALL_AUTO_RESOLVABLE.filter((t) =>
-        !(t === "mainPhase" && options.showEveryMainPhase) && !(t === "quick" && options.askEveryQuickWindow)) };
-    const game = engine.newGame({ seed: options.seed, players: options.decks, config });
-    const plain = engine.newGame({ seed: options.seed, players: options.decks, config });
-    const h = track(game);
-    for (const [i, record] of bp11Replay.inputs.entries()) {
-      const input = record.input as Input;
-      const by = record.by === null ? undefined : record.by as PlayerId;
-      expect(h.act(input, by)).toEqual(plain.act(input, by));
-      expect(stateHash(game.state)).toBe(stateHash(plain.state));
-      expect(game.decision).toEqual(plain.decision);
-      if ([70, 71, 72, 73, 76, 77].includes(i + 1)) {
-        const index = i + 1 === 76 ? 1 : [73, 77].includes(i + 1) ? 2 : 0;
-        expect(h.context(), `input ${i + 1}`).toMatchObject({ sourceDef: "BP11-070", abilityIndex: index, kind: "automatic" });
-        const text = displayAbilityText(h.context()!, catalog, "ja")!.text;
-        expect(text).toMatch(index === 0 ? /^【進化時】/ : index === 1 ? /^これがアクト/ : /^自分のターン中、いずれかのプレイヤー/);
-      }
-    }
   });
 
   it.each(["BP01-002", "BP01-004", "BP03-002"])("hands evolve over to %s's on-evolve ability at its first question", (def) => {

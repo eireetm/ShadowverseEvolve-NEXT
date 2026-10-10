@@ -16,6 +16,7 @@ import { CardArt } from "./CardArt";
 import { CardText, CardTextLine } from "./CardText";
 import { displayOf } from "./display";
 import { giftLines } from "./gifts";
+import { normalPlayCost } from "./play-cost";
 
 const LANGS: readonly DataLang[] = ["en", "cn", "ja"];
 /** The card data's other languages (Traditional Chinese is the Chinese one: not again). */
@@ -47,12 +48,14 @@ export function CardDetails() {
  */
 export function CardPanel({ focus, details, exact = false, art = true }: { focus: FocusCard; details?: CardRuntimeDetails; exact?: boolean; art?: boolean }) {
   const catalog = useApp((s) => s.catalog)!;
+  const update = useApp((s) => s.update);
   const { cardLang, uiLang, tokenArt } = useSettings();
   const t = useT();
   const [viewing, setViewing] = useState<readonly ArtFace[] | null>(null);
   const def = catalog.def(focus.def);
   if (!def) return <p className="sve-hint">{focus.def}</p>;
   const view = focus.view;
+  const playCost = normalPlayCost(update, view);
   // The name in the card language, then in the other two (each drawn in its own language's characters).
   const name = cardName(def, cardLang);
   // Only the languages' own names, each once (a language without one would repeat the card name, e.g. a pre-release card's
@@ -129,7 +132,10 @@ export function CardPanel({ focus, details, exact = false, art = true }: { focus
         </div>
       ) : null}
       <div className="sve-details-stats">
-        {def.type !== "leader" ? stat(t("card.cost"), view?.cost, def.cost) : null}
+        {def.type !== "leader" ? stat(t(playCost === undefined ? "card.cost" : "card.cardCost"), view?.cost, def.cost) : null}
+        {def.type !== "leader" && playCost !== undefined ? (
+          <div className="sve-details-stat" data-testid="details-play-cost"><span>{t("card.playCost")}</span><strong>{playCost}</strong></div>
+        ) : null}
         {stat(t("card.attack"), view?.attack, def.attack)}
         {stat(t("card.defense"), view?.defense, def.defense)}
       </div>
@@ -156,7 +162,7 @@ export function CardPanel({ focus, details, exact = false, art = true }: { focus
           </div>
         </div>
       ) : null}
-      {view && details && Object.values(details).some(Boolean) ? (
+      {view && details && (details.enteredFieldThisTurn || details.cannotAttack || details.cannotAttackLeader || details.cannotDealDamage) ? (
         <section className="sve-details-current-state" data-testid="details-state" aria-label={t("card.currentState")}>
           <div className="sve-details-flags">
             {details.enteredFieldThisTurn ? <span>{t("card.enteredThisTurn")}</span> : null}
