@@ -105,13 +105,13 @@ export interface DefFacts {
 const COLUMN = new Map(CARD_FEATURE_COLUMNS.map((c, i) => [c, i]));
 const col = (name: string) => COLUMN.get(name)!;
 const TYPE_NAMES = ["follower", "amulet", "spell", "crest", "equipment"] as const;
-const FACTS = new WeakMap<CardFeatureTable, { facts: Map<DefId, DefFacts>; index: Map<DefId, number>; traitIndex: Map<string, number>; preds: Map<string, Pred> }>();
+const FACTS = new WeakMap<CardFeatureTable, { facts: Map<DefId, DefFacts>; index: Map<DefId, number>; traitIndex: Map<string, number>; preds: Map<string, Pred>; byObject: WeakMap<RefFilter, Pred> }>();
 
 function tableCache(table: CardFeatureTable) {
   let c = FACTS.get(table);
   if (!c) {
     const ids = Object.keys(table.file.rows).sort();
-    c = { facts: new Map(), index: new Map(ids.map((id, i) => [id, i + 1])), traitIndex: new Map(table.file.traits.map((t, i) => [t, i])), preds: new Map() };
+    c = { facts: new Map(), index: new Map(ids.map((id, i) => [id, i + 1])), traitIndex: new Map(table.file.traits.map((t, i) => [t, i])), preds: new Map(), byObject: new WeakMap() };
     FACTS.set(table, c);
   }
   return c;
@@ -183,9 +183,14 @@ type Pred = (f: Facts, self: string | null) => boolean;
 /** A reference's filter as a test on a card (compiled once per process per filter). */
 export function compileFilter(table: CardFeatureTable, filter: RefFilter): Pred {
   const cache = tableCache(table);
+  const known = cache.byObject.get(filter);
+  if (known) return known;
   const key = JSON.stringify(filter);
   let p = cache.preds.get(key);
-  if (p) return p;
+  if (p) {
+    cache.byObject.set(filter, p);
+    return p;
+  }
   const build = (f: RefFilter): Pred => {
     switch (f.t) {
       case "any":
@@ -249,6 +254,7 @@ export function compileFilter(table: CardFeatureTable, filter: RefFilter): Pred 
   };
   p = build(filter);
   cache.preds.set(key, p);
+  cache.byObject.set(filter, p);
   return p;
 }
 
@@ -472,7 +478,7 @@ export function refDomain(view: PlayerView, me: PlayerId, table: CardFeatureTabl
     if (total(deckMe) !== view.players[me].deckCount) diag.poolMismatch += 1;
     if (N !== hiddenHandOpp + theirs.deckCount + hiddenCount(theirs.banished) + hiddenCount(theirs.field)) diag.poolMismatch += 1;
     if (total(evoLeftOpp) !== faceDownEvolve(theirs)) diag.poolMismatch += 1;
-    if (total(evoDownMe) !== faceDownEvolve(view.players[me])) diag.poolMismatch += 1;
+    if (total(minus(decks[me].evolve, seenMe)) !== faceDownEvolve(view.players[me])) diag.poolMismatch += 1;
   }
 
   const poolFacts = new Map<DefId, Facts>();
@@ -566,7 +572,13 @@ export function liveness(dom: RefDomain, t: RefToken, r: CardRef): { live: boole
   const R = defFacts(dom.table, t.def);
   const onBoard = t.zone === "field" || t.zone === "equipmentZone" || (t.zone === "ex" && R.type === "crest");
   if (onBoard && t.card && (t.card.abilitiesLost || t.card.boxed)) return { live: false, why: "abilitiesLost", placement: "inPlace" };
-  const playable = t.zone === "hand" || t.zone === "ex" || (t.zone === "cemetery" && R.playFromCemetery);
+  // What an equipment token gives its follower goes with the follower's abilities (lost, Boxed: CR 5.31.2).
+  if (r.key === "equipment" && t.card?.linkedTo) {
+    const follower = dom.view.players.flatMap((s) => s.field).find((c) => c.id === t.card!.linkedTo);
+    if (follower && !follower.hidden && (follower.abilitiesLost || follower.boxed)) return { live: false, why: "abilitiesLost", placement: "inPlace" };
+  }
+  // Cards are played from the hand, the EX area (a crest there is not played) and, for some, the cemetery.
+  const playable = t.zone === "hand" || (t.zone === "ex" && R.type !== "crest") || (t.zone === "cemetery" && R.playFromCemetery);
   const from = r.from as readonly string[];
   switch (r.timing) {
     case "fanfare":
@@ -578,11 +590,15 @@ export function liveness(dom: RefDomain, t: RefToken, r: CardRef): { live: boole
       return t.zone === "field" ? { live: true, why: "", placement: "die" } : { live: false, why: "notOnField", placement: "inPlace" };
     case "onEvolve":
       return { live: false, why: "onEvolve", placement: "inPlace" };
+    // A follower super-evolves only as it evolves (CR 12.2.4; an evolved card can't evolve again, 12.2.5): like On Evolve,
+    // counted through the follower that would evolve (evolveRefColumns).
     case "onSuperEvolve":
-      return t.zone === "field" && t.card?.evolvedWith != null && !t.card.superEvolved ? { live: true, why: "", placement: "inPlace" } : { live: false, why: "notSuperEvolvable", placement: "inPlace" };
+      return { live: false, why: "onEvolve", placement: "inPlace" };
     case "evolve":
       return t.zone === "field" && t.card?.evolvedWith === null ? { live: true, why: "", placement: "inPlace" } : { live: false, why: "notEvolvable", placement: "inPlace" };
     default:
+      // A card's own keywords mean nothing in its cemetery unless it can be played from there.
+      if (r.key === "selfKeywords" && t.zone === "cemetery" && !R.playFromCemetery) return { live: false, why: "notInZone", placement: "inPlace" };
       return from.includes(t.zone) ? { live: true, why: "", placement: "inPlace" } : { live: false, why: "notInZone", placement: "inPlace" };
   }
 }
@@ -646,7 +662,7 @@ function countRef(dom: RefDomain, r: CardRef, t: RefToken, self: string, move: M
     let K = 0;
     for (const [d, n] of pool) if (pred(poolFact(dom, d), self)) K += n;
     const deckCount = dom.view.players[q].deckCount;
-    return { m: 0, inPlace: 0, byZone: new Map(), slots: 0, K: 0, luck: { N, K, t: Math.min(r.top ?? 1, deckCount) } };
+    return { m: 0, inPlace: 0, byZone: new Map(), slots: 0, K: 0, luck: { N, K, t: Math.min(r.top ?? 1, deckCount, N) } };
   }
   let m = 0;
   let inPlace = 0;
@@ -820,11 +836,13 @@ export function relColumns(dom: RefDomain, t: RefToken, out: Int32Array | number
     const oppChoice = (x.ref.alt ?? []).some((a) => a.startsWith("opp") || a.startsWith("!opp"));
     if (x.unc || oppChoice) put("rel.unc", 1);
     if (x.cls !== "luck") {
+      const buckets = new Map<string, number>();
       for (const [k, v] of c.byZone) {
         const [who, zone] = k.split(".") as [string, string];
-        if (who === "own") max(`rz.own.${ZONE_BUCKET[zone] ?? "other"}`, v);
-        else max(zone === "field" ? "rz.opp.field" : "rz.opp.other", v);
+        const b = who === "own" ? `rz.own.${ZONE_BUCKET[zone] ?? "other"}` : zone === "field" ? "rz.opp.field" : "rz.opp.other";
+        buckets.set(b, (buckets.get(b) ?? 0) + v);
       }
+      for (const [b, v] of buckets) max(b, v);
     }
     if (x.key.length > 0) continue;
     const o = x.odds;
@@ -898,6 +916,9 @@ export function hasLiveRef(dom: RefDomain, t: RefToken): boolean {
  * the most met references, then the largest quantity, then the lowest definition index is reported.
  */
 export function evolveRefColumns(dom: RefDomain, t: RefToken, partners: readonly DefId[], diag?: EncodeDiagnosticsV2): { refN: number; refOk: number; scale: number } {
+  // Super-evolving needs a super-evolution point and 7 turns passed (6 going second) (CR 12.2.4, 3.2.6).
+  const side = dom.view.players[t.side];
+  const superOk = side.superEvolutionPoints >= 1 && side.turnsPassed >= (dom.view.firstPlayer === t.side ? 7 : 6);
   const none = { refN: 0, refOk: 0, scale: 0 };
   if (t.zone !== "field" || !t.card || t.card.abilitiesLost || t.card.boxed) return none;
   let best: { refN: number; refOk: number; scale: number; index: number } | null = null;
@@ -910,7 +931,7 @@ export function evolveRefColumns(dom: RefDomain, t: RefToken, partners: readonly
     let refOk = 0;
     let scale = 0;
     dom.table.refsOf(q).forEach((r, i) => {
-      if (r.timing !== "onEvolve") return;
+      if (r.timing !== "onEvolve" && !(r.timing === "onSuperEvolve" && superOk)) return;
       const x = evaluateRef(dom, qt, r, i, diag, { placement: "evolve", move, live: true, why: "" });
       if (x.partial || x.key.length > 0) return;
       if (x.cls === "gate" || x.cls === "avail") {
