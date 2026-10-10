@@ -307,3 +307,54 @@ describe("the counting module is fair by construction", () => {
     expect(source.match(/\.known\?\./g)).toHaveLength(1);
   });
 });
+
+describe("what the review asked for (2026-10-10)", () => {
+  const spell = engine.db.all().find((d) => d.type === "spell" && !d.token && !table.file.refs[d.id])!.id;
+  it("On Super-Evolve counts through the follower that would evolve, when it may super-evolve (CR 12.2.4, 12.2.5)", () => {
+    const can = position({ field: ["CP04-037"], evolveDeck: ["CP04-038"], cemetery: [spell] }, { field: [A] });
+    const side = can.view.players[0];
+    side.superEvolutionPoints = 1;
+    side.turnsPassed = can.view.firstPlayer === 0 ? 7 : 6;
+    expect(evolveRefColumns(can.dom, can.token("field", 0, "CP04-037"), ["CP04-038"])).toEqual({ refN: 2, refOk: 2, scale: 0 });
+    side.superEvolutionPoints = 0;
+    expect(evolveRefColumns(can.dom, can.token("field", 0, "CP04-037"), ["CP04-038"])).toEqual({ refN: 1, refOk: 1, scale: 0 });
+    // An evolved follower can't evolve again: its On Evolve and On Super-Evolve references are never live on it.
+    const evolved = position({ field: [{ card: "CP04-037", evolvedInto: "CP04-038" }], cemetery: [spell] }, { field: [A] }).rel("field", 0, "CP04-037");
+    expect([evolved("rel.live"), evolved("rel.dead")]).toEqual([0, 2]);
+  });
+
+  it("CP01-076 with another Mejiro follower: its return isn't on", () => {
+    const r = position({ field: ["CP01-076", "CP01-075"] }, {}).rel("field", 0, "CP01-076");
+    expect([r("bonus.n"), r("bonus.ok")]).toEqual([1, 0]);
+  });
+
+  it("rz.* take each reference's count in a zone group, then the largest", () => {
+    const big = ["BP11-058", "BP11-058", "BP11-058", "BP11-058"];
+    const r = position({ hand: ["BP11-058"], cemetery: big }, { field: [A, A, B, B, A] }).rel("hand", 0, "BP11-058");
+    expect([r("rz.own.cemetery"), r("rz.opp.field"), r("rz.own.hand")]).toEqual([4, 5, 0]);
+    const tbl = withRefs({ [X]: [ref({ zones: ["ex", "banished"], filter: { t: "type", v: "follower" } })] });
+    const other = position({ field: [X], ex: [A, B], banished: [A, A, B] }, {}, { table: tbl }).rel("field", 0, X);
+    expect([other("aff.m"), other("rz.own.other")]).toEqual([5, 5]);
+  });
+
+  it("hidden matches are an expectation in sixteenths; a remembered card played leaves the remembered hand", () => {
+    const tbl = withRefs({ [X]: [ref({ zones: ["hand"], filter: { t: "defs", v: [A] } })], [A]: [ref({ timing: "fanfare", ability: 0, key: undefined, where: "condition", zones: ["hand"], filter: { t: "any" }, test: { kind: "atLeast", n: 1, role: "gate" } })] });
+    const opp: Side = { field: [X], hand: [A, B, B], deck: [A, A, A, B, B, B, B] };
+    const p = position({}, opp, { table: tbl });
+    expect(p.rel("field", 1, X)("aff.e16")).toBe(e16(10, 4, 3));
+    const remembered = position({}, opp, {
+      table: tbl,
+      remember: (game) => {
+        const a = game.state.players[1].zones.hand.find((id) => game.state.cards[id]!.def === A)!;
+        game.state.cards[a]!.knownBy = [0];
+      },
+    });
+    const k = remembered.dom.knownHandOpp[0]!;
+    const out = new Array<number>(REL_COLUMNS_V2.length).fill(0);
+    const traces: RefTrace[] = [];
+    relColumns(remembered.dom, { zone: "hand", side: 1, id: k.id, def: k.def, phys: k.def, card: null }, out, 0, remembered.diag, traces);
+    const t = traces[0]!;
+    expect([t.live, t.placement, t.count!.inPlace, t.count!.m, t.count!.slots]).toEqual([true, "play", 1, 0, 2]);
+    expect(out[REL_COLUMNS_V2.indexOf("rel.moved")]).toBe(1);
+  });
+});

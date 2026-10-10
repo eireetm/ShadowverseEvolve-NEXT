@@ -38,3 +38,28 @@ export {
   type ScriptAnalysis,
 } from "./card-features";
 export { ENCODER_VERSION, ENCODER_LAYOUT, PLAYER_TYPES_V1, COUNTER_KINDS, encode, decode, describe, encoderSchema, infoDefOf, knownDeck, type EncoderContext, type EncoderSchema, type EncodeDiagnostics, type KnownDeck, type PlayerType, type DescribeNames } from "./encoder";
+export {
+  ENCODER_V2_VERSION,
+  ZONES_V2,
+  GLOBAL_COLUMNS_V2,
+  CARD_HEADER_V2,
+  CARD_BODY_COLUMNS_V2,
+  CARD_WIDTH_V2,
+  PILE_COLUMNS_V2,
+  GDEF_HEADER_V2,
+  GDEF_COLUMNS_V2,
+  POOL_LAYOUT_V2,
+  encoderV2Schema,
+  prepareV2,
+  gdefRow,
+  encodeV2,
+  poolV2,
+  decodeV2,
+  describeV2,
+  type EncoderV2Context,
+  type EncoderV2Schema,
+  type PreparedV2,
+  type EncodedV2,
+  type DescribeV2Names,
+} from "./encoder-v2";
+export { REL_COLUMNS_V2, emptyDiagnosticsV2, type EncodeDiagnosticsV2, type RefTrace } from "./encoder-v2-refs";
