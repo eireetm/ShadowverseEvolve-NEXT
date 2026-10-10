@@ -20,6 +20,7 @@
  *   --workers N        play on N processes at once (default 1)
  *   --seed text        the series of games (default "arena"); keep data ("gen-...") and comparisons ("eval-...") apart
  *   --range a-b        only games a to b-1 of the series (another run, into another --out, can play the rest)
+ *   --skip dir,dir     leave out the games of the series already in these --out folders (to go on with a stopped run)
  *   --out dir          a new folder: games.jsonl.gz (every game, written as it ends, replayable: npm run rl:verify),
  *                      report.json (the results; the same games give the same file) and timing.json
  *   --replays N        with --out: the first N games also as replays the GUI opens (replays/)
@@ -31,7 +32,7 @@
 import { execSync, fork } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { gzipSync } from "node:zlib";
+import { constants, gunzipSync, gzipSync } from "node:zlib";
 import { createEngine, type Answer, type Decision, type DeckList, type PlayerId } from "../packages/core/src";
 import { ALL_CARDS, ALL_SCRIPTS } from "../packages/core/src/sets";
 import { BOT_LEVELS, MEDIUM_OPTIONS, PlannerBot, createBot, evaluate, weightsEvaluator, type Bot, type BotEvaluation, type BotLevel, type BotStats, type EvalWeights } from "../packages/bot/src";
@@ -47,7 +48,7 @@ function option(name: string): string | null {
   const at = args.indexOf(name);
   return at >= 0 ? (args[at + 1] ?? null) : null;
 }
-const VALUED = ["--decks", "--workers", "--seed", "--shard", "--range", "--out", "--replays"];
+const VALUED = ["--decks", "--workers", "--seed", "--range", "--out", "--replays", "--skip"];
 const positional = args.filter((arg, i) => !arg.startsWith("--") && !(i > 0 && VALUED.includes(args[i - 1]!)));
 /** A whole number of at least `least`, or NaN. */
 const whole = (text: string | null | undefined, fallback: number, least: number) => {
@@ -119,6 +120,22 @@ const mirror = flag("--mirror");
 const independent = flag("--independent");
 const matchups = orderedMatchups(decks.length, mirror);
 const series = option("--seed") ?? "arena";
+/** --skip: the games of this series already played into these folders (by index), left out of this run. */
+const skipped = new Set<number>();
+for (const dir of (option("--skip") ?? "").split(",").map((d) => d.trim()).filter(Boolean)) {
+  const file = join(dir, "games.jsonl.gz");
+  if (!existsSync(file)) throw new Error(`--skip: no games in ${dir}`);
+  // A run that was stopped: its last game may be half written.
+  const text = gunzipSync(readFileSync(file), { finishFlush: constants.Z_SYNC_FLUSH }).toString("utf8");
+  for (const line of text.split("\n")) {
+    try {
+      const g = JSON.parse(line) as { series?: string; index?: number };
+      if (g.series === series && typeof g.index === "number") skipped.add(g.index);
+    } catch {
+      // the half-written last line
+    }
+  }
+}
 const [rangeStart, rangeEnd] = (option("--range") ?? `0-${games}`).split("-").map((n) => whole(n, NaN, 0)) as [number, number];
 const gameOf = (index: number) => {
   const g = seriesGame(index, series, matchups, independent);
@@ -233,19 +250,18 @@ function playGame(engine: Engine, index: number): GameRecord {
   };
 }
 
-// ---- A worker: its share of the games, one message each; it exits once every message is out ----
+// ---- A worker: plays the game it is sent, answers with its record, and asks for the next ----
+// (handed out one at a time, so the games end about in the series' order however fast each process is: a sequential test
+// counting the complete pairs in order isn't held back by one slow process)
 
-const shard = option("--shard");
-if (shard) {
-  const [k, n] = shard.split("/").map(Number) as [number, number];
+if (flag("--worker")) {
   const engine = createEngine({ cards: ALL_CARDS, scripts: ALL_SCRIPTS });
-  const sent: Promise<void>[] = [];
-  for (let i = rangeStart + k; i < rangeEnd; i += n) {
-    const record = playGame(engine, i);
-    sent.push(new Promise((done) => process.send!(record, undefined, {}, () => done())));
-  }
-  await Promise.all(sent);
-  process.exit(0);
+  process.on("message", (m: { index?: number; done?: true }) => {
+    if (m.done) process.exit(0);
+    process.send!(playGame(engine, m.index!));
+  });
+  process.send!({ ready: true });
+  await new Promise(() => {});
 }
 
 // ---- The main process: check, play, report ----
@@ -355,13 +371,20 @@ const take = (r: GameRecord) => {
   process.stdout.write(r.error ? "!" : r.winner === "a" ? "A" : r.winner === "b" ? "B" : r.winner === "draw" ? "=" : "?");
 };
 const exitCodes: (number | null)[] = [];
+const toPlay: number[] = [];
+for (let i = rangeStart; i < rangeEnd; i++) if (!skipped.has(i)) toPlay.push(i);
 if (workers === 1) {
-  for (let i = rangeStart; i < rangeEnd; i++) take(playGame(engine, i));
+  for (const i of toPlay) take(playGame(engine, i));
 } else {
+  let next = 0;
   await Promise.all(
-    Array.from({ length: workers }, (_, k) => {
-      const child = fork(process.argv[1]!, [...args, "--shard", `${k}/${workers}`], { stdio: ["ignore", "inherit", "inherit", "ipc"] });
-      child.on("message", (r: GameRecord) => take(r));
+    Array.from({ length: Math.min(workers, Math.max(1, toPlay.length)) }, () => {
+      const child = fork(process.argv[1]!, [...args, "--worker"], { stdio: ["ignore", "inherit", "inherit", "ipc"] });
+      child.on("message", (m: GameRecord | { ready: true }) => {
+        if (!("ready" in m)) take(m);
+        if (next < toPlay.length) child.send({ index: toPlay[next++] });
+        else child.send({ done: true });
+      });
       return new Promise<void>((done) =>
         child.on("close", (code) => {
           exitCodes.push(code);
@@ -375,7 +398,7 @@ records.sort((u, v) => u.index - v.index);
 const seconds = (performance.now() - started) / 1000;
 const played = new Set(records.map((r) => r.index));
 const missing: number[] = [];
-for (let i = rangeStart; i < rangeEnd; i++) if (!played.has(i)) missing.push(i);
+for (let i = rangeStart; i < rangeEnd; i++) if (!played.has(i) && !skipped.has(i)) missing.push(i);
 
 // ---- The report ----
 
