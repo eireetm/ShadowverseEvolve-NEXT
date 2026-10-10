@@ -12,7 +12,7 @@
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { gunzipSync } from "node:zlib";
+import { constants, gunzipSync } from "node:zlib";
 
 const args = process.argv.slice(2);
 const option = (name: string) => {
@@ -39,8 +39,16 @@ interface Game {
 }
 const games: Game[] = [];
 for (const d of dirs) {
-  const text = gunzipSync(readFileSync(join(d, "games.jsonl.gz"))).toString("utf8");
-  for (const line of text.split("\n")) if (line.trim()) games.push(JSON.parse(line) as Game);
+  // A run still being played: its last game may be half written (read up to it).
+  const text = gunzipSync(readFileSync(join(d, "games.jsonl.gz")), { finishFlush: constants.Z_SYNC_FLUSH }).toString("utf8");
+  for (const line of text.split("\n")) {
+    if (!line.trim()) continue;
+    try {
+      games.push(JSON.parse(line) as Game);
+    } catch {
+      // the half-written last line
+    }
+  }
 }
 const series = new Set(games.map((g) => g.series));
 const botsKey = new Set(games.map((g) => `${g.bots.a} | ${g.bots.b}`));
@@ -49,8 +57,14 @@ if (series.size !== 1 || botsKey.size !== 1) {
   process.exit(1);
 }
 const scoreOf = (g: Game) => (g.result.winner === "?" ? null : g.result.winner === null ? 0.5 : g.result.winner === g.bots.seatOfA ? 1 : 0);
+// A game played twice (two runs over overlapping ranges: the same series and index give the same game) counts once.
 const byPair = new Map<number, Game[]>();
-for (const g of games) if (g.pair !== null) byPair.set(g.pair, [...(byPair.get(g.pair) ?? []), g]);
+const seen = new Set<number>();
+for (const g of games) {
+  if (g.pair === null || seen.has(g.index)) continue;
+  seen.add(g.index);
+  byPair.set(g.pair, [...(byPair.get(g.pair) ?? []), g]);
+}
 
 // The pairs in series order, as long as they are complete (a later part of the series may already be in).
 const pairs: { pair: number; scores: [number | null, number | null] }[] = [];
