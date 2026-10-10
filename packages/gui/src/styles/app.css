@@ -567,12 +567,6 @@ option {
   background: var(--sve-class-neutral);
 }
 
-.sve-cost-arrow {
-  font-size: 0.6em;
-  vertical-align: 0.12em;
-  margin-left: 1px;
-}
-
 .sve-stat-cost[data-class="Forestcraft"] {
   background: var(--sve-class-forestcraft);
 }

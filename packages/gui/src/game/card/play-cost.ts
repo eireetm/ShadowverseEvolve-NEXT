@@ -9,7 +9,3 @@ export function normalPlayCost(update: GameUpdate | null, card: CardView | undef
   if (location?.zone !== "hand" && location?.zone !== "ex") return undefined;
   return update.cardDetails?.[card.id]?.normalPlayCost;
 }
-
-export function costArrow(cost: number | undefined, base: number | null): string {
-  return cost === undefined || base === null || cost === base ? "" : cost < base ? "↓" : "↑";
-}

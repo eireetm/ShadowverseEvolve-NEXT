@@ -74,11 +74,14 @@ test("costs follow normal taxes and next-card consumption across table, browser,
   await boot(page);
   const base = await getCard(page, "BP13-060");
   await expect(tile(page, base).locator(".sve-stat-cost")).toHaveText("2");
+  await tile(page, base).hover();
+  await expect(page.getByTestId("details-cost").locator("strong")).toHaveText("2");
+  await expect(page.getByTestId("details-cost").locator("small")).toHaveCount(0);
   const optional = await getCard(page, "BP15-041");
   await expect(tile(page, optional).locator(".sve-stat-cost")).toHaveText("5");
   const tax = await getCard(page, "BP05-070", 1);
   await manual(page, { kind: "move", card: tax, to: "field" });
-  await expect(tile(page, base).locator(".sve-stat-cost")).toHaveText("3↑");
+  await expect(tile(page, base).locator(".sve-stat-cost")).toHaveText("3");
   const originalColor = await tile(page, base).locator(".sve-stat-cost").evaluate(el => getComputedStyle(el).color);
   const exSource = await getCard(page, "BP01-170");
   await manual(page, { kind: "move", card: exSource, to: "ex" });
@@ -89,36 +92,36 @@ test("costs follow normal taxes and next-card consumption across table, browser,
   const fieldOz = await cardId(page, "BP03-038", "field");
   await manual(page, { kind: "token", player: 0, token: "BP01-T10", to: "field" });
   await action(page, fieldOz, "activate");
-  for (const id of [base, hand, ex]) await expect(tile(page, id).locator(".sve-stat-cost")).toHaveText("0↓");
+  for (const id of [base, hand, ex]) await expect(tile(page, id).locator(".sve-stat-cost")).toHaveText("0");
   expect(await tile(page, base).locator(".sve-stat-cost").evaluate(el => getComputedStyle(el).color)).toBe(originalColor);
   await expect(tile(page, base).locator(".sve-stat-cost")).not.toHaveClass(/sve-up|sve-down/);
 
   await tile(page, hand).hover();
-  const detail = page.getByTestId("details-play-cost");
-  await expect(detail).toContainText("Current play cost");
+  const detail = page.getByTestId("details-cost");
+  await expect(detail).toContainText("Cost");
   await expect(detail.locator("strong")).toHaveText("0");
-  await expect(page.locator(".sve-details-stat").filter({ hasText: "Card cost" }).locator("strong")).toHaveText("2");
+  await expect(detail.locator("small")).toHaveText("printed 2");
   await openZone(page, "ex");
-  await expect(page.locator(`.sve-modal .sve-card[data-card="${ex}"] .sve-stat-cost`)).toHaveText("0↓");
+  await expect(page.locator(`.sve-modal .sve-card[data-card="${ex}"] .sve-stat-cost`)).toHaveText("0");
   await page.keyboard.press("Escape");
   const box = (await tile(page, hand).boundingBox())!;
   await page.mouse.move(box.x + 10, box.y + box.height / 2);
   await page.mouse.down();
   await page.mouse.move(box.x + 80, box.y - 40, { steps: 5 });
-  await expect(page.locator(".sve-drag-ghost .sve-stat-cost")).toHaveText("0↓");
+  await expect(page.locator(".sve-drag-ghost .sve-stat-cost")).toHaveText("0");
   await page.keyboard.press("Escape");
   await page.mouse.up();
-  await expect(tile(page, ex).locator(".sve-stat-cost")).toHaveText("0↓");
+  await expect(tile(page, ex).locator(".sve-stat-cost")).toHaveText("0");
 
   // Keep another candidate's detail and EX browser open while a normal play consumes the offer.
   await tile(page, base).hover();
   await openZone(page, "ex");
   await action(page, hand, "play");
-  await expect(tile(page, base).locator(".sve-stat-cost")).toHaveText("3↑");
-  await expect(page.locator(`.sve-modal .sve-card[data-card="${ex}"] .sve-stat-cost`)).toHaveText("3↑");
+  await expect(tile(page, base).locator(".sve-stat-cost")).toHaveText("3");
+  await expect(page.locator(`.sve-modal .sve-card[data-card="${ex}"] .sve-stat-cost`)).toHaveText("3");
   await expect(detail.locator("strong")).toHaveText("3");
   await page.keyboard.press("Escape");
-  for (const [uiLang, label] of [["zh", "当前 play 费用"], ["zh-Hant", "當前 play 費用"], ["ja", "現在のプレイコスト"], ["en", "Current play cost"]]) {
+  for (const [uiLang, label] of [["zh", "费用"], ["zh-Hant", "費用"], ["ja", "コスト"], ["en", "Cost"]]) {
     const before = await inputs(page);
     await page.evaluate(async uiLang => {
       const path = "/src/app/settings.ts";
@@ -142,7 +145,7 @@ test("BP14-046 previews all shared-group members and refreshes the others after 
     return (await import(/* @vite-ignore */ path)).getApp().update.view.players[0].ex;
   });
   expect(members.length).toBe(5);
-  for (const member of members) await expect(tile(page, member.id).locator(".sve-stat-cost")).toHaveText("0↓");
+  for (const member of members) await expect(tile(page, member.id).locator(".sve-stat-cost")).toHaveText("0");
   const playable = members.find(c => c.type === "follower" || c.type === "amulet") ?? members.find(c => c.cost === 2)!;
   await tile(page, members.find(c => c.id !== playable.id)!.id).hover();
   await openZone(page, "ex");
@@ -151,7 +154,7 @@ test("BP14-046 previews all shared-group members and refreshes the others after 
     await expect(tile(page, member.id).locator(".sve-stat-cost")).toHaveText(String(member.cost));
     await expect(page.locator(`.sve-modal .sve-card[data-card="${member.id}"] .sve-stat-cost`)).toHaveText(String(member.cost));
   }
-  await expect(page.getByTestId("details-play-cost").locator("strong")).not.toHaveText("0");
+  await expect(page.getByTestId("details-cost").locator("strong")).not.toHaveText("0");
 });
 
 test("keyword expansion isolates clicks, selection, touch and back, and follows live keywords and language", async ({ page }) => {

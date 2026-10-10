@@ -63,9 +63,9 @@ export function CardPanel({ focus, details, exact = false, art = true }: { focus
   const others = otherLangs(cardLang)
     .map((l) => ({ lang: l, name: def.names[l] ?? "" }))
     .filter((o, i, all) => o.name !== "" && o.name !== name && all.findIndex((x) => x.name === o.name) === i);
-  const stat = (label: string, now: number | null | undefined, printed: number | null) =>
+  const stat = (label: string, now: number | null | undefined, printed: number | null, testId?: string) =>
     (now === undefined ? printed : now) === null ? null : (
-      <div className="sve-details-stat">
+      <div className="sve-details-stat" data-testid={testId}>
         <span>{label}</span>
         <strong>{now === undefined ? printed : now}</strong>
         {now !== undefined && now !== null && printed !== null && now !== printed ? <small>{t("card.printed", { value: printed })}</small> : null}
@@ -132,10 +132,7 @@ export function CardPanel({ focus, details, exact = false, art = true }: { focus
         </div>
       ) : null}
       <div className="sve-details-stats">
-        {def.type !== "leader" ? stat(t(playCost === undefined ? "card.cost" : "card.cardCost"), view?.cost, def.cost) : null}
-        {def.type !== "leader" && playCost !== undefined ? (
-          <div className="sve-details-stat" data-testid="details-play-cost"><span>{t("card.playCost")}</span><strong>{playCost}</strong></div>
-        ) : null}
+        {def.type !== "leader" ? stat(t("card.cost"), playCost ?? view?.cost, def.cost, "details-cost") : null}
         {stat(t("card.attack"), view?.attack, def.attack)}
         {stat(t("card.defense"), view?.defense, def.defense)}
       </div>

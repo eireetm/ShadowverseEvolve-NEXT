@@ -7,7 +7,7 @@ import { playCost as corePlayCost } from "../../core/src/engine/costs";
 import { cardRuntimeDetails } from "../src/presentation/card-details";
 import { createPlayCostQuery } from "../src/presentation/play-cost";
 import { withoutMemory } from "../src/engine/view-utils";
-import { costArrow, normalPlayCost } from "../src/game/card/play-cost";
+import { normalPlayCost } from "../src/game/card/play-cost";
 import type { GameUpdate } from "../src/presentation/protocol";
 
 const engine = createEngine({ cards: [...ALL_CARDS, testFollower("V1", 1, 1, 1), testFollower("V3", 3, 3, 3), testFollower("V5", 5, 5, 10), testSpell("S1", 1), { ...testSpell("GOLEM-SPELL", 8), traits: ["ゴーレム"] }], scripts: ALL_SCRIPTS });
@@ -218,7 +218,6 @@ describe("normal play cost presentation", () => {
     expect(normalPlayCost(update, card)).toBe(0);
     update.view.players[0].hand = [];
     expect(normalPlayCost(update, card)).toBeUndefined();
-    expect([costArrow(0, 1), costArrow(3, 2), costArrow(2, 2), costArrow(undefined, 2), costArrow(0, null)]).toEqual(["↓", "↑", "", "", ""]);
   });
   it("queries crest/equipment passives but ignores an ordinary EX source and null costs", () => {
     const custom = createEngine({ cards: [testFollower("PLAIN", 5, 1, 1), testFollower("PASSIVE", 1, 1, 1), testCrest("CREST"), { ...testFollower("EQUIP", 0, 0, 0), type: "equipment", token: true }],

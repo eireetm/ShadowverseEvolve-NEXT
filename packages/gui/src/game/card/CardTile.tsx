@@ -9,7 +9,7 @@ import { counterName } from "../../i18n/counters";
 import { showCard, useFocusSelect, type FocusCard } from "../focus";
 import { CardArt } from "./CardArt";
 import { displayOf } from "./display";
-import { costArrow, normalPlayCost } from "./play-cost";
+import { normalPlayCost } from "./play-cost";
 import { KeywordExpander } from "./KeywordExpander";
 
 /**
@@ -79,7 +79,6 @@ export function CardTile({ card, info, side, size = "normal", mark = null, onCli
   if (onClick) classes.push("sve-card-clickable");
   const playCost = normalPlayCost(update, view);
   const cost = playCost ?? (view ? view.cost : (def?.cost ?? null));
-  const arrow = costArrow(playCost, view?.cost ?? null);
   const attack = view ? view.attack : (def?.attack ?? null);
   const defense = view ? view.defense : (def?.defense ?? null);
   const compare = (now: number | null, printed: number | null | undefined) =>
@@ -105,7 +104,7 @@ export function CardTile({ card, info, side, size = "normal", mark = null, onCli
         <div className="sve-card-overlay">
           {cost !== null && def?.type !== "leader" ? (
             <span className="sve-stat sve-stat-cost" data-class={def?.class}>
-              {cost}{arrow ? <small className="sve-cost-arrow" aria-hidden="true">{arrow}</small> : null}
+              {cost}
             </span>
           ) : null}
           {attack !== null ? <span className={`sve-stat sve-stat-atk${compare(attack, def?.attack)}`}>{attack}</span> : null}
