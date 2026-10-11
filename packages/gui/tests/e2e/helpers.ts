@@ -196,7 +196,8 @@ async function answerInDialog(body: Locator, kind: string, choose: (n: number) =
   }
   // The hand's order for a redraw (left open by an earlier step): redraw as it is.
   if (kind === "mulligan") return (await body.getByTestId("mulligan-redraw").click(), "redraw");
-  const buttons = body.locator("button:not([disabled])");
+  // Source inspection is an explanatory control, not an answer to the decision.
+  const buttons = body.locator("button:not([disabled]):not(.sve-ability-heading)");
   const n = await buttons.count();
   expect(n, `no button to answer ${kind}`).toBeGreaterThan(0);
   const button = buttons.nth(choose(n));

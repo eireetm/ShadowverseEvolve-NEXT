@@ -5,6 +5,7 @@ import { type CardLang, useSettings } from "../../app/settings";
 import { useApp } from "../../app/store";
 import { shownPrinting } from "../../app/token-art";
 import { traitName } from "../../app/traits";
+import type { CardRuntimeDetails } from "../../presentation/protocol";
 import { findCard, sideOf } from "../../engine/view-utils";
 import { htmlLang, useT } from "../../i18n";
 import { counterName } from "../../i18n/counters";
@@ -15,6 +16,7 @@ import { CardArt } from "./CardArt";
 import { CardText, CardTextLine } from "./CardText";
 import { displayOf } from "./display";
 import { giftLines } from "./gifts";
+import { normalPlayCost } from "./play-cost";
 
 const LANGS: readonly DataLang[] = ["en", "cn", "ja"];
 /** The card data's other languages (Traditional Chinese is the Chinese one: not again). */
@@ -22,7 +24,7 @@ const otherLangs = (lang: CardLang): DataLang[] => LANGS.filter((l) => l !== dat
 
 /**
  * The last card the pointer went over (CardPanel). A card of the game is followed while it stays in its zone (it evolves,
- * takes damage ...); once it moves it is a new card (CR 4.1.4) and the panel keeps what it was.
+ * takes damage ...); once it moves or becomes hidden the panel keeps only its known static printing.
  */
 export function CardDetails() {
   const shown = useFocusSelect((f) => f.shown);
@@ -31,21 +33,29 @@ export function CardDetails() {
   const t = useT();
   if (!shown || !catalog) return <p className="sve-hint">{t("card.hint")}</p>;
   const now = shown.id && update ? findCard(update.view, shown.id) : null;
-  return <CardPanel focus={now && update ? { ...displayOf(now, sideOf(update.view, now.id), catalog), view: now } : shown} />;
+  const { view: oldView, ...staticFocus } = shown;
+  return (
+    <CardPanel
+      focus={now && update ? { ...displayOf(now, sideOf(update.view, now.id), catalog), view: now } : staticFocus}
+      details={now && update ? update.cardDetails[now.id] : undefined}
+    />
+  );
 }
 
 /**
  * A card's panel: picture (click it for a large one), names, type, traits, stats, text, printings. `exact`: this printing as
  * it is, not a token's chosen art; without `art`, no picture (the token art window shows one printing large beside it).
  */
-export function CardPanel({ focus, exact = false, art = true }: { focus: FocusCard; exact?: boolean; art?: boolean }) {
+export function CardPanel({ focus, details, exact = false, art = true }: { focus: FocusCard; details?: CardRuntimeDetails; exact?: boolean; art?: boolean }) {
   const catalog = useApp((s) => s.catalog)!;
+  const update = useApp((s) => s.update);
   const { cardLang, uiLang, tokenArt } = useSettings();
   const t = useT();
   const [viewing, setViewing] = useState<readonly ArtFace[] | null>(null);
   const def = catalog.def(focus.def);
   if (!def) return <p className="sve-hint">{focus.def}</p>;
   const view = focus.view;
+  const playCost = normalPlayCost(update, view);
   // The name in the card language, then in the other two (each drawn in its own language's characters).
   const name = cardName(def, cardLang);
   // Only the languages' own names, each once (a language without one would repeat the card name, e.g. a pre-release card's
@@ -53,11 +63,11 @@ export function CardPanel({ focus, exact = false, art = true }: { focus: FocusCa
   const others = otherLangs(cardLang)
     .map((l) => ({ lang: l, name: def.names[l] ?? "" }))
     .filter((o, i, all) => o.name !== "" && o.name !== name && all.findIndex((x) => x.name === o.name) === i);
-  const stat = (label: string, now: number | null | undefined, printed: number | null) =>
-    printed === null && (now === null || now === undefined) ? null : (
-      <div className="sve-details-stat">
+  const stat = (label: string, now: number | null | undefined, printed: number | null, testId?: string) =>
+    (now === undefined ? printed : now) === null ? null : (
+      <div className="sve-details-stat" data-testid={testId}>
         <span>{label}</span>
-        <strong>{now ?? printed}</strong>
+        <strong>{now === undefined ? printed : now}</strong>
         {now !== undefined && now !== null && printed !== null && now !== printed ? <small>{t("card.printed", { value: printed })}</small> : null}
       </div>
     );
@@ -77,7 +87,7 @@ export function CardPanel({ focus, exact = false, art = true }: { focus: FocusCa
     <div className="sve-details">
       {art ? (
         <button type="button" className="sve-details-art" onClick={() => setViewing(faces())} title={t("card.enlarge")} data-testid="details-art">
-          <CardArt printing={focus.printing} def={def.id} back={focus.back} name={name} subtitle={t(`type.${def.type}` as const)} exact={exact} />
+          <CardArt printing={focus.printing} def={def.id} back={focus.back} name={name} subtitle={t(`type.${view?.type ?? def.type}` as const)} exact={exact} />
         </button>
       ) : null}
       <h3 className="sve-details-name" lang={htmlLang(cardLang)}>
@@ -96,7 +106,9 @@ export function CardPanel({ focus, exact = false, art = true }: { focus: FocusCa
       <div className="sve-details-type">
         {[
           t(`class.${def.class}` as const),
-          t(`type.${def.type}` as const),
+          view && view.type !== def.type
+            ? t("card.currentType", { current: t(`type.${view.type}`), original: t(`type.${def.type}`) })
+            : t(`type.${def.type}` as const),
           def.evolved ? t("card.evolved") : null,
           def.token ? t("card.token") : null,
           def.universe ? t(`universe.${def.universe}` as const) : null,
@@ -120,7 +132,7 @@ export function CardPanel({ focus, exact = false, art = true }: { focus: FocusCa
         </div>
       ) : null}
       <div className="sve-details-stats">
-        {def.type !== "leader" ? stat(t("card.cost"), view?.cost, def.cost) : null}
+        {def.type !== "leader" ? stat(t("card.cost"), playCost ?? view?.cost, def.cost, "details-cost") : null}
         {stat(t("card.attack"), view?.attack, def.attack)}
         {stat(t("card.defense"), view?.defense, def.defense)}
       </div>
@@ -146,6 +158,16 @@ export function CardPanel({ focus, exact = false, art = true }: { focus: FocusCa
             {view.damage > 0 ? <span>{t("card.damage", { n: view.damage })}</span> : null}
           </div>
         </div>
+      ) : null}
+      {view && details && (details.enteredFieldThisTurn || details.cannotAttack || details.cannotAttackLeader || details.cannotDealDamage) ? (
+        <section className="sve-details-current-state" data-testid="details-state" aria-label={t("card.currentState")}>
+          <div className="sve-details-flags">
+            {details.enteredFieldThisTurn ? <span>{t("card.enteredThisTurn")}</span> : null}
+            {details.cannotAttack ? <span>{t("card.cannotAttack")}</span> : null}
+            {details.cannotAttackLeader ? <span>{t("card.cannotAttackLeader")}</span> : null}
+            {details.cannotDealDamage ? <span>{t("card.cannotDealDamage")}</span> : null}
+          </div>
+        </section>
       ) : null}
       {text ? <CardText text={text} lang={cardLang} /> : <p className="sve-hint">{t("card.noText")}</p>}
       {view ? <Gifts view={view} lang={cardLang} /> : null}

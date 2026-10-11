@@ -342,6 +342,11 @@ function PlayerPanel({ update, side, opponent, marks }: { update: GameUpdate; si
         {playerLabel(side.id, update, t)}
         {you ? ` · ${t("game.you")}` : ""}
       </div>
+      {update.view.firstPlayer !== null ? (
+        <div className="sve-player-order" data-testid={`player-order-${side.id}`}>
+          {t(update.view.firstPlayer === side.id ? "game.firstPlayer" : "game.secondPlayer")}
+        </div>
+      ) : null}
       {basis ? (
         <div className="sve-player-basis" data-testid={`player-basis-${side.id}`}>
           {basis}

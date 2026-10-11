@@ -18,7 +18,7 @@ export function installLongPress(root: HTMLElement): () => void {
   };
   const down = (e: PointerEvent) => {
     clear();
-    if (e.pointerType !== "touch" || !(e.target instanceof Element) || !e.target.closest("[data-card], [data-printing]")) return;
+    if (e.pointerType !== "touch" || !(e.target instanceof Element) || e.target.closest("[data-keyword-interaction]") || !e.target.closest("[data-card], [data-printing]")) return;
     start = { x: e.clientX, y: e.clientY, id: e.pointerId };
     timer = window.setTimeout(() => {
       timer = null;

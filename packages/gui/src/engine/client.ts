@@ -1,7 +1,8 @@
 // The GUI side of the engine worker: sends messages and hands the worker's messages to subscribers. Requests that expect a
 // reply (a replay, a deck check) carry an id.
 import type { DeckList } from "@sve/core";
-import type { FromWorker, Replay, ToWorker } from "./protocol";
+import type { Replay, ToWorker } from "./protocol";
+import type { FromWorker } from "../presentation/protocol";
 
 type Listener = (message: FromWorker) => void;
 
@@ -11,7 +12,7 @@ export class EngineClient {
   private nextRequest = 1;
 
   constructor() {
-    this.worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module", name: "sve-engine" });
+    this.worker = new Worker(new URL("../presentation/worker.ts", import.meta.url), { type: "module", name: "sve-engine" });
     this.worker.onmessage = (event: MessageEvent<FromWorker>) => this.emit(event.data);
     this.worker.onerror = (event: ErrorEvent) => this.emit({ kind: "error", message: `engine worker: ${event.message}` });
   }
