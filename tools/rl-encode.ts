@@ -92,7 +92,7 @@ const pick = Number(option("--pick") ?? 0);
 const encoderVersion = Number(option("--encoder") ?? 1);
 const v2 = encoderVersion === 2;
 const leakEvery = Number(option("--leak-every") ?? (v2 ? 250 : 500));
-const leafCheck = Number(option("--leaf-check") ?? 0);
+const leafCheck = Number(option("--leaf-check") ?? (v2 ? 40 : 0));
 const records = runDir ? join(resolve(runDir), "games.jsonl.gz") : "";
 if (!runDir || !existsSync(records) || !(Number.isInteger(workers) && workers >= 1) || !(limit > 0) || !(pick >= 0) || !(leakEvery >= 1) || !(leafCheck >= 0) || ![1, 2].includes(encoderVersion) || (v2 && !withX)) {
   console.error("usage: npm run rl:encode -- <run dir with games.jsonl.gz> [--out <dir>] [--workers N] [--limit N] [--no-x] [--pick N] [--leak-every N] [--leaf-check N] [--force] [--encoder 2 [--compare-with <dir>] [--compare-to <dir>] [--pick-from <enc-v1 dir>]]");
@@ -315,14 +315,14 @@ function runWorker(k: number): void {
   const timesV1: number[] = [];
   const timesPool: number[] = [];
   // Encoder v2: the references as the analysis reads them (the oracle's sites, by definition, in the table's order), the
-  // declared ranges, and the share of samples whose pooled vector is kept for the fixed pooled check (about 4,000 over the
-  // run: the 2,000 with the smallest hash are kept).
+  // declared ranges, and the share of samples whose pooled vector is kept for the fixed pooled check (about 8,000 over the
+  // run, enough for 2,000 when a run has fewer samples a game than the estimate: the 2,000 with the smallest hash are kept).
   const analyses = v2 ? analyzeScripts(ALL_SCRIPTS) : null;
   const sitesOf = (def: DefId) => analyses?.get(def)?.refs;
   const maxRefs = Math.max(10, ...Object.values(table.file.refs).map((r) => r.length));
   const ranges = V2.declaredRanges(maxRefs);
   const gamesTotal = Number(option("--games-total") ?? 1);
-  const candidateBound = Math.min(1, 4000 / Math.max(1, gamesTotal * 58)) * 2 ** 32;
+  const candidateBound = Math.min(1, 8000 / Math.max(1, gamesTotal * 58)) * 2 ** 32;
   const pooledBuffer = new Float64Array(v2 ? encoderV2Schema().pooled.dims : 0);
   let shard = -1;
   let acc: ReturnType<typeof freshShard> | null = null;
@@ -961,6 +961,7 @@ if (option("--worker") !== null) {
       compareWith: option("--compare-with"),
       compareTo: option("--compare-to"),
       pickFrom: option("--pick-from"),
+      ranges: V2.declaredRanges(Math.max(10, ...Object.values(table.file.refs).map((r) => r.length))),
       engine,
       calibrationView,
       guiReplays: join(ROOT, "packages", "gui", "replays"),
@@ -1121,7 +1122,7 @@ if (option("--worker") !== null) {
           nonzero,
         }
       : null,
-    cardFeatures: { version: CARD_FEATURES_VERSION, columnsHash: table.file.columnsHash, hash: table.file.hash },
+    cardFeatures: { version: CARD_FEATURES_VERSION, columnsHash: table.file.columnsHash, hash: table.file.hash, rulesFingerprint: table.file.rulesFingerprint },
     columns: {
       x: v2 ? "not written: encoder v2's glob / card / pile / off / gbase / gdef arrays (encoder.arrays)" : withX ? "int16 [n, dims]: encoder v1 of the viewer's view (encoder.names)" : "not written (--no-x)",
       y: "1 won, 0.5 drawn, 0 lost, from the viewer's side",
@@ -1147,9 +1148,9 @@ if (option("--worker") !== null) {
       dirty: git("status", "--porcelain", "--", "packages/core", "packages/bot", "tools") !== "",
       command: `rl:encode ${args.join(" ")}`,
     },
-    shards: results.map((r) => ({ shard: r.shard, rows: r.rows, games: r.games.length, files: r.files })),
+    shards: results.map((r) => ({ shard: r.shard, rows: r.rows, ...(r.v2 ? r.v2.sizes : {}), games: r.games.length, files: r.files, ...(r.v2 ? { checks: r.v2.checks } : {}) })),
     counts: { games: kept, samples: rows, bySplit, dropped },
-    checks: { ...checks, leaf },
+    checks: { ...checks, leaf, ...(finished ? { v2: finished.checks } : {}) },
     picked,
   };
   writeFileSync(join(out, "meta.json"), JSON.stringify(meta, null, 1) + "\n");

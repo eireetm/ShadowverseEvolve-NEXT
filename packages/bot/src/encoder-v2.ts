@@ -1073,15 +1073,26 @@ const ZONE_CN: Record<string, string> = {
   "evoUp.me": "我方进化牌组（正面）",
   "evoUp.opp": "对方进化牌组（正面）",
   "evoLeft.opp": "对方剩下的进化卡",
-  "deck.me": "我方牌组（剩下的牌，不知道顺序）",
-  "unseen.opp": "对手没见过的牌（手牌 + 牌组 + 背面）",
+  "deck.me": "我方牌组（剩下的牌；顺序一律当作不知道）",
+  "unseen.opp": "我没见过的对手的牌（他的手牌、牌组和背面的牌里）",
   "misc.me": "我方其他区（赛道 / 驾驶 / 判定）",
   "misc.opp": "对方其他区（赛道 / 驾驶 / 判定）",
 };
 const CLASS_CN = ["中立", "精灵", "皇家护卫", "巫师", "龙族", "梦魇", "主教"];
+/** What each odds family counts (the card table's columns, printed keywords and effects; not conditions). */
+const ODDS_CN: Record<(typeof ODDS)[number], string> = {
+  quick: "快速（印着的或启动能力）",
+  ward: "守护（印着的）",
+  charge: "疾驰 / 突进 / 突袭（印着的）",
+  removal: "伤害 / 破坏 / 消失效果",
+  aoe: "全体伤害",
+  heal: "主战者回复",
+  summon: "召唤或放到场上",
+  draw: "抽牌、检索或看牌组顶",
+};
 const TYPE_CN: Record<string, string> = { follower: "从者", amulet: "护符", spell: "法术", crest: "纹章", equipment: "装备" };
 const UNIVERSE_CN: Record<string, string> = { umamusume: "赛马娘", cinderellaGirls: "灰姑娘女孩", vanguard: "先导者", princessConnect: "公主连结" };
-const DEAD_CN: Record<string, string> = { resolved: "已结算，不计", notOnField: "只在场上起作用", abilitiesLost: "能力已失去", onEvolve: "进化时才计（看进化列）", notInZone: "不在这里起作用", notPlayable: "不能从这里使用", notSuperEvolvable: "不能超进化", notEvolvable: "已进化" };
+const DEAD_CN: Record<string, string> = { resolved: "已结算，不计", notOnField: "只在场上起作用", abilitiesLost: "能力已失去", onEvolve: "进化时才计（看进化列）", evolvedAlready: "已进化，不会再进化", notInZone: "不在这里起作用", notPlayable: "不能从这里使用", notSuperEvolvable: "不能超进化", notEvolvable: "已进化" };
 const CLS_CN: Record<string, string> = { gate: "门槛", avail: "可选的对象", scale: "按数量", aff: "受影响的", bonus: "额外 / 分支", luck: "靠运气" };
 
 /**
@@ -1112,11 +1123,11 @@ export function describeV2(view: PlayerView, me: PlayerId, prep: PreparedV2, nam
     const cls = leader ? defFacts(table, infoDefOf(view, leader, table)).cls : -1;
     const universe = view.players[side].universe;
     L.push(
-      `[向量里有] ${s === "me" ? "我" : "对手"}：${cls >= 0 ? CLASS_CN[cls] : "无主战者"}${universe ? ` · ${UNIVERSE_CN[universe] ?? universe}` : ""} · 体力 ${g(`g.${s}.leaderDefense`)} · PP ${g(`g.${s}.pp`)}/${g(`g.${s}.maxPp`)} · 手牌 ${g(`g.${s}.hand.count`)}${s === "opp" ? `（背面 ${g("g.opp.hand.hidden")}，看得到或记得 ${g("g.opp.hand.known")}）` : ""} · 牌组 ${g(`g.${s}.deckCount`)}${s === "opp" ? ` · 对手没见过的牌 ${g("g.opp.unseen")} 张` : ""} · 进化：场上能同时进化 ${g(`g.${s}.evo.matchField`)} 个，算上手牌 ${g(`g.${s}.evo.matchAll`)} 个`,
+      `[向量里有] ${s === "me" ? "我" : "对手"}：${cls >= 0 ? CLASS_CN[cls] : "无主战者"}${universe ? ` · ${UNIVERSE_CN[universe] ?? universe}` : ""} · 体力 ${g(`g.${s}.leaderDefense`)} · PP ${g(`g.${s}.pp`)}/${g(`g.${s}.maxPp`)} · 手牌 ${g(`g.${s}.hand.count`)}${s === "opp" ? `（背面 ${g("g.opp.hand.hidden")}，看得到或记得 ${g("g.opp.hand.known")}）` : ""} · 牌组 ${g(`g.${s}.deckCount`)}${s === "opp" ? ` · 我没见过的他的牌 ${g("g.opp.unseen")} 张` : ""} · 进化：场上剩下的进化卡够同时进化 ${g(`g.${s}.evo.matchField`)} 个，算上${s === "opp" ? "看得到 / 记得的" : ""}手牌 ${g(`g.${s}.evo.matchAll`)} 个`,
     );
     L.push(`  [向量里有] 类型槽（张数）${[1, 2, 3, 4].map((k) => g(`g.${s}.slot.${k}`)).join(" / ")} · [只打印] 名称 ${prep.slots[side].map(traitName).join(" / ")}`);
   }
-  L.push(`[向量里有] 两边共同的类型槽 ${g("g.slot.shared")} 个 · 对手手牌里有……的概率（按没见过的牌均匀估计）：${ODDS.map((f) => `${f} ${(g(`g.opp.odds.${f}`) / 10).toFixed(1)}%`).join(" · ")}`);
+  L.push(`[向量里有] 两边共同的类型槽 ${g("g.slot.shared")} 个 · 对手手牌里至少有一张……的概率（看不到的按我没见过的牌均匀抽估计；按卡牌表的列分类）：${ODDS.map((f) => `${ODDS_CN[f]} ${(g(`g.opp.odds.${f}`) / 10).toFixed(1)}%`).join(" · ")}`);
   for (const zone of ZONES_V2.filter((z) => z.kind === "card")) {
     const rows = [...Array(enc.nCards).keys()].filter((i) => enc.cards[i * CARD_WIDTH_V2] === zone.code);
     if (rows.length === 0) continue;
@@ -1130,20 +1141,26 @@ export function describeV2(view: PlayerView, me: PlayerId, prep: PreparedV2, nam
       const slotBits = [0, 1, 2, 3].filter((k) => gd[2 + k] === 1).map((k) => k + 1);
       const kws = KW_NOW.filter((k) => c(`kw.now.${k}`) === 1).map((k) => names.keyword?.(k) ?? k);
       const stats = R.type === "follower" || c("follower.now") === 1 ? ` 攻 ${c("atk.now")} / 守 ${c("def.now")}` : "";
+      // Evolve cards left (evo.left) and whether its own evolve ability can use them (evo.can); nothing for a card that has
+      // no evolve card at all.
+      const delta = `${c("evo.dAtk") >= 0 ? "+" : ""}${c("evo.dAtk")}/${c("evo.dDef") >= 0 ? "+" : ""}${c("evo.dDef")}`;
       const evo =
-        R.type === "follower" && !R.evolved && c("evolved.now") === 0
+        R.type === "follower" && !R.evolved && c("evolved.now") === 0 && table.partnersOf(def).length > 0
           ? c("evo.left") > 0
-            ? ` · 可进化：剩 ${c("evo.left")} 张（${c("evo.dAtk") >= 0 ? "+" : ""}${c("evo.dAtk")}/${c("evo.dDef") >= 0 ? "+" : ""}${c("evo.dDef")}）`
-            : " · 不可进化（剩 0 张）"
+            ? c("evo.can") === 1
+              ? ` · 可进化：剩 ${c("evo.left")} 张（${delta}）`
+              : ` · 进化卡剩 ${c("evo.left")} 张（${delta}），但它没有【进化】能力`
+            : " · 进化卡剩 0 张"
           : "";
       L.push(
-        `  · [只打印] ${cardName(def)}（${CLASS_CN[R.cls]} · ${TYPE_CN[R.type] ?? R.type}）[向量里有] 费用 ${c("cost.now")}${stats}${kws.length ? ` · ${kws.join("、")}` : ""}${c("hiddenKnown") ? " · 记得的手牌" : ""}${slotBits.length ? ` · 本方类型槽 ${slotBits.join(",")}` : ""}${evo} · 同类型：场上 ${c("share.trait.field")} 手牌 ${c("share.trait.hand")} 墓场 ${c("share.trait.cemetery")} 牌池 ${c("share.trait.pool")} · 剩 ${c("self.left")} 张、墓场 ${c("self.cem")} 张`,
+        `  · [只打印] ${cardName(def)}（${CLASS_CN[R.cls]} · ${TYPE_CN[R.type] ?? R.type}）[向量里有] 费用 ${c("cost.now")}${stats}${kws.length ? ` · ${kws.join("、")}` : ""}${c("hiddenKnown") ? " · 记得的手牌" : ""}${slotBits.length ? ` · 本方类型槽 ${slotBits.join(",")}` : ""}${evo} · 同类型：场上 ${c("share.trait.field")} 手牌${c("zone") === Z["hand.oppKnown"] || c("zone") === Z["field.opp"] || c("zone") === Z["ex.opp"] || c("zone") === Z["cemLive.opp"] || c("zone") === Z["equip.opp"] ? "（只算看得到 / 记得的）" : ""} ${c("share.trait.hand")} 墓场 ${c("share.trait.cemetery")} 牌池 ${c("share.trait.pool")} · 剩 ${c("self.left")} 张、墓场 ${c("self.cem")} 张`,
       );
       const rel = REL_COLUMNS_V2.map((n) => [n, c(n)] as const).filter(([, v]) => v !== 0);
       if (rel.length) L.push(`      [向量里有] ${rel.map(([n, v]) => `${n}=${v}`).join(" ")}`);
       for (const x of trace.get(enc.cardIds[i]!) ?? []) {
         if (!x.live) {
-          L.push(`      [只打印] ${x.ref.timing} · ${x.ref.where}：${DEAD_CN[x.why] ?? x.why}`);
+          const why = x.why === "onEvolve" && c("evolved.now") === 1 ? "evolvedAlready" : x.why;
+          L.push(`      [只打印] ${x.ref.timing} · ${x.ref.where}：${DEAD_CN[why] ?? why}`);
           continue;
         }
         if (x.partial || !x.count) {
@@ -1153,7 +1170,9 @@ export function describeV2(view: PlayerView, me: PlayerId, prep: PreparedV2, nam
         const k = x.count;
         const head = `${x.ref.timing} · ${x.ref.where}${x.key.length ? `（${x.key.join("、")} 时）` : ""} · ${CLS_CN[x.cls!]}`;
         if (k.luck) {
-          L.push(`      [只打印] ${head}：牌组顶 ${k.luck.t} 张，${x.odds ? `${(x.odds.p / 10).toFixed(1)}%` : ""}（剩 ${k.luck.N} 张里 ${k.luck.K} 张）`);
+          const tokenMine = [Z["hand.me"], Z["field.me"], Z["ex.me"], Z["cemLive.me"], Z["equip.me"]].includes(c("zone"));
+          const mine = x.ref.side === "own" ? tokenMine : !tokenMine;
+          L.push(`      [只打印] ${head}：牌组顶 ${k.luck.t} 张，${x.odds ? `${(x.odds.p / 10).toFixed(1)}%` : ""}（${mine ? `我的牌组 ${k.luck.N} 张` : `我没见过的对手的牌 ${k.luck.N} 张（不只是他的牌组）`}里 ${k.luck.K} 张）`);
           continue;
         }
         const hidden = k.slots > 0 ? `，另有看不到的 ${k.slots} 张约 ${(x.e16 / 16).toFixed(2)} 张` : "";

@@ -29,7 +29,7 @@ import {
 import { seedRng, randomInt, type Engine, type GameSession, type PlayerId } from "../../packages/core/src";
 import { TRAIT_NAMES } from "../../packages/gui/src/app/traits";
 import { zh } from "../../packages/gui/src/i18n/zh";
-import type { Calibration, V2Checks } from "./enc-v2-writer";
+import type { Calibration, V2Checks, declaredRanges } from "./enc-v2-writer";
 import { readNpy, writeNpy } from "./npy";
 
 /** A shard's encoder v2 result (rl-encode.ts's ShardV2Result, as much as this reads). */
@@ -67,6 +67,8 @@ export interface FinishV2Input {
   compareWith: string | null;
   compareTo: string | null;
   pickFrom: string | null;
+  /** The declared value ranges (C17), recorded in meta.json. */
+  ranges: ReturnType<typeof declaredRanges>;
   engine: Engine;
   /** A game record by index, for --pick-from; and how a game starts. */
   calibrationView: { view: ReturnType<GameSession["view"]>; me: PlayerId; ctx: EncoderContext } | null;
@@ -149,7 +151,7 @@ function bootstrap(byGame: Record<number, [number, number]>): [number, number] {
   return [q(ratios, 0.025), q(ratios, 0.975)];
 }
 
-export function finishV2(input: FinishV2Input): { lines: [boolean, string][]; meta: Record<string, unknown>; picked: string[] } {
+export function finishV2(input: FinishV2Input): { lines: [boolean, string][]; meta: Record<string, unknown>; checks: Record<string, unknown>; picked: string[] } {
   const { out, results, table } = input;
   const schema = encoderV2Schema();
   const lines: [boolean, string][] = [];
@@ -253,6 +255,7 @@ export function finishV2(input: FinishV2Input): { lines: [boolean, string][]; me
   // ---- C10: y, side, w1 as encoder v1 wrote them ----
   const v1meta = join(input.runDir, "enc-v1", "meta.json");
   let c10: [boolean, string];
+  const compare: Record<string, unknown> = {};
   if (existsSync(v1meta)) {
     const m = JSON.parse(readFileSync(v1meta, "utf8")) as { shards: { shard: number; rows: number; files: Record<string, string> }[] };
     let compared = 0;
@@ -265,6 +268,7 @@ export function finishV2(input: FinishV2Input): { lines: [boolean, string][]; me
         if (o.files[shardName(k, r.shard)] !== r.files[shardName(k, r.shard)]) differ10 += 1;
       }
     }
+    compare["enc-v1"] = { files: ["y", "side", "w1"], compared, differ: differ10 };
     c10 = [differ10 === 0, `C10 和编码器 v1 对照：${compared} 个 y / side / w1 文件，和 enc-v1 逐字节相同（不同的 ${differ10} 个；行数不同的分片不比${compared === 0 ? "，这次一个都没比" : ""}）。`];
   } else c10 = [true, "C10 和编码器 v1 对照：没有 enc-v1，没比（只报告）。"];
   lines.push(c10);
@@ -329,7 +333,9 @@ export function finishV2(input: FinishV2Input): { lines: [boolean, string][]; me
         if ((!there || there[i] === 0) && here && here[i]! > 0) deadCard.push(`${z.name}.${c}`);
       });
     }
-    lines.push([true, `C19 在 ${input.compareTo} 里恒为 0、这里不为 0 的特征（只报告）：全局 ${deadThere.length} 个（${deadThere.slice(0, 15).join(" ")}），卡 token ${deadCard.length} 个（${deadCard.slice(0, 15).join(" ")}）。`]);
+    const list = (xs: string[]) => xs.slice(0, 15).join(" ") + (xs.length > 15 ? " …" : "");
+    compare.zeroThere = { dir: input.compareTo, global: deadThere, card: deadCard };
+    lines.push([true, `C19 在 ${input.compareTo} 里恒为 0、这里不为 0 的特征（只报告）：全局 ${deadThere.length} 个（${list(deadThere)}），卡 token ${deadCard.length} 个（${list(deadCard)}）；全部列在 meta.json 的 compare.zeroThere。`]);
   }
 
   // ---- C20: pooled round trip (the Python reader's part runs after meta.json is written: pythonCheck) ----
@@ -351,6 +357,7 @@ export function finishV2(input: FinishV2Input): { lines: [boolean, string][]; me
     const theirs = Object.assign({}, ...other.shards.map((s) => s.files)) as Record<string, string>;
     const names = new Set([...Object.keys(theirs), ...Object.keys(fileHashes)]);
     const diff = [...names].filter((n) => theirs[n] !== fileHashes[n]);
+    compare.sameBytes = { dir: input.compareWith, files: names.size, differ: diff };
     lines.push([diff.length === 0, `C22 和 ${input.compareWith} 比：${names.size} 个分片文件逐字节相同（不同的 ${diff.length} 个${diff.length ? `：${diff.slice(0, 6).join(" ")}` : ""}）。`]);
   }
 
@@ -383,10 +390,11 @@ export function finishV2(input: FinishV2Input): { lines: [boolean, string][]; me
     c.pHist.forEach((v, i) => (cal.pHist[i]! += v));
   }
   const hiddenRows = Object.entries(cal.hidden).filter(([, h]) => h.n >= 100 && h.expected > 0).map(([k, h]) => ({ k, ratio: h.real / h.expected, n: h.n, ci: bootstrap(h.byGame) }));
-  const outOfBand = hiddenRows.filter((h) => h.ratio < 0.8 || h.ratio > 1.25);
+  // Fails only when the whole interval is outside 0.8–1.25 (a small run's point ratio is noisy; a wrong pool is not).
+  const outOfBand = hiddenRows.filter((h) => h.ci[1] < 0.8 || h.ci[0] > 1.25);
   lines.push([
     outOfBand.length === 0,
-    `C23 校准（只报告；"看不到的部分"按没见过的牌均匀抽的先验）：真实 / 期望 ${hiddenRows.map((h) => `${h.k} ${h.ratio.toFixed(3)}（${h.ci[0].toFixed(2)}–${h.ci[1].toFixed(2)}，${h.n} 次）`).join("；") || "（不足 100 次的组不列）"}；概率的可靠性 ${cal.bins.map((b, i) => ({ b, i })).filter(({ b }) => b.n > 0).map(({ b, i }) => `${i * 10}–${i * 10 + 9}%档 预测 ${((100 * b.p) / b.n).toFixed(0)}% 实际 ${((100 * b.hit) / b.n).toFixed(0)}%（${b.n}）`).join("、") || "无"}，Brier ${cal.brierN ? (cal.brier / cal.brierN).toFixed(3) : "-"}；牌组顶的运气 预测 ${cal.luck.n ? ((100 * cal.luck.p) / cal.luck.n).toFixed(1) : "-"}% 实际 ${cal.luck.n ? ((100 * cal.luck.hit) / cal.luck.n).toFixed(1) : "-"}%（${cal.luck.n} 次，Brier ${cal.luck.n ? (cal.luck.brier / cal.luck.n).toFixed(3) : "-"}）。真实 / 期望在 0.8–1.25 之外才算不通过（那说明牌池错了）。`,
+    `C23 校准（只报告；"看不到的部分"按没见过的牌均匀抽的先验）：真实 / 期望 ${hiddenRows.map((h) => `${h.k} ${h.ratio.toFixed(3)}（${h.ci[0].toFixed(2)}–${h.ci[1].toFixed(2)}，${h.n} 次）`).join("；") || "（不足 100 次的组不列）"}；概率的可靠性 ${cal.bins.map((b, i) => ({ b, i })).filter(({ b }) => b.n > 0).map(({ b, i }) => `${i * 10}–${i * 10 + 9}%档 预测 ${((100 * b.p) / b.n).toFixed(0)}% 实际 ${((100 * b.hit) / b.n).toFixed(0)}%（${b.n}）`).join("、") || "无"}，Brier ${cal.brierN ? (cal.brier / cal.brierN).toFixed(3) : "-"}；牌组顶的运气 预测 ${cal.luck.n ? ((100 * cal.luck.p) / cal.luck.n).toFixed(1) : "-"}% 实际 ${cal.luck.n ? ((100 * cal.luck.hit) / cal.luck.n).toFixed(1) : "-"}%（${cal.luck.n} 次，Brier ${cal.luck.n ? (cal.luck.brier / cal.luck.n).toFixed(3) : "-"}）。真实 / 期望的区间（按对局重抽 200 次的 95%）整个在 0.8–1.25 之外才算不通过（那说明牌池错了）${outOfBand.length ? `；不通过的：${outOfBand.map((h) => h.k).join("、")}` : ""}。`,
   ]);
 
   // ---- stats.json ----
@@ -483,10 +491,10 @@ export function finishV2(input: FinishV2Input): { lines: [boolean, string][]; me
       slotsK: 4,
       zones: ZONES_V2,
       arrays: {
-        glob: { dtype: "int16", names: GLOBAL_COLUMNS_V2, masked: sch.global.masked, namesHash: namesHash(GLOBAL_COLUMNS_V2) },
-        card: { dtype: "int16", header: sch.card.header, body: CARD_BODY_COLUMNS_V2, applies: sch.card.applies, pointers: ["zone", "def", "gd"], namesHash: namesHash(CARD_BODY_COLUMNS_V2) },
+        glob: { dtype: "int16", names: GLOBAL_COLUMNS_V2, ranges: input.ranges.global, masked: sch.global.masked, namesHash: namesHash(GLOBAL_COLUMNS_V2) },
+        card: { dtype: "int16", header: sch.card.header, body: CARD_BODY_COLUMNS_V2, ranges: input.ranges.body, applies: sch.card.applies, pointers: ["zone", "def", "gd"], namesHash: namesHash(CARD_BODY_COLUMNS_V2) },
         pile: { dtype: "int16", names: PILE_COLUMNS_V2, pointers: ["zone", "def", "gd"] },
-        gdef: { dtype: "int16", header: sch.gdef.header, names: GDEF_COLUMNS_V2, pointers: ["def", "seat"], namesHash: namesHash(GDEF_COLUMNS_V2) },
+        gdef: { dtype: "int16", header: sch.gdef.header, names: GDEF_COLUMNS_V2, ranges: input.ranges.gdef, pointers: ["def", "seat"], namesHash: namesHash(GDEF_COLUMNS_V2) },
         off: { dtype: "int32", shape: "[n + 1, 2]: first card row, first pile row" },
         gbase: { dtype: "int32", shape: "[n]: the sample's game's first gdef row" },
         pointerNote: "zone, def, gd (cards, piles) and def, seat (gdef) are pointers, never features (D21)",
@@ -503,8 +511,12 @@ export function finishV2(input: FinishV2Input): { lines: [boolean, string][]; me
     sizes: { ...sizes, rows },
     pooledCheck: { samples: chosen.length, differences: poolDiff },
     golden: { samples: golden.length },
+    timing: stats.timing,
+    compare,
   };
-  return { lines, meta, picked };
+  // C11–C17's counters (meta.json's checks.v2; encoder v1's own counters stay 0 in a v2 run).
+  const v2checks = { ...checks, maskBad, diagnostics: diag, rangeNames, oracleDifferByDef: differ, closures: Object.fromEntries(closureList.map(([k, v]) => [k, { agree: v.agree, disagree: v.disagree }])) };
+  return { lines, meta, checks: v2checks, picked };
 }
 
 /** One line of the run registry (D:\SVE\rl-runs\registry.jsonl). */
@@ -517,12 +529,16 @@ export function appendRegistry(file: string, entry: Record<string, unknown>): vo
 export function pythonCheck(root: string, out: string): [boolean, string] {
   const last = (text: string) => text.trim().split("\n").pop() ?? "";
   try {
-    const res = execFileSync("py", ["-3.14", "-I", join(root, "tools", "rl", "py", "check_encv2.py"), out], { encoding: "utf8", timeout: 900_000 });
+    const res = execFileSync("py", ["-3.14", "-I", join(root, "tools", "rl", "py", "check_encv2.py"), out], { encoding: "utf8", timeout: 900_000, stdio: ["ignore", "pipe", "pipe"] });
     return [true, `C20 Python 端：${last(res)}。`];
   } catch (e) {
-    const err = e as { status?: number; stdout?: string; message: string };
-    if (err.status === 1 && err.stdout) return [false, `C20 Python 端：${last(err.stdout)}。`];
-    return [true, `C20 Python 端：待做（运行不了：${String(err.message).split("\n")[0]!.slice(0, 100)}；阶段 3 准备好 numpy 再跑）。`];
+    const err = e as { code?: string; status?: number | null; stdout?: string; stderr?: string; message: string };
+    const stderr = String(err.stderr ?? "");
+    // Only a missing Python or numpy leaves the check for later; anything else (a crash included) fails it.
+    if (err.code === "ENOENT" || /ModuleNotFoundError: No module named 'numpy'|No suitable Python runtime/.test(stderr)) {
+      return [true, `C20 Python 端：待做（运行不了：${(last(stderr) || String(err.message).split("\n")[0]!).slice(0, 100)}；准备好 numpy 再跑）。`];
+    }
+    return [false, `C20 Python 端：出错（退出码 ${err.status ?? "-"}）：${last(err.stdout ?? "")}${stderr ? ` ${last(stderr).slice(0, 200)}` : ""}。`];
   }
 }
 
