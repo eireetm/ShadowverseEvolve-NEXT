@@ -58,7 +58,8 @@ class EncV2:
         cards = np.asarray(a["card"][c0:c1])
         piles = np.asarray(a["pile"][p0:p1])
         base = int(a["gbase"][r])
-        top = max([-1] + list(cards[:, 2]) + list(piles[:, 2]))
+        # Python ints: the stored gd is int16, and base + gd can pass 32,767 in a shard.
+        top = max([-1] + [int(x) for x in cards[:, 2]] + [int(x) for x in piles[:, 2]])
         gdef = np.asarray(a["gdef"][base : base + top + 1])
         return {"glob": np.asarray(a["glob"][r]), "cards": cards, "piles": piles, "gdef": gdef}
 
