@@ -459,15 +459,28 @@ function runWorker(k: number): void {
         const pair: EncodedV2[] = [];
         for (const v of [0, 1] as const) {
           const diag = emptyDiagnosticsV2();
+          // Speed (worker 0): v1 on the same view, before v2 on every other view and after it on the rest (whichever runs
+          // second finds the view already in the caches).
+          const timing = k === 0 && timesV2.length < 3000;
+          const v1First = timing && timesV2.length % 2 === 0;
+          let v1Micros = 0;
+          if (v1First) {
+            const t2 = performance.now();
+            encode(views[v], v, ctx);
+            v1Micros = (performance.now() - t2) * 1000;
+          }
           const t0 = performance.now();
           const e = encodeV2(views[v], v, prep, diag);
           const t1 = performance.now();
           pair.push(e);
-          if (k === 0 && timesV2.length < 3000) {
+          if (timing) {
             timesV2.push((t1 - t0) * 1000);
-            const t2 = performance.now();
-            encode(views[v], v, ctx);
-            timesV1.push((performance.now() - t2) * 1000);
+            if (!v1First) {
+              const t2 = performance.now();
+              encode(views[v], v, ctx);
+              v1Micros = (performance.now() - t2) * 1000;
+            }
+            timesV1.push(v1Micros);
             const t3 = performance.now();
             poolV2(e, prep, pooledBuffer);
             timesPool.push((performance.now() - t3) * 1000);
