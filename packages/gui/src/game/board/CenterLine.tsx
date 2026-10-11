@@ -8,6 +8,7 @@ import { useT, type MessageKey } from "../../i18n";
 import { isOnTable } from "../../engine/view-utils";
 import { inDialog } from "../actions";
 import { rangeLabel, SELECT_KEYS } from "../decisions/DecisionDialog";
+import { ProcessingPrompt } from "../decisions/ProcessingPrompt";
 import { sendAnswer, setRedrawing, useInteraction } from "../interaction";
 import { playerLabel } from "../labels";
 
@@ -34,8 +35,15 @@ export function CenterLine({ update, placing = null }: { update: GameUpdate; pla
         {label}
       </button>,
     );
+  // Under the game's turn, the active player's own turn count (CR 3.3 turns passed: what super evolving waits for, 12.2.4).
+  const activeTurn = () => {
+    const player = playerLabel(view.activePlayer, update, t);
+    const n = view.players[view.activePlayer].turnsPassed;
+    return n > 0 ? t("game.activePlayerTurn", { player, n }) : t("game.activePlayer", { player });
+  };
   let prompt: string | null = null;
-  if (decision && inDialog(decision, (id) => isOnTable(view, id))) {
+  const dialog = decision !== undefined && inDialog(decision, (id) => isOnTable(view, id));
+  if (decision && dialog) {
     prompt = t("table.answerInDialog");
   } else if (decision) {
     switch (decision.type) {
@@ -82,7 +90,7 @@ export function CenterLine({ update, placing = null }: { update: GameUpdate; pla
         <div className="sve-center-turn">
           <strong>{t("game.turn", { n: view.turn })}</strong> · {t(PHASE_KEYS[view.phase] ?? "game.phase.main")}
         </div>
-        {view.phase !== "over" ? <div>{t("game.activePlayer", { player: playerLabel(view.activePlayer, update, t) })}</div> : null}
+        {view.phase !== "over" ? <div data-testid="center-active-player">{activeTurn()}</div> : null}
         {placing ? (
           <div className="sve-center-prompt sve-your-move" data-testid="table-choose-slot">
             {t("table.chooseSlot", { card: placing })}
@@ -90,6 +98,8 @@ export function CenterLine({ update, placing = null }: { update: GameUpdate; pla
         ) : prompt ? (
           <div className={`sve-center-prompt${decision ? " sve-your-move" : ""}`}>{prompt}</div>
         ) : null}
+        {/* A decision answered on the table: what it is part of (the decision window shows it above its question). */}
+        {decision && !dialog ? <ProcessingPrompt update={update} compact /> : null}
       </div>
       <div className="sve-center-actions">{buttons}</div>
     </>

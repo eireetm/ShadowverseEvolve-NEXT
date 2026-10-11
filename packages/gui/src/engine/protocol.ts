@@ -222,14 +222,45 @@ export interface AbilitySummary {
   custom?: boolean;
   quick?: boolean;
   advanced?: boolean;
+  /** CR 12.2 — an evolve ability. */
+  evolve?: boolean;
   /** A given ability (not printed on the card). */
   granted?: boolean;
   /**
-   * An automatic ability of its card: which of the card's abilities with this timing it is (0: the first, in its script's
-   * order) and how many the card has, to find its line of the card text (game/card/ability-text.ts).
+   * Which of its definition's abilities of its kind it is (0: the first, in its script's order) and how many there are — an
+   * automatic ability's timing; an evolve, an advanced or another activated ability — to find its paragraph of the card text
+   * (game/card/ability-text.ts).
    */
   rank?: number;
   count?: number;
+}
+
+/** An ability a decision is about (a pending one, the one being played): how it reads, and what tells its text. */
+export interface AbilityInfo extends AbilitySummary {
+  source?: CardId;
+  /** The definition providing it, with the pseudo ids of keyword ("kw:"), given ("grant:") and equipment ("equip:") abilities. */
+  sourceDef?: DefId;
+  /** A keyword's ability (Drain, Single Drive, Stack ...): which keyword. */
+  keyword?: string;
+  /** A given or an equipment token's ability: the card whose text quotes it, when that can be told. */
+  giver?: DefId;
+}
+
+/**
+ * The card or ability a decision is part of (CR 10.6.2), when the host can tell (engine/processing.ts): a card being played
+ * (how it is played, its costs, a spell's effect) or an ability being played (its choices, targets, costs, effect). Public by
+ * then (CR 10.6.2.1, 10.6.2.1.1).
+ */
+export interface ProcessingInfo {
+  kind: "card" | "ability";
+  controller: PlayerId;
+  /** The card being played (in the resolution zone), or the card whose ability it is (what it is now, if it moved). */
+  source: CardId;
+  card: CardInfo;
+  /** An ability: what it is. */
+  ability?: AbilityInfo;
+  /** A card being played another way: the play option chosen (CR 10.4.7.3), its label in the core's words. */
+  playOption?: { id: string; label: string };
 }
 
 /** What a person may do by hand now (manual debugging, at a main phase decision of a game that allows it). */
@@ -246,7 +277,9 @@ export interface DecisionInfo {
   /** Every card the decision mentions that its player may see. */
   cards: Record<CardId, CardInfo>;
   /** Activated abilities (`card:ability`) and pending automatic abilities (their pending id). */
-  abilities: Record<string, AbilitySummary & { source?: CardId; sourceDef?: DefId }>;
+  abilities: Record<string, AbilityInfo>;
+  /** What the decision is part of, when it is part of playing a card or ability and the host can tell. */
+  processing?: ProcessingInfo;
 }
 
 /** A choice made by a "choose" decision: its options and the chosen ones (options of a card, 5.18; X; a token ...). */
@@ -321,6 +354,12 @@ export interface GameUpdate {
   /** Whose view this is (the human's seat; in hot seat, the player who must decide). */
   perspective: PlayerId;
   view: PlayerView;
+  /**
+   * CR 10.4.4.1 — the viewer's own cards in their hand and EX area that would cost another number of play points to play
+   * normally now than their cost (reductions, increases in force): card → play points. Only theirs (a cost may depend on its
+   * owner's hand). Absent in older messages.
+   */
+  playCosts?: Record<CardId, number>;
   decision: DecisionInfo | null;
   waitingFor: PlayerId | null;
   /** A bot is about to answer. */

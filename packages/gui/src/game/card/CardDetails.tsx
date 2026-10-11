@@ -40,6 +40,7 @@ export function CardDetails() {
  */
 export function CardPanel({ focus, exact = false, art = true }: { focus: FocusCard; exact?: boolean; art?: boolean }) {
   const catalog = useApp((s) => s.catalog)!;
+  const playCosts = useApp((s) => s.update?.playCosts);
   const { cardLang, uiLang, tokenArt } = useSettings();
   const t = useT();
   const [viewing, setViewing] = useState<readonly ArtFace[] | null>(null);
@@ -61,6 +62,9 @@ export function CardPanel({ focus, exact = false, art = true }: { focus: FocusCa
         {now !== undefined && now !== null && printed !== null && now !== printed ? <small>{t("card.printed", { value: printed })}</small> : null}
       </div>
     );
+  // CR 10.4.4.1 — one of the viewer's cards in their hand or EX area that would cost another number of play points to play
+  // now (the engine worker asks the core, GameUpdate.playCosts): beside its cost, which doesn't change.
+  const playCost = view ? playCosts?.[view.id] : undefined;
   const text = cardText(def, cardLang);
   // The physical card's printings (a back face has none: its front's).
   const physical = def.frontFace ? catalog.def(def.frontFace) : def;
@@ -121,6 +125,16 @@ export function CardPanel({ focus, exact = false, art = true }: { focus: FocusCa
       ) : null}
       <div className="sve-details-stats">
         {def.type !== "leader" ? stat(t("card.cost"), view?.cost, def.cost) : null}
+        {playCost !== undefined ? (
+          <div
+            className={`sve-details-stat sve-details-play-cost ${playCost < (view?.cost ?? def.cost ?? 0) ? "sve-cheaper" : "sve-dearer"}`}
+            title={t("card.playCostHint")}
+            data-testid="details-play-cost"
+          >
+            <span>{t("card.playCost")}</span>
+            <strong>{playCost}</strong>
+          </div>
+        ) : null}
         {stat(t("card.attack"), view?.attack, def.attack)}
         {stat(t("card.defense"), view?.defense, def.defense)}
       </div>

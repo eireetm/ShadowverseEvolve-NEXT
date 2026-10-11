@@ -10,16 +10,15 @@ import { useApp } from "../../app/store";
 import type { CardInfo, DecisionInfo, GameUpdate } from "../../engine/protocol";
 import { findCard, isOnTable } from "../../engine/view-utils";
 import { useT, type MessageKey, type Translate } from "../../i18n";
-import { cardText } from "../../app/catalog";
 import { inDialog } from "../actions";
-import { abilityLine } from "../card/ability-text";
-import { inCardLang } from "../../i18n/hant";
+import { abilityName, abilityText, giverName } from "../card/ability-display";
 import { CardTextLine, plainLine } from "../card/CardText";
 import { CardTile } from "../card/CardTile";
 import { setHighlight } from "../focus";
 import { sendAnswer, setRedrawing, toggleChosen, useInteraction } from "../interaction";
-import { abilityLabel, cardLabel } from "../labels";
+import { cardLabel } from "../labels";
 import { optionText } from "../options";
+import { ProcessingPrompt } from "./ProcessingPrompt";
 
 type Of<T extends Decision["type"]> = Extract<Decision, { type: T }>;
 
@@ -79,13 +78,16 @@ function ActionButton({
   );
 }
 
+/** The question, the card asking it, and above it what it is part of (a card or ability being played, ProcessingPrompt). */
 function Prompt({ text, source, update }: { text: string; source?: CardId | null; update: GameUpdate }) {
   const t = useT();
   const label = useLabel(update);
+  const processing = update.decision?.processing;
   return (
-    <div className="sve-prompt">
+    <div className={`sve-prompt${processing ? " sve-prompt-processing" : ""}`}>
+      <ProcessingPrompt update={update} />
       <span>{text}</span>
-      {source ? (
+      {source && !processing ? (
         <span className="sve-prompt-source" onMouseEnter={() => setHighlight([source])} onMouseLeave={() => setHighlight([])}>
           {t("decision.source", { card: label(source) })}
         </span>
@@ -95,9 +97,10 @@ function Prompt({ text, source, update }: { text: string; source?: CardId | null
 }
 
 /**
- * Which pending automatic ability to play next (CR 10.5.2.2): each one by its card and timing, and its own line of the card
- * text when the text tells which line it is (card/ability-text.ts) — two Fanfares of one card read the same otherwise.
- * Options that still read the same (copies of one card) are numbered; pointing at one shows its card on the table.
+ * Which pending automatic ability to play next (CR 10.5.2.2): each one by its card and timing (a keyword's by its keyword),
+ * with what it says — its whole paragraph of the card text, or the quote of the card that gave it (card/ability-display.ts) —
+ * two Fanfares of one card read the same otherwise. Options that still read the same (copies of one card) are numbered;
+ * pointing at one shows its card on the table.
  */
 function SelectPending({ d, info, update, answer, busy }: FormProps<"selectPending">) {
   const t = useT();
@@ -105,37 +108,32 @@ function SelectPending({ d, info, update, answer, busy }: FormProps<"selectPendi
   const catalog = useApp((s) => s.catalog)!;
   const { cardLang } = useSettings();
   const options = d.options.map((id) => {
-    const summary = info.abilities[id];
-    const source = summary?.source;
-    const head = `${source ? `${label(source)} — ` : ""}${abilityLabel(summary, t)}`;
-    const def = summary?.sourceDef && !summary.granted ? catalog.def(summary.sourceDef) : undefined;
-    const [timing, rank, count] = [summary?.timing, summary?.rank, summary?.count];
-    const line =
-      def && timing !== undefined && rank !== undefined && count !== undefined
-        ? inCardLang(cardLang, (data) => abilityLine(def.id, cardText(def, data), data, timing, rank, count))
-        : null;
-    return { id, source, head, line };
+    const ability = info.abilities[id];
+    const source = ability?.source;
+    const head = `${source ? `${label(source)} — ` : ""}${abilityName(ability, t)}`;
+    return { id, source, head, text: abilityText(ability, catalog, cardLang), giver: giverName(ability, catalog, cardLang) };
   });
   return (
     <>
       <Prompt text={t("decision.selectPending")} update={update} />
       <div className="sve-actions sve-actions-column">
         {options.map((o) => {
-          const twins = options.filter((x) => x.head === o.head && x.line === o.line);
+          const twins = options.filter((x) => x.head === o.head && x.text?.text === o.text?.text && x.giver === o.giver);
           return (
             <ActionButton
               key={o.id}
               ids={o.source ? [o.source] : []}
               disabled={busy}
               className="sve-pending-option"
-              title={o.line ? plainLine(o.line, cardLang) : undefined}
+              title={o.text ? plainLine(o.text.text, o.text.lang) : undefined}
               onClick={() => answer({ type: "selectPending", id: o.id })}
             >
               <span>
                 {o.head}
                 {twins.length > 1 ? ` (${twins.indexOf(o) + 1})` : ""}
               </span>
-              {o.line ? <CardTextLine className="sve-pending-text" line={o.line} lang={cardLang} /> : null}
+              {o.giver ? <span className="sve-processing-note">{t("decision.abilityGiver", { card: o.giver })}</span> : null}
+              {o.text ? <CardTextLine className="sve-pending-text" line={o.text.text} lang={o.text.lang} /> : null}
             </ActionButton>
           );
         })}

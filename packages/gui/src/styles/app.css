@@ -1796,11 +1796,8 @@ option {
 }
 
 .sve-pending-text {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  overflow: hidden;
+  display: block;
+  white-space: pre-line;
   font-size: 12px;
   color: var(--sve-muted);
 }
@@ -1816,6 +1813,56 @@ option {
   font-weight: 400;
   color: var(--sve-muted);
   font-size: 12px;
+}
+
+/* A question asked while a card or ability is being played: what it is part of, above the question. */
+.sve-prompt-processing {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.sve-processing {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 400;
+}
+
+.sve-processing-heading,
+.sve-processing-compact summary {
+  color: var(--sve-accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sve-processing-note {
+  display: block;
+  font-size: 12px;
+  color: var(--sve-muted);
+}
+
+.sve-processing-text {
+  display: block;
+  white-space: pre-line;
+  line-height: 1.5;
+  font-size: 13px;
+  color: var(--sve-text);
+}
+
+/* Beside the table: one line that opens the text. */
+.sve-processing-compact .sve-processing-body {
+  max-height: 30vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-top: 4px;
+}
+
+/* A small screen: the status between the two player panels stays short (the text scrolls). */
+.sve-table[data-compact] .sve-processing-compact .sve-processing-body {
+  max-height: 18vh;
 }
 
 .sve-actions {
@@ -1999,6 +2046,15 @@ option {
 
 .sve-details-stat small {
   color: var(--sve-muted);
+}
+
+/* The play points one of the viewer's cards in their hand or EX area takes to play now, when it isn't its cost. */
+.sve-details-play-cost.sve-cheaper strong {
+  color: var(--sve-good);
+}
+
+.sve-details-play-cost.sve-dearer strong {
+  color: var(--sve-bad);
 }
 
 .sve-details-state,
