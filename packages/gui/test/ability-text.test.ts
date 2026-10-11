@@ -3,11 +3,10 @@ import { ALL_CARDS, ALL_SCRIPTS } from "@sve/core/sets";
 import { describe, expect, it } from "vitest";
 import type { DataLang } from "../src/i18n/hant";
 import { rankOf } from "../src/engine/game-host";
-import { abilityLine, markedLines, OTHER_LINES } from "../src/game/card/ability-text";
+import { abilityLine, abilityTextGroup, locateAbilityText, locateAutomaticAbilityText, locateKeywordAbilityText, locateScriptAbilityText, markedLines, OTHER_LINES, PLAY_OPTIONS } from "../src/game/card/ability-text";
 
-// A choice between pending automatic abilities shows each one's own line of the card text: two Fanfares of one card (CP04-037
-// Karyl's) read the same by their timing alone. Checked against every card: each ability of a timing with a mark gets its own
-// line in every card language, and the cards with more than one trigger without a mark are all in OTHER_LINES.
+// Pending choices show complete paragraphs. Audit every script in every card language, including
+// shared paragraphs, reviewed multilingual mappings and explicit exceptions in the source data.
 
 const LANGS: readonly DataLang[] = ["en", "cn", "ja"];
 const MARKED = ["fanfare", "lastWords", "onEvolve", "onSuperEvolve", "strike", "onRace", "onDrive"];
@@ -103,13 +102,256 @@ describe("an ability's line of its card text", () => {
     expect(abilityLine("BP10-004", text("BP10-004", "en"), "en", "other", 1, 2)).toBe("At the start of your end phase, refresh this card.");
     expect(abilityLine("BP10-004", text("BP10-004", "cn"), "cn", "other", 1, 2)).toBe("当自己的结束阶段到来时，将这张卡竖置。");
     expect(abilityLine("BP10-004", text("BP10-004", "ja"), "ja", "other", 0, 2)).toMatch(/^相手の場にフォロワーが出たとき/);
-    // The Chinese and Japanese texts split BP03-090's one Fanfare in two: no line rather than half of it.
-    expect(abilityLine("BP03-090", text("BP03-090", "cn"), "cn", "fanfare", 0, 1)).toBeNull();
+    // Both printed conditional branches belong to its one scripted Fanfare.
+    expect(abilityLine("BP03-090", text("BP03-090", "cn"), "cn", "fanfare", 0, 1)).toBe(text("BP03-090", "cn").split("\n").slice(1, 3).join("\n"));
     expect(abilityLine("BP03-090", text("BP03-090", "en"), "en", "fanfare", 0, 1)).toMatch(/^\{\[fanfare\]\} If this card was put onto the field from your hand/);
-    // One trigger without a mark: its card's name says which.
-    expect(abilityLine("BP01-126", text("BP01-126", "cn"), "cn", "other", 0, 1)).toBeNull();
+    expect(abilityLine("BP01-126", text("BP01-126", "cn"), "cn", "other", 0, 1)).toBe(text("BP01-126", "cn").split("\n")[2]);
     // Older sets bracket the marks, and one line may have two ("Fanfare/Last Words").
     expect(markedLines(text("BP01-031", "ja"), "ja", "lastWords")).toHaveLength(1);
     expect(markedLines(text("BP18-049", "cn"), "cn", "lastWords")).toEqual(markedLines(text("BP18-049", "cn"), "cn", "fanfare"));
+  });
+});
+
+const cardOf = (id: string) => ALL_CARDS.find((c) => c.id === id)!;
+
+describe("unified activated, spell and play-option text", () => {
+  it("retains original evolve costs, complete activated choices, quick prefixes, Feed and Ride", () => {
+    const locate = (id: string, index: number, lang: DataLang = "ja") => locateScriptAbilityText(cardOf(id), ALL_SCRIPTS[id]!.abilities!, index, lang)!;
+    expect(locate("BP11-069", 0).text).toBe("進化コスト1：これは進化する。");
+    const axeman = locate("BP09-006", 1, "cn");
+    expect(axeman.text).toContain("将1张手牌舍弃");
+    expect(axeman.text).toContain("【1】");
+    expect(axeman.text).toContain("【2】");
+    expect(axeman.text).not.toContain("每个自己的回合");
+    expect(locate("BP02-037", 1).text).toMatch(/^《Q》《起動》.*相手のフォロワー/);
+    expect(locate("BP02-037", 2).text).toMatch(/^《Q》《起動》.*自分の他のフォロワー/);
+    for (const lang of LANGS) {
+      const feed = [0, 1, 2].map((i) => locate("CP01-042", i, lang).text);
+      expect(new Set(feed).size).toBe(3);
+      expect(feed[2]).toContain(lang === "en" ? "3 times" : "3");
+      expect(locate("CP03-008", 0, lang).text).toMatch(/^(?:憑依|《凭依》|\{\[ride\]\})/);
+    }
+    expect(locateKeywordAbilityText("stack", "cn")?.text).toContain("【蓄积】");
+  });
+
+  it("uses complete spell bodies, preserving costs and choices but excluding token definitions", () => {
+    for (const id of ["BP03-007", "BP21-026", "BP11-007", "BP14-119"]) for (const lang of LANGS) {
+      const abilities = ALL_SCRIPTS[id]!.abilities!;
+      const found = locateScriptAbilityText(cardOf(id), abilities, abilities.findIndex((a) => a.kind === "spell"), lang)!;
+      expect(found.match).toBe("body");
+      expect(found.lang).toBe(lang);
+      expect(found.text).not.toMatch(/[-―]{3,}/);
+    }
+    const token = locateScriptAbilityText(cardOf("BP01-023"), ALL_SCRIPTS["BP01-023"]!.abilities!, 0, "ja")!;
+    expect(token.text).not.toContain("『フェアリー』《エルフ》");
+    const spellWithOtherAbility = cardOf("BP09-024");
+    const abilities = ALL_SCRIPTS[spellWithOtherAbility.id]!.abilities!;
+    const spell = locateScriptAbilityText(spellWithOtherAbility, abilities, abilities.findIndex((a) => a.kind === "spell"), "ja")!;
+    expect(spell.match).toBe("body");
+    const activated = locateScriptAbilityText(spellWithOtherAbility, abilities, abilities.findIndex((a) => a.kind === "activated"), "ja")!;
+    expect(activated.match).toBe("exact");
+    expect(activated.text).not.toBe(spell.text);
+  });
+
+  it("audits every script entry and existing-language exception without treating nonempty text as unique ability text", () => {
+    const missing: string[] = [], raw: Record<DataLang, string[]> = { en: [], ja: [], cn: [] };
+    const counts = { activated: 0, spell: 0 };
+    const costOrder: string[] = [];
+    for (const card of ALL_CARDS) {
+      const abilities = ALL_SCRIPTS[card.id]?.abilities ?? [];
+      abilities.forEach((ability, index) => {
+        if (ability.kind === "automatic") return;
+        counts[ability.kind]++;
+        const group = abilityTextGroup(ability);
+        const same = (a: AbilityDef) => a.kind === ability.kind && abilityTextGroup(a) === group;
+        for (const lang of LANGS) {
+          const found = locateScriptAbilityText(card, abilities, index, lang);
+          if (!found) { missing.push(`${card.id}:${index}:${lang}`); continue; }
+          expect(found.match).toBe(ability.kind === "spell" ? "body" : "exact");
+          if (textOf(card, lang) && !abilityLine(card.id, card.text[lang]!, lang, group, abilities.slice(0, index).filter(same).length, abilities.filter(same).length)) raw[lang].push(`${card.id}:${index}`);
+          if (ability.kind === "activated" && abilities.filter(same).length > 1 && ability.cost.playPoints !== undefined) {
+            const n = ability.cost.playPoints;
+            const cost = found.lang === "en" ? `{[cost${String(n).padStart(2, "0")}]}` : found.lang === "cn" ? `消费${n}` : `コスト${n}`;
+            if (!found.text.includes(cost)) costOrder.push(`${card.id}:${index}:${lang}`);
+          }
+        }
+      });
+    }
+    expect(counts).toEqual({ activated: 1442, spell: 484 });
+    expect(missing).toEqual([]);
+    expect(raw).toEqual({ ja: [], en: ["CP02-069:2"], cn: ["BP21-096:0"] });
+    expect(costOrder).toEqual([]);
+  });
+
+  it("maps all 58 play-option definitions and excludes unrelated passive reductions", () => {
+    const defined = ALL_CARDS.filter((c) => ALL_SCRIPTS[c.id]?.playOptions?.length);
+    expect(defined).toHaveLength(58);
+    expect(Object.keys(PLAY_OPTIONS).sort()).toEqual(defined.map((c) => c.id).sort());
+    for (const card of defined) {
+      expect(PLAY_OPTIONS[card.id]).toEqual(ALL_SCRIPTS[card.id]!.playOptions!.map((o) => o.id));
+      for (const lang of LANGS) {
+        const found = locateAbilityText(card, lang, "play", 0, 1)!;
+        expect(found, `${card.id}:${lang}`).not.toBeNull();
+        expect(found.text).not.toMatch(/[-―]{3,}/);
+      }
+    }
+    for (const lang of LANGS) {
+      expect(locateAbilityText(cardOf("CP03-083"), lang, "play", 0, 1)?.text).toMatch(/元のコスト|原始消费|instead of paying/);
+      expect(locateAbilityText(cardOf("BP01-103"), lang, "play", 0, 1)?.match).toBe("shared");
+      for (const id of ["BP07-024", "BP15-087"]) {
+        const found = locateAbilityText(cardOf(id), lang, "play", 0, 1)!;
+        expect(found.text).not.toMatch(/ベイリオン|贝里昂|Bayleon|ユヅキ|夕月|Yuzuki/);
+        expect(found.match).toBe("exact");
+      }
+    }
+    expect(locateAbilityText(cardOf("BP01-006"), "ja", "play", 0, 1)).toBeNull();
+  });
+});
+
+describe("complete automatic ability text", () => {
+  it("keeps every choice and excludes unrelated passive and activated abilities", () => {
+    const card = cardOf("BP19-092");
+    for (const lang of ["cn", "ja"] as const) {
+      const found = locateAutomaticAbilityText(card, ALL_SCRIPTS[card.id]!.abilities!, 0, lang)!;
+      expect(found.text).toBe(card.text[lang]!.split("\n").slice(1).join("\n"));
+      expect(found.text).toContain("【3】");
+      expect(found.text).not.toContain(lang === "ja" ? "追加で1回" : "额外触发1次");
+    }
+    const other = cardOf("CP04-075");
+    const index = ALL_SCRIPTS[other.id]!.abilities!.findIndex((a) => a.kind === "automatic" && a.timing === "other");
+    const found = locateAutomaticAbilityText(other, ALL_SCRIPTS[other.id]!.abilities!, index, "cn")!;
+    expect(found.text).toContain("【1】");
+    expect(found.text).toContain("【2】");
+    expect(found.text).not.toContain("《入场曲》");
+  });
+
+  it("does not confuse token definitions, cost replacements, or quoted text with ordinary triggers", () => {
+    for (const id of ["BP03-074", "BP07-084", "BP12-014"]) {
+      for (const lang of ["cn", "ja"] as const) {
+        const card = cardOf(id);
+        const found = locateAbilityText(card, lang, "other", 0, 1)!;
+        expect(found.text).not.toContain("―――");
+        expect(found.text).toBe(card.text[lang]!.split("\n")[id === "BP03-074" ? 1 : 0]);
+      }
+    }
+    const card = cardOf("BP19-098");
+    expect(locateAbilityText(card, "en", "other", 0, 1)?.text).toBe("At the start of your end phase, select an enemy follower on the field and deal it 2 damage.");
+    expect(abilityLine("synthetic", "While this is on your field, whenever an enemy plays a card, its abilities trigger twice.", "en", "other", 0, 1)).toBeNull();
+    expect(abilityLine("synthetic", "これは「自分のエンドフェイズが来たとき、1枚引く」を失う。", "ja", "other", 0, 1)).toBeNull();
+    expect(abilityLine("synthetic", "自分のエンドフェイズが来たとき、1枚引く。\n自分のメインフェイズが来たとき、1枚引く。", "ja", "other", 0, 1)).toBeNull();
+    expect(abilityLine("synthetic", "ファンファーレ1枚引く。\nファンファーレ1枚引く。", "ja", "fanfare", 0, 1)).toBeNull();
+    expect(abilityLine("synthetic", "ファンファーレ1枚引く。", "ja", "fanfare", 0.5, 1)).toBeNull();
+  });
+
+  it("extracts quoted attacks and keeps outer abilities separate from the abilities they give", () => {
+    for (const lang of LANGS) {
+      const card = cardOf("CP03-009");
+      const found = locateAbilityText(card, lang, "strike", 0, 1)!;
+      expect(found.text).toMatch(/^(?:Strike|【攻击时】|【攻撃時】)/);
+      expect(found.text).not.toContain(lang === "ja" ? "【ドライブ獲得時】" : lang === "cn" ? "【驱动获得时】" : "On Drive");
+      const outer = locateAbilityText(card, lang, "onDrive", 0, 1)!;
+      expect(outer.text).toContain(found.text);
+    }
+    const card = cardOf("BP22-022");
+    expect(locateAbilityText(card, "ja", "other", 0, 1)?.text).toBe("自分のEXエリアに『輝く金貨』が置かれたとき、相手のリーダーすべてと相手の場のフォロワーすべてに1ダメージ");
+  });
+
+  it("isolates delayed triggers from their setup damage and the other choice options", () => {
+    for (const id of ["BP01-056", "BP03-089", "BP15-001", "BP15-008", "BP15-012"]) {
+      const card = cardOf(id);
+      for (const lang of LANGS) {
+        const found = locateAbilityText(card, lang, "other", 0, 1)!;
+        expect(found).not.toBeNull();
+        expect(found.match).toBe("exact");
+        expect(card.text[lang]).toContain(found.text);
+        expect(found.text).not.toMatch(/^(?:Activate|《起动》|起動|ファンファーレ|《入场曲》|\{\[fanfare\]\})/);
+      }
+    }
+    const card = cardOf("SP01-026");
+    for (const lang of LANGS) {
+      const found = locateAbilityText(card, lang, "other", 0, 1)!;
+      expect(found.text).not.toMatch(/【[134]】|\([134]\)/);
+      expect(found.text).not.toContain("Recover 5");
+      expect(card.text[lang]).toContain(found.text);
+    }
+    expect(locateAbilityText(cardOf("BP22-037"), "ja", "other", 1, 2)?.text).toBe("このターン、次に自分の場にウィッチフォロワーが1体以上出たとき、その中の1体は進化する。");
+    expect(locateAbilityText(cardOf("CP04-045"), "en", "other", 0, 1)?.text).toBe("At the start of your end phase, if this is in your EX area, bury it.");
+  });
+
+  it("identifies shared paragraphs and locates an ability by its actual script index", () => {
+    const card = cardOf("BP09-002");
+    const abilities = ALL_SCRIPTS[card.id]!.abilities!;
+    const first = locateAutomaticAbilityText(card, abilities, 1, "ja")!;
+    const second = locateAutomaticAbilityText(card, abilities, 2, "ja")!;
+    expect(first.match).toBe("shared");
+    expect(second).toEqual(first);
+    expect(first.text).toContain("獣・フォロワーなら");
+    expect(locateAutomaticAbilityText(card, abilities, 0, "ja")).toBeNull();
+    expect(locateAutomaticAbilityText(card, abilities, -1, "ja")).toBeNull();
+    expect(locateAutomaticAbilityText(card, abilities, 100, "ja")).toBeNull();
+    const quotes = cardOf("CP04-T09");
+    const equipment = ALL_SCRIPTS[quotes.id]!.equipment!.abilities!;
+    expect(locateAutomaticAbilityText(quotes, equipment, 0, "ja", "quoted")?.text).toBe("【攻撃時】相手の場のフォロワー2体まで選ぶ。それに3ダメージ");
+    const giver = { id: "X", text: { en: '{[fanfare]} Give a follower "{[fanfare]} Draw 2 cards."', cn: null, ja: null } };
+    const automatic = ALL_SCRIPTS["CP04-037"]!.abilities!.filter((a) => a.kind === "automatic").slice(0, 1);
+    expect(locateAutomaticAbilityText(giver, automatic, 0, "en", "quoted")?.text).toBe("{[fanfare]} Draw 2 cards.");
+  });
+
+  it("carries the actual language when missing or inaccurate translations fall back", () => {
+    expect(locateAbilityText(cardOf("BP08-U07"), "cn", "fanfare", 0, 1)?.lang).toBe("en");
+    for (const id of ["BP03-071", "BP18-029", "BP18-052"]) {
+      const timing = id === "BP03-071" ? "fanfare" : "strike";
+      const found = locateAbilityText(cardOf(id), "en", timing, 0, 1)!;
+      expect(found.lang).toBe("ja");
+      expect(found.text).toMatch(/^(?:ファンファーレ|【攻撃時】)/);
+    }
+    const preview = locateAbilityText(cardOf("BP22-037"), "en", "other", 0, 2)!;
+    expect(preview.lang).toBe("ja");
+    expect(locateAbilityText(cardOf("BP01-126"), "zh-Hant", "other", 0, 1)?.lang).toBe("zh-Hant");
+    expect(locateAbilityText({ id: "X", text: { cn: "【进化时】抽取1张卡。", en: "", ja: null } }, "en", "onEvolve", 0, 1)?.lang).toBe("cn");
+    expect(locateAbilityText({ id: "X", text: { en: "unavailable", cn: null, ja: null } }, "en", "fanfare", 0, 1)).toBeNull();
+  });
+
+  it("expands only the automatic keywords, including two sequential Twin Drive checks", () => {
+    for (const lang of ["ja", "cn", "en", "zh-Hant"] as const) {
+      for (const keyword of ["drain", "singleDrive", "twinDrive"]) {
+        expect(locateKeywordAbilityText(keyword, lang)).toMatchObject({ lang, match: "exact" });
+      }
+      expect(locateKeywordAbilityText("storm", lang)).toBeNull();
+    }
+    expect(locateKeywordAbilityText("twinDrive", "ja")?.text).toContain("その後");
+    expect(locateKeywordAbilityText("drain", "ja")?.text).toContain("攻撃によるダメージ");
+  });
+
+  it("covers every scripted automatic ability in all requested languages and lists raw-data exceptions explicitly", () => {
+    const missing: Record<DataLang, string[]> = { ja: [], cn: [], en: [] };
+    const noFallback: string[] = [];
+    for (const card of ALL_CARDS) {
+      const abilities = ALL_SCRIPTS[card.id]?.abilities ?? [];
+      for (const [timing, indexes] of byTiming(abilities)) {
+        for (const [rank, index] of indexes.entries()) {
+          for (const lang of LANGS) {
+            if (textOf(card, lang) && !abilityLine(card.id, card.text[lang]!, lang, timing, rank, indexes.length)) missing[lang].push(card.id + ":" + timing);
+            const found = locateAutomaticAbilityText(card, abilities, index, lang);
+            if (!found) noFallback.push(card.id + ":" + index + ":" + lang);
+            else {
+              const data = found.lang === "zh-Hant" ? "cn" : found.lang;
+              expect(card.text[data], card.id + ":" + index + ":" + lang).toContain(found.text);
+            }
+          }
+        }
+      }
+      const equipment = ALL_SCRIPTS[card.id]?.equipment?.abilities ?? [];
+      equipment.forEach((ability, index) => {
+        if (ability.kind !== "automatic") return;
+        for (const lang of LANGS) {
+          const found = locateAutomaticAbilityText(card, equipment, index, lang, "quoted");
+          if (!found) noFallback.push(card.id + ":equipment:" + index + ":" + lang);
+          else expect(card.text[found.lang === "zh-Hant" ? "cn" : found.lang]).toContain(found.text);
+        }
+      });
+    }
+    expect(missing).toEqual({ ja: [], cn: ["BP08-U07:fanfare"], en: ["BP03-071:fanfare", "BP18-029:strike", "BP18-052:strike"] });
+    expect(noFallback).toEqual([]);
   });
 });

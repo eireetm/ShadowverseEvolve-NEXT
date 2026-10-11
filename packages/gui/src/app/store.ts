@@ -2,7 +2,8 @@
 // Components read it with useApp(select); only the worker's messages change it.
 import { useSyncExternalStore } from "react";
 import { EngineClient } from "../engine/client";
-import type { GameUpdate, LogEntry } from "../engine/protocol";
+import type { LogEntry } from "../engine/protocol";
+import type { GameUpdate } from "../presentation/protocol";
 import { playUpdateSounds } from "../resources/sound";
 import { Catalog } from "./catalog";
 
