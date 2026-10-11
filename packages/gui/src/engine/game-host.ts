@@ -27,6 +27,7 @@ import {
   type PlayerView,
 } from "@sve/core";
 import type {
+  AbilityInfo,
   AbilitySummary,
   CardInfo,
   ChoiceMade,
@@ -38,6 +39,7 @@ import type {
   LogEntry,
   LookedCards,
   ManualInfo,
+  ProcessingInfo,
   QuickAnnouncement,
   RecordedInput,
   Replay,
@@ -46,7 +48,9 @@ import type {
   WatchState,
 } from "./protocol";
 import { knownController } from "./protocol";
-import { forEachCard, withoutMemory } from "./view-utils";
+import { abilityOf, normalPlayCost, PSEUDO_DEF } from "./core-internals";
+import { ProcessingTracker } from "./processing";
+import { findCard, forEachCard, withoutMemory } from "./view-utils";
 
 export interface Scheduler {
   /** Run `fn` after `ms` milliseconds; the returned function cancels it. */
@@ -93,6 +97,7 @@ export function summarizeAbility(ability: AbilityDef | undefined, def: DefId): A
       ...(cost.custom ? { custom: true } : {}),
       ...(ability.quick ? { quick: true } : {}),
       ...(ability.advanced ? { advanced: true } : {}),
+      ...(ability.evolve ? { evolve: true } : {}),
       ...granted,
     };
   }
@@ -100,15 +105,44 @@ export function summarizeAbility(ability: AbilityDef | undefined, def: DefId): A
   return { kind: "spell", ...granted };
 }
 
+/** The kind an ability's paragraph of the card text is found by (game/card/ability-text.ts): its timing, its kind of activated ability. */
+export function textGroupOf(ability: AbilityDef): string {
+  if (ability.kind === "automatic") return ability.timing;
+  if (ability.kind === "spell") return "spell";
+  return ability.evolve ? "evolve" : ability.advanced ? "advanced" : "activated";
+}
+
 /**
- * Which of its card's automatic abilities with the same timing an ability is, and how many there are (a choice between
- * pending abilities shows each one's line of the card text, game/card/ability-text.ts); nothing for another kind.
+ * Which of its definition's abilities of the same kind (textGroupOf) an ability is, and how many there are: a choice between
+ * pending abilities, and a decision asked while one is played, show its paragraph of the card text (ability-text.ts). Nothing
+ * for a spell (its text is the card's).
  */
 export function rankOf(abilities: readonly AbilityDef[], index: number): Pick<AbilitySummary, "rank" | "count"> {
   const ability = abilities[index];
-  if (ability?.kind !== "automatic") return {};
-  const same = (a: AbilityDef | undefined) => a?.kind === "automatic" && a.timing === ability.timing;
+  if (!ability || ability.kind === "spell") return {};
+  const group = textGroupOf(ability);
+  const same = (a: AbilityDef | undefined) => a !== undefined && a.kind !== "spell" && textGroupOf(a) === group;
   return { rank: abilities.slice(0, index).filter(same).length, count: abilities.filter(same).length };
+}
+
+/**
+ * CR 10.4.4.1 — what playing each of the viewer's own cards in their hand and EX area normally costs now, where that isn't the
+ * card's cost (the core's own reckoning, core-internals.ts): the card panel shows it (GameUpdate.playCosts). Nobody else's: a
+ * cost may depend on its owner's hand.
+ */
+export function playCostsOf(engine: Engine, game: GameSession, viewer: PlayerId, view: PlayerView): Record<CardId, number> {
+  const out: Record<CardId, number> = {};
+  const side = view.players[viewer];
+  for (const card of [...side.hand, ...side.ex]) {
+    if (card.hidden || card.cost === null) continue;
+    try {
+      const cost = normalPlayCost(engine, game, card.id, viewer);
+      if (cost !== card.cost) out[card.id] = cost;
+    } catch {
+      // Display only: a card the core can't price now just shows its cost.
+    }
+  }
+  return out;
 }
 
 /** GameConfig.firstPlayer for a game's turn order: a given player, one drawn from the seed ("random"), or null (CR 6.2.1.6). */
@@ -230,6 +264,8 @@ export class GameHost {
   private looked: LookedCards | null = null;
   private lookedSeq = 0;
   private seeing: { player: PlayerId; cards: Map<CardId, CardInfo> } | null = null;
+  /** What the decisions are part of (engine/processing.ts): display only. */
+  private readonly processing = new ProcessingTracker();
   /** Inputs played again (rewind, replays) are not announced. */
   private replaying = false;
   /** A quick window after an attack is being shown before the host passes it (HostSettings.attackPauseMs). */
@@ -379,6 +415,7 @@ export class GameHost {
     this.announcement = null;
     this.looked = null;
     this.seeing = null;
+    this.processing.reset();
     this.remoteQueue = new Map();
     this.desync = null;
     this.record(game.startupEvents);
@@ -528,11 +565,22 @@ export class GameHost {
     const decision = game.decision;
     this.rememberVisible();
     this.followAnswer(decision, input);
+    this.track(() => this.processing.beforeInput(game, input));
     const events = game.act(input, by ?? undefined);
     this.inputs.push({ input, by });
+    this.track(() => this.processing.afterInput(game, events));
     this.record(events);
     this.followEvents(events);
     this.followLooks(events);
+  }
+
+  /** Follow what the decisions are part of (display only): a failure there forgets it, and never stops the game. */
+  private track(step: () => void): void {
+    try {
+      step();
+    } catch {
+      this.processing.reset();
+    }
   }
 
   /**
@@ -971,7 +1019,8 @@ export class GameHost {
     const decision = game.decision;
     if (!decision || this.bots[decision.player] || this.passing || this.watching || this.isRemote(decision.player)) return null;
     const visible = new Map<CardId, CardInfo>();
-    forEachCard(game.view(decision.player), (card) => visible.set(card.id, { def: card.def, printing: card.printing }));
+    const view = game.view(decision.player);
+    forEachCard(view, (card) => visible.set(card.id, { def: card.def, printing: card.printing }));
     const cards: Record<CardId, CardInfo> = {};
     const add = (id: CardId | null | undefined, def?: DefId): void => {
       if (!id || cards[id]) return;
@@ -1024,14 +1073,7 @@ export class GameHost {
           const pending = game.state.pending.find((p) => p.id === id);
           if (!pending) continue;
           add(pending.source, pending.sourceDef.includes(":") ? undefined : pending.sourceDef);
-          const all = this.engine.scripts[pending.sourceDef]?.abilities ?? [];
-          const ability = all[pending.ability];
-          abilities[id] = {
-            ...summarizeAbility(ability, pending.sourceDef),
-            ...rankOf(all, pending.ability),
-            source: pending.source,
-            sourceDef: pending.sourceDef,
-          };
+          abilities[id] = this.abilityInfo(pending.source, pending.sourceDef, pending.ability, view);
         }
         break;
       case "selectCards":
@@ -1049,7 +1091,54 @@ export class GameHost {
         add(decision.source);
         break;
     }
-    return { decision, cards, abilities };
+    const processing = this.processingInfo(decision, view, visible);
+    return { decision, cards, abilities, ...(processing ? { processing } : {}) };
+  }
+
+  /**
+   * An ability named by its definition and index (a pending one, one being played): how it reads, which one of its kind it is,
+   * a keyword's ability's keyword, and the card that gave it (a given one: by the card's gifts in `view`, when one card did;
+   * an equipment token's: the token).
+   */
+  private abilityInfo(source: CardId, def: DefId, index: number, view: PlayerView): AbilityInfo {
+    const info: AbilityInfo = { ...summarizeAbility(abilityOf(this.engine, def, index), def), source, sourceDef: def };
+    if (def.startsWith(PSEUDO_DEF.keyword)) info.keyword = def.slice(PSEUDO_DEF.keyword.length);
+    else if (def.startsWith(PSEUDO_DEF.grant)) {
+      const grant = def.slice(PSEUDO_DEF.grant.length);
+      const givers = [...new Set(findCard(view, source)?.gifts.filter((g) => g.ability === grant).map((g) => g.by) ?? [])];
+      if (givers.length === 1) info.giver = givers[0]!;
+    } else {
+      const token = def.startsWith(PSEUDO_DEF.equipment) ? def.slice(PSEUDO_DEF.equipment.length) : null;
+      if (token) info.giver = token;
+      Object.assign(info, rankOf((token ? this.engine.scripts[token]?.equipment?.abilities : this.engine.scripts[def]?.abilities) ?? [], index));
+    }
+    return info;
+  }
+
+  /**
+   * What the decision is part of (engine/processing.ts), as its player is told it. Public by then — a card played is revealed
+   * (CR 10.6.2.1), and so is the card of an ability played from a non-public zone (10.6.2.1.1) — still only a card its player
+   * controls, may see or has seen.
+   */
+  private processingInfo(decision: Decision, view: PlayerView, visible: ReadonlyMap<CardId, CardInfo>): ProcessingInfo | null {
+    const game = this.game!;
+    let found: ReturnType<ProcessingTracker["current"]>;
+    try {
+      found = this.processing.current(game, decision);
+    } catch {
+      return null;
+    }
+    if (!found) return null;
+    // What its card is now, if a cost moved it (the latest first), as its player sees or saw it; their own card anyway.
+    const ids = found.kind === "ability" ? [...found.sources].reverse() : [found.source];
+    const shown = ids.find((id) => visible.has(id) || this.known.has(id));
+    const now = ids.find((id) => game.state.cards[id] !== undefined) ?? found.source;
+    const own = found.controller === decision.player ? game.state.cards[now] : undefined;
+    const card = shown !== undefined ? (visible.get(shown) ?? this.known.get(shown)!) : own ? { def: own.def, printing: own.printing } : null;
+    if (!card) return null;
+    const source = shown ?? now;
+    if (found.kind === "card") return { kind: "card", controller: found.controller, source, card, ...(found.playOption ? { playOption: found.playOption } : {}) };
+    return { kind: "ability", controller: found.controller, source, card, ability: this.abilityInfo(found.source, found.sourceDef, found.ability, view) };
   }
 
   private record(events: readonly GameEvent[]): void {
@@ -1121,6 +1210,7 @@ export class GameHost {
     const options = this.options;
     if (!game || !options) return;
     const perspective = this.perspective();
+    const view = this.view(perspective);
     const update: GameUpdate = {
       seed: options.seed,
       controllers: options.controllers,
@@ -1133,7 +1223,8 @@ export class GameHost {
       watch: this.watchState(),
       online: this.onlineState(),
       perspective,
-      view: this.view(perspective),
+      view,
+      playCosts: this.playCosts(perspective, view),
       decision: this.decisionInfo(),
       waitingFor: this.passing || this.watching ? null : (game.decision?.player ?? null),
       thinking,
@@ -1147,6 +1238,12 @@ export class GameHost {
     this.log = [];
     this.logReset = false;
     this.send({ kind: "update", update });
+  }
+
+  /** The play costs the card panel shows (playCostsOf); a spectator decides nothing. */
+  private playCosts(viewer: PlayerId, view: PlayerView): Record<CardId, number> {
+    const game = this.game!;
+    return this.spectating || game.isOver ? {} : playCostsOf(this.engine, game, viewer, view);
   }
 
   /** What can be done by hand now, when manual debugging is on (the core's options, the abilities' summaries, the decks). */

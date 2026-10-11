@@ -115,6 +115,34 @@ describe("GameHost (engine worker logic)", () => {
     expect(update.humanInputs.length).toBe(answered);
   });
 
+  it("tells a person what a decision is part of (a card or ability being played) and what each pending ability is", () => {
+    let told = 0;
+    for (const seed of ["processing-1", "processing-2", "processing-3"]) {
+      const h = harness(["human", "random"], seed);
+      h.host.handle({ kind: "start", options: h.options });
+      h.scheduler.run();
+      let update = h.last();
+      const rng = seedRng(seed);
+      for (let answered = 0; !update.result && answered < 400; answered++) {
+        const info = update.decision;
+        if (!info) break;
+        const processing = info.processing;
+        if (processing) {
+          told += 1;
+          expect(engine.db.has(processing.card.def), processing.card.def).toBe(true);
+          if (processing.kind === "card") expect(update.view.resolution.map((c) => c.id)).toContain(processing.source);
+          else expect(processing.ability?.kind, JSON.stringify(processing)).not.toBe("unknown");
+        }
+        if (info.decision.type === "selectPending") for (const id of info.decision.options) expect(info.abilities[id]?.kind, id).not.toBe("unknown");
+        h.host.handle({ kind: "answer", seat: 0, answer: randomAnswer(rng, info.decision) });
+        h.scheduler.run();
+        update = h.last();
+      }
+      expect(h.errors()).toEqual([]);
+    }
+    expect(told).toBeGreaterThan(0);
+  });
+
   it("refuses an answer from the wrong seat and an illegal answer without changing the game", () => {
     const h = harness(["human", "human"]);
     h.host.handle({ kind: "start", options: h.options });
