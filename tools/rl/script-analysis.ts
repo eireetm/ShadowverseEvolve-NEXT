@@ -1606,7 +1606,11 @@ export function analyzeScript(file: string, script: CardScript): CardAnalysis {
         if (callee.type === "MemberExpression" && !callee.computed && (callee.object as Node).type === "Identifier" && (callee.object as Node).name === "fx") {
           const m = (callee.property as Node).name as string;
           const family = FAMILY_OF.get(m);
+          // A card taken from the evolve deck goes where its option says: onto the field (a summon) or into the EX area.
+          const to = m === "fromEvolveDeck" ? (n.arguments as Node[])[1] : undefined;
+          const intoEx = to?.type === "ObjectExpression" && (to.properties as Node[]).some((q) => q.type === "Property" && ((q.key as Node).name ?? (q.key as Node).value) === "to" && (q.value as Node).type === "Literal" && (q.value as Node).value === "ex");
           if (family === undefined) unknownFx.add(m);
+          else if (intoEx) fx.ex += 1;
           else if (family !== "none") fx[family] += 1;
           addAmounts(amounts, m, n.arguments as Node[]);
         }
