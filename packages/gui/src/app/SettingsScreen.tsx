@@ -103,8 +103,8 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
   const file = settingsFilePath();
   const catalog = useApp((s) => s.catalog);
   const [tokenArt, setTokenArt] = useState(false);
-  // The online server ("使用服务器" in the online screen): which one is set, and its window.
-  const server = useServerConfig().server;
+  // The online servers ("使用服务器" in the online screen): which ones are set, and their window.
+  const servers = useServerConfig().servers;
   const [serverWindow, setServerWindow] = useState(false);
   useEffect(() => {
     void loadServerConfig();
@@ -240,7 +240,7 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
           <div className="sve-settings-row">
             <span>{t("settings.server")}</span>
             <span className="sve-settings-server">
-              <span data-testid="settings-server">{server ? server.name : t("settings.serverNone")}</span>
+              <span data-testid="settings-server">{servers.length > 0 ? servers.map((s) => s.name).join(t("common.listSeparator")) : t("settings.serverNone")}</span>
               <button type="button" onClick={() => setServerWindow(true)} data-testid="settings-server-edit">
                 {t("settings.serverEdit")}
               </button>

@@ -11,6 +11,8 @@ import { expectSameInputs, playAtRandom, readyBoth, watchProblems } from "./onli
 // program; its server configuration is what the settings' window keeps in the browser.
 
 const SERVER = "[server]\nname = e2e\naddress = ws://127.0.0.1:5198\nkey = e2e-test-key-0001\n";
+/** Another group's server (tests/e2e/relay2.ini: two spectator seats a room, its own key). */
+const FRIENDS = "[server]\nname = friends\naddress = ws://127.0.0.1:5197\nkey = e2e-test-key-0002\n";
 
 /** A program at its online screen, with this server configuration ("" : none). */
 async function openOnline(browser: Browser, config: string, settings: Record<string, unknown> = {}, prepare?: (page: Page) => Promise<void>): Promise<Page> {
@@ -50,7 +52,7 @@ test("through the online server: a room made with its rules, joined by code, wat
   await guest.getByTestId("online-server-join").click();
   for (const page of [host, guest]) {
     await expect(page.getByTestId("online-connected")).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByTestId("online-via")).toHaveText("the online server");
+    await expect(page.getByTestId("online-via")).toHaveText("the online server (e2e)");
     await expect(page.locator(".sve-online-facts")).toContainText("Connection: through the server");
     await expect(page.getByTestId("online-rtt")).toHaveText(/\d+ ms/, { timeout: 15_000 });
   }
@@ -374,4 +376,85 @@ test("the server's configuration: none, pasted in the settings' window, tested; 
   await page.getByTestId("online-back").click();
   await page.getByTestId("menu-settings").click();
   await expect(page.getByTestId("settings-server")).toHaveText("e2e");
+});
+
+test("two servers: one lobby lists the rooms of both; a room made on the second one is found by its code, and watched", async ({ browser }) => {
+  test.setTimeout(240_000);
+  const problems: string[] = [];
+  const both = `${SERVER}\n${FRIENDS}`;
+  const host = await openOnline(browser, both, { playerName: "Aki", setupDecks: ["samples/sd01.json", "samples/sd02.json"] });
+  const guest = await openOnline(browser, both, { setupDecks: ["samples/sd03.json", "samples/sd02.json"] });
+  // A spectator of the other group: its own server first.
+  const spectator = await openOnline(browser, `${FRIENDS}\n${SERVER}`);
+  watchProblems([host, guest, spectator], problems);
+  await expect(host.getByTestId("online-server").locator("h3")).toHaveText("Use the server (e2e, friends)");
+  await expect(spectator.getByTestId("online-server-host-on")).toHaveValue("ws://127.0.0.1:5197");
+
+  // A code on neither server: said so.
+  await spectator.getByTestId("online-server-code").fill("ZZZZZZ");
+  await spectator.getByTestId("online-server-join").click();
+  await expect(spectator.getByTestId("online-closed")).toHaveText("There is no room of that code: check the code, or the host has left.");
+  await spectator.getByTestId("online-again").click();
+
+  // The host makes the room on the second server of its configuration; every lobby lists it, said to be there.
+  await host.getByTestId("online-server-host-on").selectOption({ label: "friends" });
+  await host.getByTestId("online-server-host").click();
+  const code = (await host.getByTestId("online-room-code").innerText({ timeout: 30_000 })).trim();
+  for (const page of [guest, spectator]) {
+    const row = page.locator(`[data-testid="online-lobby-room"][data-code="${code}"]`);
+    await expect(row).toHaveAttribute("data-server", "friends", { timeout: 15_000 });
+    await expect(row).toContainText("Aki's room");
+    await expect(row.locator(".sve-hint")).toHaveText(/^friends · /);
+  }
+
+  // The guest types the code: looked for on both servers, found on the second.
+  await guest.getByTestId("online-server-code").fill(code);
+  await guest.getByTestId("online-server-join").click();
+  for (const page of [host, guest]) {
+    await expect(page.getByTestId("online-connected")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId("online-via")).toHaveText("the online server (friends)");
+  }
+  // The spectator watches from its lobby: the second server's seats (two).
+  await spectator.locator(`[data-testid="online-lobby-room"][data-code="${code}"]`).getByTestId("online-lobby-watch").click();
+  await expect(spectator.getByTestId("online-watching")).toBeVisible({ timeout: 30_000 });
+  for (const page of [host, guest, spectator]) await expect(page.getByTestId("online-watchers")).toHaveText("Spectators: 1 of 2");
+  await readyBoth(host, guest);
+  await playAtRandom(host, guest, 12, problems, 41);
+  await expectSameInputs(host, guest);
+  expect(problems).toEqual([]);
+});
+
+test("two servers in the configuration: each said and tested, a wrong part said by its place; one that can't be reached", async ({ browser }) => {
+  test.setTimeout(120_000);
+  const page = await openOnline(browser, "");
+  await page.getByTestId("online-server-configure").click();
+  // The same server twice.
+  await page.getByTestId("server-config-text").fill(`${SERVER}\n${FRIENDS}\n[server]\naddress = WS://127.0.0.1:5198/\nkey = e2e-test-key-0001\n`);
+  await expect(page.getByTestId("server-config-status")).toHaveText("Server 3: This server is there twice (the same address).");
+  await expect(page.getByTestId("server-config-save")).toBeDisabled();
+  // Each server tested: the second one's key is wrong.
+  await page.getByTestId("server-config-text").fill(`${SERVER}\n${FRIENDS.replace("e2e-test-key-0002", "not-the-key-0002")}`);
+  await expect(page.getByTestId("server-config-status").locator("p")).toHaveText(["Server: e2e (ws://127.0.0.1:5198)", "Server: friends (ws://127.0.0.1:5197)"]);
+  await page.getByTestId("server-config-test").click();
+  await expect(page.getByTestId("server-config-check")).toHaveText([
+    /^e2e: Connected: the server takes this key \(\d+ ms; 3 spectator seats a room\)\.$/,
+    /^friends: Not connected: The server refused this program: its key is wrong/,
+  ]);
+  // A server nobody runs: its part of the lobby says so, the other's rooms are listed.
+  await page.getByTestId("server-config-text").fill(`${SERVER}\n[server]\nname = down\naddress = ws://127.0.0.1:9\nkey = e2e-key-nobody-takes\n`);
+  await page.getByTestId("server-config-save").click();
+  await page.getByTestId("server-config-close").click();
+  await expect(page.getByTestId("online-lobby-problem")).toHaveText(/^down: The lobby can't be shown: Couldn't reach the server/);
+  await expect(page.getByTestId("online-lobby")).not.toHaveAttribute("data-rooms", "-1");
+  // Both right: saved; the online screen and the settings name both.
+  await page.getByTestId("online-server-configure").click();
+  await page.getByTestId("server-config-text").fill(`${SERVER}\n${FRIENDS}`);
+  await page.getByTestId("server-config-save").click();
+  await expect(page.getByTestId("server-config-save")).toBeDisabled();
+  await page.getByTestId("server-config-close").click();
+  await expect(page.getByTestId("online-server").locator("h3")).toHaveText("Use the server (e2e, friends)");
+  await expect(page.getByTestId("online-lobby-problem")).toHaveCount(0);
+  await page.getByTestId("online-back").click();
+  await page.getByTestId("menu-settings").click();
+  await expect(page.getByTestId("settings-server")).toHaveText("e2e, friends");
 });

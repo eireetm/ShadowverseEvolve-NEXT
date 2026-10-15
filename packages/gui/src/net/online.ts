@@ -26,9 +26,9 @@ import type { MessageKey } from "../i18n";
 import { BACKLOG_PIECE, CHAT_MAX, cleanName, MAX_SPECTATOR_SEATS, SPECTATOR_SEATS, watchedOptions, type Hello, type JoinAs, type NetMessage, type ReadyDeck, type Rules, type WatchedGame } from "./messages";
 import type { TurnServer } from "./relays";
 import { meet, type Admission, type Meeting, type MeetingHandlers } from "./rooms";
-import { serverNetwork, type JoinMode, type ServerProblem, type ServerRoom } from "./server";
-import { currentServer } from "./server-config";
-import { currentLink, gameStarted, getOnline, NO_PREP, setChatRelay, setLink, setOnline, setUndoRequest, type OnlineRole, type Prep } from "./state";
+import { serverNetwork, type JoinMode, type ProblemAt, type ServerProblem, type ServerRoom } from "./server";
+import { currentServers, serverNow, type ServerSettings } from "./server-config";
+import { currentLink, gameStarted, getOnline, NO_PREP, setChatRelay, setLink, setOnline, setUndoRequest, type OnlineError, type OnlineRole, type Prep } from "./state";
 
 export { sendChat, useOnline, getOnline, canChat, type OnlinePhase } from "./state";
 
@@ -539,7 +539,7 @@ function hostRules(): Rules {
   const settings = getSettings();
   const format = settings.format;
   const list = format === "unlimited" ? null : restrictionList(settings.restrictionLists[format]);
-  const server = getOnline().room?.server === true;
+  const server = getOnline().room?.server != null;
   return {
     format,
     list: list?.id ?? null,
@@ -811,17 +811,17 @@ function startWatching(): void {
 }
 
 /**
- * Watch the games in room `code` (a spectator's seat), on the online server (`server`, with the room's `password` if it has
- * one) or the public networks; `again`: after a lost connection (the game shown stays).
+ * Watch the games in room `code` (a spectator's seat), on an online server (`server`, or looked for on each of `server`; with
+ * the room's `password` if it has one) or the public networks; `again`: after a lost connection (the game shown stays).
  */
-export function watchRoom(code: string, again = false, server = false, password: string | null = null): void {
+export function watchRoom(code: string, again = false, server: RoomServer = null, password: string | null = null): void {
   stopLooking();
   disconnect();
   dropWatchers();
   setOnline({
     phase: { kind: "joining", code, as: "watch" },
     error: null,
-    room: { code, role: "spectator", server, password },
+    room: { code, role: "spectator", server: firstServer(server), password },
     ...(again ? {} : { game: null, chat: [], watchers: 0, prep: NO_PREP }),
   });
   if (!again) {
@@ -846,24 +846,42 @@ export function spectatorSide(perspective: 0 | 1): void {
 // ---- Rooms, codes by hand, leaving ----
 
 /**
- * Meet in room `code`: on the public networks, or on the online server (`server`) — making the room, joining one that is
- * there, or either (coming back after a lost connection), with the room's `password` (the server's rooms only; made with
- * one, the room takes only those who say it). Without a server configured, nothing (the error says so).
+ * Where a room is: on an online server, looked for on each of several (a code typed in, with more than one server
+ * configured), or (null) on the public networks.
  */
-function meetRoom(code: string, role: "host" | JoinAs, server: boolean, mode: JoinMode, password: string | null, handlers: MeetingHandlers): Meeting | null {
-  if (!server) return meet(code, role, turn(), handlers);
-  const settings = currentServer();
-  if (!settings) {
+export type RoomServer = ServerSettings | readonly ServerSettings[] | null;
+
+const serversOf = (server: RoomServer): readonly ServerSettings[] => (server === null ? [] : Array.isArray(server) ? server : [server as ServerSettings]);
+
+/** The server a room is said to be on until it is found (the first one it is looked for on). */
+const firstServer = (server: RoomServer): ServerSettings | null => serversOf(server)[0] ?? null;
+
+/**
+ * Meet in room `code`: on the public networks, or on an online server (`server`; a room joined by its code is looked for on
+ * each of several at once) — making the room, joining one that is there, or either (coming back after a lost connection),
+ * with the room's `password` (the server's rooms only; made with one, the room takes only those who say it). Without a
+ * server configured, nothing (the error says so).
+ */
+function meetRoom(code: string, role: "host" | JoinAs, server: RoomServer, mode: JoinMode, password: string | null, handlers: MeetingHandlers): Meeting | null {
+  if (server === null) return meet(code, role, turn(), handlers);
+  // As the configuration says them now (a key mended meanwhile is the one said when coming back).
+  const servers = serversOf(server).map(serverNow);
+  if (servers.length === 0) {
     setOnline({ phase: { kind: "idle" }, error: "online.server.none", room: null });
     return null;
   }
   return meet(code, role, null, handlers, undefined, [
     serverNetwork(
-      settings,
+      servers,
       mode,
       {
         onWelcome: (seats, records) => setOnline({ seats: Math.max(0, Math.min(MAX_SPECTATOR_SEATS, seats)), records }),
-        onProblem: (problem) => serverProblem(problem, role, mode),
+        onProblem: (problem, at) => serverProblem(problem, role, mode, at),
+        // The room is on this one: it is where this program comes back to after a lost connection.
+        onServer: (found) => {
+          const room = getOnline().room;
+          if (room) setOnline({ room: { ...room, server: found } });
+        },
         onRoom: (room) => {
           serverRoom = room;
           describeRoom();
@@ -872,6 +890,12 @@ function meetRoom(code: string, role: "host" | JoinAs, server: boolean, mode: Jo
       password,
     ),
   ]);
+}
+
+/** A server's problem as shown: named after the server when several are configured (else as it is). */
+function serverError(problem: ServerProblem, server: ServerSettings | null): OnlineError {
+  const key: MessageKey = `online.server.${problem}`;
+  return server && currentServers().length > 1 ? { key, server: server.name } : key;
 }
 
 /** The room joined on the online server (to describe it for the lobby, to send a finished game), while there is one. */
@@ -921,23 +945,24 @@ async function keepGame(seed: string): Promise<void> {
 let hostTries = 0;
 
 /**
- * Something went wrong with the online server. No such room, or no seat: said as on the public networks. Its code taken: the
- * host draws another. Otherwise (the server refused this program, couldn't be reached, or closed the connection) the attempt
- * ends with what went wrong; a connection made ends by itself through its link, and a game in progress waits for a new one.
+ * Something went wrong with the online server. No such room, or no seat: said as on the public networks (and a server the
+ * room couldn't be looked for on: it may be there). Its code taken: the host draws another. Otherwise (the server refused
+ * this program, couldn't be reached, or closed the connection) the attempt ends with what went wrong; a connection made ends
+ * by itself through its link, and a game in progress waits for a new one.
  */
-function serverProblem(problem: ServerProblem, role: "host" | JoinAs, mode: JoinMode): void {
-  const { phase } = getOnline();
+function serverProblem(problem: ServerProblem, role: "host" | JoinAs, mode: JoinMode, at: ProblemAt): void {
+  const { phase, room } = getOnline();
   if (problem === "exists" && role === "host" && mode === "create" && phase.kind === "hosting" && hostTries < 5) {
     hostTries += 1;
-    return hostRoom(undefined, false, true);
+    return hostRoom(undefined, false, room?.server ?? null);
   }
   if (problem === "missing" || problem === "full" || problem === "password" || problem === "tries") {
     stopLooking();
     const reason = problem === "full" ? (role === "watch" ? "watchFull" : "full") : problem;
-    setOnline({ phase: { kind: "closed", reason }, error: null });
+    setOnline({ phase: { kind: "closed", reason }, error: at.unasked ? serverError(at.unasked.problem, at.unasked.server) : null });
     return;
   }
-  const error: MessageKey = `online.server.${problem}`;
+  const error = serverError(problem, at.server);
   if (phase.kind === "connected") {
     if (problem !== "closed") setOnline({ error });
     return;
@@ -947,12 +972,12 @@ function serverProblem(problem: ServerProblem, role: "host" | JoinAs, mode: Join
 }
 
 /**
- * Make a room — on the online server (`server`) or the public networks: its code, to pass to the other player; wait for them
+ * Make a room — on an online server (`server`) or the public networks: its code, to pass to the other player; wait for them
  * (and spectators). On the server, a password too when the host chose one (6 random digits, to pass with the code; asked of
  * the other player and the spectators). `again`: the same room once more after a lost connection (its spectators aren't told
  * to go: they come back by themselves).
  */
-export function hostRoom(code = newRoomCode(), again = false, server = false): void {
+export function hostRoom(code = newRoomCode(), again = false, server: ServerSettings | null = null): void {
   stopLooking();
   disconnect();
   dropWatchers(!again);
@@ -969,15 +994,15 @@ export function hostRoom(code = newRoomCode(), again = false, server = false): v
 }
 
 /**
- * Join the room of this code (already normalized: codes.ts normalizeRoomCode), on the online server (`server`, with the
- * room's `password` if it has one) or the public networks; `again`: after a lost connection (on the server, the room is
- * waited for if it isn't there).
+ * Join the room of this code (already normalized: codes.ts normalizeRoomCode), on an online server (`server`, or looked for
+ * on each of `server`; with the room's `password` if it has one) or the public networks; `again`: after a lost connection
+ * (on the server, the room is waited for if it isn't there).
  */
-export function joinRoom(code: string, server = false, again = false, password: string | null = null): void {
+export function joinRoom(code: string, server: RoomServer = null, again = false, password: string | null = null): void {
   stopLooking();
   disconnect();
   dropWatchers();
-  setOnline({ phase: { kind: "joining", code, as: "player" }, error: null, room: { code, role: "guest", server, password } });
+  setOnline({ phase: { kind: "joining", code, as: "player" }, error: null, room: { code, role: "guest", server: firstServer(server), password } });
   meeting = meetRoom(code, "player", server, again ? "any" : "join", password, {
     onLink: (peer) => connected("guest", peer),
     onFull: () => {

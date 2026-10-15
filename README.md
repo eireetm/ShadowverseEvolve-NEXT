@@ -272,6 +272,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
   - 先选好赛制、禁卡表、先后手，再"创建房间"，把 6 位房间号发给对方；对方在同一栏输入房间号，点"加入"或"观战"。进房间以后房主还能改规则。
   - 所有消息都经过服务器；房间号输错会马上提示"房间不存在"；对方看不到你的 IP。
   - 配置：设置 → 联机 →"修改服务器配置"（联机界面里也有这个按钮），粘贴服务器的主人给你的文字，可以先"测试连接"。
+  - **几台服务器**：配置里可以写几段 `[server]`，一台一段。大厅同时列出这几台的房间，每个房间写着在哪台；创建前可以选"在哪台服务器建房"（不选就是第一台）；用房间号加入时，每台都会找。
   - **大厅**：列出公开的房间（"xxx的房间"、规则、等待对手还是对局中、观战人数），点"加入"或"观战"就能进。创建时取消"在大厅里公开这个房间"，就只能用房间号进。
   - **房间密码**：创建时勾选"设置房间密码"，会随机生成 6 位数字，加入和观战都要输入；大厅里上锁的房间写着"需要密码"。
   - **保存对局**：设置 → 联机 →"联机自动保存对局到云端"（默认开）。双方都开着时，下完的对局会存到服务器上，用来训练 AI：只有种子、双方卡组和每一步，没有名字和聊天。有一方关掉就不存，房间里会写明这局存不存。
@@ -656,6 +657,7 @@ Sound effects (26):
   - Choose the format, the restriction list and who goes first, then "Make a room", and send the 6-letter code to the other player, who types it in the same part and clicks "Join" or "Watch". The host can still change the rules in the room.
   - Every message goes through the server; a wrong code is said at once ("no room of that code"); the other player doesn't see your IP.
   - Configuration: Settings > Online > "Edit the server configuration" (the online screen has the button too): paste the text the server's owner gave you; "Test the connection" first if you like.
+  - **Several servers**: the configuration can have several `[server]` parts, one per server. The lobby lists the rooms of all of them, each said to be on its own; before making a room you can pick "Make the room on" (the first one unless you pick another); a code typed in is looked for on every server.
   - **Lobby**: the public rooms ("xxx's room", the rules, waiting or playing, the spectators), joined or watched with a click. Untick "List the room in the lobby" before making a room to have it joined by its code only.
   - **Room password**: tick "A password" before making a room: 6 random digits, asked of whoever joins or watches; the lobby marks such rooms "password".
   - **Keeping games**: Settings > Online > "Keep my online games on the server" (on by default). When both players have it on, a finished game is kept on the server to train the AI: the seed, both decks and every move, no names, no chat. One of them off: not kept; the room says which.

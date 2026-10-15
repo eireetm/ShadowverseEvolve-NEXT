@@ -1,13 +1,15 @@
-// The online server's configuration on this side ("使用服务器" in the online screen): the server's address and the key its
-// owner gave, as a short text (sve-server client prints it on the server):
+// The online servers' configuration on this side ("使用服务器" in the online screen): each server's address and the key its
+// owner gave, as a short text (sve-server client prints a server's part on the server):
 //   [server]
 //   name = 北京
 //   address = wss://203.0.113.7
 //   key = ...
-// Where it is kept: the PC release has it as online-server.ini next to its program (a person can edit it with Notepad;
-// written by the settings' window too); elsewhere (the phone apps, the dev server) the browser keeps what was saved in
-// the settings' window. When nothing is there, the text the app was built with: the project's online-server.ini at build
-// time (it isn't in the repository: whoever builds a release decides whether it has a server), or none.
+// One [server] part per server, when people of several servers play together: the lobby lists the rooms of all of them,
+// a room is made on one of them (the first one unless the person picks another), and joined where it is. Where it is
+// kept: the PC release has it as online-server.ini next to its program (a person can edit it with Notepad; written by the
+// settings' window too); elsewhere (the phone apps, the dev server) the browser keeps what was saved in the settings'
+// window. When nothing is there, the text the app was built with: the project's online-server.ini at build time (it isn't
+// in the repository: whoever builds a release decides whether it has a server), or none.
 import { useSyncExternalStore } from "react";
 import { hostApi } from "../host/api";
 import type { MessageKey } from "../i18n";
@@ -26,23 +28,54 @@ export interface ServerSettings {
   key: string;
 }
 
-/** The server a text describes, or what is wrong with it (null: no server, an empty text). */
-export function parseServerConfig(text: string): { server: ServerSettings | null; problems: MessageKey[] } {
-  const values = new Map<string, string>();
+/** What is wrong with a server's part of the text: which part (1: the text's first server) and what. */
+export interface ServerConfigProblem {
+  at: number;
+  problem: MessageKey;
+}
+
+/** Whether two addresses are the same server's (as people write them: the letters' case and a last "/" aside). */
+const sameAddress = (a: string, b: string): boolean => a.replace(/\/+$/, "").toLowerCase() === b.replace(/\/+$/, "").toLowerCase();
+
+/**
+ * The servers a text describes, in its order, and what is wrong with the parts that aren't one (left out); `parts`: how many
+ * servers it tries to describe. A part is what follows a "[...]" line (lines before any: the first part, as a text without
+ * one says a server); a part without an address or a key (a comment, another section) isn't a server.
+ */
+export function parseServerConfig(text: string): { servers: ServerSettings[]; problems: ServerConfigProblem[]; parts: number } {
+  const blocks: Map<string, string>[] = [];
+  let block: Map<string, string> | null = null;
   for (const raw of text.replace(/^﻿/, "").split(/\r?\n/)) {
     const line = raw.trim();
-    if (line === "" || line.startsWith(";") || line.startsWith("#") || line.startsWith("[")) continue;
+    if (line === "" || line.startsWith(";") || line.startsWith("#")) continue;
+    if (line.startsWith("[")) {
+      block = null;
+      continue;
+    }
     const at = line.indexOf("=");
-    if (at > 0) values.set(line.slice(0, at).trim().toLowerCase(), line.slice(at + 1).trim());
+    if (at <= 0) continue;
+    if (!block) blocks.push((block = new Map()));
+    block.set(line.slice(0, at).trim().toLowerCase(), line.slice(at + 1).trim());
   }
-  const address = values.get("address") ?? "";
-  const key = values.get("key") ?? "";
-  if (address === "" && key === "") return { server: null, problems: [] };
-  const problems: MessageKey[] = [];
-  if (!/^wss?:\/\/[^\s/]+/i.test(address)) problems.push("serverConfig.badAddress");
-  if (key.length < 8) problems.push("serverConfig.noKey");
-  if (problems.length > 0) return { server: null, problems };
-  return { server: { name: values.get("name") || address.replace(/^wss?:\/\//i, ""), address, key }, problems };
+  const servers: ServerSettings[] = [];
+  const problems: ServerConfigProblem[] = [];
+  let parts = 0;
+  for (const values of blocks) {
+    const address = values.get("address") ?? "";
+    const key = values.get("key") ?? "";
+    if (address === "" && key === "") continue;
+    parts += 1;
+    const wrong: MessageKey[] = [];
+    if (!/^wss?:\/\/[^\s/]+/i.test(address)) wrong.push("serverConfig.badAddress");
+    if (key.length < 8) wrong.push("serverConfig.noKey");
+    if (wrong.length === 0 && servers.some((s) => sameAddress(s.address, address))) wrong.push("serverConfig.twice");
+    if (wrong.length > 0) {
+      for (const problem of wrong) problems.push({ at: parts, problem });
+      continue;
+    }
+    servers.push({ name: values.get("name") || address.replace(/^wss?:\/\//i, ""), address, key });
+  }
+  return { servers, problems, parts };
 }
 
 /** The text of a server for the window: as its owner's program prints it (comments in the languages). */
@@ -56,12 +89,13 @@ export type ServerConfigSource = "file" | "saved" | "built-in" | "none";
 interface Loaded {
   text: string;
   source: ServerConfigSource;
-  server: ServerSettings | null;
+  /** The servers it describes (none: no server), the first one first. */
+  servers: ServerSettings[];
   /** The PC release's file (its path), when this host keeps one. */
   file: string | null;
 }
 
-let loaded: Loaded = { text: "", source: "none", server: null, file: null };
+let loaded: Loaded = { text: "", source: "none", servers: [], file: null };
 let loading: Promise<Loaded> | null = null;
 const listeners = new Set<() => void>();
 
@@ -71,7 +105,7 @@ function setLoaded(next: Loaded): void {
 }
 
 function fromText(text: string, source: ServerConfigSource, file: string | null): Loaded {
-  return { text, source, server: parseServerConfig(text).server, file };
+  return { text, source, servers: parseServerConfig(text).servers, file };
 }
 
 function readSaved(): string | null {
@@ -132,9 +166,17 @@ export async function resetServerConfig(): Promise<void> {
   setLoaded(fromText(BUILT_IN, BUILT_IN ? "built-in" : "none", null));
 }
 
-/** The server to use now (null: none configured). */
-export function currentServer(): ServerSettings | null {
-  return loaded.server;
+/** The servers to use now (none configured: none), the first one first. */
+export function currentServers(): ServerSettings[] {
+  return loaded.servers;
+}
+
+/**
+ * The server to connect to again for a room made or found on `server`: as the configuration says it now (its key may have
+ * been mended meanwhile), or as it was.
+ */
+export function serverNow(server: ServerSettings): ServerSettings {
+  return loaded.servers.find((s) => sameAddress(s.address, server.address)) ?? server;
 }
 
 /** The configuration as loaded (the screens: what is used, and from where). */
