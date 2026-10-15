@@ -5,7 +5,8 @@
 // each player's deck, ready. Both ready, the game starts (on the game screen); after it, the next one is prepared here. A
 // lost connection can be made again, and the game goes on where it was. A room's games can also be watched (a spectator's
 // seat, "观战"): the spectator sees them, and the chat, and does nothing else. The person's name goes with the connection;
-// on the server, its lobby lists the public rooms ("xxx 的房间") to join or watch with a click.
+// on the servers, their lobby lists the public rooms ("xxx 的房间"; with several servers, each said to be on its own) to
+// join or watch with a click.
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { errorText } from "../app/errors";
@@ -22,6 +23,7 @@ import { checkNetwork, type NetworkCheck } from "../net/check";
 import { normalizeRoomCode, normalizeRoomPassword } from "../net/codes";
 import { cleanName, NAME_MAX, SPECTATOR_SEATS, type Rules } from "../net/messages";
 import { watchLobby, type LobbyRoom, type ServerProblem } from "../net/server";
+import type { Via } from "../net/link";
 import type { ServerSettings } from "../net/server-config";
 import {
   acceptReply,
@@ -137,7 +139,7 @@ export function OnlineScreen({ onBack, onGame, onEditDecks }: Props) {
         <Phase phase={online.phase} since={online.since} identified={identified} going={going} onGame={onGame} onEditDecks={onEditDecks} />
         {online.error ? (
           <p className="sve-problem" data-testid="online-error">
-            {t(online.error)}
+            {typeof online.error === "string" ? t(online.error) : t("online.server.at", { name: online.error.server, text: t(online.error.key) })}
           </p>
         ) : null}
         <button type="button" onClick={back} data-testid="online-back">
@@ -296,17 +298,17 @@ function Phase({ phase, since, identified, going, onGame, onEditDecks }: PhasePr
 }
 
 /**
- * Make a room, join one, or pass codes by hand: on the online server when one is configured (its part first then), and on
+ * Make a room, join one, or pass codes by hand: on the online servers when any is configured (their part first then), and on
  * the public networks.
  */
 function Start() {
-  const server = useServerConfig().server;
+  const configured = useServerConfig().servers.length > 0;
   // Keyed: a server saved in the window moves its part up without making it again (the window stays open).
-  const parts = [<ServerStart key="server" />, <PublicStart key="public" titled={server !== null} />];
+  const parts = [<ServerStart key="server" />, <PublicStart key="public" titled={configured} />];
   return (
     <div className="sve-online-step">
       <NameField />
-      {server ? parts : parts.reverse()}
+      {configured ? parts : parts.reverse()}
     </div>
   );
 }
@@ -333,37 +335,65 @@ function NameField() {
 /** A name as shown, or "someone" when none was given. */
 const nameOr = (name: string | undefined, t: Translate): string => (name ? name : t("online.anonymous"));
 
+/** A server's part of the lobby: its public rooms (null: not heard yet), or why they can't be shown. */
+interface LobbyPart {
+  rooms: LobbyRoom[] | null;
+  problem: ServerProblem | null;
+}
+
 /**
- * The server's lobby: the rooms their hosts made public — whose, the rules, waiting or playing, the spectators — to join
- * or watch with a click. Followed while this part is shown (the server says each change).
+ * The servers' lobby: the rooms their hosts made public on each server configured — whose, the rules, waiting or playing,
+ * the spectators; with several servers, which one — to join or watch with a click. Followed while this part is shown (each
+ * server says each change).
  */
-function Lobby({ server }: { server: ServerSettings }) {
+function Lobby({ servers }: { servers: readonly ServerSettings[] }) {
   const t = useT();
-  const [rooms, setRooms] = useState<LobbyRoom[] | null>(null);
-  const [problem, setProblem] = useState<ServerProblem | null>(null);
-  /** The passwords typed for the locked rooms, by room code. */
+  /** Each server's part, by its address. */
+  const [parts, setParts] = useState<Record<string, LobbyPart>>({});
+  /** The passwords typed for the locked rooms, by server and room code. */
   const [passwords, setPasswords] = useState<Record<string, string>>({});
+  const several = servers.length > 1;
+  const followed = servers.map((s) => `${s.address}\n${s.key}`).join("\n");
   useEffect(() => {
-    const lobby = watchLobby(server, setRooms, setProblem);
-    return () => lobby.close();
-  }, [server.address, server.key]);
+    setParts({});
+    const lobbies = servers.map((server) => {
+      const update = (change: Partial<LobbyPart>) =>
+        setParts((all) => ({ ...all, [server.address]: { rooms: null, problem: null, ...all[server.address], ...change } }));
+      return watchLobby(
+        server,
+        (rooms) => update({ rooms }),
+        (problem) => update({ problem }),
+      );
+    });
+    return () => {
+      for (const lobby of lobbies) lobby.close();
+    };
+  }, [followed]);
+  const rows = servers.flatMap((server) => (parts[server.address]?.rooms ?? []).map((room) => ({ server, room, at: `${server.address} ${room.code}` })));
+  const problems = servers.flatMap((server) => {
+    const problem = parts[server.address]?.problem;
+    if (!problem) return [];
+    const text = t("online.lobbyProblem", { why: t(`online.server.${problem}`) });
+    return [{ server, text: several ? t("online.server.at", { name: server.name, text }) : text }];
+  });
+  /** A server listed its rooms (one that can't be reached lists none: its problem says why). */
+  const heard = servers.some((s) => parts[s.address]?.rooms != null && !parts[s.address]?.problem);
   return (
-    <div className="sve-online-lobby" data-testid="online-lobby" data-rooms={rooms?.length ?? -1}>
+    <div className="sve-online-lobby" data-testid="online-lobby" data-rooms={heard ? rows.length : -1}>
       <h4>{t("online.lobby")}</h4>
-      {problem ? (
-        <p className="sve-problem">{t("online.lobbyProblem", { why: t(`online.server.${problem}`) })}</p>
-      ) : rooms === null ? (
-        <p className="sve-hint">…</p>
-      ) : rooms.length === 0 ? (
-        <p className="sve-hint">{t("online.lobbyEmpty")}</p>
-      ) : (
+      {problems.map(({ server, text }) => (
+        <p key={server.address} className="sve-problem" data-testid="online-lobby-problem">
+          {text}
+        </p>
+      ))}
+      {rows.length > 0 ? (
         <ul>
-          {rooms.map((room) => {
+          {rows.map(({ server, room, at }) => {
             // A locked room: its password typed here first.
-            const pass = room.locked ? normalizeRoomPassword(passwords[room.code] ?? "") : null;
+            const pass = room.locked ? normalizeRoomPassword(passwords[at] ?? "") : null;
             const shut = room.locked === true && pass === null;
             return (
-              <li key={room.code} data-code={room.code} data-locked={room.locked ? "yes" : "no"} data-testid="online-lobby-room">
+              <li key={at} data-code={room.code} data-server={server.name} data-locked={room.locked ? "yes" : "no"} data-testid="online-lobby-room">
                 <span className="sve-online-lobby-what">
                   <strong>
                     {t("online.lobbyRoom", { name: nameOr(room.name, t) })}
@@ -371,6 +401,7 @@ function Lobby({ server }: { server: ServerSettings }) {
                   </strong>
                   <span className="sve-hint">
                     {[
+                      ...(several ? [server.name] : []),
                       t(`format.${room.format}` as MessageKey),
                       room.list ?? t("format.noList"),
                       t(room.playing ? "online.lobbyPlaying" : room.players < 2 ? "online.lobbyWaiting" : "online.lobbyPlaying"),
@@ -381,8 +412,8 @@ function Lobby({ server }: { server: ServerSettings }) {
                 {room.locked ? (
                   <input
                     className="sve-online-password"
-                    value={passwords[room.code] ?? ""}
-                    onChange={(e) => setPasswords({ ...passwords, [room.code]: e.target.value })}
+                    value={passwords[at] ?? ""}
+                    onChange={(e) => setPasswords({ ...passwords, [at]: e.target.value })}
                     placeholder={t("online.passwordLabel")}
                     maxLength={8}
                     inputMode="numeric"
@@ -390,16 +421,20 @@ function Lobby({ server }: { server: ServerSettings }) {
                     data-testid="online-lobby-password"
                   />
                 ) : null}
-                <button type="button" disabled={shut || room.players >= 2 || room.playing} onClick={() => joinRoom(room.code, true, false, pass)} data-testid="online-lobby-join">
+                <button type="button" disabled={shut || room.players >= 2 || room.playing} onClick={() => joinRoom(room.code, server, false, pass)} data-testid="online-lobby-join">
                   {t("online.join")}
                 </button>
-                <button type="button" disabled={shut || room.watchers >= room.seats} onClick={() => watchRoom(room.code, false, true, pass)} data-testid="online-lobby-watch">
+                <button type="button" disabled={shut || room.watchers >= room.seats} onClick={() => watchRoom(room.code, false, server, pass)} data-testid="online-lobby-watch">
                   {t("online.watch")}
                 </button>
               </li>
             );
           })}
         </ul>
+      ) : !heard ? (
+        problems.length === 0 ? <p className="sve-hint">…</p> : null
+      ) : (
+        <p className="sve-hint">{t("online.lobbyEmpty")}</p>
       )}
     </div>
   );
@@ -456,24 +491,29 @@ function WatchFields({ testId }: { testId: string }) {
   );
 }
 
+/** The server new rooms are made on, as picked last in this visit (the configuration's first one until then). */
+let pickedHost: string | null = null;
+
 /**
- * The online server: the rules of the room to make (the host's settings, as in the room), make it (with a password, if the
- * host wants one), or join one by its code (and its password, if it has one), to play or to watch. Without a server
- * configured: what it is, and the configuration's window.
+ * The online servers: the rules of the room to make (the host's settings, as in the room), make it (with a password, if the
+ * host wants one; with several servers, on the one picked), or join one by its code (and its password, if it has one; looked
+ * for on every server), to play or to watch. Without a server configured: what it is, and the configuration's window.
  */
 function ServerStart() {
   const t = useT();
   const settings = useSettings();
-  const server = useServerConfig().server;
+  const servers = useServerConfig().servers;
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
   const [editing, setEditing] = useState(false);
+  const [hostAt, setHostAt] = useState(pickedHost);
   const room = normalizeRoomCode(code);
   const pass = normalizeRoomPassword(password);
+  const host = servers.find((s) => s.address === hostAt) ?? servers[0] ?? null;
   return (
     <section className="sve-online-section sve-online-server" data-testid="online-server">
-      <h3>{server ? t("online.server.title", { name: server.name }) : t("online.server.titleNone")}</h3>
-      {server ? (
+      <h3>{host ? t("online.server.title", { name: servers.map((s) => s.name).join(t("common.listSeparator")) }) : t("online.server.titleNone")}</h3>
+      {host ? (
         <>
           <p className="sve-hint">{t("online.server.rules")}</p>
           <fieldset className="sve-online-rules">
@@ -482,6 +522,25 @@ function ServerStart() {
             <UndoField testId="online-server-undo" />
             <WatchFields testId="online-server" />
           </fieldset>
+          {servers.length > 1 ? (
+            <label className="sve-field sve-online-host-on">
+              <span>{t("online.server.hostOn")}</span>
+              <select
+                value={host.address}
+                onChange={(e) => {
+                  pickedHost = e.target.value;
+                  setHostAt(e.target.value);
+                }}
+                data-testid="online-server-host-on"
+              >
+                {servers.map((s) => (
+                  <option key={s.address} value={s.address}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <label className="sve-online-check-label">
             <input type="checkbox" checked={settings.publicRooms} onChange={(e) => updateSettings({ publicRooms: e.target.checked })} data-testid="online-server-public" />
             {t("online.publicRoom")}
@@ -490,14 +549,14 @@ function ServerStart() {
             <input type="checkbox" checked={settings.roomPassword} onChange={(e) => updateSettings({ roomPassword: e.target.checked })} data-testid="online-server-password" />
             {t("online.roomPassword")}
           </label>
-          <button type="button" className="sve-primary sve-menu-button" onClick={() => hostRoom(undefined, false, true)} data-testid="online-server-host">
+          <button type="button" className="sve-primary sve-menu-button" onClick={() => hostRoom(undefined, false, host)} data-testid="online-server-host">
             {t("online.host")}
           </button>
           <form
             className="sve-online-join sve-online-join-wrap"
             onSubmit={(e) => {
               e.preventDefault();
-              if (room) joinRoom(room, true, false, pass);
+              if (room) joinRoom(room, servers, false, pass);
             }}
           >
             <input value={code} onChange={(e) => setCode(e.target.value)} placeholder={t("online.codePlaceholder")} maxLength={12} data-testid="online-server-code" />
@@ -514,11 +573,11 @@ function ServerStart() {
             <button type="submit" disabled={!room} data-testid="online-server-join">
               {t("online.join")}
             </button>
-            <button type="button" disabled={!room} onClick={() => room && watchRoom(room, false, true, pass)} data-testid="online-server-watch">
+            <button type="button" disabled={!room} onClick={() => room && watchRoom(room, false, servers, pass)} data-testid="online-server-watch">
               {t("online.watch")}
             </button>
           </form>
-          <Lobby server={server} />
+          <Lobby servers={servers} />
         </>
       ) : (
         <p className="sve-hint">{t("online.server.noneHelp")}</p>
@@ -636,6 +695,11 @@ function roomSeats(online: OnlineState): number {
   return online.room?.server ? online.seats : SPECTATOR_SEATS;
 }
 
+/** How the connection is made, as a person reads it: through a server, which one. */
+function viaText(via: Via, room: OnlineState["room"], t: Translate): string {
+  return via === "server" && room?.server ? t("online.viaServer", { name: room.server.name }) : t(`online.via.${via}` as const);
+}
+
 /** The room's password on the server, for those in it to pass on (the host to the spectators it wants), when it has one. */
 function PasswordFact() {
   const t = useT();
@@ -676,7 +740,8 @@ interface WatchingProps {
  */
 function Watching({ phase, identified, going, onGame }: WatchingProps) {
   const t = useT();
-  const { names } = useOnline();
+  const online = useOnline();
+  const { names } = online;
   const same = identified ? samePrograms(phase.peer) : null;
   return (
     <div className="sve-online-step" data-testid="online-watching">
@@ -686,7 +751,7 @@ function Watching({ phase, identified, going, onGame }: WatchingProps) {
       <ul className="sve-online-facts">
         <li>
           {t("online.viaLabel")}
-          <span data-testid="online-via">{t(`online.via.${phase.via}` as const)}</span>
+          <span data-testid="online-via">{viaText(phase.via, online.room, t)}</span>
         </li>
         <li>
           {t("online.routeLabel")}
@@ -839,7 +904,7 @@ function Connected({ phase, identified, going, onGame, onEditDecks }: ConnectedP
       <ul className="sve-online-facts">
         <li>
           {t("online.viaLabel")}
-          <span data-testid="online-via">{t(`online.via.${phase.via}` as const)}</span>
+          <span data-testid="online-via">{viaText(phase.via, online.room, t)}</span>
         </li>
         <li>
           {t("online.routeLabel")}
@@ -899,7 +964,7 @@ function Prep({ role, same, onEditDecks }: { role: "host" | "guest"; same: boole
   const settings = useSettings();
   const catalog = useApp((s) => s.catalog);
   const { prep, room } = useOnline();
-  const server = room?.server === true;
+  const server = room?.server != null;
   const [decks, setDecks] = useState<DeckFileEntry[] | null>(null);
   const [status, setStatus] = useState<{ deck: DeckFile; problems: FormatProblem[] } | null>(null);
   const file = settings.setupDecks[0];

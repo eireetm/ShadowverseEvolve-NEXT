@@ -19,6 +19,7 @@ Shadowverse: Evolve NEXT  {{version}}  联机服务器 / online server
   - 浏览器打开 https://你的IP/ ，显示"联机服务器正常运行"就对了。
   - 把打印出的那段文字放进工程根目录的 online-server.ini（打包电脑版、安卓版时会带上），
     或者在 App 的"设置 → 联机 → 修改服务器配置"里粘贴。
+  - 和别的服务器的玩家一起玩（大厅里能看到几台服务器的房间）：那段文字里一台服务器一段 [server]，几台就放几段。
 
 常用命令（在网页终端里）
   sudo sve-server status            现在谁在线、本小时每把密钥的用量
@@ -53,6 +54,8 @@ Then
   - Open https://<IP>/ in a browser: it should say the server is OK.
   - Put the printed text in online-server.ini at the project's root (the PC and Android builds take it), or paste it in
     the app: Settings > Online > Edit the server configuration.
+  - To play with the players of other servers (one lobby with the rooms of all of them): one [server] part per server in
+    that text.
 
 Commands (in the web terminal)
   sudo sve-server status            who is online, this hour's use of each key

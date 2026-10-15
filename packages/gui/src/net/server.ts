@@ -4,8 +4,9 @@
 // as they are used there (as local-network.ts does for the tests), so the room's protocol — the host, the seats, the
 // spectators, the game — is the same as on the public networks; only the wire is the server's, not WebRTC. Besides, the
 // room's host tells the server what its lobby shows of the room (the host's name, the rules, who is in), a program can
-// follow the lobby (watchLobby), and a finished game can be sent for the server to keep. The server's side is
-// packages/server (its relay.ts says the messages).
+// follow the lobby (watchLobby), and a finished game can be sent for the server to keep. With several servers configured
+// (people of several servers playing together), a room is on one of them: a code typed in is looked for on all of them at
+// once, and the room is the one found. The server's side is packages/server (its relay.ts says the messages).
 import type { JsonValue, MessageAction, Room } from "trystero";
 import { APP_ID } from "./relays";
 import type { Network } from "./rooms";
@@ -39,10 +40,21 @@ export type ServerProblem =
 /** How a program comes into the room: making it (the host), joining one that is there, or either (coming back). */
 export type JoinMode = "create" | "join" | "any";
 
+/**
+ * Where a problem is: the server it is about (null: each server looked at said there is no such room), and a server the
+ * room couldn't be looked for on, with why (the room may be there).
+ */
+export interface ProblemAt {
+  server: ServerSettings | null;
+  unasked: { server: ServerSettings; problem: ServerProblem } | null;
+}
+
 export interface ServerMeetingHandlers {
-  /** The server took this program in: its spectator seats per room, and whether it keeps finished games. */
+  /** The server of the room took this program in: its spectator seats per room, and whether it keeps finished games. */
   onWelcome?: (seats: number, records: boolean) => void;
-  onProblem: (problem: ServerProblem) => void;
+  onProblem: (problem: ServerProblem, at: ProblemAt) => void;
+  /** The server the room is on, once it is found there (joined, or it said why not: its password, its seats). */
+  onServer?: (server: ServerSettings) => void;
   /** The room's handle, once the room is joined (to describe it for the lobby, to send a finished game). */
   onRoom?: (room: ServerRoom) => void;
 }
@@ -86,34 +98,97 @@ const problemOf = (why: unknown): ServerProblem => (typeof why === "string" && P
 
 /**
  * The server as a network to meet in one room on: `mode` says how this program comes in, `password` the room's (6 digits;
- * made with it, the room takes only those who say it).
+ * made with it, the room takes only those who say it). Joining (`join`) a room on one of several servers looks for it on
+ * each of them at once; a room is made, or come back to, on one server (the first given).
  */
-export function serverNetwork(server: ServerSettings, mode: JoinMode, handlers: ServerMeetingHandlers, password: string | null = null): Network {
+export function serverNetwork(
+  servers: ServerSettings | readonly ServerSettings[],
+  mode: JoinMode,
+  handlers: ServerMeetingHandlers,
+  password: string | null = null,
+): Network {
+  const list = Array.isArray(servers) ? servers : [servers as ServerSettings];
+  const used = mode === "join" ? list : list.slice(0, 1);
   return {
     via: "server",
-    join: ((_config: unknown, code: string) => joinServer(server, code, mode, handlers, password)) as unknown as Network["join"],
-    relays: [server.address],
+    join: ((_config: unknown, code: string) => joinServer(used, code, mode, handlers, password)) as unknown as Network["join"],
+    relays: used.map((s) => s.address),
   };
 }
 
-function joinServer(server: ServerSettings, code: string, mode: JoinMode, handlers: ServerMeetingHandlers, password: string | null): Room {
+/**
+ * The problem of a room looked for on several servers, once none of them took this program in: one that has the room said
+ * why not (its password, its seats); else no such room where it could be looked for (and one where it couldn't, if any);
+ * else the first server's own problem.
+ */
+function settled(tries: readonly { server: ServerSettings; failed: ServerProblem | null }[]): { problem: ServerProblem; at: ProblemAt; there: number | null } {
+  const there = tries.findIndex((a) => a.failed === "password" || a.failed === "tries" || a.failed === "full");
+  if (there >= 0) return { problem: tries[there]!.failed!, at: { server: tries[there]!.server, unasked: null }, there };
+  if (tries.some((a) => a.failed === "missing")) {
+    const other = tries.find((a) => a.failed !== "missing");
+    return {
+      problem: "missing",
+      at: { server: tries.length === 1 ? tries[0]!.server : null, unasked: other ? { server: other.server, problem: other.failed! } : null },
+      there: null,
+    };
+  }
+  return { problem: tries[0]!.failed!, at: { server: tries[0]!.server, unasked: null }, there: null };
+}
+
+/** One server's connection while a room is looked for (or made, or come back to) there. */
+interface Try {
+  server: ServerSettings;
+  socket: WebSocket | null;
+  welcomed: boolean;
+  seats: number;
+  records: boolean;
+  /** Why it can't take this program into the room (null: not said yet). */
+  failed: ServerProblem | null;
+  /** Closed by this side: the room is on another server, or the attempt is over. */
+  dropped: boolean;
+}
+
+function joinServer(servers: readonly ServerSettings[], code: string, mode: JoinMode, handlers: ServerMeetingHandlers, password: string | null): Room {
   const peers = new Set<string>();
   const actions = new Map<string, MessageAction<JsonValue>>();
   let left = false;
-  let welcomed = false;
   let reported = false;
-  const report = (problem: ServerProblem) => {
+  const report = (problem: ServerProblem, at: ProblemAt) => {
     if (reported || left) return;
     reported = true;
-    handlers.onProblem(problem);
+    handlers.onProblem(problem, at);
   };
-  let socket: WebSocket | null = null;
+  const tries: Try[] = servers.map((server) => ({ server, socket: null, welcomed: false, seats: 0, records: false, failed: null, dropped: false }));
+  /** One server only: what it says goes at once, as it says it. */
+  const single = tries.length === 1;
+  /** The server's connection the room is on, once joined there. */
+  let chosen: Try | null = null;
   let joined = false;
   /** The latest description, sent once the room is joined (and again when it changes). */
   let described: RoomInfo | null = null;
   const waitingRecords = new Map<string, (kept: Kept) => void>();
-  const send = (message: object) => {
-    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
+  const sendOn = (a: Try | null, message: object) => {
+    if (a?.socket?.readyState === WebSocket.OPEN) a.socket.send(JSON.stringify(message));
+  };
+  const send = (message: object) => sendOn(chosen, message);
+  const drop = (a: Try) => {
+    a.dropped = true;
+    a.socket?.close(1000);
+  };
+  /** A server that can't take this program into the room: when none is left, why (from all of them). */
+  const fail = (a: Try, problem: ServerProblem) => {
+    if (a.failed !== null || chosen) return;
+    a.failed = problem;
+    if (single) return report(problem, { server: a.server, unasked: null });
+    drop(a);
+    if (tries.some((t) => t.failed === null)) return;
+    const end = settled(tries);
+    if (end.there !== null) {
+      const at = tries[end.there]!;
+      handlers.onWelcome?.(at.seats, at.records);
+      handlers.onServer?.(at.server);
+    }
+    report(end.problem, end.at);
   };
   const handle: ServerRoom = {
     describe(info) {
@@ -121,7 +196,7 @@ function joinServer(server: ServerSettings, code: string, mode: JoinMode, handle
       if (joined) send({ t: "info", ...info });
     },
     record(id, game) {
-      if (!joined || socket?.readyState !== WebSocket.OPEN) return Promise.resolve("unsent");
+      if (!joined || chosen?.socket?.readyState !== WebSocket.OPEN) return Promise.resolve("unsent");
       return new Promise((done) => {
         const timer = setTimeout(() => {
           waitingRecords.delete(id);
@@ -154,7 +229,7 @@ function joinServer(server: ServerSettings, code: string, mode: JoinMode, handle
     getPeers: () => ({}),
     leave: async () => {
       left = true;
-      socket?.close(1000);
+      for (const a of tries) a.socket?.close(1000);
     },
   };
   const meetPeer = (id: string) => {
@@ -165,86 +240,113 @@ function joinServer(server: ServerSettings, code: string, mode: JoinMode, handle
   const losePeer = (id: string) => {
     if (peers.delete(id)) room.onPeerLeave?.(id);
   };
-  // Connect once the caller has set its handlers (rooms.ts sets them right after joining).
-  setTimeout(() => {
-    if (left) return;
-    try {
-      socket = new WebSocket(server.address);
-    } catch {
-      return report("unreachable");
+  const closeProblem = (code: number): ServerProblem => (code === 4008 ? "limit" : code === 4003 ? "revoked" : "closed");
+  /** What a server said on its connection `a` (`timer`: its time to welcome this program). */
+  const hear = (a: Try, m: Record<string, unknown>, timer: ReturnType<typeof setTimeout>) => {
+    switch (m.t) {
+      case "welcome":
+        a.welcomed = true;
+        clearTimeout(timer);
+        a.seats = typeof m.seats === "number" ? m.seats : 0;
+        a.records = m.records === true;
+        // Several servers: said of the one the room is found on.
+        if (single) handlers.onWelcome?.(a.seats, a.records);
+        // An older server that keeps no passwords (its welcome doesn't say it does) would make this room open to all: not made
+        // there. (Joining one there needs none: it can't have one.)
+        if (password !== null && m.passwords !== true && mode !== "join") {
+          fail(a, "nopassword");
+          a.socket?.close(1000);
+          break;
+        }
+        sendOn(a, { t: "join", room: code, mode, ...(password !== null ? { password } : {}) });
+        break;
+      case "joined":
+        // The same code on two servers (a rare draw): the room is the first one found.
+        if (chosen) {
+          drop(a);
+          break;
+        }
+        chosen = a;
+        for (const other of tries) if (other !== a) drop(other);
+        if (!single) handlers.onWelcome?.(a.seats, a.records);
+        handlers.onServer?.(a.server);
+        joined = true;
+        if (described) send({ t: "info", ...described });
+        handlers.onRoom?.(handle);
+        if (Array.isArray(m.peers)) for (const id of m.peers) if (typeof id === "string") meetPeer(id);
+        break;
+      case "recorded":
+        if (a !== chosen) break;
+        if (typeof m.id === "string") waitingRecords.get(m.id)?.(typeof m.kept === "string" ? (m.kept as Kept) : "error");
+        waitingRecords.delete(String(m.id));
+        break;
+      case "peer":
+        if (a === chosen && typeof m.id === "string") meetPeer(m.id);
+        break;
+      case "gone":
+        if (a === chosen && typeof m.id === "string") losePeer(m.id);
+        break;
+      case "from":
+        if (a === chosen && typeof m.id === "string" && peers.has(m.id)) {
+          const action = actions.get("sve") ?? [...actions.values()][0];
+          void action?.onMessage?.(m.d as JsonValue, { peerId: m.id } as Parameters<NonNullable<MessageAction<JsonValue>["onMessage"]>>[1]);
+        }
+        break;
+      case "refused":
+      case "nojoin":
+      case "closed":
+        if (a === chosen) report(problemOf(m.why), { server: a.server, unasked: null });
+        else fail(a, problemOf(m.why));
+        break;
+      default:
+        break;
     }
-    const ws = socket;
+  };
+  const connect = (a: Try) => {
+    let ws: WebSocket;
+    try {
+      ws = new WebSocket(a.server.address);
+    } catch {
+      return fail(a, "unreachable");
+    }
+    a.socket = ws;
     const timer = setTimeout(() => {
-      if (!welcomed) {
-        report("unreachable");
+      if (!a.welcomed) {
+        fail(a, "unreachable");
         ws.close();
       }
     }, ANSWER_MS);
-    ws.onopen = () => send({ t: "hello", v: RELAY_PROTOCOL, app: APP_ID, key: server.key });
+    ws.onopen = () => sendOn(a, { t: "hello", v: RELAY_PROTOCOL, app: APP_ID, key: a.server.key });
     ws.onmessage = (event: MessageEvent) => {
-      if (left || typeof event.data !== "string") return;
+      if (left || a.dropped || typeof event.data !== "string") return;
       let m: Record<string, unknown>;
       try {
         m = JSON.parse(event.data) as Record<string, unknown>;
       } catch {
         return;
       }
-      switch (m.t) {
-        case "welcome":
-          welcomed = true;
-          clearTimeout(timer);
-          handlers.onWelcome?.(typeof m.seats === "number" ? m.seats : 0, m.records === true);
-          // An older server that keeps no passwords (its welcome doesn't say it does) would make this room open to all: not made
-          // there. (Joining one there needs none: it can't have one.)
-          if (password !== null && m.passwords !== true && mode !== "join") {
-            report("nopassword");
-            ws.close(1000);
-            break;
-          }
-          send({ t: "join", room: code, mode, ...(password !== null ? { password } : {}) });
-          break;
-        case "joined":
-          joined = true;
-          if (described) send({ t: "info", ...described });
-          handlers.onRoom?.(handle);
-          if (Array.isArray(m.peers)) for (const id of m.peers) if (typeof id === "string") meetPeer(id);
-          break;
-        case "recorded":
-          if (typeof m.id === "string") waitingRecords.get(m.id)?.(typeof m.kept === "string" ? (m.kept as Kept) : "error");
-          waitingRecords.delete(String(m.id));
-          break;
-        case "peer":
-          if (typeof m.id === "string") meetPeer(m.id);
-          break;
-        case "gone":
-          if (typeof m.id === "string") losePeer(m.id);
-          break;
-        case "from":
-          if (typeof m.id === "string" && peers.has(m.id)) {
-            const action = actions.get("sve") ?? [...actions.values()][0];
-            void action?.onMessage?.(m.d as JsonValue, { peerId: m.id } as Parameters<NonNullable<MessageAction<JsonValue>["onMessage"]>>[1]);
-          }
-          break;
-        case "refused":
-        case "nojoin":
-        case "closed":
-          report(problemOf(m.why));
-          break;
-        default:
-          break;
-      }
+      hear(a, m, timer);
     };
     ws.onclose = (event: CloseEvent) => {
       clearTimeout(timer);
+      if (a !== chosen) {
+        if (!left && !a.dropped) fail(a, a.welcomed ? closeProblem(event.code) : "unreachable");
+        return;
+      }
       joined = false;
       for (const done of waitingRecords.values()) done("unsent");
       waitingRecords.clear();
       if (left) return;
       // Why (a refusal was said before the close), then everyone in the room is gone for this program: a joining program
       // leaves the room with its link (rooms.ts), and would hear nothing more.
-      report(!welcomed ? "unreachable" : event.code === 4008 ? "limit" : event.code === 4003 ? "revoked" : "closed");
+      report(closeProblem(event.code), { server: a.server, unasked: null });
       for (const id of [...peers]) losePeer(id);
     };
+  };
+  // Connect once the caller has set its handlers (rooms.ts sets them right after joining).
+  setTimeout(() => {
+    if (left) return;
+    for (const a of tries) connect(a);
   }, 0);
   return room as unknown as Room;
 }

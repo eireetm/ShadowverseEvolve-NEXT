@@ -7,6 +7,7 @@ import type { FormatProblem } from "../formats/formats";
 import type { MessageKey } from "../i18n";
 import type { PeerLink, Route, Via } from "./link";
 import { CHAT_MAX, SPECTATOR_SEATS, type Hello, type JoinAs, type ReadyDeck, type Rules } from "./messages";
+import type { ServerSettings } from "./server-config";
 
 export type OnlinePhase =
   | { kind: "idle" }
@@ -58,20 +59,24 @@ export interface OnlineGame {
   seat: 0 | 1 | null;
 }
 
+/** What went wrong: a message, or one of several online servers' (named before it). */
+export type OnlineError = MessageKey | { key: MessageKey; server: string };
+
 export interface OnlineState {
   phase: OnlinePhase;
   /** When the phase began (ms since 1970), for "still looking" hints. */
   since: number;
   chat: ChatLine[];
   /** What went wrong last (shown until the next action). */
-  error: MessageKey | null;
+  error: OnlineError | null;
   prep: Prep;
   game: OnlineGame | null;
   /**
-   * The room of the last connection, to connect again the same way after losing it (null: codes by hand); `server`: on the
-   * online server (else on the public networks); its `password` on the server (6 digits; null: none), said again then.
+   * The room of the last connection, to connect again the same way after losing it (null: codes by hand); `server`: the
+   * online server it is on (null: the public networks; while a code is looked for on several servers, the first of them
+   * until it is found); its `password` on the server (6 digits; null: none), said again then.
    */
-  room: { code: string; role: OnlineRole; server: boolean; password: string | null } | null;
+  room: { code: string; role: OnlineRole; server: ServerSettings | null; password: string | null } | null;
   /** Spectators watching the room's games (the host counts them and tells the others). */
   watchers: number;
   /** The room's spectator seats: the online server says how many its rooms have; the public networks' rooms have 2. */

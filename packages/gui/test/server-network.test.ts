@@ -11,16 +11,19 @@ import { startRelay, type Relay } from "../../server/src/relay";
 import type { PeerLink } from "../src/net/link";
 import { cleanName, parseMessage, type JoinAs, type NetMessage } from "../src/net/messages";
 import { meet, type Admission } from "../src/net/rooms";
-import { checkServer, serverNetwork, watchLobby, type JoinMode, type LobbyRoom, type RoomInfo, type ServerProblem, type ServerRoom } from "../src/net/server";
+import { checkServer, serverNetwork, watchLobby, type JoinMode, type LobbyRoom, type ProblemAt, type RoomInfo, type ServerProblem, type ServerRoom } from "../src/net/server";
 import { parseServerConfig, type ServerSettings } from "../src/net/server-config";
 
 // The online server as a network rooms meet on (src/net/server.ts), against the server's own relay (packages/server) run
 // here: the same room protocol as on the public networks (rooms.test.ts), the server's seats, and what it says when
-// something is wrong — no such room, a code taken, a wrong key, no server there, the connection closed.
+// something is wrong — no such room, a code taken, a wrong key, no server there, the connection closed. And a room looked
+// for on several servers (people of two servers playing together).
 
 const KEY = "key-for-the-tests";
 let server: Server | null = null;
 let relay: Relay | null = null;
+/** More servers (another relay each), for the rooms looked for on several. */
+const others: { server: Server; relay: Relay }[] = [];
 const meetings: { cancel(): void }[] = [];
 
 afterEach(async () => {
@@ -29,6 +32,10 @@ afterEach(async () => {
   relay = null;
   await new Promise<void>((done) => (server ? server.close(() => done()) : done()));
   server = null;
+  for (const other of others.splice(0)) {
+    other.relay.close();
+    await new Promise<void>((done) => other.server.close(() => done()));
+  }
 });
 
 /** The relay on a free port of this machine (plain ws://), with `seats` spectator seats a room. */
@@ -37,6 +44,16 @@ async function startServer(seats = 3): Promise<ServerSettings> {
   relay = startRelay(server, { ...readConfig(`[keys]\ntests = ${KEY}\n`).config, spectators: seats });
   await new Promise<void>((done) => server!.listen(0, "127.0.0.1", () => done()));
   return { name: "test", address: `ws://127.0.0.1:${(server.address() as AddressInfo).port}`, key: KEY };
+}
+
+/** Another server (its own relay and key, `seats` spectator seats a room): another group's. */
+async function startAnother(seats = 3): Promise<{ settings: ServerSettings; relay: Relay }> {
+  const key = "another-key-for-the-tests";
+  const other = { server: createServer(), relay: null as unknown as Relay };
+  other.relay = startRelay(other.server, { ...readConfig(`[keys]\nfriends = ${key}\n`).config, spectators: seats });
+  await new Promise<void>((done) => other.server.listen(0, "127.0.0.1", () => done()));
+  others.push(other);
+  return { settings: { name: "another", address: `ws://127.0.0.1:${(other.server.address() as AddressInfo).port}`, key }, relay: other.relay };
 }
 
 const until = async (check: () => boolean, ms = 4000): Promise<void> => {
@@ -48,12 +65,14 @@ const until = async (check: () => boolean, ms = 4000): Promise<void> => {
 };
 
 /**
- * A program in room `code` on the server (with the room's `password`, if any): its links, what each brought, the seats it was
- * told, the problems it heard.
+ * A program in room `code` on the server (or looked for on each of several; with the room's `password`, if any): its links,
+ * what each brought, the seats it was told, the problems it heard (and where), the server the room was found on.
  */
-function program(settings: ServerSettings, code: string, role: "host" | JoinAs, mode: JoinMode, password: string | null = null) {
+function program(settings: ServerSettings | ServerSettings[], code: string, role: "host" | JoinAs, mode: JoinMode, password: string | null = null) {
   const links: { link: PeerLink; as: JoinAs; got: NetMessage[]; closed: boolean }[] = [];
   const problems: ServerProblem[] = [];
+  const where: ProblemAt[] = [];
+  const found: ServerSettings[] = [];
   let seats = -1;
   let full = false;
   const open = (as: JoinAs) => links.filter((l) => l.as === as && !l.closed).length;
@@ -77,10 +96,24 @@ function program(settings: ServerSettings, code: string, role: "host" | JoinAs, 
       admit,
     },
     undefined,
-    [serverNetwork(settings, mode, { onWelcome: (n) => (seats = n), onProblem: (p) => problems.push(p) }, password)],
+    [
+      serverNetwork(
+        settings,
+        mode,
+        {
+          onWelcome: (n) => (seats = n),
+          onProblem: (p, at) => {
+            problems.push(p);
+            where.push(at);
+          },
+          onServer: (s) => found.push(s),
+        },
+        password,
+      ),
+    ],
   );
   meetings.push(meeting);
-  return { links, meeting, problems, seats: () => seats, isFull: () => full, players: () => open("player"), watchers: () => open("watch") };
+  return { links, meeting, problems, where, found, seats: () => seats, isFull: () => full, players: () => open("player"), watchers: () => open("watch") };
 }
 
 describe("rooms on the online server", () => {
@@ -203,6 +236,54 @@ describe("rooms on the online server", () => {
   });
 });
 
+describe("rooms on several online servers", () => {
+  /** A server nobody runs (its connections are refused). */
+  const DOWN: ServerSettings = { name: "down", address: "ws://127.0.0.1:9", key: "a-key-nobody-takes" };
+
+  it("a code is looked for on each server at once: the room is the one found, and said to be there", async () => {
+    const mine = await startServer(2);
+    const theirs = await startAnother(5);
+    const host = program(theirs.settings, "TWO001", "host", "create");
+    await until(() => host.seats() === 5);
+    const guest = program([mine, theirs.settings], "TWO001", "player", "join");
+    await until(() => host.players() === 1 && guest.links.length === 1);
+    // On the other server: its seats, its connection; nothing left on the first one.
+    expect([guest.found, guest.seats(), guest.problems]).toEqual([[theirs.settings], 5, []]);
+    await until(() => relay!.status().connections === 0);
+    const watcher = program([mine, theirs.settings], "TWO001", "watch", "join");
+    await until(() => host.watchers() === 1 && watcher.links.length === 1);
+    host.links.find((l) => l.as === "player")!.link.send({ t: "chat", text: "from the other server" });
+    await until(() => guest.links[0]!.got.length === 1);
+    expect(guest.links[0]!.got).toEqual([{ t: "chat", text: "from the other server" }]);
+    // A room is made on one server only, the first one given.
+    const second = program([theirs.settings, mine], "TWO002", "host", "create");
+    await until(() => second.seats() === 5);
+    expect([theirs.relay.status().rooms, relay!.status().rooms]).toEqual([2, 0]);
+  });
+
+  it("no such room anywhere; a server it couldn't be looked for on is said; one that has it says why not", async () => {
+    const mine = await startServer();
+    const theirs = await startAnother(4);
+    const nowhere = program([mine, theirs.settings], "NONE01", "player", "join");
+    await until(() => nowhere.problems.length === 1);
+    expect([nowhere.problems, nowhere.where]).toEqual([["missing"], [{ server: null, unasked: null }]]);
+    // One server can't be reached: the room isn't on the other, and may be on that one.
+    const half = program([mine, DOWN], "NONE01", "player", "join");
+    await until(() => half.problems.length === 1);
+    expect([half.problems, half.where]).toEqual([["missing"], [{ server: null, unasked: { server: DOWN, problem: "unreachable" } }]]);
+    // A locked room on the other server: its password, said of that server (and its seats).
+    program(theirs.settings, "LOCK01", "host", "create", "246802");
+    await until(() => theirs.relay.status().rooms === 1);
+    const asked = program([mine, theirs.settings], "LOCK01", "watch", "join");
+    await until(() => asked.problems.length === 1);
+    expect([asked.problems, asked.where, asked.found, asked.seats()]).toEqual([["password"], [{ server: theirs.settings, unasked: null }], [theirs.settings], 4]);
+    // No server takes this program: the first one's problem.
+    const refused = program([{ ...mine, key: "not-the-key-1" }, DOWN], "NONE02", "player", "join");
+    await until(() => refused.problems.length === 1);
+    expect([refused.problems, refused.where]).toEqual([["key"], [{ server: { ...mine, key: "not-the-key-1" }, unasked: null }]]);
+  });
+});
+
 describe("the server's lobby and the games it keeps", () => {
   const info = (over: Partial<RoomInfo> = {}): RoomInfo => ({ name: "小明", format: "standard", list: "10_26_JPN", turnOrder: "choose", public: true, players: 1, watchers: 0, playing: false, ...over });
 
@@ -275,10 +356,32 @@ describe("names and sharing in the programs' hello", () => {
 describe("the online server's configuration", () => {
   it("is the text its owner's program prints: the name, the address, the key; or nothing", () => {
     const text = "; comment\n[server]\nname = 北京\naddress = wss://203.0.113.7\nkey = abcdefgh12345678\n";
-    expect(parseServerConfig(text)).toEqual({ server: { name: "北京", address: "wss://203.0.113.7", key: "abcdefgh12345678" }, problems: [] });
+    expect(parseServerConfig(text)).toEqual({ servers: [{ name: "北京", address: "wss://203.0.113.7", key: "abcdefgh12345678" }], problems: [], parts: 1 });
     // No name: the address is the name; no server at all; a wrong address or no key said.
-    expect(parseServerConfig("address = ws://127.0.0.1:7461\r\nkey = abcdefgh\r\n").server?.name).toBe("127.0.0.1:7461");
-    expect(parseServerConfig("﻿; nothing here\n")).toEqual({ server: null, problems: [] });
-    expect(parseServerConfig("address = 203.0.113.7\nkey = short").problems).toEqual(["serverConfig.badAddress", "serverConfig.noKey"]);
+    expect(parseServerConfig("address = ws://127.0.0.1:7461\r\nkey = abcdefgh\r\n").servers[0]?.name).toBe("127.0.0.1:7461");
+    expect(parseServerConfig("﻿; nothing here\n")).toEqual({ servers: [], problems: [], parts: 0 });
+    expect(parseServerConfig("address = 203.0.113.7\nkey = short").problems).toEqual([
+      { at: 1, problem: "serverConfig.badAddress" },
+      { at: 1, problem: "serverConfig.noKey" },
+    ]);
+  });
+
+  it("says several servers, a [server] part each, in its order; a wrong part is said by its place and left out", () => {
+    const two = "[server]\nname = 北京\naddress = wss://203.0.113.7\nkey = abcdefgh12345678\n\n[server]\nname = 右手杯\naddress = wss://example.cn/sve-ws/\nkey = 12345678abcdefgh\n";
+    const servers = [
+      { name: "北京", address: "wss://203.0.113.7", key: "abcdefgh12345678" },
+      { name: "右手杯", address: "wss://example.cn/sve-ws/", key: "12345678abcdefgh" },
+    ];
+    expect(parseServerConfig(two)).toEqual({ servers, problems: [], parts: 2 });
+    // Another section (a server's own file's) says no server; the same server again, and a part without its key, are said.
+    const more = `${two}[rooms]\nspectators = 10\n[server]\naddress = WSS://203.0.113.7/\nkey = zyxwvuts\n[server]\nname = 第三\naddress = wss://198.51.100.1\n`;
+    expect(parseServerConfig(more)).toEqual({
+      servers,
+      problems: [
+        { at: 3, problem: "serverConfig.twice" },
+        { at: 4, problem: "serverConfig.noKey" },
+      ],
+      parts: 4,
+    });
   });
 });
