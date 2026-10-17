@@ -50,11 +50,14 @@ import type {
 import { knownController } from "./protocol";
 import { abilityOf, normalPlayCost, PSEUDO_DEF } from "./core-internals";
 import { ProcessingTracker } from "./processing";
+import { TurnClock } from "./turn-clock";
 import { findCard, forEachCard, withoutMemory } from "./view-utils";
 
 export interface Scheduler {
   /** Run `fn` after `ms` milliseconds; the returned function cancels it. */
   schedule(fn: () => void, ms: number): () => void;
+  /** The time now in milliseconds (the turn clock's; absent: Date.now). */
+  now?(): number;
 }
 
 export const timerScheduler: Scheduler = {
@@ -62,7 +65,14 @@ export const timerScheduler: Scheduler = {
     const timer = setTimeout(fn, ms);
     return () => clearTimeout(timer);
   },
+  now: () => Date.now(),
 };
+
+/**
+ * How long a person takes to pass a quick window they have nothing to play in (HostSettings.fakeQuick): about a second,
+ * from half a second to a second and a half, most often near the middle.
+ */
+const fakeQuickPause = (): number => Math.round(500 + 500 * (Math.random() + Math.random()));
 
 interface Bot {
   decide(game: GameSession): Answer;
@@ -244,8 +254,26 @@ export class GameHost {
   private options: GameOptions | null = null;
   private inputs: RecordedInput[] = [];
   private bots: [Bot | null, Bot | null] = [null, null];
-  private settings: HostSettings = { botDelayMs: 600, revealAll: false, paused: false, manualDebug: false, announceQuick: false, attackPauseMs: 0 };
+  private settings: HostSettings = {
+    botDelayMs: 600,
+    revealAll: false,
+    paused: false,
+    manualDebug: false,
+    announceQuick: false,
+    attackPauseMs: 0,
+    fakeQuick: false,
+    skipQuick: false,
+  };
   private cancelTimer: (() => void) | null = null;
+  /** Online play with a turn time limit (GameOptions.turnLimit): the players' time, the game it counts (its seed), its alarm. */
+  private clock: TurnClock | null = null;
+  private clockGame: string | null = null;
+  private cancelClock: (() => void) | null = null;
+  /**
+   * Online play: the inputs this program gave for its person by itself (quick windows passed, answers out of time), by index.
+   * They are that person's answers for the other program; "undo my last answer" goes past them.
+   */
+  private readonly automatic = new Set<number>();
   /** Log entries not sent yet. */
   private log: LogEntry[] = [];
   private logReset = false;
@@ -402,6 +430,14 @@ export class GameHost {
     this.game = game;
     this.options = options;
     this.inputs = [];
+    // A new game's clock, and nothing answered by itself yet. The same game again (answers taken back, a spectator coming
+    // back) keeps the time used: taking answers back gives no time back.
+    if (this.clockGame !== options.seed) {
+      this.clockGame = options.seed;
+      this.automatic.clear();
+      const online = !this.watching && options.controllers.includes("remote");
+      this.clock = online && options.turnLimit ? new TurnClock(options.turnLimit * 1000, () => this.now()) : null;
+    }
     // Watching, nobody plays: the replay's inputs are its answers.
     this.bots = this.watching
       ? [null, null]
@@ -433,12 +469,20 @@ export class GameHost {
     }
     this.replaying = false;
     this.quick = null;
+    for (const index of [...this.automatic]) if (index >= this.inputs.length) this.automatic.delete(index);
     this.pump();
+  }
+
+  /** The time now (ms): the scheduler's (tests set it), or the computer's. */
+  private now(): number {
+    return this.scheduler.now?.() ?? Date.now();
   }
 
   private answer(seat: PlayerId, answer: Answer): void {
     // The other program is being asked to take an answer back: this person's next one waits for what it says.
     if (this.hold && !this.isRemote(seat)) return;
+    // Out of time (GameOptions.turnLimit): this program answers for them now.
+    if (this.clock?.out(seat) && !this.isRemote(seat)) return;
     const game = this.game;
     const decision = game?.decision;
     if (!game || !decision) return this.error("there is no decision to answer");
@@ -505,11 +549,15 @@ export class GameHost {
     const remotes = this.remotes();
     if (!this.options?.allowUndo || remotes.length !== 1 || this.desync || this.hold || this.game?.isOver) return null;
     const mine = opponentOf(remotes[0]!);
+    // Out of time, this program answers for them: nothing to take back.
+    if (this.clock?.out(mine)) return null;
     for (let i = this.inputs.length - 1; i >= 0; i--) {
       const { by, input } = this.inputs[i]!;
+      // The engine's passes, and this program's own for its person.
+      if (by === null || this.automatic.has(i)) continue;
       if (by === mine) return input.type === "concede" ? null : i;
       // The other player answered since.
-      if (by !== null) return null;
+      return null;
     }
     return null;
   }
@@ -586,7 +634,9 @@ export class GameHost {
   /**
    * Publish the state; if a bot must answer, answer after the delay. A quick play that has resolved is announced first, and
    * everything waits until a person has seen it ("acknowledge"); quick windows where passing is all a player can do are
-   * passed here, as the core's autoResolve would (GameOptions.askEveryQuickWindow).
+   * passed here, as the core's autoResolve would (GameOptions.askEveryQuickWindow) — online, by each player's own program
+   * when it answers its person's windows (GameOptions.ownQuickWindows: ownAnswer). Out of time, a player's program answers
+   * for them (GameOptions.turnLimit).
    */
   private pump(): void {
     this.stopTimer();
@@ -598,9 +648,37 @@ export class GameHost {
     this.settleLook();
     if (game.isOver) this.announcement = null;
     for (;;) {
+      this.tick();
+      // Out of time: what this person hasn't seen yet doesn't hold the game.
+      if (this.localOutOfTime()) {
+        this.announcement = null;
+        this.looked = null;
+      }
       const decision = game.decision;
       if (this.announcement || this.looked || this.desync || !decision) break;
-      if (onlyPass(decision)) {
+      const own = this.ownAnswer(decision);
+      if (own && own.delay > 0) {
+        // A person's pause (or the attack's): the window isn't shown to this person meanwhile, the other program waits.
+        const seat = decision.player;
+        this.passing = true;
+        this.publish(false);
+        this.cancelTimer = this.scheduler.schedule(() => {
+          this.cancelTimer = null;
+          this.passing = false;
+          if (this.answerFor(seat, own.answer)) this.pump();
+        }, own.delay);
+        this.armClock();
+        return;
+      }
+      if (own) {
+        if (!this.answerFor(decision.player, own.answer)) return;
+        this.settleQuick();
+        this.settleLook();
+        continue;
+      }
+      // Online, each window is its player's program's to answer; with nobody else's program here (an online game's replay
+      // going on at one screen), the host passes them as before.
+      if (onlyPass(decision) && !(this.options?.ownQuickWindows && this.remotes().length > 0)) {
         // After an attack is declared (CR 8.4.5-8.4.7), the table shows it a moment before its combat.
         if (decision.type === "quick" && decision.timing === "attack" && this.settings.attackPauseMs > 0) {
           this.passing = true;
@@ -652,6 +730,67 @@ export class GameHost {
     this.publish(thinking);
     // A bot answers a decision with a single answer (a main phase it can only end) without the pause.
     if (thinking) this.cancelTimer = this.scheduler.schedule(() => this.stepBot(), forcedAnswer(decision) ? 0 : this.settings.botDelayMs);
+    this.armClock();
+  }
+
+  /**
+   * Online play: an answer this program gives for its person by itself, and after how long. Out of time, the core's default
+   * answer at once (it ends the turn, passes, declines, selects as few as allowed). With GameOptions.ownQuickWindows, a
+   * quick window where passing is all they can do — or any, when they skip quick windows (HostSettings.skipQuick) — is
+   * passed after a person's pause (fakeQuick) or the attack's pause. Not while an answer is being taken back (hold).
+   */
+  private ownAnswer(decision: Decision): { answer: Answer; delay: number } | null {
+    const seat = decision.player;
+    if (this.remotes().length !== 1 || this.isRemote(seat) || this.bots[seat] || this.hold) return null;
+    if (this.clock?.out(seat)) return { answer: defaultAnswer(decision), delay: 0 };
+    if (!this.options?.ownQuickWindows || decision.type !== "quick" || !(onlyPass(decision) || this.settings.skipQuick)) return null;
+    const attack = decision.timing === "attack" ? this.settings.attackPauseMs : 0;
+    return { answer: { type: "quick", action: { type: "pass" } }, delay: this.settings.fakeQuick ? Math.max(attack, fakeQuickPause()) : attack };
+  }
+
+  /** This program's answer for its person: played and sent to the other program as theirs; false when it failed (said). */
+  private answerFor(seat: PlayerId, answer: Answer): boolean {
+    const sent = this.outgoing();
+    const index = this.inputs.length;
+    try {
+      this.apply(answer, seat);
+    } catch (err) {
+      this.error(err);
+      return false;
+    }
+    this.automatic.add(index);
+    sent?.(answer);
+    return true;
+  }
+
+  /** The turn clock follows the game (online play with a turn time limit): whose time runs from now. */
+  private tick(): void {
+    const game = this.game;
+    if (!this.clock || !game || this.replaying) return;
+    const state = game.state;
+    this.clock.follow({ turn: state.phase === "setup" ? 0 : state.turn, active: state.activePlayer, deciding: game.decision?.player ?? null, over: game.isOver });
+  }
+
+  /** Whether the time running is this program's person's, and it is out. */
+  private localOutOfTime(): boolean {
+    const running = this.clock?.runningFor;
+    return running !== null && running !== undefined && this.remotes().length === 1 && !this.isRemote(running) && this.clock!.out(running);
+  }
+
+  /** Online play with a turn time limit: come back when this person's time runs out (their program answers for them then). */
+  private armClock(): void {
+    this.cancelClock?.();
+    this.cancelClock = null;
+    const clock = this.clock;
+    const running = clock?.runningFor;
+    if (!clock || running === null || running === undefined || this.remotes().length !== 1 || this.isRemote(running) || this.game?.isOver) return;
+    const left = clock.timeLeft(running);
+    if (left > 0) {
+      this.cancelClock = this.scheduler.schedule(() => {
+        this.cancelClock = null;
+        this.pump();
+      }, left + 1);
+    }
   }
 
   /** One bot answer (also the debug "step" while bots are paused). A failing bot gives the core's safe default answer. */
@@ -708,8 +847,9 @@ export class GameHost {
     for (const [i, { input, by }] of replay.inputs.entries()) {
       const decision = game.decision;
       if (!decision || game.isOver) break;
-      // A step goes to after each answer of a player, and after the quick window of each attack (its combat).
-      const stop = by !== null || (decision.type === "quick" && decision.timing === "attack");
+      // A step goes to after each answer of a player, and after the quick window of each attack (its combat). A window where
+      // passing was all a player could do, passed by their program (GameOptions.ownQuickWindows), is no answer of theirs.
+      const stop = (by !== null && !onlyPass(decision)) || (decision.type === "quick" && decision.timing === "attack");
       let events: readonly GameEvent[];
       try {
         events = game.act(input, by ?? undefined);
@@ -741,7 +881,8 @@ export class GameHost {
   private watchPause(next: RecordedInput): number {
     const decision = this.game!.decision;
     if (this.announcement) return 1800; // a Quick play: time to read its window
-    if (next.by === null) return decision?.type === "quick" && decision.timing === "attack" ? 600 : 0; // the attack stands a moment
+    // The engine's passes, and a player's where passing was all they could do: the attack stands a moment.
+    if (next.by === null || (decision && onlyPass(decision))) return decision?.type === "quick" && decision.timing === "attack" ? 600 : 0;
     return decision?.type === "mainPhase" || decision?.type === "quick" ? 1100 : 700;
   }
 
@@ -805,8 +946,9 @@ export class GameHost {
     const remotes = this.remotes();
     if (remotes.length === 0) return null;
     const allowUndo = !!this.options?.allowUndo;
-    if (remotes.length === 2) return { seat: null, remote: null, desync: this.desync, spectating: true, allowUndo, undo: null, revealAllowed: this.spectatorReveal };
-    return { seat: opponentOf(remotes[0]!), remote: remotes[0]!, desync: this.desync, spectating: false, allowUndo, undo: this.undoPoint(), revealAllowed: false };
+    const clock = this.clock?.view() ?? null;
+    if (remotes.length === 2) return { seat: null, remote: null, desync: this.desync, spectating: true, allowUndo, undo: null, revealAllowed: this.spectatorReveal, clock };
+    return { seat: opponentOf(remotes[0]!), remote: remotes[0]!, desync: this.desync, spectating: false, allowUndo, undo: this.undoPoint(), revealAllowed: false, clock };
   }
 
   private watchState(): WatchState | null {
@@ -1209,6 +1351,7 @@ export class GameHost {
     const game = this.game;
     const options = this.options;
     if (!game || !options) return;
+    this.tick();
     const perspective = this.perspective();
     const view = this.view(perspective);
     const update: GameUpdate = {

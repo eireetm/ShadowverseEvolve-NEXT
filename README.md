@@ -284,6 +284,8 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 - **对局**：双方各自运行同一局，只同步每一步的回答。断线后可以重连，接着打。
   - **悔棋**：房主在规则里勾选"允许悔棋"（使用服务器时在创建房间之前，也可以在房间里改）。对局中在侧边栏"调试"里点"撤销我的上一个回答"：你上一个回答之后对方还没操作过，两边就一起退回到那一步；对方操作过就不能撤销。观战者也跟着退。
   - 联机时种子和"保存复现包"在对局结束后才显示（有了它们，改过的程序能推算出牌组顺序）。
+  - **回合时间限制**：房主在规则里勾选"回合时间限制"，填秒数（先给 600 秒，可填 10–3600）。每位玩家每轮有这么多秒：自己的回合，加上之后对手回合里自己回答快速等的时间；每到自己的回合重新计时。牌桌中间显示剩余时间，最后 30 秒变红；超时后程序自动结束回合。
+  - **快速时点**：每个快速时点都由那位玩家自己的程序回答，对手看不出你手里有没有快速。侧边栏"调试"最上面有两个选项（默认关）："假快速时点"：没有能用的快速时也停 1 秒左右，像在考虑；"关闭快速时点"：所有快速时点都自动"不发动"，看起来像手里没有快速。
   - **聊天提醒**：设置 → 联机 →"联机聊天提醒"（默认关）。打开后，对手或观战者发了聊天消息时，屏幕上方会闪一下"有人发了一条聊天消息"；自己发的不提醒。
 - **观战**：知道房间号的人点"观战"进房间看对局。P2P 的房间最多 2 人；用服务器时由服务器决定（默认 10 人）。
   - 只能看双方都看得到的信息（看不到手牌），可以换边；不能操作，也不能发言（能看到聊天）。
@@ -669,6 +671,8 @@ Sound effects (26):
 - **The game**: each program runs the same game and only the answers are exchanged. After a lost connection, reconnect and play on.
   - **Taking back**: the host ticks "Allow taking back answers" in the rules (on the server, before making the room; it can be changed in the room too). In the game, "Undo my last answer" on the sidebar's Debug tab takes both programs back to before your last answer, while the other player hasn't answered since; after they have, it can't. Spectators follow.
   - Online, the seed and "Save a bug report file" are shown once the game is over (with them, a changed program could work out the decks' order).
+  - **Turn time limit**: the host ticks "Turn time limit" in the rules and gives the seconds (600 at first, 10–3600). Each player has that many seconds for their turn plus their answers (Quick and the like) in the other player's turn after it, given again at the start of each of their turns. The middle of the table shows the time left, red in the last 30 seconds; out of time, the turn ends by itself.
+  - **Quick windows**: each Quick window is answered by its player's own program, so the other player can't tell whether you have a Quick card. The sidebar's Debug tab begins with two options (off by default): "Fake Quick pauses": with nothing to play, the game still stops about a second, as if you were deciding; "Skip Quick windows": every Quick window is answered "no" for you, as if you had none.
   - **Chat notice**: Settings > Online > "Online chat notice" (off by default). With it on, "Someone sent a chat message" flashes at the top of the screen when the other player or a spectator writes in the chat; your own messages don't.
 - **Watching**: anyone with the room code can click "Watch" to watch the room's games: 2 spectators a room at most without the server; with it, as many as the server says (10 by default).
   - Spectators see only what both players can see (no hands) and can swap sides; they can't play or chat (they read the chat).

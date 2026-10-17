@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { createEngine, randomAnswer, randomInt, seedRng, type RngState } from "@sve/core";
+import { ALL_AUTO_RESOLVABLE, createEngine, defaultAnswer, randomAnswer, randomInt, seedRng, type GameState, type RngState } from "@sve/core";
 import { ALL_CARDS, ALL_SCRIPTS } from "@sve/core/sets";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { GameHost } from "../src/engine/game-host";
-import type { FromWorker, GameOptions, GameUpdate, RecordedInput } from "../src/engine/protocol";
+import { GameHost, type Scheduler } from "../src/engine/game-host";
+import type { FromWorker, GameOptions, GameUpdate, HostSettings, RecordedInput } from "../src/engine/protocol";
 import { parseDeckFile, toDeckList } from "../src/decks/format";
 
 // Online play: two programs play the same game, each with its person's seat; only answers go between them,
@@ -22,7 +22,13 @@ interface Side {
   rng: RngState;
 }
 
-function side(seat: 0 | 1, options: GameOptions, announce: boolean): Side {
+function side(
+  seat: 0 | 1,
+  options: GameOptions,
+  announce: boolean,
+  scheduler: Scheduler = { schedule: () => () => undefined },
+  settings: Partial<HostSettings> = {},
+): Side {
   const messages: FromWorker[] = [];
   const outbox: Side["outbox"] = [];
   const host = new GameHost(
@@ -31,9 +37,9 @@ function side(seat: 0 | 1, options: GameOptions, announce: boolean): Side {
       messages.push(m);
       if (m.kind === "localInput") outbox.push(m);
     },
-    { schedule: () => () => undefined },
+    scheduler,
   );
-  host.handle({ kind: "settings", settings: { botDelayMs: 0, attackPauseMs: 0, announceQuick: announce } });
+  host.handle({ kind: "settings", settings: { botDelayMs: 0, attackPauseMs: 0, announceQuick: announce, ...settings } });
   const controllers: GameOptions["controllers"] = seat === 0 ? ["human", "remote"] : ["remote", "human"];
   host.handle({ kind: "start", options: { ...options, controllers } });
   const last = () => (messages.filter((m) => m.kind === "update").at(-1) as { update: GameUpdate }).update;
@@ -87,8 +93,8 @@ describe("online play: two programs, one game", () => {
       const a = side(0, options(seed), announce);
       const b = side(1, options(seed), announce);
       // Each side is told whose seat is the other program's; nobody is asked the other's decisions.
-      expect(a.last().online).toEqual({ seat: 0, remote: 1, desync: null, spectating: false, allowUndo: false, undo: null, revealAllowed: false });
-      expect(b.last().online).toEqual({ seat: 1, remote: 0, desync: null, spectating: false, allowUndo: false, undo: null, revealAllowed: false });
+      expect(a.last().online).toEqual({ seat: 0, remote: 1, desync: null, spectating: false, allowUndo: false, undo: null, revealAllowed: false, clock: null });
+      expect(b.last().online).toEqual({ seat: 1, remote: 0, desync: null, spectating: false, allowUndo: false, undo: null, revealAllowed: false, clock: null });
       play(a, b);
       expect(a.last().result).not.toBeNull();
       expect(b.last().result).toEqual(a.last().result);
@@ -169,6 +175,24 @@ describe("online play: two programs, one game", () => {
     expect(update.decision).not.toBeNull();
   });
 
+  it("an online game's replay whose programs answered their own quick windows goes on at one screen: the host passes those again", () => {
+    const a = side(0, { ...options("online-replay-own"), ownQuickWindows: true }, false);
+    const b = side(1, { ...options("online-replay-own"), ownQuickWindows: true }, false);
+    play(a, b, 0, 30);
+    const messages: FromWorker[] = [];
+    const local = new GameHost(engine, (m) => messages.push(m), { schedule: () => () => undefined });
+    local.handle({ kind: "loadReplay", replay: a.host.replay()! });
+    const last = () => (messages.filter((m) => m.kind === "update").at(-1) as { update: GameUpdate }).update;
+    // Both people go on (the core's default answers) for a while: a window where passing is all they can do is never asked.
+    for (let i = 0; i < 60 && last().decision && !last().result; i++) {
+      const d = last().decision!.decision;
+      expect(d.type === "quick" && d.actions.length === 1).toBe(false);
+      local.handle({ kind: "answer", seat: d.player, answer: defaultAnswer(d) });
+    }
+    expect(local.session!.state.turn).toBeGreaterThan(a.host.session!.state.turn);
+    expect(messages.filter((m) => m.kind === "error")).toEqual([]);
+  });
+
   it("a player who concedes loses on both sides at once", () => {
     const a = side(0, options("online-concede"), false);
     const b = side(1, options("online-concede"), false);
@@ -213,7 +237,7 @@ describe("online play: spectators", () => {
     const a = side(0, options("watch-1"), false);
     const b = side(1, options("watch-1"), false);
     const w = spectator(options("watch-1"));
-    expect(w.last().online).toEqual({ seat: null, remote: null, desync: null, spectating: true, allowUndo: false, undo: null, revealAllowed: false });
+    expect(w.last().online).toEqual({ seat: null, remote: null, desync: null, spectating: true, allowUndo: false, undo: null, revealAllowed: false, clock: null });
     play(a, b);
     expect(a.last().result).not.toBeNull();
     const rng = seedRng("watch-order");
@@ -382,5 +406,244 @@ describe("online play: taking an answer back (a room that allows it)", () => {
     expect(c.last().online!.undo).toBeNull();
     c.host.handle({ kind: "takeBack", inputs: 0, seat: 0 });
     expect(tookBack(c.messages)).toMatchObject({ ok: false });
+  });
+});
+
+// Each player's program answers their quick windows (GameOptions.ownQuickWindows): the other side can't tell from the game
+// whether a player had a Quick card to play. With a turn time limit, each program holds its person to their time.
+
+/** Time that moves only when told (the turn clock and the pauses), shared by both programs; the delays asked for. */
+class VirtualTime implements Scheduler {
+  time = 0;
+  readonly asked: number[] = [];
+  private timers: { at: number; n: number; fn: () => void }[] = [];
+  private seq = 0;
+  schedule(fn: () => void, ms: number): () => void {
+    const timer = { at: this.time + ms, n: this.seq++, fn };
+    this.timers.push(timer);
+    this.asked.push(ms);
+    return () => {
+      this.timers = this.timers.filter((t) => t !== timer);
+    };
+  }
+  now(): number {
+    return this.time;
+  }
+  /** Move on by `ms`, running the timers due on the way, in order. */
+  advance(ms: number): void {
+    const end = this.time + ms;
+    for (;;) {
+      const due = this.timers.filter((t) => t.at <= end).sort((x, y) => x.at - y.at || x.n - y.n)[0];
+      if (!due) break;
+      this.timers = this.timers.filter((t) => t !== due);
+      this.time = due.at;
+      due.fn();
+    }
+    this.time = end;
+  }
+}
+
+const own = (seed: string, a?: string, b?: string): GameOptions => ({ ...options(seed, a, b), ownQuickWindows: true });
+const state = (s: Side): GameState => s.host.session!.state;
+
+/** Both programs' answers to each other, until none is left. */
+function settle(a: Side, b: Side): void {
+  for (let i = 0; i < 50 && a.outbox.length + b.outbox.length > 0; i++) {
+    deliver(a, b);
+    deliver(b, a);
+  }
+}
+
+/** Each person answers with the core's default answer (as quick as can be) until `done`. */
+function answerByDefault(a: Side, b: Side, done: () => boolean, limit = 400): void {
+  for (let i = 0; i < limit && !done(); i++) {
+    for (const s of [a, b]) {
+      const d = s.last().decision?.decision;
+      if (d) s.host.handle({ kind: "answer", seat: d.player, answer: defaultAnswer(d) });
+    }
+    settle(a, b);
+  }
+}
+
+/** Play at random to the end, letting time pass (2 s) whenever neither person has anything to answer and nothing is on its way. */
+function playTimed(a: Side, b: Side, time: VirtualTime, steps = 8000): void {
+  for (let step = 0; step < steps; step++) {
+    let acted = false;
+    for (const s of [a, b]) {
+      const update = s.last();
+      if (update.result || update.online?.desync) continue;
+      if (update.announcement) {
+        s.host.handle({ kind: "acknowledge", seq: update.announcement.seq });
+        acted = true;
+      } else if (update.decision) {
+        s.host.handle({ kind: "answer", seat: update.decision.decision.player, answer: randomAnswer(s.rng, update.decision.decision) });
+        acted = true;
+      }
+    }
+    const moving = a.outbox.length + b.outbox.length > 0;
+    settle(a, b);
+    if (!acted && !moving) time.advance(2000);
+    if ((a.last().result && b.last().result) || a.last().online?.desync || b.last().online?.desync) return;
+  }
+}
+
+const errorsOf = (...sides: Side[]) => sides.flatMap((s) => s.messages.filter((m) => m.kind === "error"));
+
+describe("online play: each player's program answers their quick windows", () => {
+  it("passes its person's windows itself, sent as their answers; neither program passes the other's", () => {
+    for (const seed of ["own-1", "own-2"]) {
+      const a = side(0, own(seed), false);
+      const b = side(1, own(seed), true);
+      play(a, b);
+      expect(a.last().result).not.toBeNull();
+      expect(JSON.stringify(b.host.session!.state)).toBe(JSON.stringify(a.host.session!.state));
+      const inputs = a.host.replay()!.inputs;
+      expect(b.host.replay()!.inputs).toEqual(inputs);
+      const quick = inputs.filter((r) => r.input.type === "quick");
+      expect(quick.length).toBeGreaterThan(0);
+      expect(quick.every((r) => r.by !== null)).toBe(true);
+      expect(errorsOf(a, b)).toEqual([]);
+    }
+  }, 30_000);
+
+  it("skipping quick windows passes them all, also those with a Quick card to play; its person is never asked", () => {
+    let withOptions = 0;
+    for (const seed of ["skip-1", "skip-2", "skip-3"]) {
+      const a = side(0, own(seed), false, undefined, { skipQuick: true });
+      const b = side(1, own(seed), false);
+      play(a, b);
+      expect(a.last().result).not.toBeNull();
+      expect(errorsOf(a, b)).toEqual([]);
+      // The same game again on a session of its own, to see what each of seat 0's windows offered.
+      const replay = a.host.replay()!;
+      const autoResolve = ALL_AUTO_RESOLVABLE.filter((t) => t !== "mainPhase" && t !== "quick");
+      const game = engine.newGame({ seed, players: replay.options.decks, config: { deckRestrictions: true, autoResolve, manualActions: false, firstPlayer: null } });
+      for (const { input, by } of replay.inputs) {
+        const d = game.decision!;
+        if (d.type === "quick" && d.player === 0) {
+          expect(input).toEqual({ type: "quick", action: { type: "pass" } });
+          if (d.actions.length > 1) withOptions += 1;
+        }
+        game.act(input, by ?? undefined);
+      }
+      expect(a.messages.some((m) => m.kind === "update" && m.update.decision?.decision.type === "quick")).toBe(false);
+    }
+    // Seat 0 plays SD03 (21 Quick cards): some of those windows had one to play.
+    expect(withOptions).toBeGreaterThan(0);
+  }, 30_000);
+
+  it("a fake pause: a window with nothing to play is passed after about a second, hidden from its person meanwhile", () => {
+    const time = new VirtualTime();
+    const a = side(0, own("fake-1"), false, time, { fakeQuick: true });
+    const b = side(1, own("fake-1"), false, time);
+    playTimed(a, b, time);
+    expect(a.last().result).not.toBeNull();
+    expect(JSON.stringify(b.host.session!.state)).toBe(JSON.stringify(a.host.session!.state));
+    // Only seat 0's pauses are asked for here (no bots, no attack pause): half a second to a second and a half each.
+    const pauses = time.asked.filter((ms) => ms > 0);
+    expect(pauses.length).toBeGreaterThan(0);
+    expect(pauses.every((ms) => ms >= 500 && ms <= 1500)).toBe(true);
+    // Meanwhile its person is asked nothing and sees nobody being waited for.
+    const pausing = a.messages.filter((m) => m.kind === "update" && !m.update.result && m.update.decision === null && m.update.waitingFor === null);
+    expect(pausing.length).toBeGreaterThan(0);
+    expect(errorsOf(a, b)).toEqual([]);
+  }, 30_000);
+
+  it("'undo my last answer' goes past the windows its program passed by itself", () => {
+    const opts: GameOptions = { ...own("own-undo"), allowUndo: true };
+    const a = side(0, opts, false, undefined, { skipQuick: true });
+    const b = side(1, opts, false, undefined, { skipQuick: true });
+    answerByDefault(a, b, () => state(a).turn === 2 && state(a).phase === "main");
+    const second = state(a).activePlayer === 0 ? a : b;
+    // Its last input is its program's pass of the first turn's end-phase window; the other player answered before it.
+    expect(second.host.replay()!.inputs.at(-1)).toEqual({ input: { type: "quick", action: { type: "pass" } }, by: state(a).activePlayer });
+    expect(second.last().online?.undo).toBeNull();
+    expect(errorsOf(a, b)).toEqual([]);
+  });
+});
+
+describe("online play: the turn time limit", () => {
+  /** The clock as a program shows it now. */
+  const clockOf = (s: Side) => {
+    s.host.handle({ kind: "settings", settings: {} });
+    return s.last().online!.clock!;
+  };
+
+  it("runs the active player's time, the other's while they answer; out of time the turn ends by itself; each turn gives it again", () => {
+    const time = new VirtualTime();
+    const opts: GameOptions = { ...own("clock-1"), turnLimit: 30 };
+    // Both pass every quick window (at once: the test answers nothing else there).
+    const a = side(0, opts, false, time, { skipQuick: true });
+    const b = side(1, opts, false, time, { skipQuick: true });
+    expect(a.last().online?.clock).toEqual({ left: [30_000, 30_000], running: null, limit: 30_000 });
+    // The setup isn't timed.
+    answerByDefault(a, b, () => state(a).turn === 1 && state(a).phase === "main");
+    const active = state(a).activePlayer;
+    const other = (1 - active) as 0 | 1;
+    const [mine, theirs] = active === 0 ? [a, b] : [b, a];
+    expect(clockOf(mine)).toEqual({ left: [30_000, 30_000], running: active, limit: 30_000 });
+    time.advance(10_000);
+    expect(clockOf(mine).left[active]).toBe(20_000);
+    // The other program counts the same time (from its own clock).
+    expect(clockOf(theirs).running).toBe(active);
+    expect(clockOf(theirs).left[active]).toBe(20_000);
+
+    // Out of time: its program answers for its person (the core's default answers: the turn ends); the other's turn begins.
+    const before = mine.host.replay()!.inputs.length;
+    time.advance(20_001);
+    settle(a, b);
+    expect(state(a).turn).toBe(2);
+    expect(state(a).activePlayer).toBe(other);
+    expect(JSON.stringify(state(b))).toBe(JSON.stringify(state(a)));
+    expect(mine.host.replay()!.inputs.slice(before).some((r) => r.by === active)).toBe(true);
+    // The other player's whole time again; this person's stays out until their own turn: their window is passed at once.
+    expect(clockOf(theirs).running).toBe(other);
+    expect(clockOf(theirs).left[other]).toBe(30_000);
+    expect(clockOf(mine).left[active]).toBe(0);
+    answerByDefault(a, b, () => state(a).turn === 3);
+    expect(state(a).turn).toBe(3);
+    expect(clockOf(mine).running).toBe(active);
+    expect(clockOf(mine).left[active]).toBe(30_000);
+
+    // This person ends their turn; the other's end-phase window takes them a moment (a fake pause): their time, not this one's.
+    theirs.host.handle({ kind: "settings", settings: { fakeQuick: true } });
+    for (let i = 0; i < 50 && mine.last().decision; i++) {
+      const d = mine.last().decision!.decision;
+      mine.host.handle({ kind: "answer", seat: d.player, answer: defaultAnswer(d) });
+      deliver(mine, theirs);
+    }
+    expect(mine.last().waitingFor).toBe(other);
+    const left = clockOf(mine).left[active];
+    time.advance(400);
+    const during = clockOf(mine);
+    expect(during.running).toBe(other);
+    expect(during.left[active]).toBe(left);
+    expect(during.left[other]).toBe(29_600);
+    time.advance(1_200);
+    settle(a, b);
+    expect(state(a).turn).toBe(4);
+    expect(JSON.stringify(state(b))).toBe(JSON.stringify(state(a)));
+    expect(errorsOf(a, b)).toEqual([]);
+  });
+
+  it("a spectator follows a game whose players' programs answer their own quick windows (and a clock), to the same end", () => {
+    const opts: GameOptions = { ...own("own-watch"), turnLimit: 600 };
+    const a = side(0, opts, false);
+    const b = side(1, opts, true);
+    const w = spectator(opts);
+    play(a, b);
+    expect(a.last().result).not.toBeNull();
+    for (const m of answersOf(a, b)) w.host.handle({ kind: "remoteInput", index: m.index, input: m.input, hash: m.hash });
+    expect(w.last().result).toEqual(a.last().result);
+    expect(JSON.stringify(w.host.session!.state)).toBe(JSON.stringify(a.host.session!.state));
+    expect(w.host.replay()!.inputs).toEqual(a.host.replay()!.inputs);
+    expect(w.messages.filter((m) => m.kind === "error" || m.kind === "localInput")).toEqual([]);
+  }, 30_000);
+
+  it("no limit: no clock; a spectator's clock is only shown", () => {
+    const a = side(0, own("clock-none"), false);
+    expect(a.last().online?.clock).toBeNull();
+    const w = spectator({ ...own("clock-watch"), turnLimit: 60 });
+    expect(w.last().online?.clock).toEqual({ left: [60_000, 60_000], running: null, limit: 60_000 });
   });
 });

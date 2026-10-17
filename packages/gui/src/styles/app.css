@@ -1191,6 +1191,17 @@ option {
   color: #fff;
 }
 
+/* Online play with a turn time limit: whose time runs and how much is left; the last 30 seconds stand out. */
+.sve-center-clock {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.sve-center-clock-low {
+  color: var(--sve-bad);
+  font-weight: 700;
+}
+
 .sve-center-prompt {
   color: var(--sve-muted);
   line-height: 1.35;
@@ -2182,6 +2193,19 @@ option {
   gap: 6px;
   align-items: center;
   flex-wrap: wrap;
+}
+
+/* Online, how a player's program answers their quick windows: the debug tab's first part. */
+.sve-debug-quick {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(110, 200, 255, 0.22);
+}
+
+.sve-debug-quick .sve-hint {
+  margin: 0 0 4px;
 }
 
 .sve-debug-row input[type="number"] {
@@ -3280,6 +3304,24 @@ option {
   gap: 6px;
 }
 
+/* The turn time limit: its checkbox, then its seconds while it is on. */
+.sve-online-turn-limit {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+
+.sve-online-turn-limit-seconds {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sve-online-turn-limit-seconds input {
+  width: 5.5em;
+}
+
 .sve-online-lobby h4 {
   margin: 4px 0 6px;
   font-size: 14px;
@@ -3744,6 +3786,10 @@ button.sve-online-thanks-sponsor:hover {
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.sve-table[data-compact] .sve-center-status-timed .sve-center-prompt {
+  -webkit-line-clamp: 2;
 }
 
 .sve-table[data-compact] .sve-center-actions {
