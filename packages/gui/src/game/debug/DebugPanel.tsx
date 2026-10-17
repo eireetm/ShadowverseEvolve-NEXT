@@ -5,6 +5,7 @@ import type { GameUpdate } from "../../engine/protocol";
 import { hostApi, type HostInfo } from "../../host/api";
 import { useT } from "../../i18n";
 import { requestOnlineUndo } from "../../net/state";
+import { REVEAL_PAUSE_MS } from "../animation/plan";
 import { readReplayFile } from "../replay-files";
 
 /**
@@ -160,7 +161,7 @@ export function DebugPanel({ update }: { update: GameUpdate }) {
               onChange={(e) => {
                 const botDelayMs = Number(e.target.value);
                 updateSettings({ botDelayMs });
-                engine.send({ kind: "settings", settings: { botDelayMs, attackPauseMs: Math.min(botDelayMs, 500) } });
+                engine.send({ kind: "settings", settings: { botDelayMs, attackPauseMs: Math.min(botDelayMs, 500), revealPauseMs: botDelayMs > 0 ? REVEAL_PAUSE_MS : 0 } });
               }}
             />
           </label>

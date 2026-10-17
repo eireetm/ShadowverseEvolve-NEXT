@@ -68,13 +68,26 @@ export async function dialogBody(page: Page): Promise<Locator | null> {
 }
 
 /**
+ * OK on the announcement shown (a tap on a touch screen). The window closes by itself after 3 seconds, so it may be gone
+ * first; a click that fails while it is still there fails the test (a button covered or out of reach).
+ */
+export async function pressAnnouncementOk(page: Page, tap = false): Promise<void> {
+  const ok = page.getByTestId("announcement-ok");
+  try {
+    await (tap ? ok.tap({ timeout: 1_500 }) : ok.click({ timeout: 1_500 }));
+  } catch (err) {
+    if ((await ok.count()) > 0) throw err;
+  }
+}
+
+/**
  * A Quick card or ability resolved and the game waits until it has been seen (board/QuickAnnouncement.tsx): OK, then wait
  * until that announcement is gone (the next one may follow at once).
  */
 export async function acknowledge(page: Page): Promise<void> {
   const bar = page.locator(".sve-decision");
   const seq = await bar.getAttribute("data-announcement");
-  await page.getByTestId("announcement-ok").click();
+  await pressAnnouncementOk(page);
   if (seq !== null) await expect(bar).not.toHaveAttribute("data-announcement", seq);
 }
 

@@ -1045,6 +1045,102 @@ option {
   top: 3px;
 }
 
+/* A card put into a hand in public (searched, taken from a cemetery): the other player's turns face up in their hand,
+   larger and lit, shakes twice and turns back; one's own shakes twice. The times are the table's (animation/plan.ts). */
+.sve-hand-card.sve-card-revealed {
+  z-index: 30 !important;
+  pointer-events: none;
+}
+
+.sve-hand-opponent .sve-card-revealed {
+  --sve-card-width: var(--sve-reveal-width, calc(var(--sve-card-base) * 1.25));
+  margin-left: calc((var(--opponent-hand-card-width) - var(--sve-card-width)) / 2);
+}
+
+.sve-table[data-compact] .sve-hand-opponent .sve-card-revealed {
+  --sve-card-width: var(--sve-reveal-width, calc(var(--sve-card-base) * 1.6));
+}
+
+.sve-card-revealed .sve-card-face,
+.sve-card-searched .sve-card-face {
+  box-shadow:
+    0 0 0 2px var(--sve-reveal-glow, var(--sve-accent)),
+    0 0 16px 3px var(--sve-reveal-glow, var(--sve-accent));
+}
+
+.sve-reveal-in .sve-card-frame {
+  animation: sve-reveal-in 600ms ease-out;
+}
+
+.sve-reveal-out .sve-card-frame {
+  animation: sve-reveal-out 150ms ease-in forwards;
+}
+
+.sve-reveal-down .sve-card-frame {
+  animation: sve-reveal-down 150ms ease-out;
+}
+
+.sve-card-searched .sve-card-frame {
+  animation: sve-reveal-shake 420ms ease-in-out;
+}
+
+@keyframes sve-reveal-in {
+  0% {
+    transform: perspective(700px) rotateY(90deg);
+  }
+  25% {
+    transform: perspective(700px) rotateY(0deg) translateX(0);
+  }
+  40% {
+    transform: perspective(700px) translateX(calc(var(--sve-reveal-shake, 6px) * -1));
+  }
+  55% {
+    transform: perspective(700px) translateX(var(--sve-reveal-shake, 6px));
+  }
+  70% {
+    transform: perspective(700px) translateX(calc(var(--sve-reveal-shake, 6px) * -1));
+  }
+  85% {
+    transform: perspective(700px) translateX(var(--sve-reveal-shake, 6px));
+  }
+  100% {
+    transform: perspective(700px) translateX(0);
+  }
+}
+
+@keyframes sve-reveal-out {
+  from {
+    transform: perspective(700px) rotateY(0deg);
+  }
+  to {
+    transform: perspective(700px) rotateY(90deg);
+  }
+}
+
+@keyframes sve-reveal-down {
+  from {
+    transform: perspective(700px) rotateY(-90deg);
+  }
+  to {
+    transform: perspective(700px) rotateY(0deg);
+  }
+}
+
+@keyframes sve-reveal-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(calc(var(--sve-reveal-shake, 6px) * -1));
+  }
+  40%,
+  80% {
+    transform: translateX(var(--sve-reveal-shake, 6px));
+  }
+}
+
 /* Beside the mats: each player's panel, the turn and the buttons that finish a decision. */
 .sve-player-panel {
   position: absolute;
@@ -2083,6 +2179,19 @@ option {
 
 .sve-card-text p {
   margin: 0 0 4px;
+}
+
+/* A token the text names: a click shows its card in the panel. Words of the text, only underlined. */
+.sve-card-link {
+  color: var(--sve-card-link, inherit);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.sve-card-link:hover,
+.sve-card-link:focus-visible {
+  text-decoration-style: solid;
 }
 
 /* Below a card's text in a game: the abilities it was given, as the giving card quotes them, and that it lost them all. */

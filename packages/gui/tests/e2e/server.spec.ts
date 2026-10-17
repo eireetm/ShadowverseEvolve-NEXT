@@ -261,7 +261,8 @@ test("the Chinese online screen has the three boxes at its bottom, the sponsor's
 /** The cards of a seat's hand on a page, and how many of them show their face. */
 async function handFaces(page: Page, seat: 0 | 1): Promise<{ cards: number; faces: number }> {
   const cards = await page.locator(`[data-zone="${seat}:hand"] [data-card]`).count();
-  const backs = await page.locator(`[data-zone="${seat}:hand"] [data-card][data-hidden="true"]`).count();
+  // A card put into the hand in public is shown face up a moment (public): it is a back here.
+  const backs = await page.locator(`[data-zone="${seat}:hand"] :is([data-card][data-hidden="true"], [data-card].sve-card-revealed)`).count();
   return { cards, faces: cards - backs };
 }
 

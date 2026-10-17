@@ -281,7 +281,7 @@ function DeckOps({ update, player }: { update: GameUpdate; player: PlayerId }) {
     <>
       <Section title={t("manual.actions")}>
         <Amount label={t("manual.draw")} max={Math.max(1, Math.min(60, size + 1))} onApply={(count) => sendManual(update, { kind: "draw", player, count })} testId="manual-draw" />
-        <Amount label={t("manual.mill")} max={Math.max(1, Math.min(60, size))} onApply={(count) => sendManual(update, { kind: "mill", player, count })} />
+        <Amount label={t("manual.mill")} max={Math.max(1, Math.min(60, size))} onApply={(count) => sendManual(update, { kind: "mill", player, count })} testId="manual-mill" />
         <button type="button" onClick={() => sendManual(update, { kind: "shuffle", player })}>
           {t("manual.shuffle")}
         </button>

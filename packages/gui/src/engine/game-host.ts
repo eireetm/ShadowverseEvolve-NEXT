@@ -44,12 +44,15 @@ import type {
   RecordedInput,
   Replay,
   SeatController,
+  ToHandCard,
   ToWorker,
   WatchState,
 } from "./protocol";
 import { knownController } from "./protocol";
 import { abilityOf, normalPlayCost, PSEUDO_DEF } from "./core-internals";
 import { ProcessingTracker } from "./processing";
+import { flightDelay, planFlights, planTimeline } from "../game/animation/plan";
+import { revealedToHand, type Revealing } from "./reveals";
 import { TurnClock } from "./turn-clock";
 import { findCard, forEachCard, withoutMemory } from "./view-utils";
 
@@ -263,6 +266,7 @@ export class GameHost {
     attackPauseMs: 0,
     fakeQuick: false,
     skipQuick: false,
+    revealPauseMs: 0,
   };
   private cancelTimer: (() => void) | null = null;
   /** Online play with a turn time limit (GameOptions.turnLimit): the players' time, the game it counts (its seed), its alarm. */
@@ -292,6 +296,16 @@ export class GameHost {
   private looked: LookedCards | null = null;
   private lookedSeq = 0;
   private seeing: { player: PlayerId; cards: Map<CardId, CardInfo> } | null = null;
+  /**
+   * Cards put into a hand in public (engine/reveals.ts): what is revealed now, those not published yet, and until when the
+   * table is showing one the person can't see there (HostSettings.revealPauseMs): a bot's or the other program's next answer
+   * waits until then. A time, not a flag: what waits for it waits for the rest of it, never for it again. `revealFor`: how
+   * long it was set for (what is left is never more, whatever the computer's clock does meanwhile).
+   */
+  private readonly revealing: Revealing = new Map();
+  private toHand: ToHandCard[] = [];
+  private revealUntil = 0;
+  private revealFor = 0;
   /** What the decisions are part of (engine/processing.ts): display only. */
   private readonly processing = new ProcessingTracker();
   /** Inputs played again (rewind, replays) are not announced. */
@@ -451,6 +465,10 @@ export class GameHost {
     this.announcement = null;
     this.looked = null;
     this.seeing = null;
+    this.revealing.clear();
+    this.toHand = [];
+    this.revealUntil = 0;
+    this.revealFor = 0;
     this.processing.reset();
     this.remoteQueue = new Map();
     this.desync = null;
@@ -620,6 +638,14 @@ export class GameHost {
     this.record(events);
     this.followEvents(events);
     this.followLooks(events);
+    // Followed in inputs played again too (what is revealed goes on), shown only from the game being played.
+    const added = revealedToHand(events, this.revealing);
+    if (!this.replaying) this.toHand.push(...added);
+  }
+
+  /** How much longer the table shows a card put into a hand in public (revealUntil); 0 when it doesn't. */
+  private revealLeft(): number {
+    return Math.min(this.revealFor, Math.max(0, this.revealUntil - this.now()));
   }
 
   /** Follow what the decisions are part of (display only): a failure there forgets it, and never stops the game. */
@@ -665,8 +691,9 @@ export class GameHost {
         this.cancelTimer = this.scheduler.schedule(() => {
           this.cancelTimer = null;
           this.passing = false;
+          this.revealUntil = 0;
           if (this.answerFor(seat, own.answer)) this.pump();
-        }, own.delay);
+        }, Math.max(own.delay, this.revealLeft()));
         this.armClock();
         return;
       }
@@ -686,13 +713,14 @@ export class GameHost {
           this.cancelTimer = this.scheduler.schedule(() => {
             this.cancelTimer = null;
             this.passing = false;
+            this.revealUntil = 0;
             try {
               this.apply({ type: "quick", action: { type: "pass" } }, null);
             } catch (err) {
               return this.error(err);
             }
             this.pump();
-          }, this.settings.attackPauseMs);
+          }, Math.max(this.settings.attackPauseMs, this.revealLeft()));
           return;
         }
         try {
@@ -709,6 +737,18 @@ export class GameHost {
       const index = this.inputs.length;
       const next = this.remoteQueue.get(index);
       if (!next) break;
+      // A card the other program's answers just put into a hand in public is shown before its next answer is played.
+      if (this.toHand.length > 0 && this.settings.revealPauseMs > 0) this.publish(false);
+      const left = this.revealLeft();
+      if (left > 0) {
+        this.cancelTimer = this.scheduler.schedule(() => {
+          this.cancelTimer = null;
+          this.revealUntil = 0;
+          this.pump();
+        }, left);
+        this.armClock();
+        return;
+      }
       this.remoteQueue.delete(index);
       if (next.hash !== stateHash(game.state)) {
         this.desync = `${index + 1}`;
@@ -729,7 +769,7 @@ export class GameHost {
     const thinking = decision !== null && !this.announcement && !this.looked && this.bots[decision.player] !== null && !this.settings.paused;
     this.publish(thinking);
     // A bot answers a decision with a single answer (a main phase it can only end) without the pause.
-    if (thinking) this.cancelTimer = this.scheduler.schedule(() => this.stepBot(), forcedAnswer(decision) ? 0 : this.settings.botDelayMs);
+    if (thinking) this.cancelTimer = this.scheduler.schedule(() => this.stepBot(), Math.max(forcedAnswer(decision) ? 0 : this.settings.botDelayMs, this.revealLeft()));
     this.armClock();
   }
 
@@ -796,6 +836,7 @@ export class GameHost {
   /** One bot answer (also the debug "step" while bots are paused). A failing bot gives the core's safe default answer. */
   private stepBot(): void {
     this.cancelTimer = null;
+    this.revealUntil = 0;
     const game = this.game;
     const decision = game?.decision;
     if (!game || !decision) return;
@@ -880,15 +921,17 @@ export class GameHost {
   /** How long the table stays before the next input is played (at the normal speed). */
   private watchPause(next: RecordedInput): number {
     const decision = this.game!.decision;
-    if (this.announcement) return 1800; // a Quick play: time to read its window
+    if (this.announcement) return Math.max(1800, this.revealLeft()); // a Quick play: time to read its window
     // The engine's passes, and a player's where passing was all they could do: the attack stands a moment.
-    if (next.by === null || (decision && onlyPass(decision))) return decision?.type === "quick" && decision.timing === "attack" ? 600 : 0;
-    return decision?.type === "mainPhase" || decision?.type === "quick" ? 1100 : 700;
+    const pause = next.by === null || (decision && onlyPass(decision)) ? (decision?.type === "quick" && decision.timing === "attack" ? 600 : 0) : decision?.type === "mainPhase" || decision?.type === "quick" ? 1100 : 700;
+    // A card put into a hand in public: the time the table shows it.
+    return Math.max(pause, this.revealLeft());
   }
 
   /** Play the replay's inputs up to `position` (with the animations of what they do). */
   private watchInputs(position: number): void {
     this.cancelTimer = null;
+    this.revealUntil = 0;
     const watching = this.watching;
     const game = this.game;
     if (!watching || !game) return;
@@ -1292,7 +1335,13 @@ export class GameHost {
       if (viewer !== "all" && raw.type === "cardsLookedAt" && raw.player !== viewer) continue;
       const event = viewer === "all" ? raw : viewer === "public" ? redactEvent(redactEvent(raw, 0), 1) : redactEvent(raw, viewer);
       this.learn(event);
-      this.log.push({ seq: ++this.logSeq, turn: game.state.turn, event, cards: this.cardsIn(event) });
+      const entry: LogEntry = { seq: ++this.logSeq, turn: game.state.turn, event, cards: this.cardsIn(event) };
+      // An ability played (public, CR 10.6.2.7): its kind, for the page (the sound of activated abilities).
+      if (event.type === "abilityPlayed") {
+        const { kind, evolve } = summarizeAbility(abilityOf(this.engine, event.sourceDef, event.ability), event.sourceDef);
+        entry.ability = { kind, ...(evolve ? { evolve } : {}) };
+      }
+      this.log.push(entry);
     }
   }
 
@@ -1354,6 +1403,17 @@ export class GameHost {
     this.tick();
     const perspective = this.perspective();
     const view = this.view(perspective);
+    // Cards put into a hand in public that are still there; one the person can't see there holds the next answers a moment,
+    // from when it lands: the table's plan of this update (the same log and announcement it gets) says when its flight starts.
+    const toHand = this.toHand.filter((c) => view.players[c.player].hand.some((h) => h.id === c.id));
+    this.toHand = [];
+    const hidden = new Set(toHand.filter((c) => view.players[c.player].hand.some((h) => h.id === c.id && h.hidden)).map((c) => c.id));
+    if (hidden.size > 0 && this.settings.revealPauseMs > 0) {
+      const plan = planTimeline(this.log, this.announcement?.source ?? null);
+      const waits = planFlights(this.log).flatMap((f) => (f.card !== null && hidden.has(f.card) ? [flightDelay(f, plan)] : []));
+      this.revealFor = this.settings.revealPauseMs + Math.max(0, ...waits);
+      this.revealUntil = this.now() + this.revealFor;
+    }
     const update: GameUpdate = {
       seed: options.seed,
       controllers: options.controllers,
@@ -1363,6 +1423,7 @@ export class GameHost {
       manual: this.manualInfo(),
       announcement: this.announcement,
       looked: this.looked,
+      ...(toHand.length > 0 ? { toHand } : {}),
       watch: this.watchState(),
       online: this.onlineState(),
       perspective,
