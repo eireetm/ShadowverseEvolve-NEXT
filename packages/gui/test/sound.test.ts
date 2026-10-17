@@ -106,4 +106,35 @@ describe("the sounds of an update", () => {
       ["lose", null],
     ]);
   });
+
+  it("an activated ability played (CR 10.1.1.1); not an evolve ability (it sounds as it evolves), nor an automatic one", () => {
+    const played = (ability: LogEntry["ability"]): LogEntry => ({ ...entry({ type: "abilityPlayed", player: 0, source: "f1", sourceDef: "F", ability: 1 }), ability });
+    expect(planSounds([played({ kind: "activated" })], context())).toEqual([{ sfx: "activated", at: 0 }]);
+    const evolved = entry({ type: "evolved", card: "f1", evolveCard: "e1", superEvolved: false });
+    expect(planSounds([played({ kind: "activated", evolve: true }), evolved], context())).toEqual([{ sfx: "evolve", at: 0 }]);
+    // An automatic ability; an entry of an older message, which doesn't say.
+    expect(planSounds([played({ kind: "automatic" }), played(undefined)], context())).toEqual([]);
+  });
+
+  it("a card put into a hand in public sounds as the table shows it, once it has landed; one's own only with the animations on", () => {
+    // The other player's card searched and revealed (no id leaves a deck), and one's own taken from the cemetery: an effect of
+    // a card on the table selected it, so it waits for the arrow and the hit before it flies.
+    const log = [
+      entry({ type: "cardsMoved", moves: [move(null, "h1", zone(1, "deck"), zone(1, "hand"), "effect")] }),
+      entry({ type: "cardsSelected", player: 0, cards: ["c2"], source: "f9" }),
+      entry({ type: "cardsMoved", moves: [move("c2", "h2", zone(0, "cemetery"), zone(0, "hand"), "effect")] }),
+    ];
+    const revealed = [
+      { id: "h1", hidden: true },
+      { id: "h2", hidden: false },
+    ];
+    const searched = (timed: boolean) => planSounds(log, context(timed), null, revealed).filter((cue) => cue.sfx === "search");
+    expect(searched(true)).toEqual([
+      { sfx: "search", at: TIMING.flight },
+      { sfx: "search", at: TIMING.fromTable + TIMING.strike + TIMING.leave + TIMING.flight },
+    ]);
+    // Animations off: the other player's card shows face up at once; one's own isn't shaken.
+    expect(searched(false)).toEqual([{ sfx: "search", at: 0 }]);
+    expect(planSounds(log, context()).some((cue) => cue.sfx === "search")).toBe(false);
+  });
 });

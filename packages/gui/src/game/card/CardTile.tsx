@@ -1,5 +1,5 @@
 import type { CSSProperties, PointerEvent, ReactNode } from "react";
-import type { CardView, HiddenCardView, PlayerSideView } from "@sve/core";
+import type { CardId, CardView, HiddenCardView, PlayerSideView } from "@sve/core";
 import { cardName } from "../../app/catalog";
 import { useSettings } from "../../app/settings";
 import { useApp } from "../../app/store";
@@ -21,6 +21,8 @@ interface Props {
   card?: CardView | HiddenCardView | null;
   /** A card known only by definition (a decision's candidate in a hidden zone, a deck list). */
   info?: CardInfo | null;
+  /** The game's card drawn by `info` (a hidden card being shown face up): its id for the table's animations. */
+  cardId?: CardId;
   /** The side the card is on (to show an evolved follower's evolve card). */
   side?: PlayerSideView;
   size?: "small" | "normal" | "large";
@@ -40,7 +42,7 @@ interface Props {
 
 const MAX_KEYWORDS = 3;
 
-export function CardTile({ card, info, side, size = "normal", mark = null, onClick, onPointerDown, className, style, children, evolveBack = false, exact = false }: Props) {
+export function CardTile({ card, info, cardId, side, size = "normal", mark = null, onClick, onPointerDown, className, style, children, evolveBack = false, exact = false }: Props) {
   const catalog = useApp((s) => s.catalog);
   const { cardLang, uiLang } = useSettings();
   const t = useT();
@@ -82,7 +84,7 @@ export function CardTile({ card, info, side, size = "normal", mark = null, onCli
   return (
     <div
       className={classes.join(" ")}
-      data-card={view?.id}
+      data-card={view?.id ?? cardId}
       data-def={shown.def}
       title={name}
       style={style}

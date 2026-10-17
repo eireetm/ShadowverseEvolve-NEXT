@@ -194,13 +194,15 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 | `audio/cards/<编号>-a` | 这只随从攻击时 |
 | `audio/cards/<编号>-d` | 这只随从被破坏时 |
 
-通用音效（26 个）：
+通用音效（28 个）：
 
 | 名字 | 什么时候响 |
 |---|---|
 | `draw` | 抽牌 |
+| `search` | 检索（搜寻）并公开、或从墓场加入手牌的卡在牌桌上展示时（对手的卡翻开，自己的卡抖动） |
 | `spell`、`follower`、`amulet` | 使用法术、随从、护符（没有时用 `play`） |
 | `play` | 以上三种共用的后备 |
+| `activated` | 使用启动能力（进化除外：进化放 `evolve`） |
 | `attack` | 随从攻击 |
 | `damage`、`leader-damage` | 随从、主战者受到伤害（主战者的没有时用 `damage`） |
 | `destroy` | 破坏 |
@@ -581,13 +583,15 @@ Icon names: `fanfare`, `lastwords`, `act`, `evolve`, `engage`, `quick`, `q`, `ub
 | `audio/cards/<number>-a` | When this follower attacks |
 | `audio/cards/<number>-d` | When this follower is destroyed |
 
-Sound effects (26):
+Sound effects (28):
 
 | Name | When it plays |
 |---|---|
 | `draw` | Drawing |
+| `search` | A card searched and revealed, or taken from a cemetery, is shown on the table as it goes into the hand (the opponent's turns face up, yours shakes) |
 | `spell`, `follower`, `amulet` | Playing a spell, follower or amulet (`play` when missing) |
 | `play` | The fallback for those three |
+| `activated` | Playing an activated ability (not Evolve: that plays `evolve`) |
 | `attack` | A follower attacks |
 | `damage`, `leader-damage` | A follower or a leader takes damage (`damage` when the leader's is missing) |
 | `destroy` | A card is destroyed |

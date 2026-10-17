@@ -49,6 +49,11 @@ function shownIds(views: (PlayerView | null)[], catalog: Catalog | null, id: Car
  */
 export function playUpdateSounds(update: GameUpdate, previous: PlayerView | null, catalog: Catalog | null, lastAnnouncement: number | null): void {
   if (update.logReset) return;
+  // The cards put into a hand in public that the table shows (game/animation/reveal.ts), face down there or not.
+  const revealed = (update.toHand ?? []).flatMap((c) => {
+    const card = update.view.players[c.player].hand.find((h) => h.id === c.id);
+    return card ? [{ id: c.id, hidden: card.hidden }] : [];
+  });
   const cues = planSounds(
     update.log,
     {
@@ -58,6 +63,7 @@ export function playUpdateSounds(update: GameUpdate, previous: PlayerView | null
       timed: getSettings().animations,
     },
     update.announcement?.source ?? null,
+    revealed,
   );
   if (update.announcement && update.announcement.seq !== lastAnnouncement) cues.push({ sfx: "quick", at: 0 });
   // One sound per file and moment: the card's own, else the common one.
@@ -184,10 +190,10 @@ subscribeSettings((settings) => {
   music.audio.volume = Math.min(1, Math.max(0, bgmVolume));
 });
 
-/** The interface's click sound: buttons, menu items, checkboxes and choices (installed once by the app). */
+/** The interface's click sound: buttons, menu items, checkboxes and choices, links in card text (installed once by the app). */
 export function installClickSound(): () => void {
   const onClick = (e: MouseEvent) => {
-    const target = e.target instanceof Element ? e.target.closest("button, [role=menuitem], summary, select, input[type=checkbox], input[type=radio]") : null;
+    const target = e.target instanceof Element ? e.target.closest("button, [role=menuitem], summary, select, input[type=checkbox], input[type=radio], .sve-card-link") : null;
     if (target && !(target as HTMLButtonElement).disabled) playSfx("click");
   };
   document.addEventListener("click", onClick, true);

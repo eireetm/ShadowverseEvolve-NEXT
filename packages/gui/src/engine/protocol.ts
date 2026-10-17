@@ -108,6 +108,16 @@ export interface GameOptions {
   allowUndo?: boolean;
 }
 
+/**
+ * A card just put into a hand where every player saw it (engine/reveals.ts): revealed when it was searched or taken from the
+ * deck (CR 5.8.1.2, 5.21.1), or taken from a cemetery (4.9.2). Its id in the hand, whose hand, and what it is.
+ */
+export interface ToHandCard {
+  player: PlayerId;
+  id: CardId;
+  card: CardInfo;
+}
+
 /** One input of a game, with the seat that gave it (null: not given by a seat). */
 export interface RecordedInput {
   input: Input;
@@ -176,6 +186,12 @@ export interface HostSettings {
   fakeQuick: boolean;
   /** Online play (GameOptions.ownQuickWindows): every quick window of this person is passed for them, Quick cards or not. */
   skipQuick: boolean;
+  /**
+   * A card that went into a hand in public (GameUpdate.toHand) while the person at the screen can't see it there (the other
+   * player's hand): the bots' or the other program's next answer waits this long after it has landed (its flight may wait for
+   * an arrow pointing at it first: game/animation/plan.ts flightDelay), while the table shows it (0: no wait).
+   */
+  revealPauseMs: number;
 }
 
 export type ToWorker =
@@ -349,6 +365,11 @@ export interface LogEntry {
   turn: number;
   event: GameEvent;
   cards: Record<CardId, CardInfo>;
+  /**
+   * An ability played (abilityPlayed): its kind (CR 10.1.1), which only the engine's scripts tell, and whether it is an
+   * evolve ability (an activated one, CR 12.2.1). Absent for other events, and in older messages.
+   */
+  ability?: Pick<AbilitySummary, "kind" | "evolve">;
 }
 
 export interface GameUpdate {
@@ -364,6 +385,11 @@ export interface GameUpdate {
   announcement: QuickAnnouncement | null;
   /** Cards the person just looked at, shown before the game goes on (null: nothing to show). */
   looked: LookedCards | null;
+  /**
+   * Cards this update put into a hand in public, still there (ToHandCard): the table shows each a moment, the other player's
+   * face up. Public information only, once. Absent in older messages.
+   */
+  toHand?: ToHandCard[];
   /** A replay being watched (null: a game being played). */
   watch: WatchState | null;
   /**

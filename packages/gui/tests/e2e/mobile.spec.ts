@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { showSidebar, startGame, toMainPhase, tokenByHand, useSettings } from "./helpers";
+import { pressAnnouncementOk, showSidebar, startGame, tokenByHand, toMainPhase, useSettings } from "./helpers";
 
 // A phone held sideways (the Android app is this web app in the phone's WebView): the menus fit, the
 // table packs tighter with your hand beside your mat, the card panel is a drawer (its button or a long press opens it),
@@ -64,7 +64,7 @@ test("a phone: the menus fit, a game is played by tapping, the card panel is a d
     if (kind === "mulligan") await page.getByTestId("table-keep").tap();
     else if (kind === "chooseTurnOrder") await page.getByTestId("table-first").tap();
     else if (kind === "quick") await page.getByTestId("table-pass").tap();
-    else if (kind === "announcement") await page.getByTestId("announcement-ok").tap();
+    else if (kind === "announcement") await pressAnnouncementOk(page, true);
     await page.waitForTimeout(150);
   }
   await expect(bar).toHaveAttribute("data-decision", "mainPhase");

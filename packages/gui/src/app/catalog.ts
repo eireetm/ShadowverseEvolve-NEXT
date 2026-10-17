@@ -1,7 +1,7 @@
 // Every card definition (from the engine worker at start), for showing cards and searching them. Read only.
 import type { CardLang } from "./settings";
 import type { CatalogCard } from "../engine/protocol";
-import { inCardLang } from "../i18n/hant";
+import { inCardLang, type DataLang } from "../i18n/hant";
 
 export class Catalog {
   private readonly byDef = new Map<string, CatalogCard>();
@@ -60,12 +60,18 @@ export function cardName(card: CatalogCard | undefined, lang: CardLang, fallback
 }
 
 /**
- * A card's text in the chosen language (English when missing, then the others). A pre-release card's English text is a
- * placeholder, so the other languages fall back to Japanese, its original.
+ * Whose text cardText shows for a card in a data language: that language's, else English, then the others (null: none). A
+ * pre-release card's English text is a placeholder, so the other languages fall back to Japanese, its original.
  */
+export function cardTextLang(card: CatalogCard, data: DataLang): DataLang | null {
+  const order: readonly DataLang[] = card.preview && data !== "en" ? [data, "ja", "cn"] : [data, "en", "ja", "cn"];
+  return order.find((l) => !!card.text[l]) ?? null;
+}
+
+/** A card's text in the chosen language (cardTextLang says whose). */
 export function cardText(card: CatalogCard, lang: CardLang): string {
   return inCardLang(lang, (data) => {
-    if (card.preview && data !== "en") return card.text[data] || card.text.ja || card.text.cn || "";
-    return card.text[data] || card.text.en || card.text.ja || card.text.cn || "";
+    const from = cardTextLang(card, data);
+    return from ? (card.text[from] ?? "") : "";
   });
 }

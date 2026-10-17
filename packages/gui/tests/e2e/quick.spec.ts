@@ -1,8 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
-import { answer, clickCard, showSidebar, startGame, useSettings } from "./helpers";
+import { answer, clickCard, pressAnnouncementOk, showSidebar, startGame, useSettings } from "./helpers";
 
 // Quick cards and abilities played at quick timing resolve at once: a window then tells who played what and its targets,
-// and the game waits for OK. And who goes first, chosen in the setup's advanced options.
+// and the game waits for OK (3 seconds at most). And who goes first, chosen in the setup's advanced options.
 
 const SHOTS = process.env.SVE_QUICK_SHOTS;
 
@@ -20,7 +20,7 @@ async function untilAnnouncement(page: Page, own: boolean | null, limit = 400) {
       const mine = (await window.locator(".sve-announce-own").count()) > 0;
       if (own === null || mine === own) return window;
       const seq = await bar.getAttribute("data-announcement");
-      await page.getByTestId("announcement-ok").click();
+      await pressAnnouncementOk(page);
       await expect(bar).not.toHaveAttribute("data-announcement", seq!);
       continue;
     }
@@ -43,7 +43,7 @@ async function untilAnnouncement(page: Page, own: boolean | null, limit = 400) {
   throw new Error("no announcement");
 }
 
-test("a Quick card played at quick timing: a window tells who played what, and the game waits for OK", async ({ page }) => {
+test("a Quick card played at quick timing: a window tells who played what; the game waits for OK, 3 seconds at most", async ({ page }) => {
   const problems: string[] = [];
   page.on("pageerror", (e) => problems.push(e.message));
   await useSettings(page, {
@@ -56,26 +56,38 @@ test("a Quick card played at quick timing: a window tells who played what, and t
   await startGame(page, "quick-e2e");
   const bar = page.locator(".sve-decision");
 
-  // The opponent's: at the top right, with the card; nothing moves until OK.
+  // The opponent's: at the top right, with the card; nothing moves until OK, or until 3 seconds have gone by without it.
   const theirs = await untilAnnouncement(page, false);
+  const shown = Date.now();
   await expect(theirs.locator(".sve-announce-opponent")).toBeVisible();
   await expect(theirs).toContainText("Player 2 (Random bot) played");
   await expect(theirs.locator(".sve-announce-card .sve-card")).toBeVisible();
-  if (SHOTS) await page.waitForTimeout(900).then(() => page.screenshot({ path: `${SHOTS}/quick-opponent.png` }));
   const inputs = await bar.getAttribute("data-inputs");
   await page.waitForTimeout(300);
   await expect(bar).toHaveAttribute("data-inputs", inputs!);
   await expect(bar).toHaveAttribute("data-decision", "announcement");
-  await page.getByTestId("announcement-ok").click();
-  await expect(bar).not.toHaveAttribute("data-decision", "announcement");
+  // (Its picture once the card has flown in, before it closes by itself.)
+  if (SHOTS) await page.waitForTimeout(600).then(() => page.screenshot({ path: `${SHOTS}/quick-opponent.png` }));
+  await expect(bar).not.toHaveAttribute("data-decision", "announcement", { timeout: 10_000 });
+  expect(Date.now() - shown).toBeGreaterThan(2_000);
 
   // One's own: at the bottom left.
   const mine = await untilAnnouncement(page, true);
   await expect(mine.locator(".sve-announce-own")).toBeVisible();
   await expect(mine).toContainText("Player 1 played");
+  // OK closes it at once (well before it would close by itself). Taking its picture first leaves no time to tell the two
+  // apart: then it is only closed.
   if (SHOTS) await page.waitForTimeout(900).then(() => page.screenshot({ path: `${SHOTS}/quick-own.png` }));
+  const seq = (await bar.getAttribute("data-announcement"))!;
+  if (SHOTS) await pressAnnouncementOk(page);
+  else await page.getByTestId("announcement-ok").click({ timeout: 1_000 });
+  await expect(bar).not.toHaveAttribute("data-announcement", seq, { timeout: SHOTS ? 5_000 : 1_000 });
+
+  // Another one: Escape closes it at once too.
+  await untilAnnouncement(page, null);
+  const next = (await bar.getAttribute("data-announcement"))!;
   await page.keyboard.press("Escape");
-  await expect(bar).not.toHaveAttribute("data-decision", "announcement");
+  await expect(bar).not.toHaveAttribute("data-announcement", next, { timeout: 1_000 });
   expect(problems).toEqual([]);
 });
 

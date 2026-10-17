@@ -8,7 +8,9 @@
 //     cemetery — the opponent's at the top right, one's own at the bottom left — wiping in and out (a Quick one played at
 //     quick timing is shown by its announcement instead);
 //  4. the cards an effect selected get a blue arrow from its source (a played card: from its corner), then their damage;
-//  5. numbers rise for damage and healing, evolving followers turn over.
+//  5. numbers rise for damage and healing, evolving followers turn over;
+//  6. a card put into a hand in public is shown there once it has landed (reveal.ts: the other player's face up), also
+//     without animations.
 // All of it is short and purely cosmetic: the table itself always shows the engine's latest view.
 import type { CardId } from "@sve/core";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -19,7 +21,8 @@ import type { CardInfo, GameUpdate } from "../../engine/protocol";
 import { Arrow, type Point } from "../board/Arrow";
 import { CardTile } from "../card/CardTile";
 import { flip, floatText, flyIn, flyOut, lunge, popIn, shake } from "./effects";
-import { planFlights, planTimeline, TIMING } from "./plan";
+import { flightDelay, planFlights, planTimeline, TIMING, type Timeline } from "./plan";
+import { clearShown, showToHand } from "./reveal";
 import { captureTable, takeSnapshot, type Snapshot } from "./snapshot";
 
 onBeforeUpdate(captureTable);
@@ -53,11 +56,10 @@ interface Effects {
   flash(ms: number, variant: Flash["variant"], from: () => Point | null, to: () => Point | null): void;
 }
 
-/** Start the animations of one update. */
-function animate(update: GameUpdate, snapshot: Snapshot, fx: Effects): void {
+/** Start the animations of one update, planned as `plan`. */
+function animate(update: GameUpdate, snapshot: Snapshot, plan: Timeline, fx: Effects): void {
   // Where a card is now, or was just before the update (it has left).
   const position = (id: CardId): Point | null => center(cardElement(id)?.getBoundingClientRect() ?? snapshot.cards.get(id)?.rect);
-  const plan = planTimeline(update.log, update.announcement?.source ?? null);
 
   // 3. Played cards in their corners.
   const corner = new Map<CardId, string>();
@@ -90,12 +92,11 @@ function animate(update: GameUpdate, snapshot: Snapshot, fx: Effects): void {
   // 1. The flights; a card hit on its way out waits where it was until it has been hit.
   for (const flight of planFlights(update.log)) {
     const { origin } = flight;
-    const struck = origin.card !== null ? plan.hits.get(origin.card) : undefined;
-    const delay = struck !== undefined ? struck + TIMING.leave : 0;
+    const delay = flightDelay(flight, plan);
     const from = (origin.card ? snapshot.cards.get(origin.card)?.rect : undefined) ?? (origin.zone ? snapshot.zones.get(origin.zone) : undefined);
     const element = flight.card ? cardElement(flight.card) : null;
     if (element) {
-      if (from) flyIn(element, from, 380, delay);
+      if (from) flyIn(element, from, TIMING.flight, delay);
       else popIn(element);
       continue;
     }
@@ -151,6 +152,12 @@ export function AnimationLayer({ update }: { update: GameUpdate }) {
   }, []);
   useLayoutEffect(() => {
     const snapshot = takeSnapshot();
+    const plan = planTimeline(update.log, update.announcement?.source ?? null);
+    // 6. Cards put into a hand in public, each once it has landed; a new table shows none.
+    if (update.logReset) clearShown();
+    else if (update.toHand) {
+      showToHand(update, animations, new Map(planFlights(update.log).flatMap((f) => (f.card ? [[f.card, flightDelay(f, plan) + TIMING.flight] as const] : []))));
+    }
     if (!animations || !snapshot || update.logReset) return;
     const later = (ms: number, fn: () => void) => {
       if (ms <= 0) return fn();
@@ -160,7 +167,7 @@ export function AnimationLayer({ update }: { update: GameUpdate }) {
       }, ms);
       timers.current.add(timer);
     };
-    animate(update, snapshot, {
+    animate(update, snapshot, plan, {
       later,
       show: (showcase) => {
         setShowcases((all) => [...all, showcase]);

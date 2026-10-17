@@ -9,20 +9,25 @@ import { findCard, sideOf } from "../../engine/view-utils";
 import { htmlLang, useT } from "../../i18n";
 import { counterName } from "../../i18n/counters";
 import { dataLang, type DataLang } from "../../i18n/hant";
-import { useFocusSelect, type FocusCard } from "../focus";
+import { showCard, useFocusSelect, type FocusCard } from "../focus";
 import { ArtViewer, type ArtFace } from "./ArtViewer";
 import { CardArt } from "./CardArt";
 import { CardText, CardTextLine } from "./CardText";
 import { displayOf } from "./display";
 import { giftLines } from "./gifts";
+import { tokenLinks } from "./token-links";
 
 const LANGS: readonly DataLang[] = ["en", "cn", "ja"];
 /** The card data's other languages (Traditional Chinese is the Chinese one: not again). */
 const otherLangs = (lang: CardLang): DataLang[] => LANGS.filter((l) => l !== dataLang(lang));
 
+/** The card panel of the left column (a game, the deck screens): a token named in its card's text opens there. */
+const openToken = (def: string): void => showCard({ def, printing: null });
+
 /**
  * The last card the pointer went over (CardPanel). A card of the game is followed while it stays in its zone (it evolves,
- * takes damage ...); once it moves it is a new card (CR 4.1.4) and the panel keeps what it was.
+ * takes damage ...); once it moves it is a new card (CR 4.1.4) and the panel keeps what it was. A token its text names opens
+ * here with a click.
  */
 export function CardDetails() {
   const shown = useFocusSelect((f) => f.shown);
@@ -31,14 +36,15 @@ export function CardDetails() {
   const t = useT();
   if (!shown || !catalog) return <p className="sve-hint">{t("card.hint")}</p>;
   const now = shown.id && update ? findCard(update.view, shown.id) : null;
-  return <CardPanel focus={now && update ? { ...displayOf(now, sideOf(update.view, now.id), catalog), view: now } : shown} />;
+  return <CardPanel focus={now && update ? { ...displayOf(now, sideOf(update.view, now.id), catalog), view: now } : shown} onToken={openToken} />;
 }
 
 /**
  * A card's panel: picture (click it for a large one), names, type, traits, stats, text, printings. `exact`: this printing as
  * it is, not a token's chosen art; without `art`, no picture (the token art window shows one printing large beside it).
+ * With `onToken`, the tokens its text names are links to them (token-links.ts).
  */
-export function CardPanel({ focus, exact = false, art = true }: { focus: FocusCard; exact?: boolean; art?: boolean }) {
+export function CardPanel({ focus, exact = false, art = true, onToken }: { focus: FocusCard; exact?: boolean; art?: boolean; onToken?: (def: string) => void }) {
   const catalog = useApp((s) => s.catalog)!;
   const playCosts = useApp((s) => s.update?.playCosts);
   const { cardLang, uiLang, tokenArt } = useSettings();
@@ -161,7 +167,11 @@ export function CardPanel({ focus, exact = false, art = true }: { focus: FocusCa
           </div>
         </div>
       ) : null}
-      {text ? <CardText text={text} lang={cardLang} /> : <p className="sve-hint">{t("card.noText")}</p>}
+      {text ? (
+        <CardText text={text} lang={cardLang} links={onToken ? { find: tokenLinks(def, text, cardLang, catalog), open: onToken } : undefined} />
+      ) : (
+        <p className="sve-hint">{t("card.noText")}</p>
+      )}
       {view ? <Gifts view={view} lang={cardLang} /> : null}
       <div className="sve-details-meta">
         {printing ?? def.id}

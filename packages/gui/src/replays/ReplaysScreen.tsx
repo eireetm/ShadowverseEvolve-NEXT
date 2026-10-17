@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { errorText } from "../app/errors";
 import { engine, reportError, useApp } from "../app/store";
 import { knownController, type Replay } from "../engine/protocol";
+import { REVEAL_PAUSE_MS } from "../game/animation/plan";
 import { readReplayFile } from "../game/replay-files";
 import { hostApi, type ReplayFileEntry } from "../host/api";
 import { htmlLang, useT } from "../i18n";
@@ -39,7 +40,7 @@ export function ReplaysScreen({ onWatch, onBack }: Props) {
   const watch = (replay: Replay) => {
     if (playing && !window.confirm(t("replays.endsGame"))) return;
     // Both players' cards are shown at first (the playback bar hides them again).
-    engine.send({ kind: "settings", settings: { paused: false, revealAll: true } });
+    engine.send({ kind: "settings", settings: { paused: false, revealAll: true, revealPauseMs: REVEAL_PAUSE_MS } });
     engine.send({ kind: "watch", replay });
     onWatch();
   };

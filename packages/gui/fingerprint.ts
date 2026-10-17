@@ -63,10 +63,18 @@ export const CARD_DATA_BUILD: ReadonlySet<string> = new Set(["custom.ts", "engli
 
 /**
  * Code that only works out what a player is shown: the player view (with the abilities given to cards) and the events as
- * each player is told them, and the worker's helpers for them. It never changes a game (the state's hash would tell):
- * left out, so that showing more doesn't part players. What a player knows (core/view/visibility.ts) changes the state.
+ * each player is told them, and the worker's helpers for them; and when the table shows it (the animation's plan, which
+ * the worker's waits follow: only how long the next answer waits, never which). It never changes a game (the state's hash
+ * would tell): left out, so that showing more doesn't part players. What a player knows (core/view/visibility.ts) changes
+ * the state.
  */
-export const DISPLAY_ONLY: ReadonlySet<string> = new Set(["core/view/player-view.ts", "core/view/gifts.ts", "core/events/redact.ts", "engine/view-utils.ts"]);
+export const DISPLAY_ONLY: ReadonlySet<string> = new Set([
+  "core/view/player-view.ts",
+  "core/view/gifts.ts",
+  "core/events/redact.ts",
+  "engine/view-utils.ts",
+  "game/animation/plan.ts",
+]);
 
 /** The code files the online fingerprint counts, by name ("core/engine/flow/attack.ts", "engine/game-host.ts"). */
 export function engineCode(gui: string): { name: string; file: string }[] {

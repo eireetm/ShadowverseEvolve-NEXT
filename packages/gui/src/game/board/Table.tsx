@@ -10,6 +10,7 @@ import { findCard } from "../../engine/view-utils";
 import { useMemo, useRef, type CSSProperties, type ReactNode } from "react";
 import type { GameUpdate } from "../../engine/protocol";
 import { useT, type MessageKey } from "../../i18n";
+import { useShownCards } from "../animation/reveal";
 import { CardTile, type CardMark } from "../card/CardTile";
 import { DecisionDialog } from "../decisions/DecisionDialog";
 import { actionsFor, answerFor, attackTargets, dragKind, openManual, openMenu, sendAnswer, toggleChosen, useInteraction } from "../interaction";
@@ -290,23 +291,22 @@ function HandStrip({ update, side, opponent, marks, layout }: { update: GameUpda
   const natural = n * cardWidth + Math.max(0, n - 1) * gap;
   const step = n > 1 && natural > layout.handWidth ? (layout.handWidth - cardWidth) / (n - 1) : cardWidth + gap;
   const mid = (n - 1) / 2;
+  // Cards put into a hand in public, being shown (animation/reveal.ts): one hidden here is drawn face up meanwhile.
+  const shown = useShownCards();
   return (
     <div className={`sve-hand-strip ${opponent ? "sve-hand-opponent" : "sve-hand-own"}`} data-zone={`${side.id}:hand`}>
       <div className="sve-hand-cards" style={{ width: n > 0 ? step * (n - 1) + cardWidth : 0 }}>
         {cards.map((card, i) => {
           const tilt = opponent ? 0 : (i - mid) * Math.min(2.5, 20 / Math.max(n, 1));
           const sink = opponent ? 0 : (i - mid) ** 2 * Math.min(1.2, 10 / Math.max(n, 1));
-          return (
-            <TableCard
-              key={card.id}
-              update={update}
-              card={card}
-              side={side}
-              marks={marks}
-              className={opponent ? "sve-hand-card sve-card-opponent" : "sve-hand-card"}
-              style={{ left: i * step, zIndex: i + 1, "--fan-tilt": `${tilt}deg`, "--fan-sink": `${sink}px` } as CSSProperties}
-            />
-          );
+          const className = opponent ? "sve-hand-card sve-card-opponent" : "sve-hand-card";
+          const style = { left: i * step, zIndex: i + 1, "--fan-tilt": `${tilt}deg`, "--fan-sink": `${sink}px` } as CSSProperties;
+          const s = shown.get(card.id);
+          if (s && card.hidden && s.phase !== "down") {
+            return <CardTile key={card.id} info={s.card} cardId={card.id} className={`${className} sve-card-revealed sve-reveal-${s.phase}`} style={style} />;
+          }
+          const showing = !s ? "" : s.phase === "down" ? " sve-reveal-down" : s.phase === "shake" ? " sve-card-searched" : "";
+          return <TableCard key={card.id} update={update} card={card} side={side} marks={marks} className={className + showing} style={style} />;
         })}
       </div>
     </div>

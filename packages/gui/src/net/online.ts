@@ -25,6 +25,7 @@ import { answerConnection, BadCodeError, offerConnection, type ManualAttempt } f
 import type { MessageKey } from "../i18n";
 import { BACKLOG_PIECE, CHAT_MAX, cleanName, MAX_SPECTATOR_SEATS, SPECTATOR_SEATS, turnLimitOf, watchedOptions, type Hello, type JoinAs, type NetMessage, type ReadyDeck, type Rules, type WatchedGame } from "./messages";
 import type { TurnServer } from "./relays";
+import { REVEAL_PAUSE_MS } from "../game/animation/plan";
 import { meet, type Admission, type Meeting, type MeetingHandlers } from "./rooms";
 import { serverNetwork, type JoinMode, type ProblemAt, type ServerProblem, type ServerRoom } from "./server";
 import { currentServers, serverNow, type ServerSettings } from "./server-config";
@@ -483,6 +484,7 @@ function playSettings() {
     manualDebug: false,
     announceQuick: settings.announceQuick,
     attackPauseMs: Math.min(settings.botDelayMs, 500),
+    revealPauseMs: settings.botDelayMs > 0 ? REVEAL_PAUSE_MS : 0,
     fakeQuick: settings.fakeQuick,
     skipQuick: settings.skipQuick,
   };

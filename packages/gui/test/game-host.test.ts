@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createEngine, randomAnswer, seedRng, type PlayerId, type PlayerView } from "@sve/core";
+import { createEngine, randomAnswer, seedRng, type ManualOp, type PlayerId, type PlayerView } from "@sve/core";
 import { ALL_CARDS, ALL_SCRIPTS } from "@sve/core/sets";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -482,3 +482,194 @@ describe("what a player only remembers (HiddenCardView.known)", () => {
   }, 120_000);
 });
 
+
+/** A host whose time moves only as its timers run (or as the test sets it); the delays it asked for, in order. */
+function timedHost() {
+  const messages: FromWorker[] = [];
+  const clock = { time: 0 };
+  const queue: { fn: () => void; ms: number }[] = [];
+  const asked: number[] = [];
+  const host = new GameHost(engine, (m) => messages.push(m), {
+    schedule: (fn, ms) => {
+      const entry = { fn, ms };
+      queue.push(entry);
+      asked.push(ms);
+      return () => {
+        const i = queue.indexOf(entry);
+        if (i >= 0) queue.splice(i, 1);
+      };
+    },
+    now: () => clock.time,
+  });
+  /** Run the next timer, its time passing first. */
+  const step = (): number => {
+    const next = queue.shift()!;
+    clock.time += next.ms;
+    next.fn();
+    return next.ms;
+  };
+  const updates = () => messages.flatMap((m) => (m.kind === "update" ? [m.update] : []));
+  const errors = () => messages.filter((m) => m.kind === "error");
+  return { host, clock, queue, asked, step, updates, errors };
+}
+
+// A deck of 20 Ninja Masters (BP01-040: Fanfare, search a Ninja and reveal it, CR 5.21.1) and 20 Ninja Trainees.
+const ninjas = () => ({ ...deck("sd02"), main: [...Array<string>(20).fill("BP01-040"), ...Array<string>(20).fill("BP01-042")] });
+
+describe("cards put into a hand in public (GameUpdate.toHand)", () => {
+  it("shows the bot's searched card once; the bot's next answer waits until it has been shown, not that and its pause", () => {
+    const h = timedHost();
+    h.host.handle({ kind: "settings", settings: { botDelayMs: 600, revealPauseMs: 1330 } });
+    h.host.handle({ kind: "start", options: { seed: "reveal", decks: [deck("sd01"), ninjas()], deckNames: ["SD01", "Ninjas"], controllers: ["human", "greedy"], deckRestrictions: false } });
+    const rng = seedRng("reveal");
+    let shown = false;
+    const waits: number[] = [];
+    for (let step = 0; step < 3000 && !h.host.session!.isOver && waits.length < 2; step++) {
+      const decision = h.host.session!.decision!;
+      if (decision.player === 0) h.host.handle({ kind: "answer", seat: 0, answer: randomAnswer(rng, decision) });
+      else {
+        const ms = h.step();
+        if (shown) waits.push(ms);
+      }
+      if (!shown) {
+        const update = h.updates().find((u) => u.toHand?.some((c) => c.player === 1));
+        if (update) {
+          shown = true;
+          const card = update.toHand![0]!;
+          // A Ninja: Ninja Master is one too.
+          expect(["BP01-040", "BP01-042"]).toContain(card.card.def);
+          // Hidden in the person's view: only the table shows it.
+          expect(update.view.players[1].hand.find((c) => c.id === card.id)).toEqual({ id: card.id, hidden: true });
+        }
+      }
+    }
+    expect(h.errors()).toEqual([]);
+    expect(shown, "the bot searched in this game").toBe(true);
+    // Its next answer waited for the card (1330 ms, not 1330 + 600; found in the deck, nothing pointed at it), the one after
+    // for its pause only (or none: forced).
+    expect(waits[0]).toBe(1330);
+    expect([0, 600]).toContain(waits[1]);
+    // Each card is shown once.
+    const ids = h.updates().flatMap((u) => u.toHand ?? []).map((c) => c.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  }, 60_000);
+
+  it("waits for nothing when the person sees the card anyway: two bots, both hands shown", () => {
+    const h = timedHost();
+    h.host.handle({ kind: "settings", settings: { botDelayMs: 600, revealPauseMs: 1330 } });
+    h.host.handle({ kind: "start", options: { seed: "reveal-bots", decks: [ninjas(), ninjas()], deckNames: ["Ninjas", "Ninjas"], controllers: ["greedy", "greedy"], deckRestrictions: false } });
+    for (let step = 0; step < 5000 && h.queue.length > 0 && !h.host.session!.isOver; step++) h.step();
+    expect(h.errors()).toEqual([]);
+    expect(h.host.session!.isOver).toBe(true);
+    const shown = h.updates().flatMap((u) => u.toHand ?? []);
+    expect(shown.length).toBeGreaterThan(0);
+    // The bots' pause (or none, a forced answer), never the card's.
+    expect(h.asked.filter((ms) => ms !== 0 && ms !== 600)).toEqual([]);
+  }, 60_000);
+
+  it("waits from when the card lands: later for one the table points at first (an arrow from the field); never longer than set", () => {
+    const h = timedHost();
+    h.host.handle({ kind: "settings", settings: { botDelayMs: 600, revealPauseMs: 1330 } });
+    // BP01-124: Fanfare, select up to 2 followers in your cemetery and add them to your hand. Played by hand (manual debugging)
+    // for the bot, at the person's main phase.
+    const abyss = { ...deck("sd02"), main: Array<string>(40).fill("BP01-124") };
+    h.host.handle({
+      kind: "start",
+      options: { seed: "reveal-selected", decks: [deck("sd01"), abyss], deckNames: ["SD01", "Abyss"], controllers: ["human", "greedy"], deckRestrictions: false, manualActions: true, showEveryMainPhase: true },
+    });
+    const rng = seedRng("reveal-selected");
+    for (let step = 0; step < 300; step++) {
+      const decision = h.host.session!.decision!;
+      if (decision.player === 0 && decision.type === "mainPhase") break;
+      if (decision.player === 0) h.host.handle({ kind: "answer", seat: 0, answer: randomAnswer(rng, decision) });
+      else h.step();
+    }
+    const manual = (op: ManualOp) => h.host.handle({ kind: "answer", seat: 0, answer: { type: "mainPhase", action: { type: "manual", op } } });
+    manual({ kind: "mill", player: 1, count: 3 });
+    manual({ kind: "search", player: 1, def: "BP01-124" });
+    const state = h.host.session!.state;
+    const played = state.players[1].zones.hand.find((id) => state.cards[id]!.def === "BP01-124")!;
+    manual({ kind: "play", card: played });
+    // The bot selects its cemetery followers; they go to its hand, hidden from the person.
+    while (h.host.session!.decision!.player === 1) h.step();
+    const update = h.updates().at(-1)!;
+    expect(update.toHand?.length).toBeGreaterThan(0);
+    expect(update.toHand!.every((c) => update.view.players[1].hand.some((x) => x.id === c.id && x.hidden))).toBe(true);
+    // The computer's clock goes back a minute meanwhile: what is left is never more than was set.
+    h.clock.time -= 60_000;
+    // The person ends their main phase at once: the bot's next answer waits for the card, pointed at first (planTimeline: an
+    // arrow from the table at 120 ms, the hit 170 ms later, then it leaves 330 ms later).
+    const before = h.asked.length;
+    h.host.handle({ kind: "answer", seat: 0, answer: { type: "mainPhase", action: { type: "endMainPhase" } } });
+    expect(h.asked.slice(before).find((ms) => ms > 0)).toBe(1330 + 620);
+    expect(h.errors()).toEqual([]);
+  }, 60_000);
+
+  it("a spell played and pointing at the card in the same update: the arrow comes from the spell's corner, later", () => {
+    const h = timedHost();
+    h.host.handle({ kind: "settings", settings: { botDelayMs: 600, revealPauseMs: 1330 } });
+    // BP21-036 Lieutenant's Report: select up to 2 Officer followers in your cemetery and add them to your hand (targets
+    // chosen as it is played, CR 10.6.2.3). SD02-003 Floral Fencer is an Officer. Played by hand for the bot.
+    const officers = { ...deck("sd02"), main: [...Array<string>(20).fill("BP21-036"), ...Array<string>(20).fill("SD02-003")] };
+    h.host.handle({
+      kind: "start",
+      options: { seed: "reveal-corner", decks: [deck("sd01"), officers], deckNames: ["SD01", "Officers"], controllers: ["human", "greedy"], deckRestrictions: false, manualActions: true, showEveryMainPhase: true },
+    });
+    const rng = seedRng("reveal-corner");
+    for (let step = 0; step < 300; step++) {
+      const decision = h.host.session!.decision!;
+      if (decision.player === 0 && decision.type === "mainPhase") break;
+      if (decision.player === 0) h.host.handle({ kind: "answer", seat: 0, answer: randomAnswer(rng, decision) });
+      else h.step();
+    }
+    const manual = (op: ManualOp) => h.host.handle({ kind: "answer", seat: 0, answer: { type: "mainPhase", action: { type: "manual", op } } });
+    manual({ kind: "mill", player: 1, count: 8 });
+    manual({ kind: "search", player: 1, def: "BP21-036" });
+    const state = h.host.session!.state;
+    manual({ kind: "play", card: state.players[1].zones.hand.find((id) => state.cards[id]!.def === "BP21-036")! });
+    while (h.host.session!.decision!.player === 1) h.step();
+    const update = h.updates().at(-1)!;
+    expect(update.toHand?.length).toBeGreaterThan(0);
+    expect(update.log.some((e) => e.event.type === "cardPlayed")).toBe(true);
+    const before = h.asked.length;
+    h.host.handle({ kind: "answer", seat: 0, answer: { type: "mainPhase", action: { type: "endMainPhase" } } });
+    // The spell shows in its corner at 320 ms, its arrow at 490, the hit at 660, the card leaves at 990.
+    expect(h.asked.slice(before).find((ms) => ms > 0)).toBe(1330 + 990);
+    expect(h.errors()).toEqual([]);
+  }, 60_000);
+});
+
+describe("abilities played, in the log (LogEntry.ability)", () => {
+  it("says each one's kind (CR 10.1.1): a Fanfare is automatic, an Activate ability activated", () => {
+    const h = timedHost();
+    h.host.handle({ kind: "settings", settings: { botDelayMs: 0, manualDebug: true } });
+    // BP01-001 Rose Queen: a Fanfare, and "Activate {[engage]}: recover X play points". Played and activated by hand.
+    const queens = { ...deck("sd01"), main: Array<string>(40).fill("BP01-001") };
+    h.host.handle({
+      kind: "start",
+      options: { seed: "log-abilities", decks: [queens, deck("sd02")], deckNames: ["Queens", "SD02"], controllers: ["human", "greedy"], deckRestrictions: false, manualActions: true, showEveryMainPhase: true },
+    });
+    const rng = seedRng("log-abilities");
+    const toMainPhase = () => {
+      for (let step = 0; step < 300; step++) {
+        const decision = h.host.session!.decision!;
+        if (decision.player === 0 && decision.type === "mainPhase") return;
+        if (decision.player === 0) h.host.handle({ kind: "answer", seat: 0, answer: randomAnswer(rng, decision) });
+        else h.step();
+      }
+    };
+    toMainPhase();
+    const manual = (op: ManualOp) => h.host.handle({ kind: "answer", seat: 0, answer: { type: "mainPhase", action: { type: "manual", op } } });
+    const state = () => h.host.session!.state;
+    manual({ kind: "play", card: state().players[0].zones.hand.find((id) => state().cards[id]!.def === "BP01-001")! });
+    toMainPhase();
+    const queen = state().players[0].zones.field.find((id) => state().cards[id]!.def === "BP01-001")!;
+    const key = h.updates().at(-1)!.manual!.activatable.find((k) => k.startsWith(`${queen}:`))!;
+    manual({ kind: "activate", card: queen, ability: Number(key.split(":")[1]) });
+    const played = h.updates().flatMap((u) => u.log.filter((e) => e.event.type === "abilityPlayed" && e.event.sourceDef === "BP01-001").map((e) => e.ability));
+    expect(played).toEqual([{ kind: "automatic" }, { kind: "activated" }]);
+    // Only abilities played say it.
+    expect(h.updates().flatMap((u) => u.log.filter((e) => e.event.type !== "abilityPlayed" && e.ability !== undefined))).toEqual([]);
+    expect(h.errors()).toEqual([]);
+  }, 60_000);
+});

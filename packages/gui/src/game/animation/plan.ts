@@ -85,7 +85,9 @@ export function attacksIn(entries: readonly LogEntry[]): { attacker: CardId; tar
 
 /** When the parts of an update's animation happen (ms after it is shown); the sounds keep to the same times. */
 export const TIMING = {
-  /** The flights (380 ms) have about landed: a played card shows in its corner. */
+  /** A card's flight from where it was to where it is. */
+  flight: 380,
+  /** The flights have about landed: a played card shows in its corner. */
   landed: 320,
   /** A played card's wipe in, its stay and its wipe out. */
   showcase: 900,
@@ -101,7 +103,24 @@ export const TIMING = {
   strike: 170,
   /** A card that was hit and has gone waits this long before it flies away. */
   leave: 330,
+  /** A card put into a hand in public (animation/reveal.ts) is shown once its flight has landed: the other player's turns
+   * face up and shakes twice, */
+  revealIn: 600,
+  /** stays face up, */
+  revealStay: 350,
+  /** and turns back: each half of the turn; */
+  revealOut: 150,
+  /** one's own (face up anyway) shakes twice. */
+  revealShake: 420,
 } as const;
+
+/**
+ * How long the game waits for a card put into a hand in public that the person can't see there (HostSettings.revealPauseMs):
+ * until it has landed and been shown face up, its flight's wait apart (flightDelay: the engine worker adds it, planning the
+ * update as the table does). It turns back as the game goes on.
+ */
+export const REVEAL_PAUSE_MS = TIMING.flight + TIMING.revealIn + TIMING.revealStay;
+
 
 /** The order of an update's animation (animation/AnimationLayer.tsx), and when its cards are hit (the sounds too). */
 export interface Timeline {
@@ -144,4 +163,10 @@ export function planTimeline(entries: readonly LogEntry[], skip: CardId | null =
     }
   }
   return { played, attacks, lunges: [...lunges].map(([attacker, l]) => ({ attacker, ...l })), selections, hits };
+}
+
+/** How long a flight waits before it starts: a card hit on its way out waits where it was until it has been hit. */
+export function flightDelay(flight: Flight, plan: Timeline): number {
+  const struck = flight.origin.card !== null ? plan.hits.get(flight.origin.card) : undefined;
+  return struck !== undefined ? struck + TIMING.leave : 0;
 }

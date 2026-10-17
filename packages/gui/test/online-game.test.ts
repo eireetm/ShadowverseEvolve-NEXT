@@ -647,3 +647,23 @@ describe("online play: the turn time limit", () => {
     expect(w.last().online?.clock).toEqual({ left: [60_000, 60_000], running: null, limit: 60_000 });
   });
 });
+
+describe("online play: a card put into a hand in public", () => {
+  it("is shown before the other program's next answer is played (HostSettings.revealPauseMs); both games end the same", () => {
+    const time = new VirtualTime();
+    // BP01-040 searches a Ninja and reveals it (CR 5.21.1).
+    const ninjas = { ...deck("sd02"), main: [...Array<string>(20).fill("BP01-040"), ...Array<string>(20).fill("BP01-042")] };
+    const opts: GameOptions = { ...own("reveal-1"), decks: [ninjas, ninjas], deckRestrictions: false };
+    const a = side(0, opts, false, time, { revealPauseMs: 1330 });
+    const b = side(1, opts, false, time, { revealPauseMs: 1330 });
+    playTimed(a, b, time);
+    expect(a.last().result).not.toBeNull();
+    expect(JSON.stringify(b.host.session!.state)).toBe(JSON.stringify(a.host.session!.state));
+    // Each person was shown the other's searched cards (hidden in their hand), and their program waited for them.
+    const shownHidden = (s: Side) =>
+      s.messages.some((m) => m.kind === "update" && (m.update.toHand ?? []).some((c) => m.update.view.players[c.player].hand.some((h) => h.id === c.id && h.hidden)));
+    expect([shownHidden(a), shownHidden(b)]).toEqual([true, true]);
+    expect(time.asked).toContain(1330);
+    expect(errorsOf(a, b)).toEqual([]);
+  }, 30_000);
+});
