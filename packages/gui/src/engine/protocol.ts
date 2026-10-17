@@ -17,6 +17,9 @@ import type {
   PlayerView,
   PrintingId,
 } from "@sve/core";
+import type { TurnClockView } from "./turn-clock";
+
+export type { TurnClockView } from "./turn-clock";
 
 /**
  * Who plays a seat: a person at this screen, a bot run by the worker, or a person at another program (online play:
@@ -83,6 +86,19 @@ export interface GameOptions {
    * it (QuickAnnouncement). Pacing only. Replays saved without it replay as the core decides by default.
    */
   askEveryQuickWindow?: boolean;
+  /**
+   * Online play: each quick window is answered by its player's own program, also when passing is all that player can do
+   * (an input of their seat, sent to the other program), so the other side can't tell from the game whether they had a
+   * Quick card or ability to play (HostSettings.fakeQuick, skipQuick). Needs askEveryQuickWindow. Absent: both programs pass
+   * those windows themselves.
+   */
+  ownQuickWindows?: boolean;
+  /**
+   * Online play, the host's rule: each player's seconds for their turn and their answers in the other player's turn after it,
+   * given again at the start of each of their turns (engine/turn-clock.ts). Out of time, their program answers for them (the
+   * core's default answer: the turn ends). Absent: no limit.
+   */
+  turnLimit?: number;
   /** Who goes first (absent: as the rules say). */
   turnOrder?: TurnOrder;
   /**
@@ -153,6 +169,13 @@ export interface HostSettings {
    * before the host passes it: the attack's arrow stands before its combat (0: at once). Needs askEveryQuickWindow.
    */
   attackPauseMs: number;
+  /**
+   * Online play (GameOptions.ownQuickWindows): a quick window of this person where passing is all they can do is passed after
+   * a pause like a person's (about a second), so the other player can't tell whether they had a Quick card.
+   */
+  fakeQuick: boolean;
+  /** Online play (GameOptions.ownQuickWindows): every quick window of this person is passed for them, Quick cards or not. */
+  skipQuick: boolean;
 }
 
 export type ToWorker =
@@ -348,9 +371,19 @@ export interface GameUpdate {
    * who watches the two players' programs), and whether the games differ. In a room that allows taking answers back
    * (`allowUndo`), `undo` is where "undo my last answer" goes back to: this person's last answer, while the other player
    * hasn't answered since and the game goes on (null: not now). A spectator may see both players' hidden cards
-   * (`revealAllowed`: the host lets it; it turns on "reveal all" for that).
+   * (`revealAllowed`: the host lets it; it turns on "reveal all" for that). `clock`: the players' time in a game with a turn
+   * time limit (GameOptions.turnLimit; null: none).
    */
-  online: { seat: PlayerId | null; remote: PlayerId | null; desync: string | null; spectating: boolean; allowUndo: boolean; undo: number | null; revealAllowed: boolean } | null;
+  online: {
+    seat: PlayerId | null;
+    remote: PlayerId | null;
+    desync: string | null;
+    spectating: boolean;
+    allowUndo: boolean;
+    undo: number | null;
+    revealAllowed: boolean;
+    clock: TurnClockView | null;
+  } | null;
   /** Whose view this is (the human's seat; in hot seat, the player who must decide). */
   perspective: PlayerId;
   view: PlayerView;

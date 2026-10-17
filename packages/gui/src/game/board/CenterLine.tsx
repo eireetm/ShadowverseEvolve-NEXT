@@ -2,7 +2,7 @@
 // buttons that finish the pending decision (end the main phase, pass, confirm a selection, keep the hand ...). Everything
 // else about a decision is on the table (lit cards and their menus) or in the decision window (DecisionDialog).
 import type { Answer } from "@sve/core";
-import type { ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { GameUpdate } from "../../engine/protocol";
 import { useT, type MessageKey } from "../../i18n";
 import { isOnTable } from "../../engine/view-utils";
@@ -86,11 +86,13 @@ export function CenterLine({ update, placing = null }: { update: GameUpdate; pla
   }
   return (
     <>
-      <div className="sve-center-status">
+      {/* With a turn clock, a line more: on a small screen the prompt gets one less (the box keeps its height). */}
+      <div className={`sve-center-status${update.online?.clock ? " sve-center-status-timed" : ""}`}>
         <div className="sve-center-turn">
           <strong>{t("game.turn", { n: view.turn })}</strong> · {t(PHASE_KEYS[view.phase] ?? "game.phase.main")}
         </div>
         {view.phase !== "over" ? <div data-testid="center-active-player">{activeTurn()}</div> : null}
+        <TurnClockLine update={update} />
         {placing ? (
           <div className="sve-center-prompt sve-your-move" data-testid="table-choose-slot">
             {t("table.chooseSlot", { card: placing })}
@@ -103,5 +105,30 @@ export function CenterLine({ update, placing = null }: { update: GameUpdate; pla
       </div>
       <div className="sve-center-actions">{buttons}</div>
     </>
+  );
+}
+
+/**
+ * Online play with a turn time limit: whose time is running and how much of it is left, counting down here between the
+ * worker's updates (each says the time left when it was made). The last 30 seconds stand out.
+ */
+function TurnClockLine({ update }: { update: GameUpdate }) {
+  const t = useT();
+  const clock = update.online?.clock ?? null;
+  const at = useMemo(() => Date.now(), [clock]);
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (clock?.running == null) return;
+    const timer = window.setInterval(() => setTick((n) => n + 1), 250);
+    return () => window.clearInterval(timer);
+  }, [clock]);
+  if (!clock || clock.running === null || update.result) return null;
+  const player = clock.running;
+  const seconds = Math.ceil(Math.max(0, clock.left[player] - (Date.now() - at)) / 1000);
+  const time = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+  return (
+    <div className={`sve-center-clock${seconds <= 30 ? " sve-center-clock-low" : ""}`} data-testid="center-clock" data-player={player} data-seconds={seconds}>
+      {t("game.clock", { player: playerLabel(player, update, t), time })}
+    </div>
   );
 }

@@ -23,7 +23,7 @@ import { newRoomCode, newRoomPassword } from "./codes";
 import type { PeerLink } from "./link";
 import { answerConnection, BadCodeError, offerConnection, type ManualAttempt } from "./manual";
 import type { MessageKey } from "../i18n";
-import { BACKLOG_PIECE, CHAT_MAX, cleanName, MAX_SPECTATOR_SEATS, SPECTATOR_SEATS, watchedOptions, type Hello, type JoinAs, type NetMessage, type ReadyDeck, type Rules, type WatchedGame } from "./messages";
+import { BACKLOG_PIECE, CHAT_MAX, cleanName, MAX_SPECTATOR_SEATS, SPECTATOR_SEATS, turnLimitOf, watchedOptions, type Hello, type JoinAs, type NetMessage, type ReadyDeck, type Rules, type WatchedGame } from "./messages";
 import type { TurnServer } from "./relays";
 import { meet, type Admission, type Meeting, type MeetingHandlers } from "./rooms";
 import { serverNetwork, type JoinMode, type ProblemAt, type ServerProblem, type ServerRoom } from "./server";
@@ -33,7 +33,7 @@ import { currentLink, gameStarted, getOnline, NO_PREP, setChatRelay, setLink, se
 export { sendChat, useOnline, getOnline, canChat, type OnlinePhase } from "./state";
 
 /** The protocol these messages follow (a program with another one can't play with this one, or watch its games). */
-export const PROTOCOL = "online-5";
+export const PROTOCOL = "online-6";
 
 declare const __ENGINE_FINGERPRINT__: string;
 /** The rules code's fingerprint (vite.config.ts); "dev" where the build didn't make one (tests). */
@@ -424,9 +424,12 @@ export function onlineOptions(seed: string, rules: Rules, host: ReadyDeck, guest
     secondLeaders: [host.leader2, guest.leader2],
     showEveryMainPhase: true,
     askEveryQuickWindow: true,
+    // Each player's program answers their quick windows: the other side can't tell from the game who had a Quick card.
+    ownQuickWindows: true,
     manualActions: false,
     turnOrder: rules.turnOrder,
     allowUndo: rules.undo,
+    ...(rules.turnLimit !== null ? { turnLimit: rules.turnLimit } : {}),
   };
 }
 
@@ -444,6 +447,7 @@ function watchedGame(options: GameOptions, backlog: number): WatchedGame {
     backlog,
     players: getOnline().names ?? [myName(), lastPeer?.name ?? ""],
     allowUndo: options.allowUndo === true,
+    ...(options.turnLimit ? { turnLimit: options.turnLimit } : {}),
   };
 }
 
@@ -467,10 +471,21 @@ function begin(seed: string, seat: 0 | 1): void {
   gameStarted();
 }
 
-/** The engine's settings for a game over the connection (played or watched): nothing hidden shown, no manual debugging. */
+/**
+ * The engine's settings for a game over the connection (played or watched): nothing hidden shown, no manual debugging; how
+ * this player's program answers their quick windows (fakeQuick, skipQuick: the debug tab changes them during the game too).
+ */
 function playSettings() {
   const settings = getSettings();
-  return { paused: false, revealAll: false, manualDebug: false, announceQuick: settings.announceQuick, attackPauseMs: Math.min(settings.botDelayMs, 500) };
+  return {
+    paused: false,
+    revealAll: false,
+    manualDebug: false,
+    announceQuick: settings.announceQuick,
+    attackPauseMs: Math.min(settings.botDelayMs, 500),
+    fakeQuick: settings.fakeQuick,
+    skipQuick: settings.skipQuick,
+  };
 }
 
 // The engine worker's answers of this program's person go to the other program (and the host's, to its spectators); a
@@ -548,6 +563,7 @@ function hostRules(): Rules {
     undo: settings.allowUndo,
     watchHands: server && settings.allowWatchHands,
     watchChat: server && settings.allowWatchChat,
+    turnLimit: settings.turnLimitOn ? turnLimitOf(settings.turnLimitSeconds) : null,
   };
 }
 

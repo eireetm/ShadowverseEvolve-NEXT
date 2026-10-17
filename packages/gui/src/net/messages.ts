@@ -44,6 +44,19 @@ export interface Rules {
    */
   watchHands: boolean;
   watchChat: boolean;
+  /**
+   * Each player's seconds for their turn and their answers in the other player's turn after it (GameOptions.turnLimit;
+   * null: no limit). Out of time, their program ends the turn for them.
+   */
+  turnLimit: number | null;
+}
+
+/** The turn time limit a host may choose, in seconds: at least, at most, and the one offered first. */
+export const TURN_LIMIT = { min: 10, max: 3600, first: 600 } as const;
+
+/** A turn time limit as the rules take it (a whole number of seconds within TURN_LIMIT), or null when it isn't one. */
+export function turnLimitOf(value: unknown): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value >= TURN_LIMIT.min && value <= TURN_LIMIT.max ? value : null;
 }
 
 /** A player's deck, locked for the game ("ready"). */
@@ -82,6 +95,8 @@ export interface WatchedGame {
   players?: [string, string];
   /** The players may take answers back (the spectator's program follows: "takeBack"). */
   allowUndo?: boolean;
+  /** The players' turn time limit in seconds (Rules.turnLimit), shown to the spectator too. */
+  turnLimit?: number;
 }
 
 /** The inputs a "backlog" message brings at most. */
@@ -193,6 +208,7 @@ function watchedGame(v: unknown): WatchedGame | null {
     turnOrder: g.turnOrder as TurnOrder,
     backlog: g.backlog,
     ...(g.allowUndo === true ? { allowUndo: true } : {}),
+    ...(turnLimitOf(g.turnLimit) !== null ? { turnLimit: turnLimitOf(g.turnLimit)! } : {}),
     ...(Array.isArray(g.players) && g.players.length === 2 && g.players.every((p) => isString(p, 64)) ? { players: [cleanName(g.players[0] as string), cleanName(g.players[1] as string)] as [string, string] } : {}),
   };
 }
@@ -213,9 +229,11 @@ export function watchedOptions(game: WatchedGame): GameOptions {
     secondLeaders: game.secondLeaders,
     showEveryMainPhase: true,
     askEveryQuickWindow: true,
+    ownQuickWindows: true,
     manualActions: false,
     turnOrder: game.turnOrder,
     allowUndo: game.allowUndo === true,
+    ...(game.turnLimit ? { turnLimit: game.turnLimit } : {}),
   };
 }
 
@@ -280,6 +298,7 @@ export function parseMessage(value: unknown): NetMessage | null {
           undo: r.undo === true,
           watchHands: r.watchHands === true,
           watchChat: r.watchChat === true,
+          turnLimit: turnLimitOf(r.turnLimit),
         },
       };
     }

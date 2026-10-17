@@ -329,6 +329,8 @@ test("a room with a password, whose spectators may chat and see the hands; the o
   for (const seat of [0, 1] as const) expect((await handFaces(spectator, seat)).faces).toBe(0);
   await spectator.getByTestId("sidebar-show").click();
   await spectator.getByTestId("tab-debug").click();
+  // How a player's program answers their quick windows: a player's choice, not a spectator's.
+  await expect(spectator.getByTestId("debug-quick")).toHaveCount(0);
   // (Checked once the engine worker's update says so.)
   await spectator.getByTestId("debug-reveal-all").click();
   await expect(spectator.getByTestId("debug-reveal-all")).toBeChecked();
@@ -338,10 +340,11 @@ test("a room with a password, whose spectators may chat and see the hands; the o
       return hand.cards > 0 && hand.faces === hand.cards;
     }).toBe(true);
   }
-  // A player never has it.
+  // A player never has it; the quick windows' options are theirs.
   await guest.getByTestId("sidebar-show").click();
   await guest.getByTestId("tab-debug").click();
   await expect(guest.getByTestId("debug-reveal-all")).toHaveCount(0);
+  await expect(guest.getByTestId("debug-quick")).toBeVisible();
   expect((await handFaces(guest, 0)).faces).toBe(0);
   expect(problems).toEqual([]);
 });
@@ -457,4 +460,60 @@ test("two servers in the configuration: each said and tested, a wrong part said 
   await page.getByTestId("online-back").click();
   await page.getByTestId("menu-settings").click();
   await expect(page.getByTestId("settings-server")).toHaveText("e2e, friends");
+});
+
+test("a turn time limit: the host's rule, the clock on the table, the turn ending by itself; the quick windows' options", async ({ browser }) => {
+  test.setTimeout(180_000);
+  const problems: string[] = [];
+  const host = await openOnline(browser, SERVER, { setupTurnOrder: "player1", setupDecks: ["samples/sd01.json", "samples/sd02.json"] });
+  const guest = await openOnline(browser, SERVER, { setupDecks: ["samples/sd03.json", "samples/sd02.json"] });
+  watchProblems([host, guest], problems);
+  // Off at first; on, 600 seconds are offered; the host takes 10 (within 10–3600: 5 becomes 10).
+  await expect(host.getByTestId("online-server-turn-limit")).not.toBeChecked();
+  await expect(host.getByTestId("online-server-turn-limit-seconds")).toHaveCount(0);
+  await host.getByTestId("online-server-turn-limit").check();
+  await expect(host.getByTestId("online-server-turn-limit-seconds")).toHaveValue("600");
+  await host.getByTestId("online-server-turn-limit-seconds").fill("5");
+  await host.getByTestId("online-server-turn-limit-seconds").press("Enter");
+  await expect(host.getByTestId("online-server-turn-limit-seconds")).toHaveValue("10");
+  await host.getByTestId("online-server-host").click();
+  const code = (await host.getByTestId("online-room-code").innerText({ timeout: 30_000 })).trim();
+  await guest.getByTestId("online-server-code").fill(code);
+  await guest.getByTestId("online-server-join").click();
+  await expect(guest.getByTestId("online-rules")).toHaveText("Standard · restriction list: None · first player: Player 1 goes first · turn limit 10 s", { timeout: 30_000 });
+  // In the room the host still has it (and could change it).
+  await expect(host.getByTestId("online-turn-limit")).toBeChecked();
+  await expect(host.getByTestId("online-turn-limit-seconds")).toHaveValue("10");
+  await readyBoth(host, guest);
+
+  // The setup isn't timed: no clock while the hands are kept.
+  await expect(host.locator(".sve-decision")).toHaveAttribute("data-decision", "mulligan", { timeout: 30_000 });
+  await expect(host.getByTestId("center-clock")).toHaveCount(0);
+  await host.getByTestId("table-keep").click();
+  await expect(guest.locator(".sve-decision")).toHaveAttribute("data-decision", "mulligan");
+  await guest.getByTestId("table-keep").click();
+  // Player 1's turn: their time runs, on both tables.
+  for (const page of [host, guest]) {
+    await expect(page.getByTestId("center-clock")).toHaveAttribute("data-player", "0", { timeout: 30_000 });
+    await expect(page.getByTestId("center-clock")).toHaveText(/^Player 1.*: 0:(0\d|10) left$/);
+  }
+  await expect(host.locator(".sve-center-turn")).toContainText("Turn 1");
+  // The last 30 seconds stand out (here, all of them).
+  await expect(host.getByTestId("center-clock")).toHaveClass(/sve-center-clock-low/);
+  // Nobody answers: out of time, player 1's program ends the turn; player 2's turn and time begin.
+  for (const page of [host, guest]) {
+    await expect(page.locator(".sve-center-turn")).toContainText("Turn 2", { timeout: 30_000 });
+    await expect(page.getByTestId("center-clock")).toHaveAttribute("data-player", "1");
+  }
+  expect(await host.locator(".sve-decision").getAttribute("data-inputs")).toBe(await guest.locator(".sve-decision").getAttribute("data-inputs"));
+
+  // A player's quick windows: their own options in the debug tab, off at first, kept in their settings.
+  await host.getByTestId("sidebar-show").click();
+  await host.getByTestId("tab-debug").click();
+  await expect(host.getByTestId("debug-fake-quick")).not.toBeChecked();
+  await expect(host.getByTestId("debug-skip-quick")).not.toBeChecked();
+  await host.getByTestId("debug-skip-quick").check();
+  await expect(host.getByTestId("debug-skip-quick")).toBeChecked();
+  expect(await host.evaluate(() => (JSON.parse(localStorage.getItem("sve-gui-settings") ?? "{}") as { skipQuick?: boolean }).skipQuick)).toBe(true);
+  expect(problems).toEqual([]);
 });

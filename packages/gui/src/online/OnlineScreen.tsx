@@ -21,7 +21,7 @@ import { useT, type MessageKey, type Translate } from "../i18n";
 import { APP_VERSION, PLATFORM } from "../app/version";
 import { checkNetwork, type NetworkCheck } from "../net/check";
 import { normalizeRoomCode, normalizeRoomPassword } from "../net/codes";
-import { cleanName, NAME_MAX, SPECTATOR_SEATS, type Rules } from "../net/messages";
+import { cleanName, NAME_MAX, SPECTATOR_SEATS, TURN_LIMIT, type Rules } from "../net/messages";
 import { watchLobby, type LobbyRoom, type ServerProblem } from "../net/server";
 import type { Via } from "../net/link";
 import type { ServerSettings } from "../net/server-config";
@@ -471,6 +471,51 @@ function UndoField({ testId }: { testId: string }) {
 }
 
 /**
+ * The turn time limit (the host's rule): none, or each player's seconds for their turn and their answers in the other
+ * player's turn after it. The seconds are taken when the field is left (or Enter), within TURN_LIMIT.
+ */
+function TurnLimitField({ testId }: { testId: string }) {
+  const t = useT();
+  const { turnLimitOn, turnLimitSeconds } = useSettings();
+  const [text, setText] = useState(String(turnLimitSeconds));
+  useEffect(() => {
+    setText(String(turnLimitSeconds));
+  }, [turnLimitSeconds]);
+  const take = () => {
+    const n = Math.round(Number(text));
+    const seconds = text.trim() !== "" && Number.isFinite(n) ? Math.min(TURN_LIMIT.max, Math.max(TURN_LIMIT.min, n)) : turnLimitSeconds;
+    setText(String(seconds));
+    if (seconds !== turnLimitSeconds) updateSettings({ turnLimitSeconds: seconds });
+  };
+  return (
+    <span className="sve-online-turn-limit">
+      <label className="sve-online-check-label" title={t("online.turnLimitHelp")}>
+        <input type="checkbox" checked={turnLimitOn} onChange={(e) => updateSettings({ turnLimitOn: e.target.checked })} data-testid={`${testId}-turn-limit`} />
+        {t("online.turnLimit")}
+      </label>
+      {turnLimitOn ? (
+        <label className="sve-online-turn-limit-seconds">
+          <input
+            type="number"
+            min={TURN_LIMIT.min}
+            max={TURN_LIMIT.max}
+            value={text}
+            inputMode="numeric"
+            onChange={(e) => setText(e.target.value)}
+            onBlur={take}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") take();
+            }}
+            data-testid={`${testId}-turn-limit-seconds`}
+          />
+          {t("online.turnLimitSeconds")}
+        </label>
+      ) : null}
+    </span>
+  );
+}
+
+/**
  * What the spectators of a room on the server may do (the host's rules): see both players' hidden cards (each spectator turns
  * on "reveal all" in its debug page for that), and write in the chat.
  */
@@ -520,6 +565,7 @@ function ServerStart() {
             <FormatPicker />
             <TurnOrderField testId="online-server-turn-order" />
             <UndoField testId="online-server-undo" />
+            <TurnLimitField testId="online-server" />
             <WatchFields testId="online-server" />
           </fieldset>
           {servers.length > 1 ? (
@@ -951,7 +997,12 @@ function Connected({ phase, identified, going, onGame, onEditDecks }: ConnectedP
 /** "Standard · restriction list: 01_26_JPN · first player: a random player chooses". */
 function rulesText(rules: Rules, t: ReturnType<typeof useT>): string {
   const summary = t("online.rulesSummary", { format: t(`format.${rules.format}`), list: rules.list ?? t("format.noList"), order: t(`turnOrder.${rules.turnOrder}`) });
-  const extras = [rules.undo ? t("online.rulesUndo") : null, rules.watchHands ? t("online.rulesWatchHands") : null, rules.watchChat ? t("online.rulesWatchChat") : null];
+  const extras = [
+    rules.undo ? t("online.rulesUndo") : null,
+    rules.turnLimit !== null ? t("online.rulesTurnLimit", { s: rules.turnLimit }) : null,
+    rules.watchHands ? t("online.rulesWatchHands") : null,
+    rules.watchChat ? t("online.rulesWatchChat") : null,
+  ];
   return [summary, ...extras.filter((x): x is string => x !== null)].join(" · ");
 }
 
@@ -973,7 +1024,17 @@ function Prep({ role, same, onEditDecks }: { role: "host" | "guest"; same: boole
   // The host's rules follow its settings.
   useEffect(() => {
     if (role === "host") updateRules();
-  }, [role, settings.format, settings.restrictionLists, settings.setupTurnOrder, settings.allowUndo, settings.allowWatchHands, settings.allowWatchChat]);
+  }, [
+    role,
+    settings.format,
+    settings.restrictionLists,
+    settings.setupTurnOrder,
+    settings.allowUndo,
+    settings.allowWatchHands,
+    settings.allowWatchChat,
+    settings.turnLimitOn,
+    settings.turnLimitSeconds,
+  ]);
   useEffect(() => {
     hostApi.listDecks().then(setDecks, (err: unknown) => reportError(String(err)));
   }, []);
@@ -1009,6 +1070,7 @@ function Prep({ role, same, onEditDecks }: { role: "host" | "guest"; same: boole
             <FormatPicker />
             <TurnOrderField testId="online-turn-order" />
             <UndoField testId="online-undo" />
+            <TurnLimitField testId="online" />
             {server ? <WatchFields testId="online" /> : null}
           </fieldset>
         ) : (
