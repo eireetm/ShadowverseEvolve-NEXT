@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { answer, startGame, useSettings } from "./helpers";
+import { hasCardTexts, answer, startGame, useSettings } from "./helpers";
 
 // The main menu and the settings; a game played on the table itself: cards dragged onto the mat to play them, a follower's
 // menu to attack, a follower dragged onto the enemy leader to attack.
@@ -39,7 +39,8 @@ test("the main menu leads to the settings, where the interface language changes 
   await page.getByTestId("builder-search").fill("BP12-071");
   await page.locator(".sve-pool-tile").first().hover();
   await expect(page.locator(".sve-details-name")).toHaveText("預視死期者·格莫瑞");
-  await expect(page.locator(".sve-details .sve-card-text")).toContainText("《謝幕曲》使這張卡消失");
+  // The card text, converted (this machine's texts, which a clone of the repository hasn't).
+  if (hasCardTexts) await expect(page.locator(".sve-details .sve-card-text")).toContainText("《謝幕曲》使這張卡消失");
 });
 
 async function center(locator: Locator): Promise<{ x: number; y: number }> {

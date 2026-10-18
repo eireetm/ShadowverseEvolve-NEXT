@@ -1,5 +1,5 @@
 {
- "format": 1,
+ "format": 2,
  "set": "CP01",
  "printings": 246,
  "cards": [
@@ -25,13 +25,11 @@
    "cost": 4,
    "attack": 4,
    "defense": 1,
-   "text": {
-    "en": "{[evolve]} {[cost02]}: Evolve this follower.\n{[feed]} {[cost01]}: Race this follower.\nStorm.",
-    "cn": "《进化》《消费2》：使这张卡进化。\n《吃饭》《消费1》：使这张卡起跑。\n【疾驰】",
-    "ja": "《進化》《コスト2》：これは進化する。\n《食事》《コスト1》：これは出走する。\n【疾走】"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -56,11 +54,6 @@
    "cost": null,
    "attack": 5,
    "defense": 2,
-   "text": {
-    "en": "Storm.\nOn Evolve: Select an enemy follower on the field and put it on top of its owner's deck.",
-    "cn": "【疾驰】\n【进化时】选择敌方的1个从者。将其置于牌堆顶。（置于到牌堆的衍生物会从游戏中移出）",
-    "ja": "【疾走】\n【進化時】相手のフォロワー1体を選ぶ。それをデッキの上に置く。（デッキに置いたトークンはゲームから取り除く）"
-   },
    "traits": [
     "ウマ娘"
    ]
@@ -86,13 +79,11 @@
    "cost": 5,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\n{[fanfare]} Return any number of other Umamusume cards on your field to their owners’ hands: Deal X damage to each enemy follower on the field. X equals 2 times the number of cards returned.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n《入场曲》将场上的其他的赛马娘类型·卡片任意张数放回手牌：给予敌方的全体从者各与「放回的张数」的2倍等量的伤害。（放回到手牌的衍生物会从游戏中移出）",
-    "ja": "《食事》《コスト1》：これは出走する。\n《ファンファーレ》場の他のウマ娘・カードを好きな枚数手札に戻す：相手のフォロワーすべてに「戻した枚数」の2倍のダメージ。（手札に戻ったトークンはゲームから取り除く）"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -115,13 +106,11 @@
    "cost": 4,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\n{[fanfare]} Recover 3 play points.\nWhile there are at least 8 cards on the field, this follower has Storm.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n只要相互的场上的卡片为8张及以上存在，使这张卡获得【疾驰】能力。\n《入场曲》将自己的PP回复3点。",
-    "ja": "《食事》《コスト1》：これは出走する。\nお互いの場のカードが8枚以上ある限り、これは【疾走】を持つ。\n《ファンファーレ》自分のPPを3回復する。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -144,11 +133,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Choose one of the following. (1) Search your deck for a follower with Storm, reveal it, and add it to your hand. (2) Select a follower with Storm on your field and give it {[attack]}+3.",
-    "cn": "从下述之中抉择1项。\n【1】从自己的牌堆之中搜寻持有【疾驰】能力的1张从者卡，并加入手牌。\n【2】选择持有【疾驰】能力的自己的1个从者。使其《攻击力》+3。",
-    "ja": "下記から1つチョイスする。【1】自分のデッキから【疾走】を持つフォロワー1枚を探し、手札に加える。【2】【疾走】を持つ自分のフォロワー1体を選ぶ。それは《攻撃力》+3する。"
-   },
    "traits": [
     "ウマ娘"
    ]
@@ -173,13 +157,11 @@
    "cost": 1,
    "attack": 2,
    "defense": 1,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\n{[fanfare]} Look at the top card of your deck. You may put it on the bottom of your deck.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n《入场曲》查看自己的牌堆顶1张卡。可以将其置于牌堆底。",
-    "ja": "《食事》《コスト1》：これは出走する。\n《ファンファーレ》自分のデッキの上1枚を見る。それをデッキの下に置いてよい。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -204,13 +186,11 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nOn Race: Give this follower {[attack]}+1/{[defense]}+1. Select up to 1 enemy follower on the field and return it to its owner's hand.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n【起跑时】使这张卡《攻击力》+1/《生命值》+1。选择敌方的从者最多1个。将其放回手牌。（放回到手牌的衍生物会从游戏中移出）",
-    "ja": "《食事》《コスト1》：これは出走する。\n【出走時】これは《攻撃力》+1/《体力》+1する。相手のフォロワー1体まで選ぶ。それを手札に戻す。（手札に戻ったトークンはゲームから取り除く）"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -233,11 +213,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[fanfare]} Draw a card.\nWhen this card leaves the field, select an Umamusume follower on your field and give it {[attack]}+1/{[defense]}+1.",
-    "cn": "当这张卡离开场上时，选择自己的1个赛马娘类型·从者。使其《攻击力》+1/《生命值》+1。\n《入场曲》抽取1张卡。",
-    "ja": "これが場を離れたとき、自分のウマ娘・フォロワー1体を選ぶ。それは《攻撃力》+1/《体力》+1する。\n《ファンファーレ》1枚引く。"
-   },
    "traits": [
     "ウマ娘"
    ]
@@ -263,13 +238,11 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\n{[fanfare]} Return another card on your field to its owner's hand: Give your leader {[defense]}+2.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n《入场曲》将场上的其他的1张卡片放回手牌：使自己的主战者《生命值》+2。（放回到手牌的衍生物会从游戏中移出）",
-    "ja": "《食事》《コスト1》：これは出走する。\n《ファンファーレ》場の他のカード1枚を手札に戻す：自分のリーダーは《体力》+2する。（手札に戻ったトークンはゲームから取り除く）"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -292,13 +265,11 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nWard.\n{[fanfare]} Return another card on your the field to its owner's hand: Give this follower {[attack]}+1/{[defense]}+1.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n【守护】\n《入场曲》将场上的其他的1张卡片放回手牌：使这张卡《攻击力》+1/《生命值》+1。（放回到手牌的衍生物会从游戏中移出）",
-    "ja": "《食事》《コスト1》：これは出走する。\n【守護】\n《ファンファーレ》場の他のカード1枚を手札に戻す：これは《攻撃力》+1/《体力》+1する。（手札に戻ったトークンはゲームから取り除く）"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -321,13 +292,11 @@
    "cost": 6,
    "attack": 7,
    "defense": 7,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nRush. Assail.\n{[fanfare]} Select another card on your field and return it to its owner's hand.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n【突进】【指定攻击】\n《入场曲》选择自己的其他的1张卡片。将其放回手牌。（放回到手牌的衍生物会从游戏中移出）",
-    "ja": "《食事》《コスト1》：これは出走する。\n【突進】【指定攻撃】\n《ファンファーレ》自分の他のカード1枚を選ぶ。それを手札に戻す。（手札に戻ったトークンはゲームから取り除く）"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -350,13 +319,11 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nWhen this card is returned to hand from your field, select an enemy follower on the field and deal it 2 damage.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n当这张卡从场上放回到手牌时，选择敌方的1个从者。给予其2点伤害。",
-    "ja": "《食事》《コスト1》：これは出走する。\nこれが場から手札に戻ったとき、相手のフォロワー1体を選ぶ。それに2ダメージ。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -380,13 +347,11 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nOn Race: Give this follower {[attack]}+1/{[defense]}+1. For the rest of this turn, this follower doesn't take damage.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n【起跑时】使这张卡《攻击力》+1/《生命值》+1。这个回合，使这张卡不会受到伤害。",
-    "ja": "《食事》《コスト1》：これは出走する。\n【出走時】これは《攻撃力》+1/《体力》+1する。このターン、これはダメージを受けない。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -411,13 +376,11 @@
    "cost": 5,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "{[evolve]} {[cost02]}: Evolve this follower.\n{[feed]} {[cost01]}: Race this follower.\n{[fanfare]} Select an enemy follower on the field and deal it X damage. X equals 2 times the number of followers on your field, including this one.",
-    "cn": "《进化》《消费2》：使这张卡进化。\n《吃饭》《消费1》：使这张卡起跑。\n《入场曲》选择敌方的1个从者。给予其与「自己场上的从者的数量」的2倍等量的伤害。",
-    "ja": "《進化》《コスト2》：これは進化する。\n《食事》《コスト1》：これは出走する。\n《ファンファーレ》相手のフォロワー1体を選ぶ。それに「自分の場のフォロワーの数」の2倍のダメージ。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -442,11 +405,6 @@
    "cost": null,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "Storm.",
-    "cn": "【疾驰】",
-    "ja": "【疾走】"
-   },
    "traits": [
     "ウマ娘"
    ]
@@ -472,13 +430,11 @@
    "cost": 8,
    "attack": 6,
    "defense": 8,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nBane. Ward. Aura.\nActivate {[engage]}: Select an enemy leader or enemy follower on the field and deal it 5 damage.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n【必杀】【守护】【灵气】\n《起动》将这张卡《横置》：选择敌方的1位主战者或敌方的1个从者。给予其5点伤害。",
-    "ja": "《食事》《コスト1》：これは出走する。\n【必殺】【守護】【オーラ】\n《起動》これを《アクト》：相手のリーダー1人か相手のフォロワー1体を選ぶ。それに5ダメージ。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -501,14 +457,12 @@
    "cost": 3,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nStorm.\n{[fanfare]} If there is a Trial Initiation and Narita Taishin in your cemetery, give this follower {[attack]}+3/{[defense]}+1.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n【疾驰】\n《入场曲》如果自己的墓场中有『验证，开始』卡与『成田大进』卡的话，使这张卡《攻击力》+3/《生命值》+1。",
-    "ja": "《食事》《コスト1》：これは出走する。\n【疾走】\n《ファンファーレ》自分の墓場に『検証、開始』と『ナリタタイシン』があるなら、これは《攻撃力》+3/《体力》+1する。"
-   },
    "traits": [
     "ウマ娘",
     "BNW"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -532,11 +486,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Select a follower on your field. Give it Storm and, if it’s an Umamusume follower, {[attack]}+1/{[defense]}+1.",
-    "cn": "选择自己的1个从者。使其获得【疾驰】能力。如果其为赛马娘类型·从者的话，使其《攻击力》+1/《生命值》+1。",
-    "ja": "自分のフォロワー1体を選ぶ。それは【疾走】を持つ。それがウマ娘・フォロワーなら、それは《攻撃力》+1/《体力》+1する。"
-   },
    "traits": [
     "ウマ娘"
    ]
@@ -561,13 +510,11 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nOn Race: Give this follower {[attack]}+1/{[defense]}+1. Select up to 1 other follower on your field and refresh it. For the rest of this turn, that follower can’t attack enemies.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n【起跑时】使这张卡《攻击力》+1/《生命值》+1。选择自己的其他的从者最多1个。将其竖置。这个回合中，使其不能对敌方进行攻击。",
-    "ja": "《食事》《コスト1》：これは出走する。\n【出走時】これは《攻撃力》+1/《体力》+1する。自分の他のフォロワー1体まで選ぶ。それをスタンドする。このターン、それは相手を攻撃できない。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -590,13 +537,11 @@
    "cost": 3,
    "attack": 4,
    "defense": 2,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nRush.\n{[fanfare]} {[cost03]} Search your deck for an Umamusume follower that costs 3 play points and put it onto your field.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n【突进】\n《入场曲》《消费3》：从自己的牌堆之中搜寻消费为3的1张赛马娘类型·从者卡，并召唤到场上。",
-    "ja": "《食事》《コスト1》：これは出走する。\n【突進】\n《ファンファーレ》《コスト3》：自分のデッキからコスト3のウマ娘・フォロワー1枚を探し、場に出す。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -621,11 +566,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Choose one of the following. (1) Look at the top 2 cards of your deck. You may reveal an Umamusume card from among them and add it to your hand. Put the remaining cards on the bottom of your deck in any order. (2) Select a BNW follower in your cemetery and add it to your hand.",
-    "cn": "从下述之中抉择1项。\n【1】查看自己的牌堆顶2张卡。从那之中，可以将1张赛马娘类型·卡片公开并加入手牌。将剩余的卡以任意顺序置于牌堆底。\n【2】选择自己的墓场中的1张BNW类型·从者卡。将其加入手牌。",
-    "ja": "下記から1つチョイスする。【1】自分のデッキの上2枚を見る。その中から、ウマ娘・カード1枚を公開して手札に加えてよい。残りを好きな順にデッキの下に置く。【2】自分の墓場のBNW・フォロワー1枚を選ぶ。それを手札に加える。"
-   },
    "traits": [
     "ウマ娘",
     "BNW"
@@ -651,13 +591,11 @@
    "cost": 4,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nBane.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n【必杀】",
-    "ja": "《食事》《コスト1》：これは出走する。\n【必殺】"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -681,14 +619,12 @@
    "cost": 2,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nRush.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n【突进】",
-    "ja": "《食事》《コスト1》：これは出走する。\n【突進】"
-   },
    "traits": [
     "ウマ娘",
     "BNW"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -712,13 +648,11 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\n{[lastwords]} Search your deck for a Tokai Teio, reveal it, and add it to your hand.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n《谢幕曲》从自己的牌堆之中搜寻1张『东海帝王』卡，并加入手牌。",
-    "ja": "《食事》《コスト1》：これは出走する。\n《ラストワード》自分のデッキから『トウカイテイオー』1枚を探し、手札に加える。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -742,13 +676,11 @@
    "cost": 1,
    "attack": 2,
    "defense": 1,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nOn Race: Select an enemy follower on the field and engage it.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n【起跑时】选择敌方的1个从者。将其横置。",
-    "ja": "《食事》《コスト1》：これは出走する。\n【出走時】相手のフォロワー1体を選ぶ。それをアクトする。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -771,13 +703,11 @@
    "cost": 2,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\n{[act]} {[cost03]}, {[engage]}: Select an enemy follower on the field and deal it 3 damage.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n《起动》《消费3》将这张卡《横置》：选择敌方的1个从者。给予其3点伤害。",
-    "ja": "《食事》《コスト1》：これは出走する。\n《起動》《コスト3》これを《アクト》：相手のフォロワー1体を選ぶ。それに3ダメージ。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -801,13 +731,11 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[feed]} {[cost01]}: Race this follower.\nWhenever you play a spell, select an enemy follower on the field and give it {[attack]}-1/{[defense]}-1.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《吃饭》《消费1》：使这张卡起跑。\n当自己使用法术卡时，选择敌方的1个从者。使其《攻击力》-1/《生命值》-1。",
-    "ja": "《進化》《コスト1》：これは進化する。\n《食事》《コスト1》：これは出走する。\n自分がスペルをプレイしたとき、相手のフォロワー1体を選ぶ。それは《攻撃力》-1/《体力》-1する。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -831,11 +759,6 @@
    "cost": null,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "On Evolve: Select a spell in your cemetery and add it to your hand.\nWhenever you play a spell, select an enemy follower on the field and give it {[attack]}-1/{[defense]}-1",
-    "cn": "当自己使用法术卡时，选择敌方的1个从者。使其《攻击力》-1/《生命值》-1。\n【进化时】选择自己的墓场中的1张法术卡。将其加入手牌。",
-    "ja": "自分がスペルをプレイしたとき、相手のフォロワー1体を選ぶ。それは《攻撃力》-1/《体力》-1する。\n【進化時】自分の墓場のスペル1枚を選ぶ。それを手札に加える。"
-   },
    "traits": [
     "ウマ娘"
    ]
@@ -861,13 +784,11 @@
    "cost": 4,
    "attack": 3,
    "defense": 4,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\n{[fanfare]} Search your deck for an Umamusume spell, reveal it, and add it to your hand.\nWhile this card is on your field, the 1st Umamusume spell you play each turn costs 1 less to play.\nWhen you play a spell, if it’s your 3rd this turn, select an Umamusume follower on your field. Give it and this follower Storm.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n只要有这张卡存在，自己将赛马娘类型·法术卡使用之际，如果为这个回合中第1张的赛马娘类型·法术卡的话，将其消费-1。\n当自己使用法术卡时，如果为这个回合中第3张的法术卡的话，选择自己的1个赛马娘类型·从者。使其与这张卡各获得【疾驰】能力。\n《入场曲》从自己的牌堆之中搜寻1张赛马娘类型·法术卡，并加入手牌。",
-    "ja": "《食事》《コスト1》：これは出走する。\nこれがいる限り、自分がウマ娘・スペルをプレイする際、このターン中に1枚目のウマ娘・スペルなら、コストを-1する。\n自分がスペルをプレイしたとき、このターン中に3枚目のスペルなら、自分のウマ娘・フォロワー1体を選ぶ。それとこれは【疾走】を持つ。\n《ファンファーレ》自分のデッキからウマ娘・スペル1枚を探し、手札に加える。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -891,13 +812,11 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "If there is a Daiwa Scarlet your field, this card costs 2 less to play.\n{[feed]} {[cost01]}: Race this follower.\nOnce per turn, when you play a spell, give each Umamusume follower on your field {[attack]}+1/{[defense]}+1 and Rush.",
-    "cn": "将这张卡使用之际，如果自己的场上有『大和赤骥』的话，将消费-2。\n《吃饭》《消费1》：使这张卡起跑。\n每个回合1次，当自己使用法术卡时，使自己的全体赛马娘类型·从者各《攻击力》+1/《生命值》+1，并获得【突进】能力。",
-    "ja": "これをプレイする際、自分の場に『ダイワスカーレット』がいるなら、コストを-2する。\n《食事》《コスト1》：これは出走する。\nターンごとに1回、自分がスペルをプレイしたとき、自分のウマ娘・フォロワーすべては《攻撃力》+1/《体力》+1して、【突進】を持つ。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -920,11 +839,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[quick]}\nSelect an enemy follower on the field and deal it 3 damage. If there is an Umamusume card on your field, deal 4 damage instead.",
-    "cn": "《快速》\n选择敌方的1个从者。给予其3点伤害。如果自己的场上有赛马娘类型·卡片的话，转变为4点伤害。",
-    "ja": "《クイック》\n相手のフォロワー1体を選ぶ。それに3ダメージ。自分の場にウマ娘・カードがあるなら、代わりに4ダメージ。"
-   },
    "traits": [
     "ウマ娘"
    ]
@@ -949,13 +863,11 @@
    "cost": 1,
    "attack": 0,
    "defense": 2,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nWhenever another one of your followers races, look at the top 4 cards of your deck. You may reveal a spell or amulet from among them and add it to your hand. Put the remaining cards on the bottom of your deck in any order.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n当自己的其他的从者起跑时，查看自己的牌堆顶4张卡。从那之中，可以将1张法术卡或护符卡公开并加入手牌。将剩余的卡以任意顺序置于牌堆底。",
-    "ja": "《食事》《コスト1》：これは出走する。\n自分の他のフォロワーが出走したとき、自分のデッキの上4枚を見る。その中から、スペルかアミュレット1枚を公開して手札に加えてよい。残りを好きな順にデッキの下に置く。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -978,13 +890,11 @@
    "cost": 1,
    "attack": 2,
    "defense": 1,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nOn Race: Draw a card, then discard a card.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n【起跑时】抽取1张卡。将自己的1张手牌舍弃。",
-    "ja": "《食事》《コスト1》：これは出走する。\n【出走時】1枚引く。自分の手札1枚を捨てる。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -1009,11 +919,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[quick]}\nSelect an enemy follower on the field and deal it 2 damage. If there is a racing follower on your field, deal 3 damage instead.",
-    "cn": "《快速》\n选择敌方的1个从者。给予其2点伤害。如果自己的场上有已起跑的从者的话，转变为3点伤害。",
-    "ja": "《クイック》\n相手のフォロワー1体を選ぶ。それに2ダメージ。自分の場に出走したフォロワーがいるなら、代わりに3ダメージ。"
-   },
    "traits": [
     "ウマ娘"
    ]
@@ -1038,13 +943,11 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nActivate {[engage]}: Select a spell that costs 2 play points or less in your hand and put it into your EX area. For the rest of this turn, it costs 0 play points to play.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n《起动》《消费1》将这张卡《横置》：选择自己的手牌中的消费为2及以下的1张法术卡。将其置于EX区域。这个回合中，将其使用之际，将其消费变为0。",
-    "ja": "《食事》《コスト1》：これは出走する。\n《起動》これを《アクト》：自分の手札のコスト2以下のスペル1枚を選ぶ。それをEXエリアに置く。このターン、それをプレイする際、コストを0にする。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -1068,13 +971,11 @@
    "cost": 4,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\n{[fanfare]} Discard a card: Select an enemy follower on the field and deal it 4 damage.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n《入场曲》将1张手牌舍弃：选择敌方的1个从者。给予其4点伤害。",
-    "ja": "《食事》《コスト1》：これは出走する。\n《ファンファーレ》手札1枚を捨てる：相手のフォロワー1体を選ぶ。それに4ダメージ。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -1097,13 +998,11 @@
    "cost": 9,
    "attack": 7,
    "defense": 7,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\n{[fanfare]} Deal 5 damage to each enemy leader and enemy follower on the field. Discard your hand.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n《入场曲》给予敌方的全体主战者与敌方的全体从者各5点伤害。将自己的全部手牌舍弃。",
-    "ja": "《食事》《コスト1》：これは出走する。\n《ファンファーレ》相手のリーダーすべてと相手のフォロワーすべてに5ダメージ。自分の手札すべてを捨てる。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -1127,13 +1026,11 @@
    "cost": 2,
    "attack": 2,
    "defense": 1,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\n{[lastwords]} Select a spell in your cemetery and add it to your hand.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n《谢幕曲》选择自己的墓场中的1张法术卡。将其加入手牌。",
-    "ja": "《食事》《コスト1》：これは出走する。\n《ラストワード》自分の墓場のスペル1枚を選ぶ。それを手札に加える。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -1157,13 +1054,11 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nOn Race: Give this follower {[attack]}+1/{[defense]}+1. Draw 2 cards, then discard a card.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n【起跑时】使这张卡《攻击力》+1/《生命值》+1。抽取2张卡。将自己的1张手牌舍弃。",
-    "ja": "《食事》《コスト1》：これは出走する。\n【出走時】これは《攻撃力》+1/《体力》+1する。2枚引く。自分の手札1枚を捨てる。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -1189,13 +1084,11 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[feed]} {[cost01]}: Race this follower.\n{[fanfare]} Look at the top card of your deck. If it's an Umamusume card, you may reveal it and add it to your hand.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《吃饭》《消费1》：使这张卡起跑。\n《入场曲》查看自己的牌堆顶1张卡。从那之中，可以将1张赛马娘类型·卡片公开并加入手牌。",
-    "ja": "《進化》《コスト1》：これは進化する。\n《食事》《コスト1》：これは出走する。\n《ファンファーレ》自分のデッキの上1枚を見る。その中から、ウマ娘・カード1枚を公開して手札に加えてよい。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -1220,11 +1113,6 @@
    "cost": null,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "On Evolve: If Overflow is active for you, give each other Umamusume follower on your field {[attack]}+1/{[defense]}+1.",
-    "cn": "【进化时】如果处于【觉醒】状态的话，使自己的其他的全体赛马娘类型·从者各《攻击力》+1/《生命值》+1。（如果自己的PP最大值为7点及以上的话，就会处于【觉醒】状态）",
-    "ja": "【進化時】【覚醒】状態なら、自分の他のウマ娘・フォロワーすべては《攻撃力》+1/《体力》+1する。（自分のPP最大値が7以上なら、【覚醒】状態になる）"
-   },
    "traits": [
     "ウマ娘"
    ]
@@ -1250,13 +1138,13 @@
    "cost": 6,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\n{[feed]} {[cost02]}: Race this follower 2 times.\n{[feed]} {[cost03]}: Race this follower 3 times.\nOn Race: Give this follower {[attack]}+2/{[defense]}+1.\n{[fanfare]} Discard 2 cards: Give this follower Storm.\nStrike: Deal 3 damage to each enemy follower on the field.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n《吃饭》《吃饭》《消费2》：使这张卡起跑2次。\n《吃饭》《吃饭》《吃饭》《消费3》：使这张卡起跑3次。\n【起跑时】使这张卡《攻击力》+2/《生命值》+1。\n【攻击时】给予敌方的全体从者各3点伤害。\n《入场曲》将2张手牌舍弃：使这张卡获得【疾驰】能力。",
-    "ja": "《食事》《コスト1》：これは出走する。\n《食事》《食事》《コスト2》：これは2回出走する。\n《食事》《食事》《食事》《コスト3》：これは3回出走する。\n【出走時】これは《攻撃力》+2/《体力》+1する。\n【攻撃時】相手のフォロワーすべてに3ダメージ。\n《ファンファーレ》手札2枚を捨てる：これは【疾走】を持つ。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed",
+    "feed",
+    "feed"
    ]
   },
   {
@@ -1279,13 +1167,11 @@
    "cost": 3,
    "attack": 1,
    "defense": 3,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nStorm. Intimidate.\nStrike: Give this follower {[attack]}+1.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n【疾驰】【威压】\n【攻击时】使这张卡《攻击力》+1。",
-    "ja": "《食事》《コスト1》：これは出走する。\n【疾走】【威圧】\n【攻撃時】これは《攻撃力》+1する。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -1308,11 +1194,6 @@
    "cost": 7,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[fanfare]} If there is another Umamusume card on your field, select an enemy follower on the field and deal it 4 damage.\nAt the start of your main phase, select an enemy leader or enemy follower on the field and deal it 4 damage.",
-    "cn": "当自己的主要阶段到来时，选择敌方的1位主战者或敌方的1个从者。给予其4点伤害。\n《入场曲》如果自己的场上有其他的赛马娘类型·卡片的话，选择敌方的1个从者。给予其4点伤害。",
-    "ja": "自分のメインフェイズが来たとき、相手のリーダー1人か相手のフォロワー1体を選ぶ。それに4ダメージ。\n《ファンファーレ》自分の場に他のウマ娘・カードがあるなら、相手のフォロワー1体を選ぶ。それに4ダメージ。"
-   },
    "traits": [
     "ウマ娘"
    ]
@@ -1337,13 +1218,11 @@
    "cost": 6,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\n{[fanfare]} Choose one of the following. (1) Put the top card of your deck into your EX area. Do this 3 times. (2) Search your deck for a Kawakami Princess and put it onto your field.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n《入场曲》从下述之中抉择1项。\n【1】将自己的牌堆顶1张卡置于EX区域。将这动作进行3次。\n【2】从自己的牌堆之中搜寻1张『川上公主』卡，并召唤到场上。",
-    "ja": "《食事》《コスト1》：これは出走する。\n《ファンファーレ》下記から1つチョイスする。【1】自分のデッキの上1枚をEXエリアに置く。これを3回くり返す。【2】自分のデッキから『カワカミプリンセス』1枚を探し、場に出す。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -1368,13 +1247,11 @@
    "cost": 2,
    "attack": 2,
    "defense": 1,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nOn Race: Give this follower {[attack]}+1/{[defense]}+1. Select up to 1 enemy follower on the field and deal it 2 damage.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n【起跑时】使这张卡《攻击力》+1/《生命值》+1。选择敌方的从者最多1个。给予其2点伤害。",
-    "ja": "《食事》《コスト1》：これは出走する。\n【出走時】これは《攻撃力》+1/《体力》+1する。相手のフォロワー1体まで選ぶ。それに2ダメージ。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -1397,11 +1274,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Select an Umamusume follower on your field. Give it {[attack]}+1 and draw a card. If the selected follower is a Seiun Sky, give it {[attack]}+1/{[defense]}+1 more.",
-    "cn": "选择自己的1个赛马娘类型·从者。使其《攻击力》+1。抽取1张卡。如果选择的从者为『青云天空』的话，再使其《攻击力》+1/《生命值》+1。",
-    "ja": "自分のウマ娘・フォロワー1体を選ぶ。それは《攻撃力》+1する。1枚引く。それが『セイウンスカイ』なら、さらに《攻撃力》+1/《体力》+1する。"
-   },
    "traits": [
     "ウマ娘"
    ]
@@ -1426,13 +1298,11 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\n{[fanfare]} Discard a card: Deal 2 damage to each enemy leader.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n《入场曲》将1张手牌舍弃：给予敌方的全体主战者各2点伤害。",
-    "ja": "《食事》《コスト1》：これは出走する。\n《ファンファーレ》手札1枚を捨てる：相手のリーダーすべてに2ダメージ。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -1455,13 +1325,11 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nOn Race: Give this follower {[attack]}+1/{[defense]}+1. Select up to 1 other follower on your field and give it {[attack]}+1/{[defense]}+1.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n【起跑时】使这张卡《攻击力》+1/《生命值》+1。选择自己的其他的从者最多1个。使其《攻击力》+1/《生命值》+1。",
-    "ja": "《食事》《コスト1》：これは出走する。\n【出走時】これは《攻撃力》+1/《体力》+1する。自分の他のフォロワー1体まで選ぶ。それは《攻撃力》+1/《体力》+1する。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -1485,13 +1353,11 @@
    "cost": 5,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\n{[fanfare]} Deal 2 damage to each enemy follower on the field.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n《入场曲》给予敌方的全体从者各2点伤害。",
-    "ja": "《食事》《コスト1》：これは出走する。\n《ファンファーレ》相手のフォロワーすべてに2ダメージ。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -1515,13 +1381,11 @@
    "cost": 6,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nWard.\n{[fanfare]} Give your leader {[defense]}+5.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n【守护】\n《入场曲》使自己的主战者《生命值》+5。",
-    "ja": "《食事》《コスト1》：これは出走する。\n【守護】\n《ファンファーレ》自分のリーダーは《体力》+5する。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -1544,13 +1408,11 @@
    "cost": 10,
    "attack": 10,
    "defense": 10,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\n{[fanfare]} Give your leader {[defense]}+10.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n《入场曲》使自己的主战者《生命值》+10。",
-    "ja": "《食事》《コスト1》：これは出走する。\n《ファンファーレ》自分のリーダーは《体力》+10する。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -1574,13 +1436,11 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[feed]} {[cost01]}: Race this follower.\n{[fanfare]}, Necrocharge (10): Select an enemy follower on the field and give it {[attack]}-4/{[defense]}-4.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《吃饭》《消费1》：使这张卡起跑。\n《入场曲》【死灵充能_10】选择敌方的1个从者。使其《攻击力》-4/《生命值》-4。（如果自己的墓场为10张及以上的话，就会发动【死灵充能_10】之后的能力）",
-    "ja": "《進化》《コスト1》：これは進化する。\n《食事》《コスト1》：これは出走する。\n《ファンファーレ》【ネクロチャージ_10】相手のフォロワー1体を選ぶ。それは《攻撃力》-4/《体力》-4する。（自分の墓場が10枚以上なら、【ネクロチャージ_10】の後の能力が働く）"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -1604,11 +1464,6 @@
    "cost": null,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "On Evolve: Select an enemy follower on the field and give it {[attack]}-2/{[defense]}-2.",
-    "cn": "【进化时】选择敌方的1个从者。使其《攻击力》-2/《生命值》-2。",
-    "ja": "【進化時】相手のフォロワー1体を選ぶ。それは《攻撃力》-2/《体力》-2する。"
-   },
    "traits": [
     "ウマ娘"
    ]
@@ -1634,13 +1489,11 @@
    "cost": 5,
    "attack": 3,
    "defense": 5,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nWard.\n{[fanfare]} Select an enemy follower on the field. Deal it 3 damage and put the top 2 cards of your deck into your cemetery.\n{[lastwords]} Select an Umamusume follower with a different name from this card in your cemetery and add it to your hand.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n【守护】\n《入场曲》选择敌方的1个从者。给予其3点伤害。将自己的牌堆顶2张卡置于墓场。\n《谢幕曲》选择自己的墓场中的1张「与这张卡不同名的赛马娘类型·从者卡」。将其加入手牌。",
-    "ja": "《食事》《コスト1》：これは出走する。\n【守護】\n《ファンファーレ》相手のフォロワー1体を選ぶ。それに3ダメージ。自分のデッキの上2枚を墓場に置く。\n《ラストワード》自分の墓場の「これと同名でないウマ娘・フォロワー」1枚を選ぶ。それを手札に加える。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -1663,13 +1516,11 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\n{[fanfare]} Select an enemy follower on the field and give it {[attack]}-1/{[defense]}-1.\n{[lastwords]} Each opponent discards a card.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n《入场曲》选择敌方的1个从者。使其《攻击力》-1/《生命值》-1。\n《谢幕曲》敌方的全体玩家，各将自身的1张手牌舍弃。",
-    "ja": "《食事》《コスト1》：これは出走する。\n《ファンファーレ》相手のフォロワー1体を選ぶ。それは《攻撃力》-1/《体力》-1する。\n《ラストワード》相手プレイヤーすべては、自身の手札1枚を捨てる。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -1692,11 +1543,6 @@
    "cost": 5,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "This card can only be played if there are at least 20 Umamusume cards in your cemetery.\nDestroy each enemy follower on the field. Draw 3 cards. Each opponent discards 3 cards.",
-    "cn": "将这张卡使用之际，如果自己的墓场中的赛马娘类型·卡片为19张及以下的话，将不能使用。\n将敌方的全体从者各破坏。抽取3张卡。敌方的全体玩家，各将自身的3张手牌舍弃。",
-    "ja": "これをプレイする際、自分の墓場のウマ娘・カードが19枚以下なら、プレイできない。\n相手のフォロワーすべてを破壊する。3枚引く。相手プレイヤーすべては、自身の手札3枚を捨てる。"
-   },
    "traits": [
     "ウマ娘"
    ]
@@ -1721,13 +1567,11 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nOn Race: Give this follower {[attack]}+1/{[defense]}+1. Give your leader {[defense]}+2. Put the top 2 cards of your deck into your cemetery.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n【起跑时】使这张卡《攻击力》+1/《生命值》+1。使自己的主战者《生命值》+2。将自己的牌堆顶2张卡置于墓场。",
-    "ja": "《食事》《コスト1》：これは出走する。\n【出走時】これは《攻撃力》+1/《体力》+1する。自分のリーダーは《体力》+2する。自分のデッキの上2枚を墓場に置く。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -1751,13 +1595,11 @@
    "cost": 1,
    "attack": 2,
    "defense": 1,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nRush.\n{[fanfare]} If there are 4 other Umamusume cards on your field, give this follower Storm.\n{[fanfare]} If there are at least 5 Umamusume cards in your cemetery, give this follower {[attack]}+2.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n【突进】\n《入场曲》如果自己的其他的赛马娘类型·卡片为4张的话，使这张卡获得【疾驰】能力。\n《入场曲》如果自己的墓场中的赛马娘类型·卡片为5张及以上的话，使这张卡《攻击力》+2。",
-    "ja": "《食事》《コスト1》：これは出走する。\n【突進】\n《ファンファーレ》自分の他のウマ娘・カードが4枚なら、これは【疾走】を持つ。\n《ファンファーレ》自分の墓場のウマ娘・カードが5枚以上なら、これは《攻撃力》+2する。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -1782,11 +1624,6 @@
    "cost": 4,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[quick]}\nIf there are at least 10 Umamusume cards in the cemetery, this card costs 2 less to play.\nSelect an enemy follower on the field and destroy it.",
-    "cn": "《快速》\n将这张卡使用之际，如果自己的墓场中的赛马娘类型·卡片为10张及以上的话，将消费-2。\n选择敌方的1个从者。将其破坏。",
-    "ja": "《クイック》\nこれをプレイする際、自分の墓場のウマ娘・カードが10枚以上なら、コストを-2する。\n相手のフォロワー1体を選ぶ。それを破壊する。"
-   },
    "traits": [
     "ウマ娘"
    ]
@@ -1812,13 +1649,11 @@
    "cost": 1,
    "attack": 1,
    "defense": 1,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\n{[act]} {[cost01]}, {[engage]}: Select an enemy follower on the field. Deal it 1 damage and put the top card of your deck into your cemetery.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n《起动》《消费1》将这张卡《横置》：选择敌方的1个从者。给予其1点伤害。将自己的牌堆顶1张卡置于墓场。",
-    "ja": "《食事》《コスト1》：これは出走する。\n《起動》《コスト1》これを《アクト》：相手のフォロワー1体を選ぶ。それに1ダメージ。自分のデッキの上1枚を墓場に置く。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -1842,13 +1677,11 @@
    "cost": 2,
    "attack": 3,
    "defense": 1,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nAssail.\n{[fanfare]} If there are at least 10 Umamusume cards in your cemetery, give this follower Storm.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n【指定攻击】\n《入场曲》如果自己的墓场中的赛马娘类型·卡片为10张及以上的话，使这张卡获得【疾驰】能力。",
-    "ja": "《食事》《コスト1》：これは出走する。\n【指定攻撃】\n《ファンファーレ》自分の墓場のウマ娘・カードが10枚以上なら、これは【疾走】を持つ。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -1872,13 +1705,11 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nOn Race: Give this follower {[attack]}+1/{[defense]}+1. Select up to 1 Umamusume card in your cemetery and add it to your hand.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n【起跑时】使这张卡《攻击力》+1/《生命值》+1。选择自己的墓场中的赛马娘类型·卡片最多1张。将其加入手牌。",
-    "ja": "《食事》《コスト1》：これは出走する。\n【出走時】これは《攻撃力》+1/《体力》+1する。自分の墓場のウマ娘・カード1枚まで選ぶ。それを手札に加える。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -1901,13 +1732,11 @@
    "cost": 2,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\n{[lastwords]} Put the top 2 cards of your deck into your cemetery.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n《谢幕曲》将自己的牌堆顶2张卡置于墓场。",
-    "ja": "《食事》《コスト1》：これは出走する。\n《ラストワード》自分のデッキの上2枚を墓場に置く。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -1930,13 +1759,11 @@
    "cost": 4,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\n{[fanfare]} Select an enemy amulet on the field and destroy it.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n《入场曲》选择敌方的1个护符。将其破坏。",
-    "ja": "《食事》《コスト1》：これは出走する。\n《ファンファーレ》相手のアミュレット1つを選ぶ。それを破壊する。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -1960,14 +1787,12 @@
    "cost": 4,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\n{[evolve]} {[cost01]}: Evolve this follower.\nWard.\n{[fanfare]} Put an amulet from your field into its owner’s cemetery: Select an enemy leader or enemy follower on the field and deal it 3 damage.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《吃饭》《消费1》：使这张卡起跑。\n【守护】\n《入场曲》将1个护符置于墓场：选择敌方的1位主战者或敌方的1个从者。给予其3点伤害。",
-    "ja": "《進化》《コスト1》：これは進化する。\n《食事》《コスト1》：これは出走する。\n【守護】\n《ファンファーレ》アミュレット1つを墓場に置く：相手のリーダー1人か相手のフォロワー1体を選ぶ。それに3ダメージ。"
-   },
    "traits": [
     "ウマ娘",
     "メジロ家"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -1991,11 +1816,6 @@
    "cost": null,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "Ward.\nOn Evolve: Select an amulet in your cemetery and add it to your hand.",
-    "cn": "【守护】\n【进化时】选择自己的墓场中的1张护符卡。将其加入手牌。",
-    "ja": "【守護】\n【進化時】自分の墓場のアミュレット1枚を選ぶ。それを手札に加える。"
-   },
    "traits": [
     "ウマ娘",
     "メジロ家"
@@ -2022,13 +1842,11 @@
    "cost": 8,
    "attack": 8,
    "defense": 8,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\n{[fanfare]} Reveal the top card of your deck. Deal X damage to each enemy leader and give your leader {[defense]}+X. X equals the revealed card's cost.\n{[act]} {[cost10]}: Give this follower {[attack]}+10/{[defense]}+10.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n《入场曲》将自己的牌堆顶1张卡公开。给予敌方的全体主战者各X点伤害。使自己的主战者《生命值》+X。X为「公开的卡片的消费值」。\n《起动》《消费10》：使这张卡《攻击力》+10/《生命值》+10。",
-    "ja": "《食事》《コスト1》：これは出走する。\n《ファンファーレ》自分のデッキの上1枚を公開する。相手のリーダーすべてにXダメージ。自分のリーダーは《体力》+Xする。Xは「公開したカードのコスト」である。\n《起動》《コスト10》：これは《攻撃力》+10/《体力》+10する。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -2051,13 +1869,11 @@
    "cost": 3,
    "attack": 2,
    "defense": 4,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nWard.\n{[fanfare]}  Look at the top 3 cards of your deck. You may reveal an amulet or Umamusume card from among them and add it to your hand. Put the remaining cards on the bottom of your deck in any order.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n【守护】\n《入场曲》查看自己的牌堆顶3张卡。从那之中，可以将1张「赛马娘类型·卡片」或护符卡公开并加入手牌。将剩余的卡以任意顺序置于牌堆底。",
-    "ja": "《食事》《コスト1》：これは出走する。\n【守護】\n《ファンファーレ》自分のデッキの上3枚を見る。その中から、ウマ娘・カードかアミュレット1枚を公開して手札に加えてよい。残りを好きな順にデッキの下に置く。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -2080,11 +1896,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[fanfare]} Look at the top 3 cards of your deck. Put any number of cards from among them on the top of your deck in any order. Put any remaining cards on the bottom of your deck in any order.\n{[act]} {[cost02]}, {[engage]}, put this card into its owner’s cemetery: Draw a card.",
-    "cn": "《入场曲》查看自己的牌堆顶3张卡。从那之中，可以将任意张数以任意顺序置于牌堆顶。将剩余的卡以任意顺序置于牌堆底。\n《起动》《消费2》将这张卡《横置》置于墓场：抽取1张卡。",
-    "ja": "《ファンファーレ》自分のデッキの上3枚を見る。その中から、好きな枚数を好きな順にデッキの上に置く。残りを好きな順にデッキの下に置く。\n《起動》《コスト2》これを《アクト》墓場に置く：1枚引く。"
-   },
    "traits": [
     "ウマ娘"
    ]
@@ -2109,13 +1920,11 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nOn Race: Give this follower {[attack]}+1/{[defense]}+1. Search your deck for an amulet that costs 1 play point and put it onto your field.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n【起跑时】使这张卡《攻击力》+1/《生命值》+1。从自己的牌堆之中搜寻消费为1的1张护符卡，并召唤到场上。",
-    "ja": "《食事》《コスト1》：これは出走する。\n【出走時】これは《攻撃力》+1/《体力》+1する。自分のデッキからコスト1のアミュレット1枚を探し、場に出す。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -2138,14 +1947,12 @@
    "cost": 2,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nWhen an amulet or Mejiro Family follower you control leaves the field, give this follower Storm.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n当自己的「目白家类型·从者」或护符离开场上时，使这张卡获得【疾驰】能力。",
-    "ja": "《食事》《コスト1》：これは出走する。\n自分のメジロ家・フォロワーかアミュレットが場を離れたとき、これは【疾走】を持つ。"
-   },
    "traits": [
     "ウマ娘",
     "メジロ家"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -2170,11 +1977,6 @@
    "cost": 4,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[fanfare]} Select an enemy follower on the field and destroy it.\nActivate {[engage]}, put this card into its owner's cemetery: Look at the top card of your deck. If it costs 7 play points, you may reveal it and add it to your hand.",
-    "cn": "《入场曲》选择敌方的1个从者。将其破坏。\n《起动》将这张卡《横置》置于墓场：查看自己的牌堆顶1张卡。从那之中，可以将消费为7的1张卡片公开并加入手牌。",
-    "ja": "《ファンファーレ》相手のフォロワー1体を選ぶ。それを破壊する。\n《起動》これを《アクト》墓場に置く：自分のデッキの上1枚を見る。その中から、コスト7のカード1枚を公開して手札に加えてよい。"
-   },
    "traits": [
     "ウマ娘"
    ]
@@ -2199,13 +2001,11 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\n{[fanfare]} Discard an amulet: Give this follower {[attack]}+2 and Rush.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n《入场曲》将手牌中的1张护符卡舍弃：使这张卡的《攻击力》+2，并获得【突进】能力。",
-    "ja": "《食事》《コスト1》：これは出走する。\n《ファンファーレ》手札のアミュレット1枚を捨てる：これは《攻撃力》+2して、【突進】を持つ。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -2229,14 +2029,12 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nOn Race: Give this follower {[attack]}+1/{[defense]}+1. Give your leader {[defense]}+2.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n【起跑时】使这张卡《攻击力》+1/《生命值》+1。使自己的主战者《生命值》+2。",
-    "ja": "《食事》《コスト1》：これは出走する。\n【出走時】これは《攻撃力》+1/《体力》+1する。自分のリーダーは《体力》+2する。"
-   },
    "traits": [
     "ウマ娘",
     "メジロ家"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -2260,14 +2058,12 @@
    "cost": 1,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\nWard.\nAt the start of your main phase, if there are no Mejiro Family followers with a different name from this card on your field, return this card to its owner’s hand.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n【守护】\n当自己的主要阶段到来时，如果自己的场上没有「与这张卡不同名的目白家类型·从者」的话，将这张卡放回手牌。",
-    "ja": "《食事》《コスト1》：これは出走する。\n【守護】\n自分のメインフェイズが来たとき、自分の場に「これと同名でないメジロ家・フォロワー」がいないなら、これを手札に戻す。"
-   },
    "traits": [
     "ウマ娘",
     "メジロ家"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -2290,14 +2086,12 @@
    "cost": 4,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\n{[fanfare]} Search your deck for a Mejiro Family follower and add it to your hand.\n{[fanfare]} If there is a Make! Some! NOISE! is in your cemetery, give this follower {[attack]}+1/{[defense]}+1 and Rush.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n《入场曲》从自己的牌堆之中搜寻1张目白家类型·从者卡，并加入手牌。\n《入场曲》如果自己的墓场中有『跳起来・燥起来・FES起来！』卡的话，使这张卡《攻击力》+1/《生命值》+1，并获得【突进】能力。",
-    "ja": "《食事》《コスト1》：これは出走する。\n《ファンファーレ》自分のデッキからメジロ家・フォロワー1枚を探し、手札に加える。\n《ファンファーレ》自分の墓場に『おどれ・さわげ・フェスれ！』があるなら、これは《攻撃力》+1/《体力》+1して、【突進】を持つ。"
-   },
    "traits": [
     "ウマ娘",
     "メジロ家"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -2321,13 +2115,11 @@
    "cost": 7,
    "attack": 6,
    "defense": 6,
-   "text": {
-    "en": "{[feed]} {[cost01]}: Race this follower.\n{[fanfare]} Select an enemy follower on the field. Banish it and draw a card.",
-    "cn": "《吃饭》《消费1》：使这张卡起跑。\n《入场曲》选择敌方的1个从者。将其消失。抽取1张卡。",
-    "ja": "《食事》《コスト1》：これは出走する。\n《ファンファーレ》相手のフォロワー1体を選ぶ。それを消滅させる。1枚引く。"
-   },
    "traits": [
     "ウマ娘"
+   ],
+   "advancedIcons": [
+    "feed"
    ]
   },
   {
@@ -2351,11 +2143,6 @@
    "cost": 6,
    "attack": 6,
    "defense": 6,
-   "text": {
-    "en": "Rush.\nStrike: If there are no other followers on your field, select an enemy follower on the field. Destroy it and deal 3 damage to its leader.",
-    "cn": "【突进】\n【攻击时】如果自己的场上没有其他的从者的话，选择敌方的1个从者。将其破坏。给予其主战者3点伤害。",
-    "ja": "【突進】\n【攻撃時】自分の場に他のフォロワーがいないなら、相手のフォロワー1体を選ぶ。それを破壊する。それのリーダーに3ダメージ。"
-   },
    "traits": [
     "トレセン学園"
    ]
@@ -2380,11 +2167,6 @@
    "cost": 10,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Shuffle your deck, then reveal the top 6 cards. You may put any number of Umamusume followers or Umamusume amulets from among them onto your field. Add the remaining cards to your hand.",
-    "cn": "将自己的牌堆洗切，并将牌堆顶6张卡公开。从那之中，可以将赛马娘类型·从者卡或赛马娘类型·护符卡任意张数召唤到场上。将剩余的卡加入手牌。",
-    "ja": "自分のデッキをシャッフルし、上6枚を公開する。その中から、ウマ娘・フォロワーかウマ娘・アミュレットを好きな枚数場に出してよい。残りを手札に加える。"
-   },
    "traits": [
     "ウマ娘"
    ]
@@ -2409,11 +2191,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "At the start of your main phase, roll a 6-sided die. If you roll a 1, deal 5 damage to your leader. If you roll a 2, 3, 4, or 5, draw a card. If you roll a 6, give your leader {[defense]}+3 and destroy this card.",
-    "cn": "当自己的主要阶段到来时，掷骰子。如果为1的话，给予自己的主战者5点伤害。如果为2到5的话，抽取1张卡。如果为6的话，使自己的主战者《生命值》+3，并将这张卡破坏。",
-    "ja": "自分のメインフェイズが来たとき、サイコロをふる。1なら、自分のリーダーに5ダメージ。2から5なら、1枚引く。6なら、自分のリーダーは《体力》+3して、これを破壊する。"
-   },
    "traits": [
     "トレセン学園"
    ]
@@ -2438,11 +2215,6 @@
    "cost": 2,
    "attack": 1,
    "defense": 3,
-   "text": {
-    "en": "Ward.\n{[fanfare]} Select a faceup Carrot in your evolve deck. Turn it facedown and draw a card.\nWhenever one of your followers races, give it {[attack]}+1/{[defense]}+1.",
-    "cn": "【守护】\n当自己的从者起跑时，使其《攻击力》+1/《生命值》+1。\n《入场曲》选择自己的进化牌组中正面放置的1张『胡萝卜』卡。将其变为反面放置。抽取1张卡。",
-    "ja": "【守護】\n自分のフォロワーが出走したとき、それは《攻撃力》+1/《体力》+1する。\n《ファンファーレ》自分のエボルヴデッキに表向きで置いた『にんじん』1枚を選ぶ。それを裏向きにする。1枚引く。"
-   },
    "traits": [
     "トレセン学園"
    ]
@@ -2467,11 +2239,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} Reveal the top card of your deck. If it costs an odd number of play points, deal 2 damage to each enemy leader. If it costs an even number of play points, deal 2 damage to your leader.",
-    "cn": "《入场曲》将自己的牌堆顶1张卡公开。如果其消费为奇数的话，给予敌方的全体主战者各2点伤害。如果为偶数的话，给予自己的主战者2点伤害。",
-    "ja": "《ファンファーレ》自分のデッキの上1枚を公開する。それのコストが奇数なら、相手のリーダーすべてに2ダメージ。偶数なら、自分のリーダーに2ダメージ。"
-   },
    "traits": [
     "トレセン学園"
    ]
@@ -2496,11 +2263,6 @@
    "cost": 4,
    "attack": 3,
    "defense": 5,
-   "text": {
-    "en": "Ward.\n{[fanfare]} Select an Umamusume follower on your field and give it {[attack]}+1/{[defense]}+2.",
-    "cn": "【守护】\n《入场曲》选择自己的1个赛马娘类型·从者。使其《攻击力》+1/《生命值》+2。",
-    "ja": "【守護】\n《ファンファーレ》自分のウマ娘・フォロワー1体を選ぶ。それは《攻撃力》+1/《体力》+2する。"
-   },
    "traits": [
     "トレセン学園"
    ]
@@ -2536,11 +2298,6 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "You can serve a Carrot to an Umamusume follower to race it. (Racing followers have Rush.)\n----------\nYou can put up to 10 of this card into your evolve deck.",
-    "cn": "通过吃饭，来使那个赛马娘类型·从者起跑。（使其获得【突进】能力）\n----------\n在进化牌组中，这张卡可以放入最多10张。",
-    "ja": "食事することで、そのウマ娘・フォロワーは出走する。（それは【突進】を持つ）\n----------\nこれはエボルヴデッキに10枚まで入れることができる。"
-   },
    "traits": [],
    "alternateNames": {
     "ECP01-058": {
@@ -2593,7 +2350,10 @@
      "cn": "合宿！农家体验！",
      "ja": "合宿ッ！農家体験ッ！"
     }
-   }
+   },
+   "advancedIcons": [
+    "feed"
+   ]
   },
   {
    "id": "CP01-LD01",
@@ -2614,12 +2374,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": "",
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "CP01-LD02",
@@ -2640,12 +2396,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": "",
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "CP01-LD03",
@@ -2666,12 +2418,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": "",
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "CP01-LD04",
@@ -2692,12 +2440,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": "",
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "CP01-LD05",
@@ -2718,12 +2462,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": "",
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "CP01-LD06",
@@ -2744,12 +2484,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": "",
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "CP01-LD07",
@@ -2770,12 +2506,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": "",
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "CP01-LD08",
@@ -2796,12 +2528,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": "",
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   }
  ]
 }

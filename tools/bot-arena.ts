@@ -35,10 +35,14 @@ import { join } from "node:path";
 import { constants, gunzipSync, gzipSync } from "node:zlib";
 import { createEngine, type Answer, type Decision, type DeckList, type PlayerId } from "../packages/core/src";
 import { ALL_CARDS, ALL_SCRIPTS } from "../packages/core/src/sets";
+import { withDataTexts } from "./lib/card-texts";
 import { BOT_LEVELS, MEDIUM_OPTIONS, PlannerBot, createBot, evaluate, weightsEvaluator, type Bot, type BotEvaluation, type BotLevel, type BotStats, type EvalWeights } from "../packages/bot/src";
 import { engineFingerprint } from "../packages/gui/fingerprint";
 import { DECK_SETS, ROOT, allSampleDecks, deckSet, orderedMatchups, sampleDeck, seriesGame, type NamedDeck } from "./rl/series";
 import { SVE_SERVER_AIS, createSveServerBot, type SveServerAI } from "./sve-server-ais";
+
+/** The cards with this machine's texts (lib/card-texts.ts), which sve-server's imitated AIs read; the rules never do. */
+const CARDS = withDataTexts(ALL_CARDS);
 
 type Engine = ReturnType<typeof createEngine>;
 
@@ -255,7 +259,7 @@ function playGame(engine: Engine, index: number): GameRecord {
 // counting the complete pairs in order isn't held back by one slow process)
 
 if (flag("--worker")) {
-  const engine = createEngine({ cards: ALL_CARDS, scripts: ALL_SCRIPTS });
+  const engine = createEngine({ cards: CARDS, scripts: ALL_SCRIPTS });
   process.on("message", (m: { index?: number; done?: true }) => {
     if (m.done) process.exit(0);
     process.send!(playGame(engine, m.index!));
@@ -285,7 +289,7 @@ if (!(rangeStart < rangeEnd && rangeEnd <= games)) fail(`--range a-b: 0 <= a < b
 if (decks.length !== deckNames.length) fail(`no sample deck named ${deckNames.filter((n) => !decks.some((d) => d.name === n)).join(", ")}`);
 if (matchups.length === 0) fail("two different decks are needed (or --mirror)");
 if (replays > 0 && !out) fail("--replays needs --out");
-const engine = createEngine({ cards: ALL_CARDS, scripts: ALL_SCRIPTS });
+const engine = createEngine({ cards: CARDS, scripts: ALL_SCRIPTS });
 if (standard) {
   const bad = decks.map((d) => ({ name: d.name, problems: deckProblems(engine, d.deck) })).filter((d) => d.problems.length > 0);
   if (bad.length > 0) fail(bad.map((d) => `${d.name}: ${d.problems.join("; ")}`).join("\n"));

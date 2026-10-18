@@ -1,8 +1,12 @@
-import { ALL_CARDS } from "@sve/core/sets";
+import { ALL_CARDS as CORE_CARDS } from "@sve/core/sets";
 import { describe, expect, it } from "vitest";
 import { ABILITIES, NO_FILTERS, filterPool, poolEntries, setOf, setsOf, type PoolCard } from "../src/decks/filters";
 import { emptyDeck } from "../src/decks/format";
 import { addCard, clearDeck, copiesOf, copiesOfDefinition, fileNameFor, isDeckCard, removeCard, sectionOf, sortDeck } from "../src/decks/model";
+import { hasDataTexts, withDataTexts } from "../../../tools/lib/card-texts";
+
+// The cards with this machine's texts (not in the repository; the core has none): the checks of texts need them.
+const ALL_CARDS = withDataTexts(CORE_CARDS);
 
 // The deck builder's pure parts: editing a deck, and the card pool's filters, on the real card pool.
 const byId = new Map(ALL_CARDS.map((c) => [c.id, c]));
@@ -88,7 +92,7 @@ describe("the card pool", () => {
     expect(setsOf(pool).slice(0, 3)).toEqual(["BP01", "BP02", "BP03"]);
   });
 
-  it("searches words in names, numbers and text; every word must match and '-word' must not", () => {
+  it.skipIf(!hasDataTexts())("searches words in names, numbers and text; every word must match and '-word' must not", () => {
     const goblins = filterPool(pool, { ...NO_FILTERS, text: "goblin" });
     expect(goblins.length).toBeGreaterThan(0);
     expect(filterPool(pool, { ...NO_FILTERS, text: "BP01-011" }).map((c) => c.id)).toContain("BP01-011");
@@ -101,15 +105,18 @@ describe("the card pool", () => {
     expect(byCost.map((c) => c.cost ?? 99)).toEqual([...byCost.map((c) => c.cost ?? 99)].sort((a, b) => a - b));
   });
 
-  it("filters by an ability the card text names, and every ability finds cards", () => {
+  it.skipIf(!hasDataTexts())("filters by an ability the card text names, and every ability finds cards", () => {
     const byAbility = (ability: (typeof ABILITIES)[number]) => filterPool(pool, { ...NO_FILTERS, ability });
     const fanfare = byAbility("fanfare");
     expect(fanfare.length).toBeGreaterThan(500);
     expect(fanfare.filter((c) => !c.preview).every((c) => c.text.en.includes("{[fanfare]}"))).toBe(true);
-    // A pre-release card (BP22: a placeholder English text) is found by its Japanese text.
     expect(fanfare.map((c) => c.id)).toContain("BP22-009");
     expect([byAbility("act"), byAbility("quick"), byAbility("onSuperEvolve")].map((cs) => cs.some((c) => ["BP22-001", "BP22-018", "BP22-022"].includes(c.id)))).toEqual([true, true, true]);
     expect(byAbility("storm").map((c) => c.id)).not.toContain("BP22-009");
+    // A pre-release card (data/preview.ts: a placeholder English text; BP22 until 2026-10-18) is found by its Japanese text.
+    const mage = pool.find((c) => c.id === "BP22-009")!;
+    const preview = [{ ...mage, preview: true as const, text: { ...mage.text, en: "unavailable" } }];
+    expect([filterPool(preview, { ...NO_FILTERS, ability: "fanfare" }).length, filterPool(preview, { ...NO_FILTERS, ability: "storm" }).length]).toEqual([1, 0]);
     expect(byAbility("ward").map((c) => c.id)).toContain("BP10-105");
     expect(byAbility("sanguine").map((c) => c.id)).toContain("BP01-112");
     for (const ability of ABILITIES) expect(byAbility(ability).length, ability).toBeGreaterThan(0);

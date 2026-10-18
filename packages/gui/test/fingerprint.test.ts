@@ -61,6 +61,10 @@ describe("the online fingerprint", () => {
     expect(write({ "gui/src/engine/game-host.ts": "export function pace() : number {\n\n      return 1; // one\n  }\n" })).toBe(base);
     expect(write({}, { ...card, text: { en: "Ward. (fixed)", cn: "【守护】。", ja: "【守護】" }, names: { en: "Knight!", cn: "骑士！", ja: "ナイト" } })).toBe(base);
     expect(write({}, { ...card, alternateNames: { "X-001a": { en: "Sir", cn: "爵士", ja: "サー" } } })).toBe(base);
+    // The texts' own files (X_en.json ...), whatever they say.
+    const textFile = (en: string) => JSON.stringify({ format: 1, set: "X", lang: "en", cards: { "X-001": en } });
+    expect(write({ "core/data/X_en.json": textFile("Ward.") })).toBe(base);
+    expect(write({ "core/data/X_en.json": textFile("Ward. Storm.") })).toBe(base);
     const { id, ...rest } = card;
     expect(write({}, { ...rest, id })).toBe(base);
     expect(write({ "core/src/data/fixes.ts": 'export const FIX = "漢字";\n' })).toBe(base);

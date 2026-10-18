@@ -26,7 +26,7 @@ export default defineCard({
       modes: [
         {
           id: "roar",
-          label: "Put a 貫く咆哮 from your cemetery into your EX area",
+          label: "Put a Piercing Roar from your cemetery into your EX area",
           targets: [inYourZone("cemetery", { filter: named(PIERCING_ROAR) })],
           *resolve(fx) {
             yield* fx.putIntoEx(fx.targets[0] ?? []);
@@ -34,7 +34,7 @@ export default defineCard({
         },
         {
           id: "ignis",
-          label: "Pay 5: put an イグニスドラゴン from your cemetery onto your field",
+          label: "Pay 5: put an Ignis Dragon from your cemetery onto your field",
           cost: playPointsCost(5),
           targets: [inYourZone("cemetery", { filter: named(IGNIS_DRAGON) })],
           *resolve(fx) {

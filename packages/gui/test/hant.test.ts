@@ -1,5 +1,5 @@
 import { createEngine } from "@sve/core";
-import { ALL_CARDS, ALL_SCRIPTS } from "@sve/core/sets";
+import { ALL_CARDS as CORE_CARDS, ALL_SCRIPTS } from "@sve/core/sets";
 import { describe, expect, it } from "vitest";
 import { Catalog, cardName, cardText } from "../src/app/catalog";
 import { DEFAULT_SETTINGS } from "../src/app/settings";
@@ -11,6 +11,10 @@ import { scriptLabel } from "../src/game/options";
 import { translate } from "../src/i18n";
 import { counterName } from "../src/i18n/counters";
 import { loadHant, toHant } from "../src/i18n/hant";
+import { hasDataTexts, withDataTexts } from "../../../tools/lib/card-texts";
+
+// The cards with this machine's texts (not in the repository; the core has none): the checks of texts need them.
+const ALL_CARDS = withDataTexts(CORE_CARDS);
 
 // Traditional Chinese (i18n/hant.ts): the interface and the card texts are the Simplified Chinese ones, converted with
 // OpenCC's dictionaries (phrases first). Its converter is loaded when it is chosen.
@@ -33,7 +37,7 @@ describe("Traditional Chinese", () => {
     expect([toHant("后手"), toHant("皇后"), toHant("头发"), toHant("发动"), toHant("一只")]).toEqual(["後手", "皇后", "頭髮", "發動", "一隻"]);
   });
 
-  it("converts the card names and texts, traits, icons, counters, the scripts' options and quoted abilities", async () => {
+  it.skipIf(!hasDataTexts())("converts the card names and texts, traits, icons, counters, the scripts' options and quoted abilities", async () => {
     await loadHant();
     const gremory = catalog.def("BP12-071")!;
     expect(cardName(gremory, "zh-Hant")).toBe("預視死期者·格莫瑞");

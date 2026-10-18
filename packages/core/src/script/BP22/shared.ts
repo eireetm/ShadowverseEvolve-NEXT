@@ -1,27 +1,27 @@
 // Shared pieces of BP22 card scripts (not a card: the file name has no set prefix).
 //
-// BP22 is a pre-release set (data/preview.ts): its cards are implemented from the Japanese text (the Chinese text checked
-// against it), and a card of this set is named by its Japanese name until the English data is out. Every script names
-// BP22 cards through the constants below, so that renaming them then is one edit here.
+// BP22's cards were implemented from the Japanese text (the Chinese text checked against it) while the set was pre-release
+// data (data/preview.ts, 2026-10-01); since 2026-10-18 they are built from the scraped data and named by its English names.
+// Every script names BP22 cards through the constants below.
 import type { CardId, PlayerId } from "../../model/ids";
 import type { GameReader } from "../../engine/query";
 import { hasTrait, isFollower, isToken } from "../targets";
 
-// BP22 card names (Japanese until the English data is out).
-export const BRILLIANT_FAIRY = "ブリリアントフェアリー"; // BP22-001
-export const ERIN = "永久なる輝き・エリン"; // BP22-003 / 004
-export const VICTORY_BLADER = "ビクトリーブレイダー"; // BP22-019
-export const ICEBLOCK_GOLEM = "氷塊のゴーレム"; // BP22-052
-export const IGNIS_DRAGON = "イグニスドラゴン"; // BP22-056 / 057
-export const PIERCING_ROAR = "貫く咆哮"; // BP22-067
-export const DRAGOSNAKE = "堅殻のドラゴスネーク"; // BP22-070
-export const KERNUNNOS = "ケルヌンノス"; // BP22-077
-export const ZOMBIE_DOG = "ゾンビドッグ"; // BP22-080
-export const HUGINN_AND_MUNINN = "フギン＆ムニン"; // BP22-085
-export const GOD_OF_CURSES = "ゴッド・オブ・カース"; // BP22-092
-export const SAINTS_COMMAND = "聖女の号令"; // BP22-T01 (spell token)
-export const SHADOW_GENERAL = "シャドウジェネラル"; // BP22-T02
-export const RADIANT_ARTIFACT = "レディアントアーティファクト"; // BP22-T03
+// BP22 card names.
+export const BRILLIANT_FAIRY = "Brilliant Fairy"; // BP22-001 ブリリアントフェアリー
+export const ERIN = "Aerin, Forever Brilliant"; // BP22-003 / 004 永久なる輝き・エリン
+export const VICTORY_BLADER = "Victorious Blader"; // BP22-019 ビクトリーブレイダー
+export const ICEBLOCK_GOLEM = "Frost Golem"; // BP22-052 氷塊のゴーレム
+export const IGNIS_DRAGON = "Ignis Dragon"; // BP22-056 / 057 イグニスドラゴン
+export const PIERCING_ROAR = "Piercing Roar"; // BP22-067 貫く咆哮
+export const DRAGOSNAKE = "Ironscale Serpent Drake"; // BP22-070 堅殻のドラゴスネーク
+export const KERNUNNOS = "Cernunnos"; // BP22-077 ケルヌンノス
+export const ZOMBIE_DOG = "Dog of the Dead"; // BP22-080 ゾンビドッグ
+export const HUGINN_AND_MUNINN = "Huginn & Muninn"; // BP22-085 フギン＆ムニン
+export const GOD_OF_CURSES = "God of Curses"; // BP22-092 ゴッド・オブ・カース
+export const SAINTS_COMMAND = "Her Holiness's Decree"; // BP22-T01 聖女の号令 (spell token)
+export const SHADOW_GENERAL = "Shadow General"; // BP22-T02 シャドウジェネラル
+export const RADIANT_ARTIFACT = "Radiant Artifact"; // BP22-T03 レディアントアーティファクト
 
 // Tokens and cards of earlier sets (their English names).
 export const FAIRY = "Fairy"; // BP01-T03 フェアリー

@@ -685,13 +685,13 @@ export const OPTION_TEXT: Readonly<Record<string, OptionText>> = {
   // BP22-039
   "Earth Rite (9): this costs 1": { card: "BP22-039", cn: "【土之秘术_9】：将消费变为1", ja: "【土の秘術_9】：コストを1にする" },
   // BP22-062
-  "Put a 貫く咆哮 from your cemetery into your EX area": { card: "BP22-062", cn: "选择自己的墓场中的1张『贯穿的咆哮』卡。将其置于EX区域", ja: "自分の墓場の『貫く咆哮』1枚を選ぶ。それをEXエリアに置く" },
-  "Pay 5: put an イグニスドラゴン from your cemetery onto your field": { card: "BP22-062", cn: "《消费5》：选择自己的墓场中的1张『烈焰之龙』卡。将其召唤到场上", ja: "コスト5：自分の墓場の『イグニスドラゴン』1枚を選ぶ。それを場に出す" },
+  "Put a Piercing Roar from your cemetery into your EX area": { card: "BP22-062", cn: "选择自己的墓场中的1张『贯穿的咆哮』卡。将其置于EX区域", ja: "自分の墓場の『貫く咆哮』1枚を選ぶ。それをEXエリアに置く" },
+  "Pay 5: put an Ignis Dragon from your cemetery onto your field": { card: "BP22-062", cn: "《消费5》：选择自己的墓场中的1张『烈焰之龙』卡。将其召唤到场上", ja: "コスト5：自分の墓場の『イグニスドラゴン』1枚を選ぶ。それを場に出す" },
   // BP22-074
   "Destroy an enemy follower, then 1 damage to each enemy leader and follower": { card: "BP22-074", cn: "选择敌方场上的1个从者。将其破坏。给予敌方的全体主战者与敌方场上的全体从者各1点伤害", ja: "相手の場のフォロワー1体を選ぶ。それを破壊する。相手のリーダーすべてと相手の場のフォロワーすべてに1ダメージ" },
   // BP22-085
   "This gets +1 attack": { card: "BP22-085", cn: "使这张卡《攻击力》+1", ja: "これは攻撃力+1する" },
-  "Pay 1: summon a フギン＆ムニン from your deck": { card: "BP22-085", cn: "《消费1》：从自己的牌堆之中搜寻1张『福金与雾尼』卡，并召唤到场上", ja: "コスト1：自分のデッキから『フギン＆ムニン』1枚を探し、場に出す" },
+  "Pay 1: summon a Huginn & Muninn from your deck": { card: "BP22-085", cn: "《消费1》：从自己的牌堆之中搜寻1张『福金与雾尼』卡，并召唤到场上", ja: "コスト1：自分のデッキから『フギン＆ムニン』1枚を探し、場に出す" },
   // BP22-090
   "Put the top 2 cards of your deck into your cemetery": { card: "BP22-090", cn: "将自己的牌堆顶2张卡置于墓场", ja: "自分のデッキの上2枚を墓場に置く" },
   "Recover 2 play points": { card: "BP22-090", cn: "将自己的PP回复2点", ja: "自分のPPを2回復する" },

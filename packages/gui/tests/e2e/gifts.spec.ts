@@ -1,10 +1,11 @@
 import { expect, test } from "@playwright/test";
-import { clickCard, showSidebar, startGame, toMainPhase, tokenByHand, useSettings } from "./helpers";
+import { hasCardTexts, clickCard, showSidebar, startGame, toMainPhase, tokenByHand, useSettings } from "./helpers";
 
 // The card panel shows the abilities given to a card below its text, as the text of the card that gave it quotes it
 // (game/card/gifts.ts): here a Wings of Desire (BP15-PR14) played on a follower gives it its Strike.
 
 test("the card panel: an ability given to a follower, quoted from the card that gave it", async ({ page }) => {
+  test.skip(!hasCardTexts, "no card text files on this machine (npm run build:cards writes them)");
   const problems: string[] = [];
   page.on("pageerror", (e) => problems.push(e.message));
   await useSettings(page, { uiLang: "en", cardLang: "en", botDelayMs: 0, manualDebug: true, setupControllers: ["human", "greedy"], setupDecks: ["samples/sd01.json", "samples/sd02.json"] });

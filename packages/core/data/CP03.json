@@ -1,5 +1,5 @@
 {
- "format": 1,
+ "format": 2,
  "set": "CP03",
  "printings": 281,
  "cards": [
@@ -24,11 +24,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost04]}: Evolve this follower into a Blue Storm Supreme Dragon, Glory Maelstrom.\nStorm. Twin Drive.\nStrike - If it's the 4th time an Aqua Force follower on your field has attacked this turn, evolve this follower into a Blue Storm Supreme Dragon, Glory Maelstrom.",
-    "cn": "《进化》《消费4》：使这张卡进化为『苍岚霸龙 荣光灾漩』。\n【疾驰】【双重驱动】\n【攻击时】如果为这个回合，第4次的自己场上的苍海军势类型·从者的攻击的话，使这张卡进化为『苍岚霸龙 荣光灾漩』。",
-    "ja": "進化コスト4：これは『蒼嵐覇竜 グローリー・メイルストローム』に進化する。\n【疾走】【ツインドライブ】\n【攻撃時】このターン、4回目の自分の場のアクアフォース・フォロワーの攻撃なら、これは『蒼嵐覇竜 グローリー・メイルストローム』に進化する。"
-   },
    "traits": [
     "ヴァンガード",
     "アクアフォース"
@@ -55,11 +50,6 @@
    "cost": null,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "Storm. Twin Drive\nWhenever this follower deals damage to an enemy leader, select an enemy follower on the field. Destroy it and draw 2 cards.",
-    "cn": "【疾驰】【双重驱动】\n当这张卡给予敌方的主战者伤害时，选择敌方场上的1个从者。将其破坏。抽取2张卡。",
-    "ja": "【疾走】【ツインドライブ】\nこれが相手のリーダーにダメージを与えたとき、相手の場のフォロワー1体を選ぶ。それを破壊する。2枚引く。"
-   },
    "traits": [
     "ヴァンガード",
     "アクアフォース"
@@ -85,11 +75,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "Rush.\n{[fanfare]} Select an enemy follower on the field and engage it.\n{[lastwords]} If it's your turn, look at the top 5 cards of your deck. You may summon up to two 1-cost Aqua Force followers from among them. Put the rest on the bottom of your deck in any order.",
-    "cn": "【突进】\n《入场曲》选择敌方场上的1个从者。将其横置。\n《谢幕曲》如果为自己的回合中的话，查看自己的牌堆顶5张卡。从那之中，可以将原始消费为1的苍海军势类型·从者卡最多2张召唤到场上。将剩余的卡以任意顺序置于牌堆底。",
-    "ja": "【突進】\nファンファーレ相手の場のフォロワー1体を選ぶ。それをアクトする。\nラストワード自分のターン中なら、自分のデッキの上5枚を見る。その中から、元のコスト1のアクアフォース・フォロワー2枚まで場に出してよい。残りを好きな順にデッキの下に置く。"
-   },
    "traits": [
     "ヴァンガード",
     "アクアフォース"
@@ -115,11 +100,6 @@
    "cost": 3,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "Storm.\n{[fanfare]} Return a 1-cost Aqua Force follower on your field to its owner's hand: You may summon an Aqua Force follower that costs 3 or less from your hand.",
-    "cn": "【疾驰】\n《入场曲》将原始消费为1的场上的1个苍海军势类型·从者放回手牌：可以将自己的手牌中的原始消费为3及以下的1张苍海军势类型·从者卡召唤到场上。",
-    "ja": "【疾走】\nファンファーレ元のコスト1の場のアクアフォース・フォロワー1体を手札に戻す：自分の手札の元のコスト3以下のアクアフォース・フォロワー1枚を場に出してよい。"
-   },
    "traits": [
     "ヴァンガード",
     "アクアフォース"
@@ -145,11 +125,6 @@
    "cost": 2,
    "attack": 1,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower into a Navalgazer Dragon.\nWhenever an Aqua Force follower on your field attacks, if it's the 3rd time an Aqua Force follower on your field has attacked this turn, give your leader {[defense]}+2 and draw a card.",
-    "cn": "《进化》《消费1》：使这张卡进化为『凝海龙』。\n当自己场上的苍海军势类型·从者进行攻击时，如果为这个回合，第3次的自己场上的苍海军势类型·从者的攻击的话，使自己的主战者《生命值》+2。抽取1张卡。",
-    "ja": "進化コスト1：これは『ネイブルゲイザー・ドラゴン』に進化する。\n自分の場のアクアフォース・フォロワーが攻撃したとき、このターン、3回目の自分の場のアクアフォース・フォロワーの攻撃なら、自分のリーダーは体力+2する。1枚引く。"
-   },
    "traits": [
     "ヴァンガード",
     "アクアフォース"
@@ -175,11 +150,6 @@
    "cost": null,
    "attack": 2,
    "defense": 4,
-   "text": {
-    "en": "Twin Drive.\nOn Evolve - You may summon a 1-cost Aqua Force follower from your hand.\nWhenever an Aqua Force follower on your field attacks, if it's the 3rd time an Aqua Force follower on your field has attacked this turn, give your leader {[defense]}+2 and draw a card.",
-    "cn": "【双重驱动】\n当自己场上的苍海军势类型·从者进行攻击时，如果为这个回合，第3次的自己场上的苍海军势类型·从者的攻击的话，使自己的主战者《生命值》+2。抽取1张卡。\n【进化时】可以将自己的手牌中的原始消费为1的1张苍海军势类型·从者卡召唤到场上。",
-    "ja": "【ツインドライブ】\n自分の場のアクアフォース・フォロワーが攻撃したとき、このターン、3回目の自分の場のアクアフォース・フォロワーの攻撃なら、自分のリーダーは体力+2する。1枚引く。\n【進化時】自分の手札の元のコスト1のアクアフォース・フォロワー1枚を場に出してよい。"
-   },
    "traits": [
     "ヴァンガード",
     "アクアフォース"
@@ -205,11 +175,6 @@
    "cost": 8,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "This card costs 6 less to play if Aqua Force followers on your field have attacked at least 3 times this turn.\n----------\nTwin Drive.\n{[fanfare]} Select up to 2 enemy followers on the field. Destroy them and, for every follower destroyed this way, deal 1 damage to each enemy leader.",
-    "cn": "将这张卡使用之际，如果这个回合，自己场上的苍海军势类型·从者进行攻击的次数为3次及以上的话，将消费-6。\n【双重驱动】\n《入场曲》选择敌方场上的从者最多2个。将其破坏。以这个能力破坏的敌方场上的从者每有1个，给予敌方的全体主战者各1点伤害。",
-    "ja": "これをプレイする際、このターン、自分の場のアクアフォース・フォロワーが3回以上攻撃していたなら、コストを-6する。\n【ツインドライブ】\nファンファーレ相手の場のフォロワー2体まで選ぶ。それを破壊する。これによって破壊した相手の場のフォロワー1体につき、相手のリーダーすべてに1ダメージ。"
-   },
    "traits": [
     "ヴァンガード",
     "アクアフォース"
@@ -235,14 +200,12 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[ride]} {[cost01]}: Give this follower Drive.\nOn Drive - Give this follower  {[attack]}+1/{[defense]}+1. Search your deck for up to two 1-cost Aqua Force followers with different names, reveal them, add them to your hand, then shuffle.",
-    "cn": "《凭依》《消费1》：使这张卡获得驱动能力。\n【驱动获得时】使这张卡《攻击力》+1/《生命值》+1。从自己的牌堆之中搜寻原始消费为1的、卡片名各不相同的苍海军势类型·从者卡最多2张，并加入手牌。",
-    "ja": "憑依コスト1：これはドライブを持つ。\n【ドライブ獲得時】これは攻撃力+1/体力+1する。自分のデッキから元のコスト1のアクアフォース・フォロワーをカード名が異なるように2枚まで探し、手札に加える。"
-   },
    "traits": [
     "ヴァンガード",
     "アクアフォース"
+   ],
+   "advancedIcons": [
+    "ride"
    ]
   },
   {
@@ -265,14 +228,12 @@
    "cost": 1,
    "attack": 1,
    "defense": 1,
-   "text": {
-    "en": "{[ride]} {[cost01]}: Give this follower Drive.\nOn Drive - Give this follower  {[attack]}+1/{[defense]}+1, Storm, and \"Strike - Select an enemy follower on the field and, if it's the 3rd time an Aqua Force follower on your field has attacked this turn, deal 2 damage to the selected follower.\"",
-    "cn": "《凭依》《消费1》：使这张卡获得驱动能力。\n【驱动获得时】使这张卡《攻击力》+1/《生命值》+1，并获得【疾驰】与「【攻击时】选择敌方场上的1个从者。如果为这个回合，第3次的自己场上的苍海军势类型·从者的攻击的话，给予其2点伤害」能力。",
-    "ja": "憑依コスト1：これはドライブを持つ。\n【ドライブ獲得時】これは攻撃力+1/体力+1して、【疾走】と「【攻撃時】相手の場のフォロワー1体を選ぶ。このターン、3回目の自分の場のアクアフォース・フォロワーの攻撃なら、それに2ダメージ」を持つ。"
-   },
    "traits": [
     "ヴァンガード",
     "アクアフォース"
+   ],
+   "advancedIcons": [
+    "ride"
    ]
   },
   {
@@ -295,11 +256,6 @@
    "cost": 2,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "This follower doesn't take damage from enemy abilities.",
-    "cn": "这张卡不会受到「敌方的能力伤害」。",
-    "ja": "これは「相手の能力ダメージ」を受けない。"
-   },
    "traits": [
     "ヴァンガード",
     "アクアフォース"
@@ -325,11 +281,6 @@
    "cost": 1,
    "attack": 2,
    "defense": 1,
-   "text": {
-    "en": "{[fanfare]} If there's another Aqua Force follower on your field, give this follower Rush and Assail.",
-    "cn": "《入场曲》如果自己的场上有其他的苍海军势类型·从者的话，使这张卡获得【突进】【指定攻击】能力。",
-    "ja": "ファンファーレ自分の場に他のアクアフォース・フォロワーがいるなら、これは【突進】【指定攻撃】を持つ。"
-   },
    "traits": [
     "ヴァンガード",
     "アクアフォース"
@@ -355,14 +306,12 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[ride]} {[cost01]}: Give this follower Drive.\nOn Drive - Give this follower {[attack]}+1/{[defense]}+1. Look at the top card of your deck. You may reveal it and add it to your hand. If you revealed a 1-cost Aqua Force follower, give your leader {[defense]}+2.",
-    "cn": "《凭依》《消费1》：使这张卡获得驱动能力。\n【驱动获得时】使这张卡《攻击力》+1/《生命值》+1。查看自己的牌堆顶1张卡。从那之中，可以将1张卡公开并加入手牌。如果将原始消费为1的苍海军势类型·从者卡公开的话，使自己的主战者《生命值》+2。",
-    "ja": "憑依コスト1：これはドライブを持つ。\n【ドライブ獲得時】これは攻撃力+1/体力+1する。自分のデッキの上1枚を見る。その中から、1枚を公開して手札に加えてよい。元のコスト1のアクアフォース・フォロワーを公開したなら、自分のリーダーは体力+2する。"
-   },
    "traits": [
     "ヴァンガード",
     "アクアフォース"
+   ],
+   "advancedIcons": [
+    "ride"
    ]
   },
   {
@@ -385,11 +334,6 @@
    "cost": 1,
    "attack": 0,
    "defense": 1,
-   "text": {
-    "en": "Storm.\n{[lastwords]} Search your deck for a Tear Knight, Cyprus, reveal it, add it to your hand, then shuffle.",
-    "cn": "【疾驰】\n《谢幕曲》从自己的牌堆之中搜寻1张『泪骑士 齐浦洛斯』卡，并加入手牌。",
-    "ja": "【疾走】\nラストワード自分のデッキから『ティアーナイト キプロス』1枚を探し、手札に加える。"
-   },
    "traits": [
     "ヴァンガード",
     "アクアフォース"
@@ -415,11 +359,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[quick]}\nChoose one. (1) Select an enemy follower on the field and deal it 2 damage. (2) Discard an Aqua Force card: Select an enemy follower on the field. Deal it 3 damage and look at the top card of your deck. If it's a 1-cost Aqua Force follower, you may reveal it and add it to your hand.",
-    "cn": "《快速》\n从下述之中抉择1项。\n【1】选择敌方场上的1个从者。给予其2点伤害。\n【2】将手牌中的1张苍海军势类型·卡片舍弃：选择敌方场上的1个从者。给予其3点伤害。查看自己的牌堆顶1张卡。从那之中，可以将原始消费为1的1张苍海军势类型·从者卡公开并加入手牌。",
-    "ja": "クイック\n下記から1つチョイスする。【1】相手の場のフォロワー1体を選ぶ。それに2ダメージ。【2】手札のアクアフォース・カード1枚を捨てる：相手の場のフォロワー1体を選ぶ。それに3ダメージ。自分のデッキの上1枚を見る。その中から、元のコスト1のアクアフォース・フォロワー1枚を公開して手札に加えてよい。"
-   },
    "traits": [
     "ヴァンガード",
     "アクアフォース"
@@ -446,11 +385,6 @@
    "cost": 1,
    "attack": 1,
    "defense": 1,
-   "text": {
-    "en": "Storm.\n-----------\n(If this card is revealed by a drive check, give a follower on your field {[attack]}+2.)",
-    "cn": "【疾驰】\n----------\n（如果以驱动判定翻开这张卡的话，使自己场上的1个从者《攻击力》+2）",
-    "ja": "【疾走】\n----------\n（ドライブチェックによってこれが捲れたなら、自分の場のフォロワー1体は攻撃力+2する）"
-   },
    "traits": [
     "ヴァンガード",
     "アクアフォース"
@@ -477,11 +411,6 @@
    "cost": 2,
    "attack": 1,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} Draw a card.\n----------\n(If this card is revealed by a drive check, draw a card.)",
-    "cn": "《入场曲》抽取1张卡。\n----------\n（如果以驱动判定翻开这张卡的话，抽取1张卡）",
-    "ja": "ファンファーレ1枚引く。\n----------\n（ドライブチェックによってこれが捲れたなら、1枚引く）"
-   },
    "traits": [
     "ヴァンガード",
     "アクアフォース"
@@ -508,11 +437,6 @@
    "cost": 1,
    "attack": 1,
    "defense": 1,
-   "text": {
-    "en": "Rush.\n{[fanfare]} Select up to 1 enemy follower on the field and engage or refresh it.\n----------\n(If this card is revealed by a drive check, refresh a follower on your field. For the rest of this turn, it can't attack enemy leaders.)",
-    "cn": "【突进】\n《入场曲》选择敌方场上的从者最多1个。将其横置或竖置。\n----------\n（如果以驱动判定翻开这张卡的话，将自己场上的1个从者竖置。这个回合，使其不能对敌方的主战者进行攻击）",
-    "ja": "【突進】\nファンファーレ相手の場のフォロワー1体まで選ぶ。それをアクトするかスタンドする。\n----------\n（ドライブチェックによってこれが捲れたなら、自分の場のフォロワー1体をスタンドする。このターン、それは相手のリーダーを攻撃できない）"
-   },
    "traits": [
     "ヴァンガード",
     "アクアフォース"
@@ -539,11 +463,6 @@
    "cost": 1,
    "attack": 1,
    "defense": 1,
-   "text": {
-    "en": "Ward.\nAt the start of your end phase, if Aqua Force followers on your field have attacked at least 3 times this turn, give your leader {[defense]}+2.\n----------\n(If this card is revealed by a drive check, give your leader{[defense]}+3.)",
-    "cn": "【守护】\n当自己的结束阶段到来时，如果这个回合，自己场上的苍海军势类型·从者进行攻击的次数为3次及以上的话，使自己的主战者《生命值》+2。\n----------\n（如果以驱动判定翻开这张卡的话，使自己的主战者《生命值》+3）",
-    "ja": "【守護】\n自分のエンドフェイズが来たとき、このターン、自分の場のアクアフォース・フォロワーが3回以上攻撃していたなら、自分のリーダーは体力+2する。\n----------\n（ドライブチェックによってこれが捲れたなら、自分のリーダーは体力+3する）"
-   },
    "traits": [
     "ヴァンガード",
     "アクアフォース"
@@ -569,14 +488,12 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[ride]} {[cost01]}: Give this follower Drive.\nOn Drive - Select up to 1 enemy follower on the field. Deal it 2 damage and give this follower {[attack]}+1/{[defense]}+1.\nWhenever an Aqua Force follower on your field attacks, select an enemy follower on the field and, if it's the 3rd time an Aqua Force follower on your field has attacked this turn, deal 2 damage to the selected follower.",
-    "cn": "《凭依》《消费1》：使这张卡获得驱动能力。\n当自己场上的苍海军势类型·从者进行攻击时，选择敌方场上的1个从者。如果为这个回合，第3次的自己场上的苍海军势类型·从者的攻击的话，给予其2点伤害。\n【驱动获得时】选择敌方场上的从者最多1个。给予其2点伤害。使这张卡《攻击力》+1/《生命值》+1。",
-    "ja": "憑依コスト1：これはドライブを持つ。\n自分の場のアクアフォース・フォロワーが攻撃したとき、相手の場のフォロワー1体を選ぶ。このターン、3回目の自分の場のアクアフォース・フォロワーの攻撃なら、それに2ダメージ。\n【ドライブ獲得時】相手の場のフォロワー1体まで選ぶ。それに2ダメージ。これは攻撃力+1/体力+1する。"
-   },
    "traits": [
     "ヴァンガード",
     "アクアフォース"
+   ],
+   "advancedIcons": [
+    "ride"
    ]
   },
   {
@@ -599,11 +516,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Select a 1-cost Aqua Force follower in your cemetery and summon it.",
-    "cn": "选择自己的墓场中的原始消费为1的1张苍海军势类型·从者卡。将其召唤到场上。",
-    "ja": "自分の墓場の元のコスト1のアクアフォース・フォロワー1枚を選ぶ。それを場に出す。"
-   },
    "traits": [
     "ヴァンガード",
     "アクアフォース"
@@ -629,11 +541,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Starting Amulet. (All cards with Starting Amulet in your deck must share the same name.)\nActivate {[engage]}, bury this card: Select a 1-cost Aqua Force follower on your field and give it Storm.",
-    "cn": "【起始护符】（持有【起始护符】能力的卡片在牌组中可以放入最多1种）\n《起动》将这张卡《横置》置于墓场：选择原始消费为1的自己场上的1个苍海军势类型·从者。使其获得【疾驰】能力。",
-    "ja": "【スタートアミュレット】（【スタートアミュレット】を持つカードはデッキに1種しか入れられない）\n起動これをアクト墓場に置く：元のコスト1の自分の場のアクアフォース・フォロワー1体を選ぶ。それは【疾走】を持つ。"
-   },
    "traits": [
     "ヴァンガード",
     "アクアフォース"
@@ -660,11 +567,6 @@
    "cost": 6,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "Storm. Twin Drive.\n{[fanfare]} Select up to 1 enemy follower on the field for every pair of Blaster Blade and Blaster Dark in your cemetery and destroy the selected followers.\nStrike - If there's a Blaster Blade and Blaster Dark in your cemetery, give this follower {[attack]}+2/{[defense]}+2.",
-    "cn": "【疾驰】【双重驱动】\n【攻击时】如果自己的墓场中有『狂风剑刃』卡与『暗黑狂风』卡的话，使这张卡《攻击力》+2/《生命值》+2。\n《入场曲》自己的墓场中有『狂风剑刃』卡与『暗黑狂风』卡各1张为1组，选择敌方场上的从者每组最多1个。将其破坏。",
-    "ja": "【疾走】【ツインドライブ】\n【攻撃時】自分の墓場に『ブラスター・ブレード』と『ブラスター・ダーク』があるなら、これは攻撃力+2/体力+2する。\nファンファーレ自分の墓場の『ブラスター・ブレード』と『ブラスター・ダーク』各1枚1組につき、相手の場のフォロワー1体まで選ぶ。それを破壊する。"
-   },
    "traits": [
     "ヴァンガード",
     "ロイヤルパラディン"
@@ -690,11 +592,6 @@
    "cost": 4,
    "attack": 5,
    "defense": 3,
-   "text": {
-    "en": "While there are at least 15 Royal Paladin cards in your cemetery, this follower has Storm and \"Strike - Give this follower {[attack]}+1/{[defense]}+1.\"\n{[fanfare]} Select an enemy follower on the field and deal it 5 damage.",
-    "cn": "只要自己的墓场中的光辉骑士团类型·卡片有15张及以上存在，使这张卡获得【疾驰】与「【攻击时】使这张卡《攻击力》+1/《生命值》+1」能力。\n《入场曲》选择敌方场上的1个从者。给予其5点伤害。",
-    "ja": "自分の墓場にロイヤルパラディン・カードが15枚以上ある限り、これは【疾走】と「【攻撃時】これは攻撃力+1/体力+1する」を持つ。\nファンファーレ相手の場のフォロワー1体を選ぶ。それに5ダメージ。"
-   },
    "traits": [
     "ヴァンガード",
     "ロイヤルパラディン"
@@ -720,14 +617,12 @@
    "cost": 4,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[ride]} {[cost01]}: Give this follower Drive.\nOn Drive - Select up to 1 enemy follower on the field. Deal it 4 damage and give this follower {[attack]}+1/{[defense]}+1.\n{[fanfare]} Search your deck for up to 2 cards with \"Blaster\" in their names, reveal them, add one to your hand, bury the other, then shuffle.",
-    "cn": "《凭依》《消费1》：使这张卡获得驱动能力。\n【驱动获得时】选择敌方场上的从者最多1个。给予其4点伤害。使这张卡《攻击力》+1/《生命值》+1。\n《入场曲》从自己的牌堆之中搜寻「卡片名包含『狂风』的从者卡」最多2张。从那之中，将1张卡加入手牌。将1张卡置于墓场。",
-    "ja": "憑依コスト1：これはドライブを持つ。\n【ドライブ獲得時】相手の場のフォロワー1体まで選ぶ。それに4ダメージ。これは攻撃力+1/体力+1する。\nファンファーレ自分のデッキから「カード名に『ブラスター』を含むフォロワー」2枚まで探す。その中から、1枚を手札に加える。1枚を墓場に置く。"
-   },
    "traits": [
     "ヴァンガード",
     "ロイヤルパラディン"
+   ],
+   "advancedIcons": [
+    "ride"
    ]
   },
   {
@@ -750,11 +645,6 @@
    "cost": 5,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost02]}: Evolve this follower into a Soul Saver Dragon.\n{[fanfare]} Look at the top 5 cards of your deck. From among them, you may summon up to 2 Royal Paladin followers that cost 2 or less and give them Rush. Put the rest on the bottom of your deck in any order.",
-    "cn": "《进化》《消费2》：使这张卡进化为『灵魂赎救龙』。\n《入场曲》查看自己的牌堆顶5张卡。从那之中，可以将原始消费为2及以下的光辉骑士团类型·从者卡最多2张召唤到场上。将剩余的卡以任意顺序置于牌堆底。使其获得【突进】能力。",
-    "ja": "進化コスト2：これは『ソウルセイバー・ドラゴン』に進化する。\nファンファーレ自分のデッキの上5枚を見る。その中から、元のコスト2以下のロイヤルパラディン・フォロワー2枚まで場に出してよい。残りを好きな順にデッキの下に置く。それは【突進】を持つ。"
-   },
    "traits": [
     "ヴァンガード",
     "ロイヤルパラディン"
@@ -780,11 +670,6 @@
    "cost": null,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "Twin Drive.\nOn Evolve - Select up to 2 other Royal Paladin followers on your field and give them {[attack]}+2/{[defense]}+2.",
-    "cn": "【双重驱动】\n【进化时】选择自己场上的其他的光辉骑士团类型·从者最多2个。使其《攻击力》+2/《生命值》+2。",
-    "ja": "【ツインドライブ】\n【進化時】自分の場の他のロイヤルパラディン・フォロワー2体まで選ぶ。それは攻撃力+2/体力+2する。"
-   },
    "traits": [
     "ヴァンガード",
     "ロイヤルパラディン"
@@ -810,11 +695,6 @@
    "cost": 2,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "Ward.\n{[fanfare]} If there is a follower with \"Blaster\" in its name on your field, give this follower {[attack]}+1 and Storm.",
-    "cn": "【守护】\n《入场曲》如果自己的场上有「卡片名包含『狂风』的从者」的话，使这张卡《攻击力》+1，并获得【疾驰】能力。",
-    "ja": "【守護】\nファンファーレ自分の場に「カード名に『ブラスター』を含むフォロワー」がいるなら、これは攻撃力+1して、【疾走】を持つ。"
-   },
    "traits": [
     "ヴァンガード",
     "ロイヤルパラディン"
@@ -840,11 +720,6 @@
    "cost": 4,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "Rush. Assail. Twin Drive.\n{[fanfare]} If there's a Blaster Blade in your cemetery, draw 2 cards, then discard a card. For the rest of this turn, this follower doesn't take damage.",
-    "cn": "【突进】【指定攻击】【双重驱动】\n《入场曲》如果自己的墓场中有『狂风剑刃』卡的话，抽取2张卡。将自己的1张手牌舍弃。这个回合，使这张卡不会受到伤害。",
-    "ja": "【突進】【指定攻撃】【ツインドライブ】\nファンファーレ自分の墓場に『ブラスター・ブレード』があるなら、2枚引く。自分の手札1枚を捨てる。このターン、これはダメージを受けない。"
-   },
    "traits": [
     "ヴァンガード",
     "ロイヤルパラディン"
@@ -870,11 +745,6 @@
    "cost": 3,
    "attack": 4,
    "defense": 3,
-   "text": {
-    "en": "When playing this card, turn a faceup evolved follower with \"Blaster\" in its name in your evolve deck facedown: This card costs 3 less to play.\n----------\nRush.",
-    "cn": "将这张卡使用之际，将进化牌组中正面放置的1张「卡片名包含『狂风』的从者卡」变为反面放置：将消费-3。\n【突进】",
-    "ja": "これをプレイする際、エボルヴデッキの表向きの「カード名に『ブラスター』を含むエボルヴフォロワー」1枚を裏向きにする：コストを-3する。\n【突進】"
-   },
    "traits": [
     "ヴァンガード",
     "ロイヤルパラディン"
@@ -900,11 +770,6 @@
    "cost": 1,
    "attack": 0,
    "defense": 1,
-   "text": {
-    "en": "When this card is discarded by the ability of a Royal Paladin card you control, you may put this card into your EX area.\n----------\nWard.\n{[lastwords]} Draw a card.",
-    "cn": "当以自己的光辉骑士团类型·卡片的能力将这张卡从自己的手牌中舍弃时，可以将这张卡置于EX区域。\n【守护】\n《谢幕曲》抽取1张卡。",
-    "ja": "自分のロイヤルパラディン・カードの能力によってこれを自分の手札から捨てたとき、これをEXエリアに置いてよい。\n【守護】\nラストワード1枚引く。"
-   },
    "traits": [
     "ヴァンガード",
     "ロイヤルパラディン"
@@ -930,11 +795,6 @@
    "cost": 1,
    "attack": 1,
    "defense": 1,
-   "text": {
-    "en": "{[fanfare]} Reveal a Royal Paladin card in your hand: Draw a card.",
-    "cn": "《入场曲》将手牌中的1张光辉骑士团类型·卡片公开：抽取1张卡。",
-    "ja": "ファンファーレ手札のロイヤルパラディン・カード1枚を公開：1枚引く。"
-   },
    "traits": [
     "ヴァンガード",
     "ロイヤルパラディン"
@@ -960,11 +820,6 @@
    "cost": 3,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} Look at the top 3 cards of your deck. You may summon a Royal Paladin follower that costs 2 or less from among them. Put the rest on the bottom of your deck in any order.",
-    "cn": "《入场曲》查看自己的牌堆顶3张卡。从那之中，可以将原始消费为2及以下的1张光辉骑士团类型·从者卡召唤到场上。将剩余的卡以任意顺序置于牌堆底。",
-    "ja": "ファンファーレ自分のデッキの上3枚を見る。その中から、元のコスト2以下のロイヤルパラディン・フォロワー1枚を場に出してよい。残りを好きな順にデッキの下に置く。"
-   },
    "traits": [
     "ヴァンガード",
     "ロイヤルパラディン"
@@ -990,11 +845,6 @@
    "cost": 2,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} Select a Vanguard follower that costs 4 or more on your field and give it  {[attack]}+2/{[defense]}+2, Rush and Assail.",
-    "cn": "《入场曲》选择原始消费为4及以上的自己场上的1个先导者类型·从者。使其《攻击力》+2/《生命值》+2，并获得【突进】【指定攻击】能力。",
-    "ja": "ファンファーレ元のコスト4以上の自分の場のヴァンガード・フォロワー1体を選ぶ。それは攻撃力+2/体力+2して、【突進】【指定攻撃】を持つ。"
-   },
    "traits": [
     "ヴァンガード",
     "ロイヤルパラディン"
@@ -1020,14 +870,12 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[ride]} {[cost01]}: Give this follower Drive.\nOn Drive - Give this follower {[attack]}+1/{[defense]}+1. Look at the top card of your deck. You may reveal it and add it to your hand. If you revealed a Royal Paladin card, deal 1 damage to each enemy leader.",
-    "cn": "《凭依》《消费1》：使这张卡获得驱动能力。\n【驱动获得时】使这张卡《攻击力》+1/《生命值》+1。查看自己的牌堆顶1张卡。从那之中，可以将1张卡公开并加入手牌。如果将光辉骑士团类型·卡片公开的话，给予敌方的全体主战者各1点伤害。",
-    "ja": "憑依コスト1：これはドライブを持つ。\n【ドライブ獲得時】これは攻撃力+1/体力+1する。自分のデッキの上1枚を見る。その中から、1枚を公開して手札に加えてよい。ロイヤルパラディン・カードを公開したなら、相手のリーダーすべてに1ダメージ。"
-   },
    "traits": [
     "ヴァンガード",
     "ロイヤルパラディン"
+   ],
+   "advancedIcons": [
+    "ride"
    ]
   },
   {
@@ -1052,11 +900,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} Discard a Vanguard card: Search your deck for a Blaster Blade, reveal it, add it to your hand, then shuffle.\n----------\n(If this card is revealed by a drive check, give a follower on your field {[attack]}+2.)",
-    "cn": "《入场曲》将手牌中的1张先导者类型·卡片舍弃：从自己的牌堆中搜寻1张『狂风剑刃』卡，并加入手牌。\n----------\n（如果以驱动判定翻开这张卡的话，使自己场上的1个从者《攻击力》+2）",
-    "ja": "ファンファーレ手札のヴァンガード・カード1枚を捨てる：自分のデッキから『ブラスター・ブレード』1枚を探し、手札に加える。\n----------\n（ドライブチェックによってこれが捲れたなら、自分の場のフォロワー1体は攻撃力+2する）"
-   },
    "traits": [
     "ヴァンガード",
     "ロイヤルパラディン"
@@ -1084,11 +927,6 @@
    "cost": 1,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} Discard a Royal Paladin card: Draw a card.\n----------\n(If this card is revealed by a drive check, draw a card.)",
-    "cn": "《入场曲》将手牌中的1张光辉骑士团类型·卡片舍弃：抽取1张卡。\n----------\n（如果以驱动判定翻开这张卡的话，抽取1张卡）",
-    "ja": "ファンファーレ手札のロイヤルパラディン・カード1枚を捨てる：1枚引く。\n----------\n（ドライブチェックによってこれが捲れたなら、1枚引く）"
-   },
    "traits": [
     "ヴァンガード",
     "ロイヤルパラディン"
@@ -1116,11 +954,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "At the start of your end phase, refresh this card.\n----------\n(If this card is revealed by a drive check, refresh a follower on your field. For the rest of this turn, it can't attack enemy leaders.)",
-    "cn": "当自己的结束阶段到来时，将这张卡竖置。\n----------\n（如果以驱动判定翻开这张卡的话，将自己场上的1个从者竖置。这个回合，使其不能对敌方的主战者进行攻击）",
-    "ja": "自分のエンドフェイズが来たとき、これをスタンドする。\n----------\n（ドライブチェックによってこれが捲れたなら、自分の場のフォロワー1体をスタンドする。このターン、それは相手のリーダーを攻撃できない）"
-   },
    "traits": [
     "ヴァンガード",
     "ロイヤルパラディン"
@@ -1148,11 +981,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "Ward.\n{[fanfare]} Give your leader {[defense]}+2.\n----------\n(If this card is revealed by a drive check, give your leader {[defense]}+3.)",
-    "cn": "【守护】\n《入场曲》使自己的主战者《生命值》+2。\n----------\n（如果以驱动判定翻开这张卡的话，使自己的主战者《生命值》+3）",
-    "ja": "【守護】\nファンファーレ自分のリーダーは体力+2する。\n----------\n（ドライブチェックによってこれが捲れたなら、自分のリーダーは体力+3する）"
-   },
    "traits": [
     "ヴァンガード",
     "ロイヤルパラディン"
@@ -1178,11 +1006,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "Whenever a follower on your field performs a drive check, give it {[attack]}+1.",
-    "cn": "当自己场上的从者进行驱动判定时，使其《攻击力》+1。",
-    "ja": "自分の場のフォロワーがドライブチェックしたとき、それは攻撃力+1する。"
-   },
    "traits": [
     "ヴァンガード",
     "ロイヤルパラディン"
@@ -1208,11 +1031,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[quick]}\nChoose one. (1) Select an enemy follower on the field and deal it 3 damage. (2) The next time your leader would take damage this turn, it takes that much minus 5 instead.",
-    "cn": "《快速》\n从下述之中抉择1项。\n【1】选择敌方场上的1个从者。给予其3点伤害。\n【2】这个回合，使自己的主战者下次受到的伤害-5。",
-    "ja": "クイック\n下記から1つチョイスする。【1】相手の場のフォロワー1体を選ぶ。それに3ダメージ。【2】このターン、自分のリーダーが次に受けるダメージを-5する。"
-   },
    "traits": [
     "ヴァンガード",
     "ロイヤルパラディン"
@@ -1238,11 +1056,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Starting Amulet. (All cards with Starting Amulet in your deck must share the same name.)\nActivate {[engage]}, bury this card: Draw a card. Discard a card. Activate only if there's a Royal Paladin follower on your field.",
-    "cn": "【起始护符】（持有【起始护符】能力的卡片在牌组中可以放入最多1种）\n《起动》将这张卡《横置》置于墓场：抽取1张卡。将自己的1张手牌舍弃。这个能力在自己的场上有光辉骑士团类型·从者的话才可使用。",
-    "ja": "【スタートアミュレット】（【スタートアミュレット】を持つカードはデッキに1種しか入れられない）\n起動これをアクト墓場に置く：1枚引く。自分の手札1枚を捨てる。この能力は自分の場にロイヤルパラディン・フォロワーがいるなら使える。"
-   },
    "traits": [
     "ヴァンガード",
     "ロイヤルパラディン"
@@ -1269,11 +1082,6 @@
    "cost": 7,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "Rush. Twin Drive.\n{[fanfare]} Select up to 1 Pale Moon follower that costs 4 or less, up to 1 that costs 3 or less, and up to 1 that costs 2 or less in your banished zone and summon them.",
-    "cn": "【突进】【双重驱动】\n《入场曲》选择自己的消失领域中的原始消费为4及以下的黯月类型·从者卡与原始消费为3及以下的黯月类型·从者卡与原始消费为2及以下的黯月类型·从者卡各最多1张。将其召唤到场上。",
-    "ja": "【突進】【ツインドライブ】\nファンファーレ自分の消滅領域の元のコスト4以下のペイルムーン・フォロワーと元のコスト3以下のペイルムーン・フォロワーと元のコスト2以下のペイルムーン・フォロワーそれぞれ1枚まで選ぶ。それを場に出す。"
-   },
    "traits": [
     "ヴァンガード",
     "ペイルムーン"
@@ -1299,11 +1107,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\nTwin Drive.\n{[fanfare]} Banish the top card of your deck. If there are at least 5 cards in your banished zone, draw a card.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n【双重驱动】\n《入场曲》将自己的牌堆顶1张卡消失。如果自己的消失领域为5张及以上的话，抽取1张卡。",
-    "ja": "進化コスト1：これは進化する。\n【ツインドライブ】\nファンファーレ自分のデッキの上1枚を消滅させる。自分の消滅領域が5枚以上なら、1枚引く。"
-   },
    "traits": [
     "ヴァンガード",
     "ペイルムーン"
@@ -1329,11 +1132,6 @@
    "cost": null,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "Twin Drive.\nOn Evolve - Choose one. (1) Select a Pale Moon follower that costs 2 or less in your banished zone and summon it. (2) {[cost04]}: Select a Pale Moon follower in your banished zone and summon it.",
-    "cn": "【双重驱动】\n【进化时】从下述之中抉择1项。\n【1】选择自己的消失领域中的原始消费为2及以下的1张黯月类型·从者卡。将其召唤到场上。\n【2】《消费4》：选择自己的消失领域中的1张黯月类型·从者卡。将其召唤到场上。",
-    "ja": "【ツインドライブ】\n【進化時】下記から1つチョイスする。【1】自分の消滅領域の元のコスト2以下のペイルムーン・フォロワー1枚を選ぶ。それを場に出す。【2】コスト4：自分の消滅領域のペイルムーン・フォロワー1枚を選ぶ。それを場に出す。"
-   },
    "traits": [
     "ヴァンガード",
     "ペイルムーン"
@@ -1360,11 +1158,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} Choose one. (1) Draw a card. Banish a card from your hand. (2) Select a Pale Moon follower on your field and, if there are at least 5 cards in your banished zone, give it Storm.",
-    "cn": "《入场曲》从下述之中抉择1项。\n【1】抽取1张卡。将自己的1张手牌消失。\n【2】选择自己场上的1个黯月类型·从者。如果自己的消失领域为5张及以上的话，使其获得【疾驰】能力。",
-    "ja": "ファンファーレ下記から1つチョイスする。【1】1枚引く。自分の手札1枚を消滅させる。【2】自分の場のペイルムーン・フォロワー1体を選ぶ。自分の消滅領域が5枚以上なら、それは【疾走】を持つ。"
-   },
    "traits": [
     "ヴァンガード",
     "ペイルムーン"
@@ -1390,11 +1183,6 @@
    "cost": 4,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower into a Barking Manticore.\nWard.\n{[fanfare]} Banish a Pale Moon card from your hand: Draw 2 cards.",
-    "cn": "《进化》《消费1》：使这张卡进化为『吠叫人面狮蝎』。\n【守护】\n《入场曲》将手牌中的1张黯月类型·卡片消失：抽取2张卡。",
-    "ja": "進化コスト1：これは『バーキング・マンティコア』に進化する。\n【守護】\nファンファーレ手札のペイルムーン・カード1枚を消滅：2枚引く。"
-   },
    "traits": [
     "ヴァンガード",
     "ペイルムーン"
@@ -1420,11 +1208,6 @@
    "cost": null,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "Ward. Twin Drive.\nOn Evolve - Select an enemy follower on the field and deal it 4 damage.",
-    "cn": "【守护】【双重驱动】\n【进化时】选择敌方场上的1个从者。给予其4点伤害。",
-    "ja": "【守護】【ツインドライブ】\n【進化時】相手の場のフォロワー1体を選ぶ。それに4ダメージ。"
-   },
    "traits": [
     "ヴァンガード",
     "ペイルムーン"
@@ -1450,11 +1233,6 @@
    "cost": 2,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} If there are at least 5 cards in your banished zone, give this follower Storm.\nActivate {[engage]}, banish this card: Select an enemy follower on the field and deal it 3 damage.",
-    "cn": "《入场曲》如果自己的消失领域为5张及以上的话，使这张卡获得【疾驰】能力。\n《起动》将这张卡《横置》消失：选择敌方场上的1个从者。给予其3点伤害。",
-    "ja": "ファンファーレ自分の消滅領域が5枚以上なら、これは【疾走】を持つ。\n起動これをアクト消滅：相手の場のフォロワー1体を選ぶ。それに3ダメージ。"
-   },
    "traits": [
     "ヴァンガード",
     "ペイルムーン"
@@ -1480,11 +1258,6 @@
    "cost": 4,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "{[fanfare]} Select a Pale Moon follower that costs 2 or less in your banished zone and summon it.\nActivate {[engage]}: Select an enemy follower on the field and deal it damage equal to the number of Pale Moon followers on your field.",
-    "cn": "《入场曲》选择自己的消失领域中的原始消费为2及以下的1张黯月类型·从者卡。将其召唤到场上。\n《起动》将这张卡《横置》：选择敌方场上的1个从者。给予其与「自己场上的黯月类型·从者的数量」等量的伤害。",
-    "ja": "ファンファーレ自分の消滅領域の元のコスト2以下のペイルムーン・フォロワー1枚を選ぶ。それを場に出す。\n起動これをアクト：相手の場のフォロワー1体を選ぶ。それに「自分の場のペイルムーン・フォロワーの数」と同じダメージ。"
-   },
    "traits": [
     "ヴァンガード",
     "ペイルムーン"
@@ -1510,14 +1283,12 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[ride]} {[cost01]}: Give this follower Drive.\nOn Drive - Select up to 1 enemy follower on the field. Give this follower {[attack]}+1/{[defense]}+1 and, if there are at least 5 cards in your banished zone, destroy the selected follower and give your leader {[defense]}+2.",
-    "cn": "《凭依》《消费1》：使这张卡获得驱动能力。\n【驱动获得时】选择敌方场上的从者最多1个。使这张卡《攻击力》+1/《生命值》+1。如果自己的消失领域为5张及以上的话，将其破坏。使自己的主战者《生命值》+2。",
-    "ja": "憑依コスト1：これはドライブを持つ。\n【ドライブ獲得時】相手の場のフォロワー1体まで選ぶ。これは攻撃力+1/体力+1する。自分の消滅領域が5枚以上なら、それを破壊する。自分のリーダーは体力+2する。"
-   },
    "traits": [
     "ヴァンガード",
     "ペイルムーン"
+   ],
+   "advancedIcons": [
+    "ride"
    ]
   },
   {
@@ -1540,14 +1311,12 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[ride]} {[cost01]}: Give this follower Drive.\nOn Drive - Select up to 1 enemy follower on the field. Deal it 2 damage, give this follower {[attack]}+1/{[defense]}+1, and banish the top card of your deck.",
-    "cn": "《凭依》《消费1》：使这张卡获得驱动能力。\n【驱动获得时】选择敌方场上的从者最多1个。给予其2点伤害。使这张卡《攻击力》+1/《生命值》+1。将自己的牌堆顶1张卡消失。",
-    "ja": "憑依コスト1：これはドライブを持つ。\n【ドライブ獲得時】相手の場のフォロワー1体まで選ぶ。それに2ダメージ。これは攻撃力+1/体力+1する。自分のデッキの上1枚を消滅させる。"
-   },
    "traits": [
     "ヴァンガード",
     "ペイルムーン"
+   ],
+   "advancedIcons": [
+    "ride"
    ]
   },
   {
@@ -1570,11 +1339,6 @@
    "cost": 1,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "Activate {[engage]}: Draw a card. Banish a card from your hand.",
-    "cn": "《起动》将这张卡《横置》：抽取1张卡。将自己的1张手牌消失。",
-    "ja": "起動これをアクト：1枚引く。自分の手札1枚を消滅させる。"
-   },
    "traits": [
     "ヴァンガード",
     "ペイルムーン"
@@ -1600,11 +1364,6 @@
    "cost": 3,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "While there are at least 5 cards in your banished zone, this follower has Bane and Ward.\n{[fanfare]} Look at the top 5 cards of your deck. You may banish up to 2 of them. Put the rest on the bottom of your deck in any order.",
-    "cn": "只要自己的消失领域有5张及以上存在，使这张卡获得【必杀】【守护】能力。\n《入场曲》查看自己的牌堆顶5张卡。从那之中，可以将卡最多2张消失。将剩余的卡以任意顺序置于牌堆底。",
-    "ja": "自分の消滅領域が5枚以上ある限り、これは【必殺】【守護】を持つ。\nファンファーレ自分のデッキの上5枚を見る。その中から、2枚まで消滅させてよい。残りを好きな順にデッキの下に置く。"
-   },
    "traits": [
     "ヴァンガード",
     "ペイルムーン"
@@ -1630,14 +1389,12 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[ride]} {[cost01]}: Give this follower Drive.\nOn Drive: Give this follower {[attack]}+1/{[defense]}+1. Look at the top 2 cards of your deck. Add one of them to your hand and banish the other.",
-    "cn": "《凭依》《消费1》：使这张卡获得驱动能力。\n【驱动获得时】使这张卡《攻击力》+1/《生命值》+1。查看自己的牌堆顶2张卡。从那之中，将1张卡加入手牌。将1张卡消失。",
-    "ja": "憑依コスト1：これはドライブを持つ。\n【ドライブ獲得時】これは攻撃力+1/体力+1する。自分のデッキの上2枚を見る。その中から、1枚を手札に加える。1枚を消滅させる。"
-   },
    "traits": [
     "ヴァンガード",
     "ペイルムーン"
+   ],
+   "advancedIcons": [
+    "ride"
    ]
   },
   {
@@ -1660,11 +1417,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[quick]}\nChoose one. (1) Select an enemy follower on the field and deal it 2 damage. (2) Discard a Pale Moon card: Select an enemy follower on the field. Deal it 3 damage and banish the top 3 cards of your deck.",
-    "cn": "《快速》\n从下述之中抉择1项。\n【1】选择敌方场上的1个从者。给予其2点伤害。\n【2】将手牌中的1张黯月类型·卡片舍弃：选择敌方场上的1个从者。给予其3点伤害。将自己的牌堆顶3张卡消失。",
-    "ja": "クイック\n下記から1つチョイスする。【1】相手の場のフォロワー1体を選ぶ。それに2ダメージ。【2】手札のペイルムーン・カード1枚を捨てる：相手の場のフォロワー1体を選ぶ。それに3ダメージ。自分のデッキの上3枚を消滅させる。"
-   },
    "traits": [
     "ヴァンガード",
     "ペイルムーン"
@@ -1691,11 +1443,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} Banish the top card of your deck. If there are at least 5 cards in your banished zone, deal 2 damage to each enemy leader.\n----------\n(If this card is revealed by a drive check, give a follower on your field {[attack]}+2.)",
-    "cn": "《入场曲》将自己的牌堆顶1张卡消失。如果自己的消失领域为5张及以上的话，给予敌方的全体主战者各2点伤害。\n----------\n（如果以驱动判定翻开这张卡的话，使自己场上的1个从者《攻击力》+2）",
-    "ja": "ファンファーレ自分のデッキの上1枚を消滅させる。自分の消滅領域が5枚以上なら、相手のリーダーすべてに2ダメージ。\n----------\n（ドライブチェックによってこれが捲れたなら、自分の場のフォロワー1体は攻撃力+2する）"
-   },
    "traits": [
     "ヴァンガード",
     "ペイルムーン"
@@ -1722,11 +1469,6 @@
    "cost": 2,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} Select a Pale Moon card in your banished zone. Add it to your hand, then banish a card from your hand.\n----------\n(If this card is revealed by a drive check, draw a card.)",
-    "cn": "《入场曲》选择自己的消失领域中的1张黯月类型·卡片。将其加入手牌。将自己的1张手牌消失。\n----------\n（如果以驱动判定翻开这张卡的话，抽取1张卡）",
-    "ja": "ファンファーレ自分の消滅領域のペイルムーン・カード1枚を選ぶ。それを手札に加える。自分の手札1枚を消滅させる。\n----------\n（ドライブチェックによってこれが捲れたなら、1枚引く）"
-   },
    "traits": [
     "ヴァンガード",
     "ペイルムーン"
@@ -1753,11 +1495,6 @@
    "cost": 1,
    "attack": 1,
    "defense": 2,
-   "text": {
-    "en": "Activate Banish this card: Select another Pale Moon follower on your field and refresh it. For the rest of this turn, it can't attack enemy leaders.\n----------\n(If this card is revealed by a drive check, refresh a follower on your field. For the rest of this turn, it can't attack enemy leaders.)",
-    "cn": "《起动》将这张卡消失：选择自己场上的其他的1个黯月类型·从者。将其竖置。这个回合，使其不能对敌方的主战者进行攻击。\n----------\n（如果以驱动判定翻开这张卡的话，将自己场上的1个从者竖置。这个回合，使其不能对敌方的主战者进行攻击）",
-    "ja": "起動これを消滅：自分の場の他のペイルムーン・フォロワー1体を選ぶ。それをスタンドする。このターン、それは相手のリーダーを攻撃できない。\n----------\n（ドライブチェックによってこれが捲れたなら、自分の場のフォロワー1体をスタンドする。このターン、それは相手のリーダーを攻撃できない）"
-   },
    "traits": [
     "ヴァンガード",
     "ペイルムーン"
@@ -1784,11 +1521,6 @@
    "cost": 2,
    "attack": 1,
    "defense": 3,
-   "text": {
-    "en": "Ward.\n{[fanfare]} Give your leader {[defense]}+2. Banish the top card of your deck.\n-----------\n(If this card is revealed by a drive check, give your leader {[defense]}+3.)",
-    "cn": "【守护】\n《入场曲》使自己的主战者《生命值》+2。将自己的牌堆顶1张卡消失。\n----------\n（如果以驱动判定翻开这张卡的话，使自己的主战者《生命值》+3）",
-    "ja": "【守護】\nファンファーレ自分のリーダーは体力+2する。自分のデッキの上1枚を消滅させる。\n----------\n（ドライブチェックによってこれが捲れたなら、自分のリーダーは体力+3する）"
-   },
    "traits": [
     "ヴァンガード",
     "ペイルムーン"
@@ -1814,14 +1546,12 @@
    "cost": 1,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[ride]} {[cost03]}: Give this follower Drive.\nOn Drive - Select up to 1 Pale Moon card in your banished zone. Add it to your hand and give this follower {[attack]}+1/{[defense]}+1.\n{[fanfare]} Banish the top 2 cards of your deck.",
-    "cn": "《凭依》《消费3》：使这张卡获得驱动能力。\n【驱动获得时】选择自己的消失领域中的黯月类型·卡片最多1张。将其加入手牌。使这张卡《攻击力》+1/《生命值》+1。\n《入场曲》将自己的牌堆顶2张卡消失。",
-    "ja": "憑依コスト3：これはドライブを持つ。\n【ドライブ獲得時】自分の消滅領域のペイルムーン・カード1枚まで選ぶ。それを手札に加える。これは攻撃力+1/体力+1する。\nファンファーレ自分のデッキの上2枚を消滅させる。"
-   },
    "traits": [
     "ヴァンガード",
     "ペイルムーン"
+   ],
+   "advancedIcons": [
+    "ride"
    ]
   },
   {
@@ -1844,11 +1574,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Select 2 Pale Moon cards in your cemetery. Banish them and draw a card. (Play only if you can select 2.)",
-    "cn": "选择自己的墓场中的2张黯月类型·卡片。将其消失。抽取1张卡。（不能选择2张将不能使用）",
-    "ja": "自分の墓場のペイルムーン・カード2枚を選ぶ。それを消滅させる。1枚引く。（2枚を選べなければプレイできない）"
-   },
    "traits": [
     "ヴァンガード",
     "ペイルムーン"
@@ -1874,11 +1599,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Starting Amulet. (All cards with Starting Amulet in your deck must share the same name.)\nActivate {[engage]}, bury this card: Draw a card. Banish a card from your hand. Activate only if there's a Pale Moon follower on your field.",
-    "cn": "【起始护符】（持有【起始护符】能力的卡片在牌组中可以放入最多1种）\n《起动》将这张卡《横置》置于墓场：抽取1张卡。将自己的1张手牌消失。这个能力在自己的场上有黯月类型·从者的话才可使用。",
-    "ja": "【スタートアミュレット】（【スタートアミュレット】を持つカードはデッキに1種しか入れられない）\n起動これをアクト墓場に置く：1枚引く。自分の手札1枚を消滅させる。この能力は自分の場にペイルムーン・フォロワーがいるなら使える。"
-   },
    "traits": [
     "ヴァンガード",
     "ペイルムーン"
@@ -1905,11 +1625,6 @@
    "cost": 7,
    "attack": 6,
    "defense": 6,
-   "text": {
-    "en": "Storm. Ward. Twin Drive.\n{[fanfare]} If there's a Dragonic Overlord in your cemetery, recover 1 play point.\nStrike - {[cost03]}, discard a Dragonic Overlord the End: Refresh this follower.\nActivate Banish 5 Kagero cards from your cemetery: Destroy each other follower on the field.",
-    "cn": "【疾驰】【守护】【双重驱动】\n【攻击时】《消费3》将手牌中的1张『龙纹·终结帝王』卡舍弃：将这张卡竖置。\n《入场曲》如果自己的墓场中有『龙纹·帝王』卡的话，将自己的PP回复1点。\n《起动》将墓场中的5张阳炎类型·卡片消失：将场上的其他的全体从者各破坏。",
-    "ja": "【疾走】【守護】【ツインドライブ】\n【攻撃時】コスト3手札の『ドラゴニック・オーバーロード・ジ・エンド』1枚を捨てる：これをスタンドする。\nファンファーレ自分の墓場に『ドラゴニック・オーバーロード』があるなら、自分のPPを1回復する。\n起動墓場のかげろう・カード5枚を消滅：場の他のフォロワーすべてを破壊する。"
-   },
    "traits": [
     "ヴァンガード",
     "かげろう"
@@ -1935,11 +1650,6 @@
    "cost": 2,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "During your turn, whenever an opponent plays a spell, deal 2 damage to their leader.\nOnce on each of your turns, when a Kagero card you control deals ability damage to an enemy follower on the field, draw a card.",
-    "cn": "自己的回合中，当敌方将法术卡使用时，给予其主战者2点伤害。\n每个自己的回合1次，当自己的阳炎类型·卡片给予敌方场上的从者能力伤害时，抽取1张卡。",
-    "ja": "自分のターン中、相手がスペルをプレイしたとき、それのリーダーに2ダメージ。\n自分のターンごとに1回、自分のかげろう・カードが相手の場のフォロワーに能力ダメージを与えたとき、1枚引く。"
-   },
    "traits": [
     "ヴァンガード",
     "かげろう"
@@ -1965,11 +1675,6 @@
    "cost": 2,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "Rush.\n{[fanfare]} If there's a follower with \"Overlord\" in its name on your field, give this follower {[attack]}+2/{[defense]}+2.\nWhenever a follower on your field performs a drive check, select an enemy leader or enemy follower on the field and deal it 1 damage.",
-    "cn": "【突进】\n当自己场上的从者进行驱动判定时，选择敌方的1位主战者或敌方场上的1个从者。给予其1点伤害。\n《入场曲》如果自己的场上有「卡片名包含『帝王』的从者」的话，使这张卡《攻击力》+2/《生命值》+2。",
-    "ja": "【突進】\n自分の場のフォロワーがドライブチェックしたとき、相手のリーダー1人か相手の場のフォロワー1体を選ぶ。それに1ダメージ。\nファンファーレ自分の場に「カード名に『オーバーロード』を含むフォロワー」がいるなら、これは攻撃力+2/体力+2する。"
-   },
    "traits": [
     "ヴァンガード",
     "かげろう"
@@ -1995,11 +1700,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost03]}: Evolve this follower into a Blazing Flare Dragon.\n{[evolve]} {[cost01]}, banish an Iron Tail Dragon and Gattling Claw Dragon from your cemetery: Evolve this follower into a Blazing Flare Dragon.",
-    "cn": "《进化》《消费3》：使这张卡进化为『燃炎闪耀龙』。\n《进化》《消费1》将墓场中的1张『铁尾龙』卡与1张『加特林爪龙』卡消失：使这张卡进化为『燃炎闪耀龙』。",
-    "ja": "進化コスト3：これは『ブレイジングフレア・ドラゴン』に進化する。\n進化コスト1墓場の『アイアンテイル・ドラゴン』1枚と『ガトリングクロー・ドラゴン』1枚を消滅：これは『ブレイジングフレア・ドラゴン』に進化する。"
-   },
    "traits": [
     "ヴァンガード",
     "かげろう"
@@ -2025,11 +1725,6 @@
    "cost": null,
    "attack": 6,
    "defense": 6,
-   "text": {
-    "en": "Twin Drive.\nOn Evolve - Select an enemy follower on the field. Deal 5 damage to it and 3 damage to its leader.",
-    "cn": "【双重驱动】\n【进化时】选择敌方场上的1个从者。给予其5点伤害。给予其主战者3点伤害。",
-    "ja": "【ツインドライブ】\n【進化時】相手の場のフォロワー1体を選ぶ。それに5ダメージ。それのリーダーに3ダメージ。"
-   },
    "traits": [
     "ヴァンガード",
     "かげろう"
@@ -2055,11 +1750,6 @@
    "cost": 4,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "Rush.\n{[fanfare]} Discard a Kagero card: Draw 2 cards.",
-    "cn": "【突进】\n《入场曲》将手牌中的1张阳炎类型·卡片舍弃：抽取2张卡。",
-    "ja": "【突進】\nファンファーレ手札のかげろう・カード1枚を捨てる：2枚引く。"
-   },
    "traits": [
     "ヴァンガード",
     "かげろう"
@@ -2085,11 +1775,6 @@
    "cost": 5,
    "attack": 6,
    "defense": 6,
-   "text": {
-    "en": "{[fanfare]} Banish 3 Kagero cards from your cemetery: Select up to 2 enemy followers on the field and destroy them.",
-    "cn": "《入场曲》将墓场中的3张阳炎类型·卡片消失：选择敌方场上的从者最多2个。将其破坏。",
-    "ja": "ファンファーレ墓場のかげろう・カード3枚を消滅：相手の場のフォロワー2体まで選ぶ。それを破壊する。"
-   },
    "traits": [
     "ヴァンガード",
     "かげろう"
@@ -2115,11 +1800,6 @@
    "cost": 1,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} Reveal a follower with \"Overlord\" in its name from your hand: Draw a card.",
-    "cn": "《入场曲》将手牌中的1张「卡片名包含『帝王』的从者卡」公开：抽取1张卡。",
-    "ja": "ファンファーレ手札の「カード名に『オーバーロード』を含むフォロワー」1枚を公開：1枚引く。"
-   },
    "traits": [
     "ヴァンガード",
     "かげろう"
@@ -2145,14 +1825,12 @@
    "cost": 5,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "{[ride]} {[cost01]}: Give this follower Drive.\nOn Drive - Select up to 2 enemy followers on the field. Deal 4 damage divided between them and give this follower {[attack]}+1{[defense]}+1.\n{[fanfare]} Give your leader {[defense]}+2. Draw a card.",
-    "cn": "《凭依》《消费1》：使这张卡获得驱动能力。\n【驱动获得时】选择敌方场上的从者最多2个。给予其合计4点伤害、任意分配。使这张卡《攻击力》+1/《生命值》+1。\n《入场曲》使自己的主战者《生命值》+2。抽取1张卡。",
-    "ja": "憑依コスト1：これはドライブを持つ。\n【ドライブ獲得時】相手の場のフォロワー2体まで選ぶ。それに4ダメージを割りふる。これは攻撃力+1/体力+1する。\nファンファーレ自分のリーダーは体力+2する。1枚引く。"
-   },
    "traits": [
     "ヴァンガード",
     "かげろう"
+   ],
+   "advancedIcons": [
+    "ride"
    ]
   },
   {
@@ -2175,11 +1853,6 @@
    "cost": 2,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "This follower can't attack enemies.\nWhenever you drive check a Trigger, this card loses all abilities for the rest of the turn.",
-    "cn": "这张卡不能对敌方进行攻击。\n当以自己的驱动判定进行触发时，这个回合，使这张卡失去全部能力。",
-    "ja": "これは相手を攻撃できない。\n自分のドライブチェックによってトリガーしたとき、このターン、これは能力すべてを失う。"
-   },
    "traits": [
     "ヴァンガード",
     "かげろう"
@@ -2205,14 +1878,12 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[ride]} {[cost01]}: Give this follower Drive.\nOn Drive - Give this follower {[attack]}+1/{[defense]}+1. Look at the top 2 cards of your deck. You may reveal a Kagero follower from among them and add it to your hand. Put the rest on the bottom of your deck in any order. If Overflow is active for you, you may reveal and add up to 2 instead.",
-    "cn": "《凭依》《消费1》：使这张卡获得驱动能力。\n【驱动获得时】使这张卡《攻击力》+1/《生命值》+1。查看自己的牌堆顶2张卡。从那之中，可以将1张阳炎类型·从者卡公开并加入手牌。将剩余的卡以任意顺序置于牌堆底。如果处于【觉醒】状态的话，转变为可以将阳炎类型·从者卡最多2张公开并加入手牌。将剩余的卡以任意顺序置于牌堆底。",
-    "ja": "憑依コスト1：これはドライブを持つ。\n【ドライブ獲得時】これは攻撃力+1/体力+1する。自分のデッキの上2枚を見る。その中から、かげろう・フォロワー1枚を公開して手札に加えてよい。残りを好きな順にデッキの下に置く。【覚醒】状態なら、代わりにかげろう・フォロワー2枚まで公開して手札に加えてよい。残りを好きな順にデッキの下に置く。"
-   },
    "traits": [
     "ヴァンガード",
     "かげろう"
+   ],
+   "advancedIcons": [
+    "ride"
    ]
   },
   {
@@ -2235,11 +1906,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} Choose one. (1) Select an enemy amulet on the field and destroy it. (2) Deal 2 damage to each enemy leader.",
-    "cn": "《入场曲》从下述之中抉择1项。\n【1】选择敌方场上的1个护符。将其破坏。\n【2】给予敌方的全体主战者各2点伤害。",
-    "ja": "ファンファーレ下記から1つチョイスする。【1】相手の場のアミュレット1つを選ぶ。それを破壊する。【2】相手のリーダーすべてに2ダメージ。"
-   },
    "traits": [
     "ヴァンガード",
     "かげろう"
@@ -2265,11 +1931,6 @@
    "cost": 3,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[quick]}\nSelect an enemy follower on the field and deal it 6 damage.",
-    "cn": "《快速》\n选择敌方场上的1个从者。给予其6点伤害。",
-    "ja": "クイック\n相手の場のフォロワー1体を選ぶ。それに6ダメージ。"
-   },
    "traits": [
     "ヴァンガード",
     "かげろう"
@@ -2297,11 +1958,6 @@
    "cost": 2,
    "attack": 3,
    "defense": 1,
-   "text": {
-    "en": "Rush. Assail.\n{[fanfare]} If Overflow is active for you, deal 2 to each enemy leader.\n----------\n(If this card is revealed by a drive check, give a follower on your field {[attack]}+2.)",
-    "cn": "【突进】【指定攻击】\n《入场曲》如果处于【觉醒】状态的话，给予敌方的全体主战者各2点伤害。（如果自己的PP最大值为7点及以上的话，就会处于【觉醒】状态）\n----------\n（如果以驱动判定翻开这张卡的话，使自己场上的1个从者《攻击力》+2）",
-    "ja": "【突進】【指定攻撃】\nファンファーレ【覚醒】状態なら、相手のリーダーすべてに2ダメージ。（自分のPP最大値が7以上なら、【覚醒】状態になる）\n----------\n（ドライブチェックによってこれが捲れたなら、自分の場のフォロワー1体は攻撃力+2する）"
-   },
    "traits": [
     "ヴァンガード",
     "かげろう"
@@ -2329,11 +1985,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "Activate {[engage]}:  Draw a card. Activate only if an enemy follower was put from the field into the cemetery this turn.\n----------\n(If this card is revealed by a drive check, draw a card.)",
-    "cn": "《起动》将这张卡《横置》：抽取1张卡。这个能力在「这个回合，如果已有敌方的从者从场上置于到墓场的话」才可使用。\n----------\n（如果以驱动判定翻开这张卡的话，抽取1张卡）",
-    "ja": "起動これをアクト：1枚引く。この能力はこのターン、相手のフォロワーが場から墓場に置かれていたなら使える。\n----------\n（ドライブチェックによってこれが捲れたなら、1枚引く）"
-   },
    "traits": [
     "ヴァンガード",
     "かげろう"
@@ -2361,11 +2012,6 @@
    "cost": 1,
    "attack": 1,
    "defense": 2,
-   "text": {
-    "en": "Activate {[engage]}: Select an enemy follower on the field and deal it 1 damage. Activate only if there's another Kagero follower on your field.\n{[act]} {[cost02]}: Refresh this card. For the rest of this turn, this follower can't attack enemies.\n----------\n(If this card is revealed by a drive check, refresh a follower on your field. For the rest of this turn, it can't attack enemy leaders.)",
-    "cn": "《起动》将这张卡《横置》：选择敌方场上的1个从者。给予其1点伤害。这个能力在自己的场上有其他的阳炎类型·从者的话才可使用。\n《起动》《消费2》：将这张卡竖置。这个回合，使这张卡不能对敌方进行攻击。\n----------\n（如果以驱动判定翻开这张卡的话，将自己场上的1个从者竖置。这个回合，使其不能对敌方的主战者进行攻击）",
-    "ja": "起動これをアクト：相手の場のフォロワー1体を選ぶ。それに1ダメージ。この能力は自分の場に他のかげろう・フォロワーがいるなら使える。\n起動コスト2：これをスタンドする。このターン、これは相手を攻撃できない。\n----------\n（ドライブチェックによってこれが捲れたなら、自分の場のフォロワー1体をスタンドする。このターン、それは相手のリーダーを攻撃できない）"
-   },
    "traits": [
     "ヴァンガード",
     "かげろう"
@@ -2393,11 +2039,6 @@
    "cost": 1,
    "attack": 1,
    "defense": 1,
-   "text": {
-    "en": "Ward.\n{[fanfare]} Give your leader {[defense]}+1. If Overflow is active for you, give {[defense]}+2 instead.\n----------\n(If this card is revealed by a drive check, give your leader {[defense]}+3.)",
-    "cn": "【守护】\n《入场曲》使自己的主战者《生命值》+1。如果处于【觉醒】状态的话，转变为《生命值》+2。（如果自己的PP最大值为7点及以上的话，就会处于【觉醒】状态）\n----------\n（如果以驱动判定翻开这张卡的话，使自己的主战者《生命值》+3）",
-    "ja": "【守護】\nファンファーレ自分のリーダーは体力+1する。【覚醒】状態なら、代わりに体力+2する。（自分のPP最大値が7以上なら、【覚醒】状態になる）\n----------\n（ドライブチェックによってこれが捲れたなら、自分のリーダーは体力+3する）"
-   },
    "traits": [
     "ヴァンガード",
     "かげろう"
@@ -2423,11 +2064,6 @@
    "cost": 1,
    "attack": 1,
    "defense": 2,
-   "text": {
-    "en": "Activate {[engage]}: Give this follower {[attack]}+1.",
-    "cn": "《起动》将这张卡《横置》：使这张卡《攻击力》+1。",
-    "ja": "起動これをアクト：これは攻撃力+1する。"
-   },
    "traits": [
     "ヴァンガード",
     "かげろう"
@@ -2453,11 +2089,6 @@
    "cost": 1,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} Select an enemy follower on the field and, if Overflow is active for you, deal it 2 damage.\nOnce on each of your turns, when an enemy follower is put from the field into the cemetery, draw a card, then discard a card.",
-    "cn": "每个自己的回合1次，当敌方的从者从场上置于到墓场时，抽取1张卡。将自己的1张手牌舍弃。\n《入场曲》选择敌方场上的1个从者。如果处于【觉醒】状态的话，给予其2点伤害。（如果自己的PP最大值为7点及以上的话，就会处于【觉醒】状态）",
-    "ja": "自分のターンごとに1回、相手のフォロワーが場から墓場に置かれたとき、1枚引く。自分の手札1枚を捨てる。\nファンファーレ相手の場のフォロワー1体を選ぶ。【覚醒】状態なら、それに2ダメージ。（自分のPP最大値が7以上なら、【覚醒】状態になる）"
-   },
    "traits": [
     "ヴァンガード",
     "かげろう"
@@ -2483,11 +2114,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Starting Amulet. (All cards with Starting Amulet in your deck must share the same name.)\nActivate {[engage]}, bury this card: Select an enemy follower on the field and deal it 1 damage. Activate only if there's a Kagero follower on your field.",
-    "cn": "【起始护符】（持有【起始护符】能力的卡片在牌组中可以放入最多1种）\n《起动》将这张卡《横置》置于墓场：选择敌方场上的1个从者。给予其1点伤害。这个能力在自己的场上有阳炎类型·从者的话才可使用。",
-    "ja": "【スタートアミュレット】（【スタートアミュレット】を持つカードはデッキに1種しか入れられない）\n起動これをアクト墓場に置く：相手の場のフォロワー1体を選ぶ。それに1ダメージ。この能力は自分の場にかげろう・フォロワーがいるなら使える。"
-   },
    "traits": [
     "ヴァンガード",
     "かげろう"
@@ -2514,11 +2140,6 @@
    "cost": 9,
    "attack": 6,
    "defense": 6,
-   "text": {
-    "en": "If there are at least 15 Shadow Paladin cards in your cemetery, you may bury a Phantom Blaster Dragon to play this card instead of paying its cost.\n----------\nWard. Twin Drive.\n{[fanfare]} Select an enemy follower on the field. Destroy it and draw 3 cards.\n{[act]} {[cost01]}, discard a Phantom Blaster Overlord: Give this follower {[attack]}+6/{[defense]}+6",
-    "cn": "将这张卡使用之际，如果自己的墓场中的暗影骑士团类型·卡片为15张及以上的话，可以不支付这张卡的原始消费，将场上的1个『幻影狂风龙』置于墓场。\n【守护】【双重驱动】\n《入场曲》选择敌方场上的1个从者。将其破坏。抽取3张卡。\n《起动》《消费1》将手牌中的1张『幻影狂风帝王』卡舍弃：使这张卡《攻击力》+6/《生命值》+6。",
-    "ja": "これをプレイする際、自分の墓場のシャドウパラディン・カードが15枚以上なら、これの元のコストを払うのではなく、場の『ファントム・ブラスター・ドラゴン』1体を墓場に置いてよい。\n【守護】【ツインドライブ】\nファンファーレ相手の場のフォロワー1体を選ぶ。それを破壊する。3枚引く。\n起動コスト1手札の『ファントム・ブラスター・オーバーロード』1枚を捨てる：これは攻撃力+6/体力+6する。"
-   },
    "traits": [
     "ヴァンガード",
     "シャドウパラディン"
@@ -2544,11 +2165,6 @@
    "cost": 3,
    "attack": 4,
    "defense": 3,
-   "text": {
-    "en": "As an additional cost to play this card, bury a Shadow Paladin follower.\n----------\n{[evolve]} {[cost01]}: Evolve this follower.\nStorm. Twin Drive.\n{[fanfare]} If you buried a Blaster Dark as the additional cost to play this card, evolve this follower.",
-    "cn": "将这张卡使用之际，作为额外消费、将场上的1个暗影骑士团类型·从者置于墓场。\n《进化》《消费1》：使这张卡进化。\n【疾驰】【双重驱动】\n《入场曲》如果将这张卡使用之际、作为额外消费将自己的『暗黑狂风』从场上置于墓场的话，使这张卡进化。",
-    "ja": "これをプレイする際、追加コストとして場のシャドウパラディン・フォロワー1体を墓場に置く。\n進化コスト1：これは進化する。\n【疾走】【ツインドライブ】\nファンファーレこれをプレイする際の追加コストとして自分の『ブラスター・ダーク』を場から墓場に置いていたなら、これは進化する。"
-   },
    "traits": [
     "ヴァンガード",
     "シャドウパラディン"
@@ -2574,11 +2190,6 @@
    "cost": null,
    "attack": 5,
    "defense": 4,
-   "text": {
-    "en": "Storm. Twin Drive.\nOn Evolve - Select an enemy follower on the field and, if there are at least 10 Shadow Paladin cards in your cemetery, destroy it.",
-    "cn": "【疾驰】【双重驱动】\n【进化时】选择敌方场上的1个从者。如果自己的墓场中的暗影骑士团类型·卡片为10张及以上的话，将其破坏。",
-    "ja": "【疾走】【ツインドライブ】\n【進化時】相手の場のフォロワー1体を選ぶ。自分の墓場のシャドウパラディン・カードが10枚以上なら、それを破壊する。"
-   },
    "traits": [
     "ヴァンガード",
     "シャドウパラディン"
@@ -2605,11 +2216,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\nSingle Drive.\n{[fanfare]} Bury the top 2 cards of your deck.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n【单次驱动】\n《入场曲》将自己的牌堆顶2张卡置于墓场。",
-    "ja": "進化コスト1：これは進化する。\n【シングルドライブ】\nファンファーレ自分のデッキの上2枚を墓場に置く。"
-   },
    "traits": [
     "ヴァンガード",
     "シャドウパラディン"
@@ -2635,11 +2241,6 @@
    "cost": null,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "Single Drive.\nOn Evolve - Select an enemy follower on the field. Deal it 3 damage, then deal it 1 more damage for every 5 Shadow Paladin cards in your cemetery.",
-    "cn": "【单次驱动】\n【进化时】选择敌方场上的1个从者。给予其3点伤害。自己的墓场中的暗影骑士团类型·卡片每有5张，再给予1点伤害。",
-    "ja": "【シングルドライブ】\n【進化時】相手の場のフォロワー1体を選ぶ。それに3ダメージ。自分の墓場のシャドウパラディン・カード5枚につき、さらに1ダメージ。"
-   },
    "traits": [
     "ヴァンガード",
     "シャドウパラディン"
@@ -2665,14 +2266,12 @@
    "cost": 4,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[ride]} {[cost01]}: Give this follower Drive.\nOn Drive - Give this follower {[attack]}+1/{[defense]}+1. Look at the top 3 cards of your deck. You may reveal a Shadow Paladin card from among them and add it to your hand. Bury the rest.\n{[fanfare]} Select an enemy follower on the field and deal it 4 damage.",
-    "cn": "《凭依》《消费1》：使这张卡获得驱动能力。\n【驱动获得时】使这张卡《攻击力》+1/《生命值》+1。查看自己的牌堆顶3张卡。从那之中，可以将1张暗影骑士团类型·卡片公开并加入手牌。将剩余的卡置于墓场。\n《入场曲》选择敌方场上的1个从者。给予其4点伤害。",
-    "ja": "憑依コスト1：これはドライブを持つ。\n【ドライブ獲得時】これは攻撃力+1/体力+1する。自分のデッキの上3枚を見る。その中から、シャドウパラディン・カード1枚を公開して手札に加えてよい。残りを墓場に置く。\nファンファーレ相手の場のフォロワー1体を選ぶ。それに4ダメージ。"
-   },
    "traits": [
     "ヴァンガード",
     "シャドウパラディン"
+   ],
+   "advancedIcons": [
+    "ride"
    ]
   },
   {
@@ -2695,11 +2294,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "While there are at least 10 Shadow Paladin cards in your cemetery, this follower has Rush and Bane.\n{[fanfare]} Bury the top card of your deck.\nStrike - If there's a follower with \"Blaster\" in its name in your cemetery, deal 2 damage to each enemy leader.",
-    "cn": "只要自己的墓场中的暗影骑士团类型·卡片有10张及以上存在，使这张卡获得【突进】【必杀】能力。\n【攻击时】如果自己的墓场中有「卡片名包含『狂风』的从者卡」的话，给予敌方的全体主战者各2点伤害。\n《入场曲》将自己的牌堆顶1张卡置于墓场。",
-    "ja": "自分の墓場にシャドウパラディン・カードが10枚以上ある限り、これは【突進】【必殺】を持つ。\n【攻撃時】自分の墓場に「カード名に『ブラスター』を含むフォロワー」があるなら、相手のリーダーすべてに2ダメージ。\nファンファーレ自分のデッキの上1枚を墓場に置く。"
-   },
    "traits": [
     "ヴァンガード",
     "シャドウパラディン"
@@ -2725,14 +2319,12 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[ride]} {[cost01]}: Give this follower Drive.\nOn Drive - Give this follower {[attack]}+1/{[defense]}+1. Search your deck for a Shadow Paladin follower that costs 2 or less, summon it, then shuffle.",
-    "cn": "《凭依》《消费1》：使这张卡获得驱动能力。\n【驱动获得时】使这张卡《攻击力》+1/《生命值》+1。从自己的牌堆之中搜寻原始消费为2及以下的1张暗影骑士团类型·从者卡，并召唤到场上。",
-    "ja": "憑依コスト1：これはドライブを持つ。\n【ドライブ獲得時】これは攻撃力+1/体力+1する。自分のデッキから元のコスト2以下のシャドウパラディン・フォロワー1枚を探し、場に出す。"
-   },
    "traits": [
     "ヴァンガード",
     "シャドウパラディン"
+   ],
+   "advancedIcons": [
+    "ride"
    ]
   },
   {
@@ -2755,11 +2347,6 @@
    "cost": 5,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "{[fanfare]} Give your leader {[defense]}+3. Bury the top 2 cards of your deck.\nAt the start of your end phase, select an enemy follower on the field and, if there are at least 10 Shadow Paladin cards in your cemetery, destroy it.",
-    "cn": "当自己的结束阶段到来时，选择敌方场上的1个从者。如果自己的墓场中的暗影骑士团类型·卡片为10张及以上的话，将其破坏。\n《入场曲》使自己的主战者《生命值》+3。将自己的牌堆顶2张卡置于墓场。",
-    "ja": "自分のエンドフェイズが来たとき、相手の場のフォロワー1体を選ぶ。自分の墓場のシャドウパラディン・カードが10枚以上なら、それを破壊する。\nファンファーレ自分のリーダーは体力+3する。自分のデッキの上2枚を墓場に置く。"
-   },
    "traits": [
     "ヴァンガード",
     "シャドウパラディン"
@@ -2785,14 +2372,12 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[ride]} {[cost01]}: Give this follower Drive.\nOn Drive - Select up to 1 enemy follower on the field. Deal it 2 damage, give this follower {[attack]}+1/{[defense]}+1, and bury the top card of your deck.",
-    "cn": "《凭依》《消费1》：使这张卡获得驱动能力。\n【驱动获得时】选择敌方场上的从者最多1个。给予其2点伤害。使这张卡《攻击力》+1/《生命值》+1。将自己的牌堆顶1张卡置于墓场。",
-    "ja": "憑依コスト1：これはドライブを持つ。\n【ドライブ獲得時】相手の場のフォロワー1体まで選ぶ。それに2ダメージ。これは攻撃力+1/体力+1する。自分のデッキの上1枚を墓場に置く。"
-   },
    "traits": [
     "ヴァンガード",
     "シャドウパラディン"
+   ],
+   "advancedIcons": [
+    "ride"
    ]
   },
   {
@@ -2815,11 +2400,6 @@
    "cost": 1,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} Bury the top card of your deck.",
-    "cn": "《入场曲》将自己的牌堆顶1张卡置于墓场。",
-    "ja": "ファンファーレ自分のデッキの上1枚を墓場に置く。"
-   },
    "traits": [
     "ヴァンガード",
     "シャドウパラディン"
@@ -2845,11 +2425,6 @@
    "cost": 1,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "While there are at least 10 Shadow Paladin cards in your cemetery, this follower has Bane.\nWhenever a follower on your field performs a drive check, bury the top card of your deck.",
-    "cn": "只要自己的墓场中的暗影骑士团类型·卡片有10张及以上存在，使这张卡获得【必杀】能力。\n当自己场上的从者进行驱动判定时，将自己的牌堆顶1张卡置于墓场。",
-    "ja": "自分の墓場にシャドウパラディン・カードが10枚以上ある限り、これは【必殺】を持つ。\n自分の場のフォロワーがドライブチェックしたとき、自分のデッキの上1枚を墓場に置く。"
-   },
    "traits": [
     "ヴァンガード",
     "シャドウパラディン"
@@ -2875,11 +2450,6 @@
    "cost": 2,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "Rush.\n{[fanfare]} Discard a Vanguard card: Search your deck for a Phantom Blaster Dragon or Blaster Dark, reveal it, add it to your hand, then shuffle.",
-    "cn": "【突进】\n《入场曲》将手牌中的1张先导者类型·卡片舍弃：从自己的牌堆之中搜寻1张『幻影狂风龙』卡或『暗黑狂风』卡，并加入手牌。",
-    "ja": "【突進】\nファンファーレ手札のヴァンガード・カード1枚を捨てる：自分のデッキから『ファントム・ブラスター・ドラゴン』か『ブラスター・ダーク』1枚を探し、手札に加える。"
-   },
    "traits": [
     "ヴァンガード",
     "シャドウパラディン"
@@ -2905,11 +2475,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[quick]}\nChoose one. (1) Select an enemy follower on the field and deal it 2 damage. (2) Discard a Shadow Paladin card: Select an enemy follower on the field. Deal it 3 damage and bury the top card of your deck.",
-    "cn": "《快速》\n从下述之中抉择1项。\n【1】选择敌方场上的1个从者。给予其2点伤害。\n【2】将手牌中的1张暗影骑士团类型·卡片舍弃：选择敌方场上的1个从者。给予其3点伤害。将自己的牌堆顶1张卡置于墓场。",
-    "ja": "クイック\n下記から1つチョイスする。【1】相手の場のフォロワー1体を選ぶ。それに2ダメージ。【2】手札のシャドウパラディン・カード1枚を捨てる：相手の場のフォロワー1体を選ぶ。それに3ダメージ。自分のデッキの上1枚を墓場に置く。"
-   },
    "traits": [
     "ヴァンガード",
     "シャドウパラディン"
@@ -2936,11 +2501,6 @@
    "cost": 2,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "While there are at least 10 Shadow Paladin cards in your cemetery, this follower has Storm.\n----------\n(If this card is revealed by a drive check, give a follower on your field {[attack]}+2.)",
-    "cn": "只要自己的墓场中的暗影骑士团类型·卡片有10张及以上存在，使这张卡获得【疾驰】能力。\n----------\n（如果以驱动判定翻开这张卡的话，使自己场上的1个从者《攻击力》+2）",
-    "ja": "自分の墓場にシャドウパラディン・カードが10枚以上ある限り、これは【疾走】を持つ。\n----------\n（ドライブチェックによってこれが捲れたなら、自分の場のフォロワー1体は攻撃力+2する）"
-   },
    "traits": [
     "ヴァンガード",
     "シャドウパラディン"
@@ -2967,11 +2527,6 @@
    "cost": 2,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} Discard a Shadow Paladin card: Select a Shadow Paladin follower in your cemetery and add it to your hand.\n----------\n(If this card is revealed by a drive check, draw a card.)",
-    "cn": "《入场曲》将手牌中的1张暗影骑士团类型·卡片舍弃：选择自己的墓场中的1张暗影骑士团类型·从者卡。将其加入手牌。\n----------\n（如果以驱动判定翻开这张卡的话，抽取1张卡）",
-    "ja": "ファンファーレ手札のシャドウパラディン・カード1枚を捨てる：自分の墓場のシャドウパラディン・フォロワー1枚を選ぶ。それを手札に加える。\n----------\n（ドライブチェックによってこれが捲れたなら、1枚引く）"
-   },
    "traits": [
     "ヴァンガード",
     "シャドウパラディン"
@@ -2998,11 +2553,6 @@
    "cost": 1,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "At the start of your end phase, select a Shadow Paladin follower on your field and, if there are at least 10 Shadow Paladin cards in your cemetery, refresh it.\n----------\n(If this card is revealed by a drive check, refresh a follower on your field. For the rest of this turn, it can't attack enemy leaders.)",
-    "cn": "当自己的结束阶段到来时，选择自己场上的1个暗影骑士团类型·从者。如果自己的墓场中的暗影骑士团类型·卡片为10张及以上的话，将其竖置。\n----------\n（如果以驱动判定翻开这张卡的话，将自己场上的1个从者竖置。这个回合，使其不能对敌方的主战者进行攻击）",
-    "ja": "自分のエンドフェイズが来たとき、自分の場のシャドウパラディン・フォロワー1体を選ぶ。自分の墓場のシャドウパラディン・カードが10枚以上なら、それをスタンドする。\n----------\n（ドライブチェックによってこれが捲れたなら、自分の場のフォロワー1体をスタンドする。このターン、それは相手のリーダーを攻撃できない）"
-   },
    "traits": [
     "ヴァンガード",
     "シャドウパラディン"
@@ -3029,11 +2579,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "Ward.\n{[fanfare]} If there are at least 10 Shadow Paladin cards in your cemetery, give your leader {[defense]}+3.\n----------\n(If this card is revealed by a drive check, give your leader {[defense]}+3.)",
-    "cn": "【守护】\n《入场曲》如果自己的墓场中的暗影骑士团类型·卡片为10张及以上的话，使自己的主战者《生命值》+3。\n----------\n（如果以驱动判定翻开这张卡的话，使自己的主战者《生命值》+3）",
-    "ja": "【守護】\nファンファーレ自分の墓場のシャドウパラディン・カードが10枚以上なら、自分のリーダーは体力+3する。\n----------\n（ドライブチェックによってこれが捲れたなら、自分のリーダーは体力+3する）"
-   },
    "traits": [
     "ヴァンガード",
     "シャドウパラディン"
@@ -3059,14 +2604,12 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[ride]} {[cost01]}: Give this follower Drive.\nOn Drive - Give this follower {[attack]}+1/{[defense]}+1. You may discard a Shadow Paladin card. If you do, draw 2 cards.",
-    "cn": "《凭依》《消费1》：使这张卡获得驱动能力。\n【驱动获得时】使这张卡《攻击力》+1/《生命值》+1。可以将自己的手牌中的1张暗影骑士团类型·卡片舍弃。若如此做，抽取2张卡。",
-    "ja": "憑依コスト1：これはドライブを持つ。\n【ドライブ獲得時】これは攻撃力+1/体力+1する。自分の手札のシャドウパラディン・カード1枚を捨ててよい。そうしたなら、2枚引く。"
-   },
    "traits": [
     "ヴァンガード",
     "シャドウパラディン"
+   ],
+   "advancedIcons": [
+    "ride"
    ]
   },
   {
@@ -3089,11 +2632,6 @@
    "cost": 4,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[quick]}\nSelect an enemy follower on the field and up to 1 Shadow Paladin follower in your cemetery. Destroy the first follower and add the second to your hand.",
-    "cn": "《快速》\n选择敌方场上的1个从者与自己的墓场中的暗影骑士团类型·从者卡最多1张。将前者破坏。将后者加入手牌。",
-    "ja": "クイック\n相手の場のフォロワー1体と自分の墓場のシャドウパラディン・フォロワー1枚まで選ぶ。前者を破壊する。後者を手札に加える。"
-   },
    "traits": [
     "ヴァンガード",
     "シャドウパラディン"
@@ -3119,11 +2657,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Starting Amulet. (All cards with Starting Amulet in your deck must share the same name.)\nActivate {[engage]}, bury this card: Bury the top 2 cards of your deck. Activate only if there's a Shadow Paladin follower on your field.",
-    "cn": "【起始护符】（持有【起始护符】能力的卡片在牌组中可以放入最多1种）\n《起动》将这张卡《横置》置于墓场：将自己的牌堆顶2张卡置于墓场。这个能力在自己的场上有暗影骑士团类型·从者的话才可使用。",
-    "ja": "【スタートアミュレット】（【スタートアミュレット】を持つカードはデッキに1種しか入れられない）\n起動これをアクト墓場に置く：自分のデッキの上2枚を墓場に置く。この能力は自分の場にシャドウパラディン・フォロワーがいるなら使える。"
-   },
    "traits": [
     "ヴァンガード",
     "シャドウパラディン"
@@ -3150,11 +2683,6 @@
    "cost": 5,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "Ward. Twin Drive.\nWhile there's a Goddess of the Half Moon, Tsukuyomi and Goddess of the Crescent Moon, Tsukuyomi in your cemetery, this follower has Storm.\n{[fanfare]} You may summon an Oracle Think Tank follower that costs 4 or less from your hand.",
-    "cn": "【守护】【双重驱动】\n只要自己的墓场中有『半月的女神 月读』卡与『新月的女神 月读』卡存在，使这张卡获得【疾驰】能力。\n《入场曲》可以将自己的手牌中的原始消费为4及以下的1张占卜魔法团类型·从者卡召唤到场上。",
-    "ja": "【守護】【ツインドライブ】\n自分の墓場に『半月の女神 ツクヨミ』と『三日月の女神 ツクヨミ』がある限り、これは【疾走】を持つ。\nファンファーレ自分の手札の元のコスト4以下のオラクルシンクタンク・フォロワー1枚を場に出してよい。"
-   },
    "traits": [
     "ヴァンガード",
     "オラクルシンクタンク"
@@ -3180,11 +2708,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} Look at the top 3 cards of your deck. Put any number of them on the top of your deck in any order. Put the rest on the bottom in any order.\n{[act]} {[cost01]}, {[engage]}:Select an enemy follower on the field. Reveal the top card of your deck and deal damage equal to its cost to the selected follower. If you revealed a Goddess of the Full Moon, Tsukuyomi, add it to your hand.",
-    "cn": "《入场曲》查看自己的牌堆顶3张卡。从那之中，将卡任意张数以任意顺序置于牌堆顶。将剩余的卡以任意顺序置于牌堆底。\n《起动》《消费1》将这张卡《横置》：选择敌方场上的1个从者。将自己的牌堆顶1张卡公开。给予其与「公开的卡片的原始消费值」等量的伤害。如果将『满月的女神 月读』卡公开的话，将公开的卡片加入手牌。",
-    "ja": "ファンファーレ自分のデッキの上3枚を見る。その中から、好きな枚数を好きな順にデッキの上に置く。残りを好きな順にデッキの下に置く。\n起動コスト1これをアクト：相手の場のフォロワー1体を選ぶ。自分のデッキの上1枚を公開する。それに「公開したカードの元のコスト」と同じダメージ。『満月の女神 ツクヨミ』を公開したなら、公開したカードを手札に加える。"
-   },
    "traits": [
     "ヴァンガード",
     "オラクルシンクタンク"
@@ -3210,11 +2733,6 @@
    "cost": 4,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "{[evolve]} {[cost02]}: Evolve this follower.\nAssail. Twin Drive.\n{[fanfare]} Look at the top 2 cards of your deck. Put any number of them on the top of your deck in any order. Put the rest on the bottom in any order.",
-    "cn": "《进化》《消费2》：使这张卡进化。\n【指定攻击】【双重驱动】\n《入场曲》查看自己的牌堆顶2张卡。从那之中，将卡任意张数以任意顺序置于牌堆顶。将剩余的卡以任意顺序置于牌堆底。",
-    "ja": "進化コスト2：これは進化する。\n【指定攻撃】【ツインドライブ】\nファンファーレ自分のデッキの上2枚を見る。その中から、好きな枚数を好きな順にデッキの上に置く。残りを好きな順にデッキの下に置く。"
-   },
    "traits": [
     "ヴァンガード",
     "オラクルシンクタンク"
@@ -3240,11 +2758,6 @@
    "cost": null,
    "attack": 6,
    "defense": 6,
-   "text": {
-    "en": "Assail. Twin Drive.\nWhenever you drive check a Trigger, choose one. (1) Select an enemy follower on the field and banish it. (2) Draw a card.",
-    "cn": "【指定攻击】【双重驱动】\n当以自己的驱动判定进行触发时，从下述之中抉择1项。\n【1】选择敌方场上的1个从者。将其消失。\n【2】抽取1张卡。",
-    "ja": "【指定攻撃】【ツインドライブ】\n自分のドライブチェックによってトリガーしたとき、下記から1つチョイスする。【1】相手の場のフォロワー1体を選ぶ。それを消滅させる。【2】1枚引く。"
-   },
    "traits": [
     "ヴァンガード",
     "オラクルシンクタンク"
@@ -3270,11 +2783,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this card.\nSingle Drive.\n{[fanfare]} Select up to 1 card in your cemetery and put it into your deck 3rd from the top.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n【单次驱动】\n《入场曲》选择自己的墓场中的卡片最多1张。将其置于自己的牌堆顶第3张。",
-    "ja": "進化コスト1：これは進化する。\n【シングルドライブ】\nファンファーレ自分の墓場のカード1枚まで選ぶ。それを自分のデッキの上から3番目に置く。"
-   },
    "traits": [
     "ヴァンガード",
     "オラクルシンクタンク"
@@ -3300,11 +2808,6 @@
    "cost": null,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "Single Drive.\nOn Evolve - Discard an Oracle Think Tank card: Select an enemy follower with 5 defense or less on the field and banish it.",
-    "cn": "【单次驱动】\n【进化时】将手牌中的1张占卜魔法团类型·卡牌舍弃：选择生命值5及以下的敌方场上的1个从者。将其消失。",
-    "ja": "【シングルドライブ】\n【進化時】手札のオラクルシンクタンク・カード1枚を捨てる：体力5以下の相手の場のフォロワー1体を選ぶ。それを消滅させる。"
-   },
    "traits": [
     "ヴァンガード",
     "オラクルシンクタンク"
@@ -3330,11 +2833,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "Rush. Twin Drive.\nOnce on each of your turns, when you drive check a Trigger, draw a card.",
-    "cn": "【突进】【双重驱动】\n每个自己的回合1次，当以自己的驱动判定进行触发时，抽取1张卡。",
-    "ja": "【突進】【ツインドライブ】\n自分のターンごとに1回、自分のドライブチェックによってトリガーしたとき、1枚引く。"
-   },
    "traits": [
     "ヴァンガード",
     "オラクルシンクタンク"
@@ -3360,11 +2858,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "Ward.\n{[fanfare]} Look at the top 5 cards of your deck. Put any number of them on the top of your deck in any order. Put the rest on the bottom in any order.\nActivate {[engage]}: Draw a card.",
-    "cn": "【守护】\n《入场曲》查看自己的牌堆顶5张卡。从那之中，将卡任意张数以任意顺序置于牌堆顶。将剩余的卡以任意顺序置于牌堆底。\n《起动》将这张卡《横置》：抽取1张卡。",
-    "ja": "【守護】\nファンファーレ自分のデッキの上5枚を見る。その中から、好きな枚数を好きな順にデッキの上に置く。残りを好きな順にデッキの下に置く。\n起動これをアクト：1枚引く。"
-   },
    "traits": [
     "ヴァンガード",
     "オラクルシンクタンク"
@@ -3391,14 +2884,12 @@
    "cost": 4,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[ride]} {[cost01]}: Give this follower Drive.\nOn Drive - Give this follower {[attack]}+1/{[defense]}+1. Look at the top 5 cards of your deck. Put any number of them on the top of your deck in any order. Put the rest on the bottom in any order.\nWhenever you drive check a Trigger, select an enemy follower on the field. Deal it 4 damage and give your leader {[defense]}+2.",
-    "cn": "《凭依》《消费1》：使这张卡获得驱动能力。\n当以自己的驱动判定进行触发时，选择敌方场上的1个从者。给予其4点伤害。使自己的主战者《生命值》+2。\n【驱动获得时】使这张卡《攻击力》+1/《生命值》+1。查看自己的牌堆顶5张卡。从那之中，将卡任意张数以任意顺序置于牌堆顶。将剩余的卡以任意顺序置于牌堆底。",
-    "ja": "憑依コスト1：これはドライブを持つ。\n自分のドライブチェックによってトリガーしたとき、相手の場のフォロワー1体を選ぶ。それに4ダメージ。自分のリーダーは体力+2する。\n【ドライブ獲得時】これは攻撃力+1/体力+1する。自分のデッキの上5枚を見る。その中から、好きな枚数を好きな順にデッキの上に置く。残りを好きな順にデッキの下に置く。"
-   },
    "traits": [
     "ヴァンガード",
     "オラクルシンクタンク"
+   ],
+   "advancedIcons": [
+    "ride"
    ]
   },
   {
@@ -3421,11 +2912,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} Select up to 1 card in your cemetery and put it into your deck 3rd from the top.\nOnce on each of your turns, when you drive check a Trigger, deal 2 damage to each enemy leader and give your leader {[defense]}+2.",
-    "cn": "每个自己的回合1次，当以自己的驱动判定进行触发时，给予敌方的全体主战者各2点伤害。使自己的主战者《生命值》+2。\n《入场曲》选择自己的墓场中的卡片最多1张。将其置于自己的牌堆顶第3张。",
-    "ja": "自分のターンごとに1回、自分のドライブチェックによってトリガーしたとき、相手のリーダーすべてに2ダメージ。自分のリーダーは体力+2する。\nファンファーレ自分の墓場のカード1枚まで選ぶ。それを自分のデッキの上から3番目に置く。"
-   },
    "traits": [
     "ヴァンガード",
     "オラクルシンクタンク"
@@ -3451,14 +2937,12 @@
    "cost": 1,
    "attack": 1,
    "defense": 1,
-   "text": {
-    "en": "{[ride]} {[cost01]}: Give this follower Drive.\nOn Drive - Give this follower {[attack]}+1/{[defense]}+1. Give your leader {[defense]}+1.\n{[fanfare]} Select up to 1 card in your cemetery and put it into your deck 3rd from the top.",
-    "cn": "《凭依》《消费1》：使这张卡获得驱动能力。\n【驱动获得时】使这张卡《攻击力》+1/《生命值》+1。使自己的主战者《生命值》+1。\n《入场曲》选择自己的墓场中的卡片最多1张。将其置于自己的牌堆顶第3张。",
-    "ja": "憑依コスト1：これはドライブを持つ。\n【ドライブ獲得時】これは攻撃力+1/体力+1する。自分のリーダーは体力+1する。\nファンファーレ自分の墓場のカード1枚まで選ぶ。それを自分のデッキの上から3番目に置く。"
-   },
    "traits": [
     "ヴァンガード",
     "オラクルシンクタンク"
+   ],
+   "advancedIcons": [
+    "ride"
    ]
   },
   {
@@ -3481,11 +2965,6 @@
    "cost": 1,
    "attack": 2,
    "defense": 1,
-   "text": {
-    "en": "{[fanfare]} Look at the top 3 cards of your deck. Put any number of them on the top of your deck in any order. Put the rest on the bottom in any order.\nActivate {[engage]}: Reveal the top card of your deck. If you revealed a Goddess of the Half Moon, Tsukuyomi, add it to your hand.",
-    "cn": "《入场曲》查看自己的牌堆顶3张卡。从那之中，将卡任意张数以任意顺序置于牌堆顶。将剩余的卡以任意顺序置于牌堆底。\n《起动》将这张卡《横置》：将自己的牌堆顶1张卡公开。如果将『半月的女神 月读』卡公开的话，将公开的卡片加入手牌。",
-    "ja": "ファンファーレ自分のデッキの上3枚を見る。その中から、好きな枚数を好きな順にデッキの上に置く。残りを好きな順にデッキの下に置く。\n起動これをアクト：自分のデッキの上1枚を公開する。『半月の女神 ツクヨミ』を公開したなら、公開したカードを手札に加える。"
-   },
    "traits": [
     "ヴァンガード",
     "オラクルシンクタンク"
@@ -3511,14 +2990,12 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[ride]} {[cost01]}: Give this follower Drive.\nOn Drive - Give this follower  {[attack]}+1/{[defense]}+1. Look at the top 3 cards of your deck. You may reveal an Oracle Think Tank follower from among them and add it to your hand. Put any number of them on the top of your deck in any order. Put the rest on the bottom in any order.",
-    "cn": "《凭依》《消费1》：使这张卡获得驱动能力。\n【驱动获得时】使这张卡《攻击力》+1/《生命值》+1。查看自己的牌堆顶3张卡。从那之中，可以将1张占卜魔法团类型·从者卡公开并加入手牌。将卡任意张数以任意顺序置于牌堆顶。将剩余的卡以任意顺序置于牌堆底。",
-    "ja": "憑依コスト1：これはドライブを持つ。\n【ドライブ獲得時】これは攻撃力+1/体力+1する。自分のデッキの上3枚を見る。その中から、オラクルシンクタンク・フォロワー1枚を公開して手札に加えてよい。好きな枚数を好きな順にデッキの上に置く。残りを好きな順にデッキの下に置く。"
-   },
    "traits": [
     "ヴァンガード",
     "オラクルシンクタンク"
+   ],
+   "advancedIcons": [
+    "ride"
    ]
   },
   {
@@ -3541,11 +3018,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[quick]}\nChoose one. (1) Select an enemy follower on the field and deal it 2 damage. (2) Discard an Oracle Think Tank card: Select an enemy follower on the field. Deal it 3 damage and look at the top 2 cards of your deck. Put any number of them on the top of your deck in any order. Put the rest on the bottom in any order.",
-    "cn": "《快速》\n从下述之中抉择1项。\n【1】选择敌方场上的1个从者。给予其2点伤害。\n【2】将手牌中的1张占卜魔法团类型·卡片舍弃：选择敌方场上的1个从者。给予其3点伤害。查看自己的牌堆顶2张卡。从那之中，将卡任意张数以任意顺序置于牌堆顶。将剩余的卡以任意顺序置于牌堆底。",
-    "ja": "クイック\n下記から1つチョイスする。【1】相手の場のフォロワー1体を選ぶ。それに2ダメージ。【2】手札のオラクルシンクタンク・カード1枚を捨てる：相手の場のフォロワー1体を選ぶ。それに3ダメージ。自分のデッキの上2枚を見る。その中から、好きな枚数を好きな順にデッキの上に置く。残りを好きな順にデッキの下に置く。"
-   },
    "traits": [
     "ヴァンガード",
     "オラクルシンクタンク"
@@ -3572,11 +3044,6 @@
    "cost": 4,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "Rush. Assail.\nWhenever you drive check a Trigger, give this follower Storm.\n----------\n(If this card is revealed by a drive check, give a follower on your field{[attack]}+2.)",
-    "cn": "【突进】【指定攻击】\n当以自己的驱动判定进行触发时，使这张卡获得【疾驰】能力。\n----------\n（如果以驱动判定翻开这张卡的话，使自己场上的1个从者《攻击力》+2）",
-    "ja": "【突進】【指定攻撃】\n自分のドライブチェックによってトリガーしたとき、これは【疾走】を持つ。\n----------\n（ドライブチェックによってこれが捲れたなら、自分の場のフォロワー1体は攻撃力+2する）"
-   },
    "traits": [
     "ヴァンガード",
     "オラクルシンクタンク"
@@ -3603,11 +3070,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} Draw a card. Put a card from your hand into your deck 3rd from the top.\n----------\n(If this card is revealed by a drive check, draw a card.)",
-    "cn": "《入场曲》抽取1张卡。将自己的1张手牌置于自己的牌堆顶第3张。\n----------\n（如果以驱动判定翻开这张卡的话，抽取1张卡）",
-    "ja": "ファンファーレ1枚引く。自分の手札1枚を自分のデッキの上から3番目に置く。\n----------\n（ドライブチェックによってこれが捲れたなら、1枚引く）"
-   },
    "traits": [
     "ヴァンガード",
     "オラクルシンクタンク"
@@ -3634,11 +3096,6 @@
    "cost": 1,
    "attack": 2,
    "defense": 1,
-   "text": {
-    "en": "{[fanfare]} Select a Vanguard follower on your field and refresh it. For the rest of this turn, it can't attack enemy leaders.\n----------\n(If this card is revealed by a drive check, refresh a follower on your field. For the rest of this turn, it can't attack enemy leaders.)",
-    "cn": "《入场曲》选择自己场上的1个先导者类型·从者。将其竖置。这个回合，使其不能对敌方的主战者进行攻击。\n----------\n（如果以驱动判定翻开这张卡的话，将自己场上的1个从者竖置。这个回合，使其不能对敌方的主战者进行攻击）",
-    "ja": "ファンファーレ自分の場のヴァンガード・フォロワー1体を選ぶ。それをスタンドする。このターン、それは相手のリーダーを攻撃できない。\n----------\n（ドライブチェックによってこれが捲れたなら、自分の場のフォロワー1体をスタンドする。このターン、それは相手のリーダーを攻撃できない）"
-   },
    "traits": [
     "ヴァンガード",
     "オラクルシンクタンク"
@@ -3665,11 +3122,6 @@
    "cost": 1,
    "attack": 1,
    "defense": 1,
-   "text": {
-    "en": "Ward.\n{[fanfare]} Look at the top 2 cards of your deck. Put any number of them on the top of your deck in any order. Put the rest on the bottom in any order.\nWhenever you drive check a Trigger, give your leader {[defense]}+1.\n----------\n(If this card is revealed by a drive check, give your leader {[defense]}+3.)",
-    "cn": "【守护】\n当以自己的驱动判定进行触发时，使自己的主战者《生命值》+1。\n《入场曲》查看自己的牌堆顶2张卡。从那之中，将卡任意张数以任意顺序置于牌堆顶。将剩余的卡以任意顺序置于牌堆底。\n----------\n（如果以驱动判定翻开这张卡的话，使自己的主战者《生命值》+3）",
-    "ja": "【守護】\n自分のドライブチェックによってトリガーしたとき、自分のリーダーは体力+1する。\nファンファーレ自分のデッキの上2枚を見る。その中から、好きな枚数を好きな順にデッキの上に置く。残りを好きな順にデッキの下に置く。\n----------\n（ドライブチェックによってこれが捲れたなら、自分のリーダーは体力+3する）"
-   },
    "traits": [
     "ヴァンガード",
     "オラクルシンクタンク"
@@ -3695,14 +3147,12 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[ride]} {[cost01]}: Give this follower Drive.\nOn Drive - Select up to 1 enemy follower on the field. Deal it 2 damage and give this follower  {[attack]}+1/{[defense]}+1.\n{[fanfare]} Look at the top 2 cards of your deck. Put any number of them on the top of your deck in any order. Put the rest on the bottom in any order.",
-    "cn": "《凭依》《消费1》：使这张卡获得驱动能力。\n【驱动获得时】选择敌方场上的从者最多1个。给予其2点伤害。使这张卡《攻击力》+1/《生命值》+1。\n《入场曲》查看自己的牌堆顶2张卡。从那之中，将卡任意张数以任意顺序置于牌堆顶。将剩余的卡以任意顺序置于牌堆底。",
-    "ja": "憑依コスト1：これはドライブを持つ。\n【ドライブ獲得時】相手の場のフォロワー1体まで選ぶ。それに2ダメージ。これは攻撃力+1/体力+1する。\nファンファーレ自分のデッキの上2枚を見る。その中から、好きな枚数を好きな順にデッキの上に置く。残りを好きな順にデッキの下に置く。"
-   },
    "traits": [
     "ヴァンガード",
     "オラクルシンクタンク"
+   ],
+   "advancedIcons": [
+    "ride"
    ]
   },
   {
@@ -3725,11 +3175,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Choose one. (1) Look at the top 3 cards of your deck. Put any number of them on the top of your deck in any order. Put the rest on the bottom in any order. (2) Select 5 followers with Triggers in your cemetery. Return them to your deck, shuffle, draw a card, and recover 1 play point.",
-    "cn": "从下述之中抉择1项。\n【1】查看自己的牌堆顶3张卡。从那之中，将卡任意张数以任意顺序置于牌堆顶。将剩余的卡以任意顺序置于牌堆底。\n【2】选择自己的墓场中的持有触发能力的5张从者卡。将其放回牌堆，并洗切。抽取1张卡。将自己的PP回复1点。",
-    "ja": "下記から1つチョイスする。【1】自分のデッキの上3枚を見る。その中から、好きな枚数を好きな順にデッキの上に置く。残りを好きな順にデッキの下に置く。【2】自分の墓場のトリガーを持つフォロワー5枚を選ぶ。それをデッキに戻し、シャッフルする。1枚引く。自分のPPを1回復する。"
-   },
    "traits": [
     "ヴァンガード",
     "オラクルシンクタンク"
@@ -3755,11 +3200,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Starting Amulet. (All cards with Starting Amulet in your deck must share the same name.)\nActivate {[engage]}, bury this card: Look at the top 3 cards of your deck. Put any number of them on the top of your deck in any order. Put the rest on the bottom in any order. Activate only if there's an Oracle Think Tank follower on your field.",
-    "cn": "【起始护符】（持有【起始护符】能力的卡片在牌组中可以放入最多1种）\n《起动》将这张卡《横置》置于墓场：查看自己的牌堆顶3张卡。从那之中，将卡任意张数以任意顺序置于牌堆顶。将剩余的卡以任意顺序置于牌堆底。这个能力在自己的场上有占卜魔法团类型·从者的话才可使用。",
-    "ja": "【スタートアミュレット】（【スタートアミュレット】を持つカードはデッキに1種しか入れられない）\n起動これをアクト墓場に置く：自分のデッキの上3枚を見る。その中から、好きな枚数を好きな順にデッキの上に置く。残りを好きな順にデッキの下に置く。この能力は自分の場にオラクルシンクタンク・フォロワーがいるなら使える。"
-   },
    "traits": [
     "ヴァンガード",
     "オラクルシンクタンク"
@@ -3787,11 +3227,6 @@
    "cost": 3,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Choose one. If there are at least 3 faceup cards named Drive Point in your evolve deck, choose up to 3 instead. (1) Select an enemy follower on the field and deal it 4 damage. (2) Select a follower in your cemetery and add it to your hand. (3) Give your leader {[defense]}+4.",
-    "cn": "从下述之中抉择1项。如果自己的进化牌组中正面放置的『驱动点数』卡为3张及以上的话，转变为最多3项。\n【1】选择敌方场上的1个从者。给予其4点伤害。\n【2】选择自己的墓场中的1张从者卡。将其加入手牌。\n【3】使自己的主战者《生命值》+4。",
-    "ja": "下記から1つチョイスする。自分のエボルヴデッキの表向きの『ドライブポイント』が3枚以上なら、代わりに3つまで。\n【1】相手の場のフォロワー1体を選ぶ。それに4ダメージ。【2】自分の墓場のフォロワー1枚を選ぶ。それを手札に加える。【3】自分のリーダーは体力+4する。"
-   },
    "traits": [
     "ヴァンガード"
    ]
@@ -3819,11 +3254,6 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "You can put up to 10 of this card into your evolve deck.\n----------\n(Followers with Drive have Rush and Single Drive.)",
-    "cn": "在进化牌组中，这张卡可以放入最多10张。\n----------\n（持有驱动能力的从者，持有【突进】【单次驱动】能力）",
-    "ja": "これはエボルヴデッキに10枚まで入れることができる。\n----------\n（ドライブを持ったフォロワーは、【突進】【シングルドライブ】を持つ）"
-   },
    "traits": []
   },
   {
@@ -3845,12 +3275,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": "",
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "CP03-LD02",
@@ -3871,12 +3297,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": "",
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "CP03-LD03",
@@ -3897,12 +3319,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": "",
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "CP03-LD04",
@@ -3923,12 +3341,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": "",
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "CP03-LD05",
@@ -3949,12 +3363,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": "",
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "CP03-LD06",
@@ -3975,12 +3385,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": "",
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   }
  ]
 }

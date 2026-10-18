@@ -1,5 +1,5 @@
 {
- "format": 1,
+ "format": 2,
  "set": "CP02",
  "printings": 346,
  "cards": [
@@ -23,11 +23,6 @@
    "cost": 3,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[fanfare]} Look at the top 3 cards of your deck. You may reveal a Passion card from among them and add it to your hand. Put the rest on the bottom of your deck in any order.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《入场曲》查看自己的牌堆顶3张卡。从那之中，可以将1张Passion类型·卡片公开并加入手牌。将剩余的卡以任意顺序置于牌堆底。",
-    "ja": "進化コスト1：これは進化する。\nファンファーレ自分のデッキの上3枚を見る。その中から、パッション・カード1枚を公開して手札に加えてよい。残りを好きな順にデッキの下に置く。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -53,11 +48,6 @@
    "cost": null,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "On Evolve - You may summon a Passion follower that costs 3 or less from your hand.",
-    "cn": "【进化时】可以将自己的手牌中的原始消费为3及以下的1张Passion类型·从者卡召唤到场上。",
-    "ja": "【進化時】自分の手札の元のコスト3以下のパッション・フォロワー1枚を場に出してよい。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -89,11 +79,6 @@
    "cost": 2,
    "attack": 3,
    "defense": 1,
-   "text": {
-    "en": "Strike - Select an enemy follower on the field and deal it 2 damage.\n{[act]} {[cost01]}, Lesson (1): Give this follower Storm.",
-    "cn": "【攻击时】选择敌方场上的1个从者。给予其2点伤害。\n《起动》《消费1》【课程_1】：使这张卡获得【疾驰】能力。",
-    "ja": "【攻撃時】相手の場のフォロワー1体を選ぶ。それに2ダメージ。\n起動コスト1【レッスン_1】：これは【疾走】を持つ。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -146,11 +131,6 @@
    "cost": 1,
    "attack": 1,
    "defense": 1,
-   "text": {
-    "en": "{[evolve]} {[cost02]}: Evolve this follower.\nWard.\nActivate, Lesson (1): Select another card that costs 1 or less on your field and return it to its owner's hand. For the rest of this turn, this card's Activate abilities except Evolve can't be activated.",
-    "cn": "《进化》《消费2》：使这张卡进化。\n【守护】\n《起动》【课程_1】：选择原始消费为1及以下的自己场上的其他的1张卡片。将其放回手牌。这个回合，这张卡的《进化》能力以外的《起动》能力将不能使用。（放回到手牌的衍生物会从游戏中移出）",
-    "ja": "進化コスト2：これは進化する。\n【守護】\n起動【レッスン_1】：元のコスト1以下の自分の場の他のカード1枚を選ぶ。それを手札に戻す。このターン、これの進化を除く起動能力を使えない。（手札に戻ったトークンはゲームから取り除く）"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -176,11 +156,6 @@
    "cost": null,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "Ward.\nOn Evolve - Select an enemy follower that costs 2 or less on the field and return it to its owner's hand.\nActivate, Lesson (1): Select another card that costs 1 or less on your field and return it to its owner's hand. For the rest of this turn, this card's Activate abilities can't be activated.",
-    "cn": "【守护】\n【进化时】选择原始消费为2及以下的敌方场上的1个从者。将其放回手牌。\n《起动》【课程_1】：选择原始消费为1及以下的自己场上的其他的1张卡片。将其放回手牌。这个回合，这张卡的《起动》能力将不能使用。",
-    "ja": "【守護】\n【進化時】元のコスト2以下の相手の場のフォロワー1体を選ぶ。それを手札に戻す。\n起動【レッスン_1】：元のコスト1以下の自分の場の他のカード1枚を選ぶ。それを手札に戻す。このターン、これの起動能力を使えない。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -209,11 +184,6 @@
    "cost": 5,
    "attack": 2,
    "defense": 4,
-   "text": {
-    "en": "{[fanfare]} Recover 2 play points.\nWhenever you play a card during your turn, if it's the 3rd you've played this turn, recover 2 play points. If it's the 5th, give each follower on your field {[attack]}+1/{[defense]}+1.",
-    "cn": "自己的回合中，当自己将卡片使用时，如果为这个回合中第3张的卡片的话，将自己的PP回复2点。如果为这个回合中第5张的卡片的话，使自己场上的全体从者各《攻击力》+1/《生命值》+1。\n《入场曲》将自己的PP回复2点。",
-    "ja": "自分のターン中、自分がカードをプレイしたとき、このターン中に3枚目のカードなら、自分のPPを2回復する。このターン中に5枚目のカードなら、自分の場のフォロワーすべては攻撃力+1/体力+1する。\nファンファーレ自分のPPを2回復する。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -246,11 +216,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "When this card leaves the field, if a Magical Item was banished from your EX area this turn, draw a card..\nActivate {[engage]}, bury this card: Select a follower on your field and give it {[attack]}+1/{[defense]}+1.",
-    "cn": "当这张卡离开场上时，这个回合，如果已有自己EX区域的『魔法道具』卡被消失的话，抽取1张卡。\n《起动》将这张卡《横置》置于墓场：选择自己场上的1个从者。使其《攻击力》+1/《生命值》+1。",
-    "ja": "これが場を離れたとき、このターン、自分のEXエリアの『魔法のアイテム』が消滅していたなら、1枚引く。\n起動これをアクト墓場に置く：自分の場のフォロワー1体を選ぶ。それは攻撃力+1/体力+1する。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -277,11 +242,6 @@
    "cost": 4,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]}  Search your deck for up to two 1-cost iM@S CG followers and/or 1-cost iM@S CG amulets with different names, summon them, then shuffle your deck.",
-    "cn": "《入场曲》从自己的牌堆之中搜寻卡片名各不相同的「原始消费为1的IMC类型·从者卡」或「原始消费为1的IMC类型·护符卡」最多2张，并召唤到场上。",
-    "ja": "ファンファーレ自分のデッキから元のコスト1のデレマス・フォロワーや元のコスト1のデレマス・アミュレットをカード名が異なるように2枚まで探し、場に出す。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -307,11 +267,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[fanfare]} If there are at least 3 Passion followers on your field, select an enemy follower on the field and deal it 2 damage.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《入场曲》如果自己场上的Passion类型·从者为3个及以上的话，选择敌方场上的1个从者。给予其2点伤害。",
-    "ja": "進化コスト1：これは進化する。\nファンファーレ自分の場のパッション・フォロワーが3体以上なら、相手の場のフォロワー1体を選ぶ。それに2ダメージ。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -337,11 +292,6 @@
    "cost": null,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "On Evolve - Select an enemy follower with 3 defense or less on the field and put it on the bottom of its owner's deck.",
-    "cn": "【进化时】选择生命值为3及以下的敌方场上的1个从者。其玩家将其置于牌堆底。（置于到牌堆的衍生物会从游戏中移出）",
-    "ja": "【進化時】体力3以下の相手の場のフォロワー1体を選ぶ。それのプレイヤーはそれをデッキの下に置く。（デッキに置いたトークンはゲームから取り除く）"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -368,11 +318,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Draw a card. If there's a follower that costs 5 or more on your field, recover 1 play point.",
-    "cn": "抽取1张卡。如果自己的场上有原始消费为5及以上的从者的话，将自己的PP回复1点。",
-    "ja": "1枚引く。自分の場に元のコスト5以上のフォロワーがいるなら、自分のPPを1回復する。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -406,11 +351,6 @@
    "cost": 1,
    "attack": 2,
    "defense": 1,
-   "text": {
-    "en": "{[fanfare]} Select another iM@S CG follower on your field and give it Rush.",
-    "cn": "《入场曲》选择自己场上的其他的1个IMC类型·从者。使其获得【突进】能力。",
-    "ja": "ファンファーレ自分の場の他のデレマス・フォロワー1体を選ぶ。それは【突進】を持つ。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -436,11 +376,6 @@
    "cost": 4,
    "attack": 3,
    "defense": 5,
-   "text": {
-    "en": "This card costs 3 less to play if there are at least 3 iM@S CG followers on your field.\n----------\nWard.",
-    "cn": "将这张卡使用之际，如果自己的场上的IMC类型·从者为3个及以上的话，将消费-3。\n【守护】",
-    "ja": "これをプレイする際、自分の場のデレマス・フォロワーが3体以上なら、コストを-3する。\n【守護】"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -467,11 +402,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.",
-    "cn": "《进化》《消费1》：使这张卡进化。",
-    "ja": "進化コスト1：これは進化する。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -498,11 +428,6 @@
    "cost": null,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "On Evolve - Look at the top card of your deck. You may reveal it and add it to your hand. If you revealed a Cute card, give your leader {[defense]}+2.",
-    "cn": "【进化时】查看自己的牌堆顶1张卡。从那之中，可以将1张卡公开并加入手牌。如果将Cute类型·卡片公开的话，使自己的主战者《生命值》+2。",
-    "ja": "【進化時】自分のデッキの上1枚を見る。その中から、1枚を公開して手札に加えてよい。キュート・カードを公開したなら、自分のリーダーは体力+2する。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -529,11 +454,6 @@
    "cost": 2,
    "attack": 1,
    "defense": 3,
-   "text": {
-    "en": "Whenever you play card, select an enemy follower on the field and deal it 1 damage.",
-    "cn": "当自己将卡片使用时，选择敌方场上的1个从者。给予其1点伤害。",
-    "ja": "自分がカードをプレイしたとき、相手の場のフォロワー1体を選ぶ。それに1ダメージ。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -560,11 +480,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[fanfare]}/{[lastwords]} Select an enemy follower on the field and deal it 3 damage.\n{[act]} {[cost02]}, {[engage]}, discard a card: Bury this card.",
-    "cn": "《入场曲》《谢幕曲》选择敌方场上的1个从者。给予其3点伤害。\n《起动》《消费2》将这张卡《横置》将1张手牌舍弃：将这张卡置于墓场。",
-    "ja": "ファンファーレラストワード相手の場のフォロワー1体を選ぶ。それに3ダメージ。\n起動コスト2これをアクト手札1枚を捨てる：これを墓場に置く。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -590,11 +505,6 @@
    "cost": 7,
    "attack": 6,
    "defense": 7,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\nWard.\n{[fanfare]} Give your leader {[defense]}+3. Draw 2 cards.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n【守护】\n《入场曲》使自己的主战者《生命值》+3。抽取2张卡。",
-    "ja": "進化コスト1：これは進化する。\n【守護】\nファンファーレ自分のリーダーは体力+3する。2枚引く。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -622,11 +532,6 @@
    "cost": null,
    "attack": 7,
    "defense": 8,
-   "text": {
-    "en": "Ward.\nOn Evolve - Select up to 1 enemy follower on the field and engage or refresh it.\nDuring your turn, this follower doesn't take damage.",
-    "cn": "【守护】\n自己的回合中，使这张卡不会受到伤害。\n【进化时】选择敌方场上的从者最多1个。将其横置或竖置。",
-    "ja": "【守護】\n自分のターン中、これはダメージを受けない。\n【進化時】相手の場のフォロワー1体まで選ぶ。それをアクトするかスタンドする。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -657,11 +562,6 @@
    "cost": 4,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "{[fanfare]} Banish two 1-cost cards from your cemetery: Choose up to 2 of the following. (1) Select an enemy follower on the field and destroy it. (2) Deal 2 damage to each enemy leader. (3) Draw a card. Discard a card.\n{[act]} {[cost01]}, Lesson (1): Give this follower Rush.",
-    "cn": "《入场曲》将墓场中的原始消费为1的2张卡片消失：从下述之中抉择2项。\n【1】选择敌方场上的1个从者。将其破坏。\n【2】给予敌方的全体主战者各2点伤害。\n【3】抽取1张卡。将自己的1张手牌舍弃。\n《起动》《消费1》【课程_1】：使这张卡获得【突进】能力。",
-    "ja": "ファンファーレ墓場の元のコスト1のカード2枚を消滅：下記から2つまでチョイスする。【1】相手の場のフォロワー1体を選ぶ。それを破壊する。【2】相手のリーダーすべてに2ダメージ。【3】1枚引く。自分の手札1枚を捨てる。\n起動コスト1【レッスン_1】：これは【突進】を持つ。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -709,11 +609,6 @@
    "cost": 4,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "Ward.\n{[fanfare]} If there's a follower with \"Uzuki Shimamura\" in its name on your field, select an enemy follower on the field and deal it 5 damage.\n{[fanfare]} If there's a follower with \"Mio Honda\" in its name on your field, deal 5 damage to each enemy leader.",
-    "cn": "【守护】\n《入场曲》如果自己场上有「卡片名包含『岛村卯月』的从者」的话，选择敌方场上的1个从者。给予其5点伤害。\n《入场曲》如果自己场上有「卡片名包含『本田未央』的从者」的话，给予敌方的全体主战者各5点伤害。",
-    "ja": "【守護】\nファンファーレ自分の場に「カード名に『島村卯月』を含むフォロワー」がいるなら、相手の場のフォロワー1体を選ぶ。それに5ダメージ。\nファンファーレ自分の場に「カード名に『本田未央』を含むフォロワー」がいるなら、相手のリーダーすべてに5ダメージ。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -739,11 +634,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 1,
-   "text": {
-    "en": "Storm.\nStrike - If there's a follower with \"Uzuki Shimamura\" in its name on your field, give this follower {[defense]}+1.\nStrike - If there's a follower with \"Rin Shibuya\" in its name on your field, give this follower {[attack]}+1.",
-    "cn": "【疾驰】\n【攻击时】如果自己场上有「卡片名包含『岛村卯月』的从者」的话，使这张卡《生命值》+1。\n【攻击时】如果自己场上有「卡片名包含『涩谷凛』的从者」的话，使这张卡《攻击力》+1。",
-    "ja": "【疾走】\n【攻撃時】自分の場に「カード名に『島村卯月』を含むフォロワー」がいるなら、これは体力+1する。\n【攻撃時】自分の場に「カード名に『渋谷凛』を含むフォロワー」がいるなら、これは攻撃力+1する。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -769,11 +659,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[fanfare]}, Lesson (1): Give your leader {[defense]}+1.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《入场曲》【课程_1】：使自己的主战者《生命值》+1。",
-    "ja": "進化コスト1：これは進化する。\nファンファーレ【レッスン_1】：自分のリーダーは体力+1する。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -799,11 +684,6 @@
    "cost": null,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "On Evolve - Search your deck for a follower with \"Rin Shibuya\" or \"Mio Honda\" in its name, put it into your EX area, then shuffle your deck. It costs 2 less to play this turn.",
-    "cn": "【进化时】从自己的牌堆之中搜寻1张「卡片名包含『涩谷凛』或『本田未央』的从者卡」，并置于EX区域。这个回合，将其使用之际，将其消费-2。",
-    "ja": "【進化時】自分のデッキから「カード名に『渋谷凛』か『本田未央』を含むフォロワー」1枚を探し、EXエリアに置く。このターン、それをプレイする際、コストを-2する。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -830,11 +710,6 @@
    "cost": 1,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} If there are 2 iM@S CG followers or less on your field, {[engage]}.\nThis card doesn't refresh during your start phase.\nAt the start of your main phase, {[cost02]}: Refresh this card.",
-    "cn": "这张卡在自己的开始阶段不会竖置。\n当自己的主要阶段到来时，《消费2》：将这张卡竖置。\n《入场曲》如果自己场上的IMC类型·从者为2个及以下的话，将这张卡横置。",
-    "ja": "これは自分のスタートフェイズにスタンドしない。\n自分のメインフェイズが来たとき、コスト2：これをスタンドする。\nファンファーレ自分の場のデレマス・フォロワーが2体以下なら、これをアクトする。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -860,11 +735,6 @@
    "cost": 2,
    "attack": 1,
    "defense": 1,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[fanfare]} If there are at least 3 iM@S CG followers on your field, give this follower {[defense]}+2.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《入场曲》如果自己场上的IMC类型·从者为3个及以上的话，使这张卡《生命值》+2。",
-    "ja": "進化コスト1：これは進化する。\nファンファーレ自分の場のデレマス・フォロワーが3体以上なら、これは体力+2する。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -890,11 +760,6 @@
    "cost": null,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "On Evolve - Select an enemy follower on the field. Deal it and this follower 3 damage.",
-    "cn": "【进化时】选择敌方场上的1个从者。给予其与这张卡各3点伤害。",
-    "ja": "【進化時】相手の場のフォロワー1体を選ぶ。それとこれに3ダメージ。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -921,11 +786,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Look at the top 2 cards of your deck. You may reveal a Cool or Passion card from among them and add it to your hand. Put the rest on the bottom of your deck in any order.",
-    "cn": "查看自己的牌堆顶2张卡。从那之中，可以将1张Cool类型·卡片或Passion类型·卡片公开并加入手牌。将剩余的卡以任意顺序置于牌堆底。",
-    "ja": "自分のデッキの上2枚を見る。その中から、クール・カードかパッション・カード1枚を公開して手札に加えてよい。残りを好きな順にデッキの下に置く。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -951,11 +811,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} If there are at least 3 iM@S CG followers on your field, select an enemy follower on the field and deal it 2 damage.",
-    "cn": "《入场曲》如果自己场上的IMC类型·从者为3个及以上的话，选择敌方的1个从者。给予其2点伤害。",
-    "ja": "ファンファーレ自分の場のデレマス・フォロワーが3体以上なら、相手の場のフォロワー1体を選ぶ。それに2ダメージ。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -981,11 +836,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 4,
-   "text": {
-    "en": "Assail. Bane. Drain.",
-    "cn": "【指定攻击】【必杀】【吸血】",
-    "ja": "【指定攻撃】【必殺】【ドレイン】"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -1012,11 +862,6 @@
    "cost": 9,
    "attack": 9,
    "defense": 9,
-   "text": {
-    "en": "This card costs 3 less to play if there's a 1-cost follower on your field.\n----------\nWard.\n{[fanfare]} Refresh each follower on your field.",
-    "cn": "将这张卡使用之际，如果自己的场上有原始消费为1的从者的话，将消费-3。\n【守护】\n《入场曲》将自己场上的全体从者竖置。",
-    "ja": "これをプレイする際、自分の場に元のコスト1のフォロワーがいるなら、コストを-3する。\n【守護】\nファンファーレ自分の場のフォロワーすべてをスタンドする。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -1042,11 +887,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.",
-    "cn": "《进化》《消费1》：使这张卡进化。",
-    "ja": "進化コスト1：これは進化する。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -1072,11 +912,6 @@
    "cost": null,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "On Evolve - Select an enemy follower on the field and deal it 2 damage. If there are at least 5 Cute cards in your cemetery, deal 3 damage instead.",
-    "cn": "【进化时】选择敌方场上的1个从者。给予其2点伤害。如果自己的墓场中的Cute类型·卡片为5张及以上的话，转变为3点伤害。",
-    "ja": "【進化時】相手の場のフォロワー1体を選ぶ。それに2ダメージ。自分の墓場のキュート・カードが5枚以上なら、代わりに3ダメージ。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -1102,11 +937,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[quick]}\nSelect a follower on your field. Give it {[attack]}+1/{[defense]}+3 and your leader {[defense]}+3.",
-    "cn": "《快速》\n选择自己场上的1个从者。使其《攻击力》+1/《生命值+》+3。使自己的主战者《生命值》+3。",
-    "ja": "クイック\n自分の場のフォロワー1体を選ぶ。それは攻撃力+1/体力+3する。自分のリーダーは体力+3する。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -1132,11 +962,6 @@
    "cost": 7,
    "attack": 7,
    "defense": 7,
-   "text": {
-    "en": "Activate {[engage]}: Deal 3 damage to each enemy leader and enemy follower on the field. If there are at least 9 cards with different base costs in your cemetery, deal 7 damage instead.",
-    "cn": "《起动》将这张卡《横置》：给予敌方的全体主战者与敌方场上的全体从者各3点伤害。如果自己的墓场中的卡片的原始消费的种类数量为9种类及以上的话，转变为7点伤害。",
-    "ja": "起動これをアクト：相手のリーダーすべてと相手の場のフォロワーすべてに3ダメージ。自分の墓場にあるカードの元のコストの種類数が9種類以上なら、代わりに7ダメージ。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -1162,11 +987,6 @@
    "cost": 5,
    "attack": 2,
    "defense": 5,
-   "text": {
-    "en": "{[evolve]} {[cost02]}: Evolve this follower.\n{[fanfare]} Look at the top 3 cards of your deck. You may put one of them into your EX area. Bury the rest.\nActivate {[engage]}, discard a card: Select an enemy follower on the field and deal it 5 damage.",
-    "cn": "《进化》《消费2》：使这张卡进化。\n《入场曲》查看自己的牌堆顶3张卡。从那之中，可以将1张卡置于EX区域。将剩余的卡置于墓场。\n《起动》将这张卡《横置》将1张手牌舍弃：选择敌方场上的1个从者。给予其5点伤害。",
-    "ja": "進化コスト2：これは進化する。\nファンファーレ自分のデッキの上3枚を見る。その中から、1枚をEXエリアに置いてよい。残りを墓場に置く。\n起動これをアクト手札1枚を捨てる：相手の場のフォロワー1体を選ぶ。それに5ダメージ。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -1194,11 +1014,6 @@
    "cost": null,
    "attack": 4,
    "defense": 7,
-   "text": {
-    "en": "On Evolve - Select up to 1 card in your EX area and deal damage equal to its cost to your leader. It costs 0 play points to play this turn.\nActivate {[engage]}, discard a card: Select an enemy follower on the field and deal it 5 damage.",
-    "cn": "【进化时】选择自己EX区域的卡片最多1张。给予自己的主战者与「其原始消费」等量的伤害。这个回合，将其使用之际，将其消费变为0。\n《起动》将这张卡《横置》将1张手牌舍弃：选择敌方场上的1个从者。给予其5点伤害。",
-    "ja": "【進化時】自分のEXエリアのカード1枚まで選ぶ。自分のリーダーに「それの元のコスト」と同じダメージ。このターン、それをプレイする際、コストを0にする。\n起動これをアクト手札1枚を捨てる：相手の場のフォロワー1体を選ぶ。それに5ダメージ。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -1228,11 +1043,6 @@
    "cost": 9,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "When playing this card, discard 3 iM@S CG cards: This card costs 6 less to play.\n----------\n{[fanfare]} Select an enemy follower on the field. Deal it 4 damage and draw 2 cards.",
-    "cn": "将这张卡使用之际，将手牌中的3张IMC类型·卡片舍弃：将消费-6。\n《入场曲》选择敌方场上的1个从者。给予其4点伤害。抽取2张卡。",
-    "ja": "これをプレイする際、手札のデレマス・カード3枚を捨てる：コストを-6する。\nファンファーレ相手の場のフォロワー1体を選ぶ。それに4ダメージ。2枚引く。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -1280,11 +1090,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.",
-    "cn": "《进化》《消费1》：使这张卡进化。",
-    "ja": "進化コスト1：これは進化する。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -1310,11 +1115,6 @@
    "cost": null,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "On Evolve - Lesson (2): Select an enemy follower on the field and deal it 4 damage.",
-    "cn": "【进化时】【课程_2】：选择敌方场上的1个从者。给予其4点伤害。",
-    "ja": "【進化時】【レッスン_2】：相手の場のフォロワー1体を選ぶ。それに4ダメージ。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -1341,11 +1141,6 @@
    "cost": 3,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[quick]}\nSelect an enemy follower on the field. Deal it 5 damage and, if there's a Passion follower on your field, draw a card.",
-    "cn": "《快速》\n选择敌方场上的1个从者。给予其5点伤害。如果自己的场上有Passion类型·从者的话，抽取1张卡。",
-    "ja": "クイック\n相手の場のフォロワー1体を選ぶ。それに5ダメージ。自分の場にパッション・フォロワーがいるなら、1枚引く。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -1378,11 +1173,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.",
-    "cn": "《进化》《消费1》：使这张卡进化。",
-    "ja": "進化コスト1：これは進化する。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -1408,11 +1198,6 @@
    "cost": null,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "On Evolve - Select an iM@S CG spell that costs 2 or less in your cemetery and play it for 0 play points.",
-    "cn": "【进化时】选择自己的墓场中的原始消费为2及以下的1张IMC类型·法术卡。将其以「消费变为0」使用。",
-    "ja": "【進化時】自分の墓場の元のコスト2以下のデレマス・スペル1枚を選ぶ。それのコストを0にしてプレイする。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -1438,11 +1223,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "Once per turn, when you play a card that originally costs 5 or more, select an enemy leader or enemy follower on the field. Deal it 3 damage and draw a card.",
-    "cn": "每个回合1次，当自己将原始消费为5及以上的卡片使用时，选择敌方的1位主战者或敌方场上的1个从者。给予其3点伤害。抽取1张卡。",
-    "ja": "ターンごとに1回、自分が元のコスト5以上のカードをプレイしたとき、相手のリーダー1人か相手の場のフォロワー1体を選ぶ。それに3ダメージ。1枚引く。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -1469,11 +1249,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[quick]}\nSelect an enemy follower on the field and deal it 2 damage. If there are at least 3 iM@S CG followers on your field, deal 3 damage instead.",
-    "cn": "《快速》\n选择敌方场上的1个从者。给予其2点伤害。如果自己场上的IMC类型·从者为3个及以上的话，转变为3点伤害。",
-    "ja": "クイック\n相手の場のフォロワー1体を選ぶ。それに2ダメージ。自分の場のデレマス・フォロワーが3体以上なら、代わりに3ダメージ。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -1499,11 +1274,6 @@
    "cost": 3,
    "attack": 1,
    "defense": 5,
-   "text": {
-    "en": "Whenever you play a spell, select an enemy follower on the field and deal it 2 damage.",
-    "cn": "自己将法术卡使用之际，选择敌方场上的1个从者。给予其2点伤害。",
-    "ja": "自分がスペルをプレイしたとき、相手の場のフォロワー1体を選ぶ。それに2ダメージ。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -1529,11 +1299,6 @@
    "cost": 1,
    "attack": 1,
    "defense": 1,
-   "text": {
-    "en": "{[evolve]} {[cost02]}: Evolve this follower.",
-    "cn": "《进化》《消费2》：使这张卡进化。",
-    "ja": "進化コスト2：これは進化する。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -1559,11 +1324,6 @@
    "cost": null,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "On Evolve - Search your deck for a spell that costs 3 or less, reveal it, add it to your hand, then shuffle your deck.",
-    "cn": "【进化时】从自己的牌堆之中搜寻1张原始消费为3及以下的法术卡，并加入手牌。",
-    "ja": "【進化時】自分のデッキから元のコスト3以下のスペル1枚を探し、手札に加える。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -1591,11 +1351,6 @@
    "cost": 1,
    "attack": 1,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} Select another iM@S CG follower on your field and give it {[attack]}+1/{[defense]}+1.",
-    "cn": "《入场曲》选择自己场上的其他的1个IMC类型·从者。使其《攻击力》+1/《生命值》+1。",
-    "ja": "ファンファーレ自分の場の他のデレマス・フォロワー1体を選ぶ。それは攻撃力+1/体力+1する。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -1621,11 +1376,6 @@
    "cost": 6,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "When playing this card, discard a card: This card costs 2 less to play.\n----------\n{[fanfare]} Search your deck for up to 2 spells with different names, reveal them, add them to your hand, then shuffle your deck.",
-    "cn": "将这张卡使用之际，将1张手牌舍弃：将消费-2。\n《入场曲》从自己的牌堆之中搜寻卡片名各不相同的法术卡最多2张，并加入手牌。",
-    "ja": "これをプレイする際、手札1枚を捨てる：コストを-2する。\nファンファーレ自分のデッキからスペルをカード名が異なるように2枚まで探し、手札に加える。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -1652,11 +1402,6 @@
    "cost": 5,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[quick]}\nSelect up to 2 enemy followers on the field and destroy them.",
-    "cn": "《快速》\n选择敌方场上的从者最多2个。将其破坏。",
-    "ja": "クイック\n相手の場のフォロワー2体まで選ぶ。それを破壊する。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -1682,11 +1427,6 @@
    "cost": 4,
    "attack": 4,
    "defense": 5,
-   "text": {
-    "en": "Ward.\n{[fanfare]} Give your leader {[defense]}+3. If you have 10 max play points, deal 3 damage to each enemy leader.\nWhenever this follower takes at least 5 damage, increase your max play points by 1.",
-    "cn": "【守护】\n当这张卡受到伤害时，如果那伤害为5点及以上的话，将自己的PP最大值+1点。\n《入场曲》使自己的主战者《生命值》+3。如果自己的PP最大值为10点的话，给予敌方的全体主战者各3点伤害。",
-    "ja": "【守護】\nこれがダメージを受けたとき、そのダメージが5以上なら、自分のPP最大値を+1する。\nファンファーレ自分のリーダーは体力+3する。自分のPP最大値が10なら、相手のリーダーすべてに3ダメージ。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -1712,11 +1452,6 @@
    "cost": 4,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost02]}: Evolve this follower.\n{[fanfare]}, Lesson (1): Select an enemy follower on the field and deal it 4 damage.",
-    "cn": "《进化》《消费2》：使这张卡进化。\n《入场曲》【课程_1】：选择敌方场上的1个从者。给予其4点伤害。",
-    "ja": "進化コスト2：これは進化する。\nファンファーレ【レッスン_1】：相手の場のフォロワー1体を選ぶ。それに4ダメージ。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -1744,11 +1479,6 @@
    "cost": null,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "On Evolve - Search your deck for a spell that costs 3 or less or amulet that costs 3 or less, put it into your EX area, then shuffle your deck. It costs 3 less to play this turn.",
-    "cn": "【进化时】从自己的牌堆之中搜寻1张原始消费为3及以下的法术卡或原始消费为3及以下的护符卡，并置于EX区域。这个回合，将其使用之际，将其消费-3。",
-    "ja": "【進化時】自分のデッキから元のコスト3以下のスペルか元のコスト3以下のアミュレット1枚を探し、EXエリアに置く。このターン、それをプレイする際、コストを-3する。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -1779,11 +1509,6 @@
    "cost": 7,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "{[fanfare]} Search your deck for a 3-cost follower and 1-cost follower, summon them, then shuffle your deck.\nWhenever another iM@S CG follower is put onto your field, select an enemy follower on the field and deal it 2 damage.",
-    "cn": "当其他的IMC类型·从者召唤到自己的场上时，选择敌方场上的1个从者。给予其2点伤害。\n《入场曲》从自己的牌堆之中搜寻1张原始消费为3的从者卡与1张原始消费为1的从者卡，并召唤到场上。",
-    "ja": "自分の場に他のデレマス・フォロワーが出たとき、相手の場のフォロワー1体を選ぶ。それに2ダメージ。\nファンファーレ自分のデッキから元のコスト3のフォロワー1枚と元のコスト1のフォロワー1枚を探し、場に出す。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -1831,11 +1556,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} Discard up to 3 cards: If you discarded at least 1 Cute card, give your leader {[defense]}+2. If you discarded at least 1 Cool card, draw a card. If you discarded at least 1 Passion card, deal 2 damage to each enemy leader.\n{[fanfare]} If you have 10 max play points, draw 2 cards.",
-    "cn": "《入场曲》将手牌最多3张舍弃：如果将Cute类型·卡片舍弃的话，使自己的主战者《生命值》+2。如果将Cool类型·卡片舍弃的话，抽取1张卡。如果将Passion类型·卡片舍弃的话，给予敌方的全体主战者各2点伤害。\n《入场曲》如果自己的PP最大值为10点的话，抽取2张卡。",
-    "ja": "ファンファーレ手札3枚まで捨てる：キュート・カードを捨てたなら、自分のリーダーは体力+2する。クール・カードを捨てたなら、1枚引く。パッション・カードを捨てたなら、相手のリーダーすべてに2ダメージ。\nファンファーレ自分のPP最大値が10なら、2枚引く。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -1861,11 +1581,6 @@
    "cost": 6,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "{[evolve]} {[cost02]}: Evolve this follower.\n{[evolve]}, Lesson (3): {[evolve]} this follower.\n{[fanfare]} Increase your max play points by 1.",
-    "cn": "《进化》《消费2》：使这张卡进化。\n《进化》【课程_3】：使这张卡进化。\n《入场曲》使自己的PP最大值+1点。",
-    "ja": "進化コスト2：これは進化する。\n進化【レッスン_3】：これは進化する。\nファンファーレ自分のPP最大値を+1する。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -1891,11 +1606,6 @@
    "cost": null,
    "attack": 6,
    "defense": 6,
-   "text": {
-    "en": "On Evolve - Select an enemy follower on the field and destroy it. If you have 10 max play points, deal 3 damage to its leader.",
-    "cn": "【进化时】选择敌方场上的1个从者。将其破坏。如果自己的PP最大值为10点的话，给予其主战者3点伤害。",
-    "ja": "【進化時】相手の場のフォロワー1体を選ぶ。それを破壊する。自分のPP最大値が10なら、それのリーダーに3ダメージ。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -1921,11 +1631,6 @@
    "cost": 1,
    "attack": 1,
    "defense": 1,
-   "text": {
-    "en": "{[fanfare]} If there are at least 3 iM@S CG followers on your field, search your deck for a 1-cost spell or 1-cost amulet, reveal it, add it to your hand, then shuffle your deck.",
-    "cn": "《入场曲》如果自己场上的IMC类型·从者为3个及以上的话，从自己的牌堆之中搜寻1张原始消费为1的法术卡或原始消费为1的护符卡，并加入手牌。",
-    "ja": "ファンファーレ自分の場のデレマス・フォロワーが3体以上なら、自分のデッキから元のコスト1のスペルか元のコスト1のアミュレット1枚を探し、手札に加える。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -1951,11 +1656,6 @@
    "cost": 1,
    "attack": 1,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost02]}: Evolve this follower.",
-    "cn": "《进化》《消费2》：使这张卡进化。",
-    "ja": "進化コスト2：これは進化する。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -1981,11 +1681,6 @@
    "cost": null,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "On Evolve - Deal 1 damage to each enemy follower on the field. If you have 10 max play points, deal 4 damage instead.",
-    "cn": "【进化时】给予敌方场上的全体从者各1点伤害。如果自己的PP最大值为10点的话，转变为4点伤害。",
-    "ja": "【進化時】相手の場のフォロワーすべてに1ダメージ。自分のPP最大値が10なら、代わりに4ダメージ。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -2012,11 +1707,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "This card costs 1 more to play for every follower on the field.\n----------\nDeal 7 damage to each follower on the field.",
-    "cn": "将这张卡使用之际，将消费+X。X为「场上的从者的数量」。\n给予场上的全体从者各7点伤害。",
-    "ja": "これをプレイする際、コストを+Xする。Xは「場のフォロワーの数」である。\n場のフォロワーすべてに7ダメージ。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -2050,11 +1740,6 @@
    "cost": 3,
    "attack": 4,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} Deal each enemy leader damage equal to the number of other iM@S CG followers on your field.",
-    "cn": "《入场曲》给予敌方的全体主战者与「自己场上的其他的IMC类型·从者的数量」等量的伤害。",
-    "ja": "ファンファーレ相手のリーダーすべてに「自分の場の他のデレマス・フォロワーの数」と同じダメージ。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -2081,11 +1766,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} If there are at least 3 iM@S CG followers on your field, give this follower {[attack]}+1 and Rush.\nStrike - Give your leader {[defense]}+2.",
-    "cn": "【攻击时】使自己的主战者《生命值》+2。\n《入场曲》如果自己场上的IMC类型·从者为3个及以上的话，使这张卡《攻击力》+1，并获得【突进】能力。",
-    "ja": "【攻撃時】自分のリーダーは体力+2する。\nファンファーレ自分の場のデレマス・フォロワーが3体以上なら、これは攻撃力+1して、【突進】を持つ。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -2112,11 +1792,6 @@
    "cost": 4,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "{[fanfare]} Choose one of the following. (1) Select an enemy amulet on the field and destroy it. (2) Draw a card.",
-    "cn": "《入场曲》从下述之中抉择1项。\n【1】选择敌方场上的1个护符。将其破坏。\n【2】抽取1张卡。",
-    "ja": "ファンファーレ下記から1つチョイスする。【1】相手の場のアミュレット1つを選ぶ。それを破壊する。【2】1枚引く。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -2143,11 +1818,6 @@
    "cost": 5,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.",
-    "cn": "《进化》《消费1》：使这张卡进化。",
-    "ja": "進化コスト1：これは進化する。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -2174,11 +1844,6 @@
    "cost": null,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "On Evolve - Select an enemy follower on the field and deal it damage equal to your max play points.",
-    "cn": "【进化时】选择敌方场上的1个从者。给予其与「自己的PP最大值」等量的伤害。",
-    "ja": "【進化時】相手の場のフォロワー1体を選ぶ。それに「自分のPP最大値」と同じダメージ。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -2204,11 +1869,6 @@
    "cost": 4,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Draw 3 cards.",
-    "cn": "抽取3张卡。",
-    "ja": "3枚引く。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -2234,11 +1894,6 @@
    "cost": 4,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[fanfare]} Select an enemy follower on the field and deal it 2 damage.\nActivat {[cost01]}, Lesson (2): Select up to 2 enemy followers on the field and deal them 2 damage.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《入场曲》选择敌方场上的1个从者。给予其2点伤害。\n《起动》《消费1》【课程_2】:选择敌方场上的从者最多2个。给予其各2点伤害。",
-    "ja": "進化コスト1：これは進化する。\nファンファーレ相手の場のフォロワー1体を選ぶ。それに2ダメージ。\n起動コスト1【レッスン_2】：相手の場のフォロワー2体まで選ぶ。それに2ダメージ。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -2268,11 +1923,6 @@
    "cost": null,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "On Evolve - Look at the top 4 cards of your deck. You may put one of them into your EX area. Bury the rest.\n{[act]} {[cost01]}, Lesson (2): Select up to 2 enemy followers on the field and deal them 2 damage.",
-    "cn": "【进化时】查看自己的牌堆顶4张卡。从那之中，可以将1张卡置于EX区域。将剩余的卡置于墓场。\n《起动》《消费1》【课程_2】:选择敌方场上的从者最多2个。给予其各2点伤害。",
-    "ja": "【進化時】自分のデッキの上4枚を見る。その中から、1枚をEXエリアに置いてよい。残りを墓場に置く。\n起動コスト1【レッスン_2】：相手の場のフォロワー2体まで選ぶ。それに2ダメージ。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -2322,11 +1972,6 @@
    "cost": 2,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} Deal 2 damage to your leader.\nWhile your leader's defense is 10 or less, this follower has Storm and Bane.",
-    "cn": "只要自己的主战者的《生命值》为10及以下，使这张卡获得【疾驰】【必杀】能力。\n【入场曲】给予自己的主战者2点伤害。",
-    "ja": "自分のリーダーの体力10以下である限り、これは【疾走】【必殺】を持つ。\nファンファーレ自分のリーダーに2ダメージ。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -2352,11 +1997,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.",
-    "cn": "《进化》《消费1》：使这张卡进化。",
-    "ja": "進化コスト1：これは進化する。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -2382,11 +2022,6 @@
    "cost": null,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "On Evolve - Select an enemy follower on the field. Destroy it and deal 3 damage to your leader.",
-    "cn": "【进化时】选择敌方场上的1个从者。将其破坏。给予自己的主战者3点伤害。",
-    "ja": "【進化時】相手の場のフォロワー1体を選ぶ。それを破壊する。自分のリーダーに3ダメージ。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -2412,11 +2047,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "While this card is on your field, your leader and each other follower on your field don't take ability damage during your turn.\n{[act]} {[cost01]}, Lesson (1): Select an enemy follower on the field and deal it 3 damage. Activate only once per turn.",
-    "cn": "只要有这张卡存在，自己的回合中，使自己的主战者与自己场上的其他的全体从者不会受到由能力给予的伤害。\n《起动》《消费1》【课程_1】：选择敌方场上的1个从者。给予其3点伤害。这个能力在1回合可以使用1次。",
-    "ja": "これがいる限り、自分のターン中、自分のリーダーと自分の場の他のフォロワーすべては能力によるダメージを受けない。\n起動コスト1【レッスン_1】：相手の場のフォロワー1体を選ぶ。それに3ダメージ。この能力は1ターンに1回使える。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -2443,11 +2073,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[quick]}\nSelect an enemy follower that costs 3 or less on the field. Destroy it and bury the top card of your deck.",
-    "cn": "《快速》\n选择原始消费为3及以下的敌方场上的1个从者。将其破坏。将自己的牌堆顶1张卡置于墓场。",
-    "ja": "クイック\n元のコスト3以下の相手の場のフォロワー1体を選ぶ。それを破壊する。自分のデッキの上1枚を墓場に置く。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -2480,11 +2105,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} Deal 2 damage to your leader. Draw 2 cards.",
-    "cn": "《入场曲》给予自己的主战者2点伤害。抽取2张卡。",
-    "ja": "ファンファーレ自分のリーダーに2ダメージ。2枚引く。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -2510,11 +2130,6 @@
    "cost": 7,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[fanfare]} Select an enemy follower on the field and deal it 5 damage.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《入场曲》选择敌方场上的1个从者。给予其5点伤害。",
-    "ja": "進化コスト1：これは進化する。\nファンファーレ相手の場のフォロワー1体を選ぶ。それに5ダメージ。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -2540,11 +2155,6 @@
    "cost": null,
    "attack": 6,
    "defense": 6,
-   "text": {
-    "en": "On Evolve - Select up to 2 enemy followers on the field and deal them 5 damage.",
-    "cn": "【进化时】选择敌方场上的从者最多2个。给予其各5点伤害。",
-    "ja": "【進化時】相手の場のフォロワー2体まで選ぶ。それに5ダメージ。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -2570,11 +2180,6 @@
    "cost": 3,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Select an enemy follower on the field. Destroy it and, if Sanguine is active for you, deal 2 damage to its leader.",
-    "cn": "选择敌方场上的1个从者。将其破坏。如果处于【真红】状态的话，给予其主战者2点伤害。（自己的回合中，如果自己的主战者的生命值已有减少的话，就会处于【真红】状态）",
-    "ja": "相手の場のフォロワー1体を選ぶ。それを破壊する。【真紅】状態なら、それのリーダーに2ダメージ。（自分のターン中、自分のリーダーの体力が減少していたなら、【真紅】状態になる）"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -2600,11 +2205,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 4,
-   "text": {
-    "en": "Ward.\n{[lastwords]} Select an iM@S CG spell in your cemetery and add it to your hand.",
-    "cn": "【守护】\n《谢幕曲》选择自己的墓场中的1张IMC类型·法术卡。将其加入手牌。",
-    "ja": "【守護】\nラストワード自分の墓場のデレマス・スペル1枚を選ぶ。それを手札に加える。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -2631,11 +2231,6 @@
    "cost": 3,
    "attack": 4,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} Look at the top 3 cards of your deck. Put one of them on the top of your deck. Bury the rest.\nWhile there are at least 5 iM@S CG cards in your cemetery, this follower has Rush.",
-    "cn": "只要自己的墓场中的IMC类型·卡片有5张及以上存在，使这张卡获得【突进】能力。\n《入场曲》查看自己的牌堆顶3张卡。从那之中，将1张卡置于牌堆顶。将剩余的卡置于墓场。",
-    "ja": "自分の墓場にデレマス・カードが5枚以上ある限り、これは【突進】を持つ。\nファンファーレ自分のデッキの上3枚を見る。その中から、1枚をデッキの上に置く。残りを墓場に置く。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -2661,11 +2256,6 @@
    "cost": 2,
    "attack": 3,
    "defense": 1,
-   "text": {
-    "en": "This card costs 1 less to play if a follower on your field evolved this turn.\n----------\n{[fanfare]} If Sanguine is active for you, select an enemy follower on the field and deal it 3 damage.",
-    "cn": "将这张卡使用之际，这个回合，如果已有自己场上的从者进化的话，将消费-1。\n《入场曲》如果处于【真红】状态的话，选择敌方场上的1个从者。给予其3点伤害。（自己的回合中，如果自己的主战者的生命值已有减少的话，就会处于【真红】状态）",
-    "ja": "これをプレイする際、このターン、自分の場のフォロワーが進化していたなら、コストを-1する。\nファンファーレ【真紅】状態なら、相手の場のフォロワー1体を選ぶ。それに3ダメージ。（自分のターン中、自分のリーダーの体力が減少していたなら、【真紅】状態になる）"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -2692,11 +2282,6 @@
    "cost": 2,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\nThis follower can't attack enemies.\nAt the start of your end phase, give your leader {[defense]}+1.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n这张卡不能对敌方进行攻击。\n当自己的结束阶段到来时，使自己的主战者《生命值》+1。",
-    "ja": "進化コスト1：これは進化する。\nこれは相手を攻撃できない。\n自分のエンドフェイズが来たとき、自分のリーダーは体力+1する。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -2723,11 +2308,6 @@
    "cost": null,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "At the start of your end phase, deal 1 damage to each enemy leader.\n{[lastwords]} Deal 1 damage to each enemy leader.",
-    "cn": "当自己的结束阶段到来时，给予敌方的全体主战者各1点伤害。\n《谢幕曲》给予敌方的全体主战者各1点伤害。",
-    "ja": "自分のエンドフェイズが来たとき、相手のリーダーすべてに1ダメージ。\nラストワード相手のリーダーすべてに1ダメージ。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -2754,11 +2334,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Select an enemy follower on the field. Deal it 3 damage and give {[attack]}+1 to each follower that costs 1 or less on your field.",
-    "cn": "选择敌方场上的1个从者。给予其3点伤害。使原始消费为1及以下的自己场上的全体从者各《攻击力》+1。",
-    "ja": "相手の場のフォロワー1体を選ぶ。それに3ダメージ。元のコスト1以下の自分の場のフォロワーすべては攻撃力+1する。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -2793,11 +2368,6 @@
    "cost": 5,
    "attack": 3,
    "defense": 5,
-   "text": {
-    "en": "Ward.\n{[fanfare]} Select an enemy follower on the field and banish it.\nAt the start of your end phase, if your leader's defense is 5 or less, give it {[defense]}+5 and draw a card.\n{[act]} {[cost01]}, Lesson (1): Give this follower Aura.",
-    "cn": "【守护】\n当自己的结束阶段到来时，如果自己的主战者的《生命值》为5及以下的话，使自己的主战者《生命值》+5。抽取1张卡。\n《入场曲》选择敌方场上的1个从者。将其消失。\n《起动》《消费1》【课程_1】：使这张卡获得【灵气】能力。",
-    "ja": "【守護】\n自分のエンドフェイズが来たとき、自分のリーダーの体力5以下なら、自分のリーダーは体力+5する。1枚引く。\nファンファーレ相手の場のフォロワー1体を選ぶ。それを消滅させる。\n起動コスト1【レッスン_1】：これは【オーラ】を持つ。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -2823,11 +2393,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost06]}: Evolve this follower.\n{[fanfare]} Draw a card.",
-    "cn": "《进化》《消费6》：使这张卡进化。\n《入场曲》抽取1张卡。",
-    "ja": "進化コスト6：これは進化する。\nファンファーレ1枚引く。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -2857,11 +2422,6 @@
    "cost": null,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "On Evolve - Select a follower that costs 8 or less in your cemetery and summon it.",
-    "cn": "【进化时】选择自己的墓场中的原始消费为8及以下的1张从者卡。将其召唤到场上。",
-    "ja": "【進化時】自分の墓場の元のコスト8以下のフォロワー1枚を選ぶ。それを場に出す。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -2909,11 +2469,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[fanfare]} Look at the top 5 cards of your deck. You may reveal an amulet from among them and add it to your hand. Put the rest on the bottom of your deck in any order.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《入场曲》查看自己的牌堆顶5张卡。从那之中，可以将1张护符卡公开并加入手牌。将剩余的卡以任意顺序置于牌堆底。",
-    "ja": "進化コスト1：これは進化する。\nファンファーレ自分のデッキの上5枚を見る。その中から、アミュレット1枚を公開して手札に加えてよい。残りを好きな順にデッキの下に置く。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -2939,11 +2494,6 @@
    "cost": null,
    "attack": 4,
    "defense": 3,
-   "text": {
-    "en": "On Evolve - You may summon an amulet that costs 3 or less from your hand.",
-    "cn": "【进化时】可以将自己的手牌中的原始消费为3及以下的1张护符卡召唤到场上。",
-    "ja": "【進化時】自分の手札の元のコスト3以下のアミュレット1枚を場に出してよい。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -2969,11 +2519,6 @@
    "cost": 5,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "Rush. Assail.\nStrike - Deal 2 damage to each enemy leader.\n{[act]} {[cost02]}, Lesson (1): Give this follower Storm.",
-    "cn": "【突进】【指定攻击】\n【攻击时】给予敌方的全体主战者各2点伤害。\n《起动》《消费2》【课程_1】：使这张卡获得【疾驰】能力。",
-    "ja": "【突進】【指定攻撃】\n【攻撃時】相手のリーダーすべてに2ダメージ。\n起動コスト2【レッスン_1】：これは【疾走】を持つ。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -2999,11 +2544,6 @@
    "cost": 3,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[fanfare]} Give your leader {[defense]}+2. Draw a card.\n{[q]}Activate {[cost02]}, {[engage]}, bury this card: Select an iM@S CG follower in your cemetery and add it to your hand.",
-    "cn": "《入场曲》使自己的主战者《生命值》+2。抽取1张卡。\n《快速》《起动》《消费2》将这张卡《横置》置于墓场：选择自己的墓场中的1张IMC类型·从者卡。将其加入手牌。",
-    "ja": "ファンファーレ自分のリーダーは体力+2する。1枚引く。\nQ起動コスト2これをアクト墓場に置く：自分の墓場のデレマス・フォロワー1枚を選ぶ。それを手札に加える。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -3030,11 +2570,6 @@
    "cost": 3,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} Look at the top 3 cards of your deck. You may summon an iM@S CG follower that costs 2 or less from among them. Put the rest on the bottom of your deck in any order.",
-    "cn": "《入场曲》查看自己的牌堆顶3张卡。从那之中，可以将原始消费为2及以下的1张IMC类型·从者卡召唤到场上。将剩余的卡以任意顺序置于牌堆底。",
-    "ja": "ファンファーレ自分のデッキの上3枚を見る。その中から、元のコスト2以下のデレマス・フォロワー1枚を場に出してよい。残りを好きな順にデッキの下に置く。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -3060,11 +2595,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[fanfare]} If Risa Matoba is on your field, give this follower {[attack]}+1/{[defense]}+1 and Storm.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《入场曲》如果自己的场上有『的场梨沙』的话，使这张卡《攻击力》+1/《生命值》+1，并获得【疾驰】能力。",
-    "ja": "進化コスト1：これは進化する。\nファンファーレ自分の場に『的場梨沙』がいるなら、これは攻撃力+1/体力+1して、【疾走】を持つ。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -3090,11 +2620,6 @@
    "cost": null,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "On Evolve - Give your leader {[defense]}+2.",
-    "cn": "【进化时】使自己的主战者《生命值》+2。",
-    "ja": "【進化時】自分のリーダーは体力+2する。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -3120,11 +2645,6 @@
    "cost": 3,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[fanfare]} Select an enemy follower with 4 defense or less on the field and banish it.\n{[act]} {[cost05]}, {[engage]}, bury this card: Select an enemy follower on the field and banish it.",
-    "cn": "《入场曲》选择生命值为4及以下的敌方场上的1个从者。将其消失。\n《起动》《消费5》将这张卡《横置》置于墓场：选择敌方场上的1个从者。将其消失。",
-    "ja": "ファンファーレ体力4以下の相手の場のフォロワー1体を選ぶ。それを消滅させる。\n起動コスト5これをアクト墓場に置く：相手の場のフォロワー1体を選ぶ。それを消滅させる。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -3152,11 +2672,6 @@
    "cost": 2,
    "attack": 1,
    "defense": 3,
-   "text": {
-    "en": "Storm.\n{[fanfare]} Select an enemy follower on the field and deal it damage equal to the number of other Passion followers on your field.",
-    "cn": "【疾驰】\n《入场曲》选择敌方场上的1个从者。给予其与「自己场上的其他的Passion类型·从者的数量」等量的伤害。",
-    "ja": "【疾走】\nファンファーレ相手の場のフォロワー1体を選ぶ。それに「自分の場の他のパッション・フォロワーの数」と同じダメージ。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -3183,11 +2698,6 @@
    "cost": 3,
    "attack": 2,
    "defense": 5,
-   "text": {
-    "en": "{[fanfare]} Give your leader {[defense]}+2. If there are at least 5 Passion cards in your cemetery, give {[defense]}+4 instead.",
-    "cn": "《入场曲》使自己的主战者《生命值》+2。如果自己的墓场中的Passion类型·卡片为5张及以上的话，转变为《生命值》+4。",
-    "ja": "ファンファーレ自分のリーダーは体力+2する。自分の墓場のパッション・カードが5枚以上なら、代わりに体力+4する。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -3213,11 +2723,6 @@
    "cost": 4,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.",
-    "cn": "《进化》《消费1》：使这张卡进化。",
-    "ja": "進化コスト1：これは進化する。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -3243,11 +2748,6 @@
    "cost": null,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "On Evolve - Search your deck for a Cool follower and Passion follower, reveal them, add them to your hand, then shuffle your deck.",
-    "cn": "【进化时】从自己的牌堆之中搜寻1张Cool类型·从者卡与1张Passion类型·从者卡，并加入手牌。",
-    "ja": "【進化時】自分のデッキからクール・フォロワー1枚とパッション・フォロワー1枚を探し、手札に加える。"
-   },
    "traits": [
     "デレマス",
     "クール"
@@ -3274,11 +2774,6 @@
    "cost": 7,
    "attack": 7,
    "defense": 7,
-   "text": {
-    "en": "Rush. Ward.\nIf this follower would take more than 3 damage, it takes 3 instead.",
-    "cn": "【突进】【守护】\n这张卡受到的4点及以上的伤害变为3点。",
-    "ja": "【突進】【守護】\nこれが受ける4以上のダメージを3にする。"
-   },
    "traits": [
     "デレマス",
     "パッション"
@@ -3305,11 +2800,6 @@
    "cost": 4,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[quick]}\nSelect an enemy follower on the field. Banish it and, if there's a Cute follower on your field, give your leader {[defense]}+3.",
-    "cn": "《快速》\n选择敌方场上的1个从者。将其消失。如果自己的场上有Cute类型·从者的话，使自己的主战者《生命值》+3。",
-    "ja": "クイック\n相手の場のフォロワー1体を選ぶ。それを消滅させる。自分の場にキュート・フォロワーがいるなら、自分のリーダーは体力+3する。"
-   },
    "traits": [
     "デレマス",
     "キュート"
@@ -3341,11 +2831,6 @@
    "cost": 10,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "When playing this card, banish 3 Cute cards, 3 Cool cards, and 3 Passion cards from your cemetery: This card costs 9 less to play.\n----------\nStorm. Bane. Ward.",
-    "cn": "将这张卡使用之际，将墓场中的3张Cute类型·卡片与3张Cool类型·卡片与3张Passion类型·卡片消失：将消费-9。\n【疾驰】【必杀】【守护】",
-    "ja": "これをプレイする際、墓場のキュート・カード3枚とクール・カード3枚とパッション・カード3枚を消滅：コストを-9する。\n【疾走】【必殺】【守護】"
-   },
    "traits": [
     "デレマス",
     "キュート",
@@ -3397,11 +2882,6 @@
    "cost": 6,
    "attack": 7,
    "defense": 7,
-   "text": {
-    "en": "{[fanfare]}, Lesson (5): Destroy each enemy card on the field.",
-    "cn": "《入场曲》【课程_5】：将敌方场上的全体卡片破坏。",
-    "ja": "ファンファーレ【レッスン_5】：相手の場のカードすべてを破壊する。"
-   },
    "traits": [
     "デレマス",
     "キュート",
@@ -3429,11 +2909,6 @@
    "cost": 8,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "{[fanfare]} Put 5 Magical Item tokens into your EX area. Recover 4 play points.",
-    "cn": "《入场曲》将5张『魔法道具』卡置于EX区域。将自己的PP回复4点。\n―――――――――――――――\n『魔法道具』《中立职业》IMC类型·法术《消费4》使自己的主战者《生命值》+1。抽取1张卡。",
-    "ja": "ファンファーレ『魔法のアイテム』5枚をEXエリアに置く。自分のPPを4回復する。\n―――――――――――――――\n『魔法のアイテム』ニュートラルデレマス・スペルコスト4自分のリーダーは体力+1する。1枚引く。"
-   },
    "traits": [
     "デレマス"
    ]
@@ -3458,11 +2933,6 @@
    "cost": 4,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "{[fanfare]} Put 2 Magical Item tokens into your EX area.",
-    "cn": "《入场曲》将2张『魔法道具』卡置于EX区域。\n―――――――――――――――\n『魔法道具』《中立职业》IMC类型·法术《消费4》使自己的主战者《生命值》+1。抽取1张卡。",
-    "ja": "ファンファーレ『魔法のアイテム』2枚をEXエリアに置く。\n―――――――――――――――\n『魔法のアイテム』ニュートラルデレマス・スペルコスト4自分のリーダーは体力+1する。1枚引く。"
-   },
    "traits": [
     "デレマス"
    ]
@@ -3487,11 +2957,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} Select another iM@S CG follower on your field and give it Bane or Drain.",
-    "cn": "《入场曲》选择自己场上的其他的1个IMC类型·从者。使其获得【必杀】或【吸血】能力。",
-    "ja": "ファンファーレ自分の場の他のデレマス・フォロワー1体を選ぶ。それは【必殺】か【ドレイン】を持つ。"
-   },
    "traits": [
     "デレマス"
    ]
@@ -3517,11 +2982,6 @@
    "cost": 1,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "Activate {[engage]}: Select another iM@S CG follower on your field and give it {[attack]}+1.",
-    "cn": "《起动》将这张卡《横置》：选择自己场上的其他的1个IMC类型·从者。使其《攻击力》+1。",
-    "ja": "起動これをアクト：自分の場の他のデレマス・フォロワー1体を選ぶ。それは攻撃力+1する。"
-   },
    "traits": [
     "デレマス"
    ]
@@ -3545,12 +3005,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": "",
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "CP02-LD02",
@@ -3571,12 +3027,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": "",
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "CP02-LD03",
@@ -3597,12 +3049,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": "",
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "CP02-LD04",
@@ -3623,12 +3071,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": "",
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "CP02-LD05",
@@ -3649,12 +3093,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": "",
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "CP02-LD06",
@@ -3675,12 +3115,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": "",
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "CP02-T01",
@@ -3742,11 +3178,6 @@
    "cost": 4,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Give your leader {[defense]}+1. Draw a card.\n----------\n(At the start of the game, if your deck is based on the THE IDOLM@STER CINDERELLA GIRLS universe, put 5 Magical Item tokens into your EX area.)",
-    "cn": "使自己的主战者《生命值》+1。抽取1张卡。\n----------\n（※在对战开始时，如果自己的牌组构筑为「偶像大师 灰姑娘女孩」主题构筑的话，将5张『魔法道具』卡置于EX区域）",
-    "ja": "自分のリーダーは体力+1する。1枚引く。\n----------\n（※バトル開始時、自分のデッキ構築が「アイドルマスター シンデレラガールズ」タイトル構築なら、『魔法のアイテム』5枚をEXエリアに置く）"
-   },
    "traits": [
     "デレマス"
    ],

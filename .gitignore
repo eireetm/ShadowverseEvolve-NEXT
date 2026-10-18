@@ -13,3 +13,8 @@ dist-ios/
 packages/gui/.e2e-relay-records/
 # The project's notes (docs/) stay on the developer's machine: the README says what a user needs.
 docs/
+# The card texts, a file per set and language (npm run build:cards writes them on this machine): not published. The PC
+# release's private zip carries them in public/text/ (packages/gui/scripts/release-pc.ts).
+packages/core/data/*_en.json
+packages/core/data/*_cn.json
+packages/core/data/*_ja.json

@@ -36,7 +36,7 @@ Shadowverse: Evolve NEXT  {{version}}
 文件夹
   decks/     卡组文件（samples/ 里是示例卡组）
   replays/   保存的录像
-  public/    你自己的图片、声音、字体，全部可选，放进去后刷新页面：
+  public/    你自己的图片、声音、字体和卡牌文本，全部可选，放进去后刷新页面：
                images/cards/<卡号>.png         卡图（例如 BP01-001.png；双面卡的背面加 _back；卡号里的 Ⓢ 也可以写成 S）
                images/backs/default.png         卡背（evolve.png 是进化卡组的卡背）
                textures/board/field.png         场地（1586×992）
@@ -46,6 +46,7 @@ Shadowverse: Evolve NEXT  {{version}}
                audio/sfx/                        通用音效
                audio/cards/<卡号>-p.mp3         每张卡的音效（-p 使用、-a 攻击、-d 被破坏）
                fonts/                            字体
+               text/<卡包>_<语言>.json         卡牌文本（例如 BP22_cn.json；语言是 en、cn、ja）。程序本身没有卡牌文本
   settings.ini  设置：第一次启动时生成，可以直接编辑（游戏关着时改，或者改完后刷新页面），说明在文件里
   app/       程序本身，不要改动
   update/    更新时换下来的旧程序（update/previous），不需要可以删掉
@@ -88,7 +89,7 @@ Shadowverse: Evolve NEXT  {{version}}
 フォルダ
   decks/     デッキファイル（samples/ はサンプルデッキ）
   replays/   保存したリプレイ
-  public/    自分の画像・音声・フォント（すべて任意。入れたらページを再読み込み）：
+  public/    自分の画像・音声・フォント・カードテキスト（すべて任意。入れたらページを再読み込み）：
                images/cards/<カード番号>.png   カード画像（例：BP01-001.png。両面カードの裏面は _back。カード番号の Ⓢ は S でも可）
                images/backs/default.png         カードの裏面（evolve.png はエボルヴデッキの裏面）
                textures/board/field.png         プレイマット（1586×992）
@@ -98,6 +99,7 @@ Shadowverse: Evolve NEXT  {{version}}
                audio/sfx/                        効果音
                audio/cards/<カード番号>-p.mp3   カードごとの効果音（-p プレイ、-a 攻撃、-d 破壊）
                fonts/                            フォント
+               text/<セット>_<言語>.json        カードテキスト（例：BP22_cn.json。言語は en・cn・ja）。プログラム自体はカードテキストを持たない
   settings.ini  設定：初回起動時に作られます。直接編集できます（ゲームを閉じているときに編集するか、編集後にページを再読み込み）。説明はファイルの中にあります
   app/       プログラム本体（変更しないでください）
   update/    更新で入れ替えた古いプログラム（update/previous）。不要なら削除してかまいません
@@ -141,7 +143,7 @@ Updating from an older version
 Folders
   decks/     deck files (samples/: sample decks)
   replays/   saved replays
-  public/    your own images, sounds and fonts, all optional; reload the page after adding files:
+  public/    your own images, sounds, fonts and card texts, all optional; reload the page after adding files:
                images/cards/<card number>.png   card images (e.g. BP01-001.png; a back face adds _back; a Ⓢ in the number may be a plain S)
                images/backs/default.png          the card back (evolve.png: the evolve deck's)
                textures/board/field.png          the playmat (1586×992)
@@ -151,6 +153,7 @@ Folders
                audio/sfx/                         sound effects
                audio/cards/<card number>-p.mp3   a card's own sounds (-p play, -a attack, -d destroyed)
                fonts/                             fonts
+               text/<set>_<language>.json         card texts (e.g. BP22_cn.json; the languages are en, cn, ja); the program has none of its own
   settings.ini  the settings: made at the first start, and can be edited by hand (while the game is closed, or reload the page
              after saving it); the comments in it explain each one
   app/       the program itself; don't change it

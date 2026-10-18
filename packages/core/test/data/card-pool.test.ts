@@ -3,9 +3,12 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CardDatabase } from "../../src";
 import { ALL_CARDS, ALL_SCRIPTS, SETS, SUPPORTED_SETS } from "../../src/sets";
+import { hasDataTexts, withDataTexts } from "../../../../tools/lib/card-texts";
 
 // The whole card pool: cards of every supported set with their printings in all sets.
 const db = new CardDatabase(ALL_CARDS);
+/** With this machine's card texts (not in the repository; the core has none): the checks of texts need them. */
+const withTexts = new CardDatabase(withDataTexts(ALL_CARDS));
 
 describe("card pool (all supported sets)", () => {
   it("every supported set has its data and script registry", () => {
@@ -18,8 +21,8 @@ describe("card pool (all supported sets)", () => {
     expect(Object.keys(ALL_SCRIPTS).length).toBe(SUPPORTED_SETS.reduce((n, s) => n + Object.keys(SETS[s].scripts).length, 0));
   });
 
-  it("every card with a text has a Chinese text (else the Chinese interface shows English; fixed in data/fixes.ts)", () => {
-    const missing = ALL_CARDS.filter((c) => c.text.ja && !c.text.cn).map((c) => c.id);
+  it.skipIf(!hasDataTexts())("every card with a text has a Chinese text (else the Chinese interface shows English; fixed in data/fixes.ts)", () => {
+    const missing = withTexts.all().filter((c) => c.text.ja && !c.text.cn).map((c) => c.id);
     expect(missing).toEqual([]);
   });
 
@@ -49,13 +52,14 @@ describe("card pool (all supported sets)", () => {
     expect(db.named("La+ Darkness, Laplace's Demon")).toEqual([]);
   });
 
-  it("uses effect_en where the scraped official English text belongs to another card", () => {
+  it.skipIf(!hasDataTexts())("uses effect_en where the scraped official English text belongs to another card", () => {
     // BP02-091's official field holds another card's fanfare; the card's own text is effect_en.
-    expect(db.get("BP02-091").text.en).toMatch(/prayer counter/);
-    expect(db.get("BP02-091").text.ja).toMatch(/祈りカウンター/);
+    expect(withTexts.get("BP02-091").text.en).toMatch(/prayer counter/);
+    expect(withTexts.get("BP02-091").text.ja).toMatch(/祈りカウンター/);
   });
 
-  it("CR 5.16.1.1.1 — every evolved card has exactly one base follower with the same name", () => {
+  // The texts tell the hosts of evolved cards named otherwise ("in its name").
+  it.skipIf(!hasDataTexts())("CR 5.16.1.1.1 — every evolved card has exactly one base follower with the same name", () => {
     // Evolved spells are evolve-deck resources, not evolved forms: Carrot (CR 14.2.1), Drive Point (14.4.9).
     for (const e of ALL_CARDS.filter((c) => c.evolved && c.type !== "spell")) {
       const same = db.named(e.name).filter((d) => !d.evolved && d.type === "follower");
@@ -63,7 +67,7 @@ describe("card pool (all supported sets)", () => {
       // "Unless specified otherwise": evolved into from a card whose text names a string this
       // card's name contains (BP03-056 evolves into BP03-058 "Lævateinn Dragon, Attack Form"),
       // or whose evolve ability names this card (the faces of a double-faced card, BP09-004).
-      const hosts = ALL_CARDS.filter(
+      const hosts = withTexts.all().filter(
         (d) =>
           !d.evolved &&
           d.type === "follower" &&
@@ -85,7 +89,7 @@ describe("card pool (all supported sets)", () => {
     ]);
     // The back face's Japanese traits and text are transcribed from the card (data/fixes.ts).
     expect(back.traits).toEqual(["妖精"]);
-    expect(back.text.ja).toMatch(/コンボ_3/);
+    if (hasDataTexts()) expect(withTexts.get("BP09-005_back").text.ja).toMatch(/コンボ_3/);
     expect([back.evolved, back.attack, back.defense, back.printings]).toEqual([true, 3, 3, []]);
     // Every printing of the card is the front (the physical card).
     expect(db.ofPrinting("BP09-P02").id).toBe("BP09-005");

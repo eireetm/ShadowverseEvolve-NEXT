@@ -95,8 +95,8 @@ function makeBot(engine: Engine, controller: SeatController, seed: string, seat:
   return null;
 }
 
-/** How an ability reads on a button (the GUI words it). */
-export function summarizeAbility(ability: AbilityDef | undefined, def: DefId): AbilitySummary {
+/** How an ability reads on a button (the GUI words it). `engine` tells an advanced ability's icon from its card's text. */
+export function summarizeAbility(ability: AbilityDef | undefined, def: DefId, engine?: Engine): AbilitySummary {
   const granted = def.includes(":") ? { granted: true } : {};
   if (!ability) return { kind: "unknown", ...granted };
   if (ability.kind === "activated") {
@@ -109,13 +109,26 @@ export function summarizeAbility(ability: AbilityDef | undefined, def: DefId): A
       ...(cost.leaderDefense ? { leaderDefense: cost.leaderDefense } : {}),
       ...(cost.custom ? { custom: true } : {}),
       ...(ability.quick ? { quick: true } : {}),
-      ...(ability.advanced ? { advanced: true } : {}),
+      ...(ability.advanced ? { advanced: true, ...advancedIconOf(engine, def, ability) } : {}),
       ...(ability.evolve ? { evolve: true } : {}),
       ...granted,
     };
   }
   if (ability.kind === "automatic") return { kind: "automatic", timing: ability.timing, ...granted };
   return { kind: "spell", ...granted };
+}
+
+/**
+ * The scripts write serve (CR 14.2.2) and Ride (14.4.9) abilities as advanced activated abilities (serveAbility, rideAbility):
+ * which icon this one is printed with, its definition's icons in its advanced abilities' order (CardDefinition.advancedIcons,
+ * which the data build reads from the text). Nothing for {[adv]} or a given ability.
+ */
+function advancedIconOf(engine: Engine | undefined, def: DefId, ability: AbilityDef): Pick<AbilitySummary, "advancedIcon"> {
+  const icons = engine?.db.has(def) ? engine.db.get(def).advancedIcons : undefined;
+  if (!icons) return {};
+  const rank = (engine!.scripts[def]?.abilities ?? []).filter((a) => a.kind === "activated" && a.advanced).indexOf(ability);
+  const icon = icons[Math.max(rank, 0)] ?? icons[0];
+  return icon === "feed" || icon === "ride" ? { advancedIcon: icon } : {};
 }
 
 /** The kind an ability's paragraph of the card text is found by (game/card/ability-text.ts): its timing, its kind of activated ability. */
@@ -1219,7 +1232,7 @@ export class GameHost {
     const reader = game.reader();
     const activated = (card: CardId, ability: number): void => {
       const ref = reader.info(card).abilities[ability];
-      abilities[`${card}:${ability}`] = summarizeAbility(ref?.ability, ref?.def ?? "");
+      abilities[`${card}:${ability}`] = summarizeAbility(ref?.ability, ref?.def ?? "", this.engine);
     };
     switch (decision.type) {
       case "chooseTurnOrder":
@@ -1286,7 +1299,7 @@ export class GameHost {
    * an equipment token's: the token).
    */
   private abilityInfo(source: CardId, def: DefId, index: number, view: PlayerView): AbilityInfo {
-    const info: AbilityInfo = { ...summarizeAbility(abilityOf(this.engine, def, index), def), source, sourceDef: def };
+    const info: AbilityInfo = { ...summarizeAbility(abilityOf(this.engine, def, index), def, this.engine), source, sourceDef: def };
     if (def.startsWith(PSEUDO_DEF.keyword)) info.keyword = def.slice(PSEUDO_DEF.keyword.length);
     else if (def.startsWith(PSEUDO_DEF.grant)) {
       const grant = def.slice(PSEUDO_DEF.grant.length);
@@ -1338,7 +1351,7 @@ export class GameHost {
       const entry: LogEntry = { seq: ++this.logSeq, turn: game.state.turn, event, cards: this.cardsIn(event) };
       // An ability played (public, CR 10.6.2.7): its kind, for the page (the sound of activated abilities).
       if (event.type === "abilityPlayed") {
-        const { kind, evolve } = summarizeAbility(abilityOf(this.engine, event.sourceDef, event.ability), event.sourceDef);
+        const { kind, evolve } = summarizeAbility(abilityOf(this.engine, event.sourceDef, event.ability), event.sourceDef, this.engine);
         entry.ability = { kind, ...(evolve ? { evolve } : {}) };
       }
       this.log.push(entry);
@@ -1459,7 +1472,7 @@ export class GameHost {
     for (const key of options.activatable) {
       const [card, index] = key.split(":") as [CardId, string];
       const ref = game.reader().info(card).abilities[Number(index)];
-      if (ref) abilities[key] = summarizeAbility(ref.ability, ref.def);
+      if (ref) abilities[key] = summarizeAbility(ref.ability, ref.def, this.engine);
     }
     const deck = (p: PlayerId): Record<DefId, number> => {
       const counts: Record<DefId, number> = {};

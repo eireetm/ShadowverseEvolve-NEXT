@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
-import { useSettings } from "./helpers";
+import { hasCardTexts, useSettings } from "./helpers";
 
 // The deck builder (stage 5): filters, adding by click and drag, removing by right-click and by dragging back to the pool,
 // the leader window, save as / delete; the format (Cross Craft: two leaders) and what a deck doesn't meet, told on saving
@@ -290,6 +290,7 @@ test("a deck that can't be loaded is told, and the builder goes on with a new de
 });
 
 test("the card panel: a token a card's text names opens that token there (click or keyboard); the name wraps with the text", async ({ page }) => {
+  test.skip(!hasCardTexts, "no card text files on this machine (npm run build:cards writes them)");
   const problems: string[] = [];
   page.on("pageerror", (e) => problems.push(e.message));
   await useSettings(page, { uiLang: "en", cardLang: "en", builderDeck: null });

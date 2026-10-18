@@ -229,6 +229,9 @@ export async function createNativeHost(platform: AppPlatform): Promise<Host> {
       misc: [],
     }),
 
+    // The app has no card texts of its own: the player's (public/text/) are its texts.
+    builtInCardTexts: async () => [],
+
     resources: async () => {
       const files = (await walk("public")).map((f) => f.path);
       own = new Set(files);

@@ -6,7 +6,7 @@ import { hostConfig, type HostConfig } from "./config.ts";
 import { deckPath, deleteDeckFile, listDecks, readDeckText, writeDeckText } from "./decks.ts";
 import { browserHasFile, fileTag } from "./file-cache.ts";
 import { deleteReplayFile, listReplays, readReplayText, replayPath, writeReplayText } from "./replays.ts";
-import { CONTENT_TYPES, findCardArt, findMisc, listMisc, listResources } from "./resources.ts";
+import { CONTENT_TYPES, findCardArt, findMisc, listMisc, listResources, readCardTexts } from "./resources.ts";
 import { readSettingsText, writeSettingsText } from "./settings-file.ts";
 
 /** Information about the local files, for the GUI's settings and debug panel (GET /api/host). */
@@ -70,6 +70,7 @@ function readBody(req: IncomingMessage): Promise<string> {
  *  GET  /api/card-art/<printing>?def=&back= the card's image (the player's own first, then the scraped one), 404 if none
  *  GET  /api/misc/<name>                   a Misc image of the assets folder (field, back, unknown, background_m ...), 404 if none
  *  GET  /api/resources                     { files }: everything under public/
+ *  GET  /api/card-texts                    { files }: the card text files of this machine (HostConfig.cardTextsDir), as JSON
  *  GET  /api/decks                         { decks }: deck files
  *  GET  /api/decks/<file>                  a deck file
  *  PUT  /api/decks/<file>                  save a deck file (JSON body)
@@ -113,6 +114,7 @@ export function hostPlugin(cfg: HostConfig = hostConfig()): Plugin {
         return sendFile(req, res, file);
       }
       if (path === "resources" && req.method === "GET") return sendJson(res, 200, { files: listResources(cfg) });
+      if (path === "card-texts" && req.method === "GET") return sendJson(res, 200, { files: readCardTexts(cfg) });
       if (path === "decks" && req.method === "GET") return sendJson(res, 200, { decks: listDecks(cfg) });
       if (path.startsWith("decks/")) {
         const full = deckPath(cfg, path.slice("decks/".length));

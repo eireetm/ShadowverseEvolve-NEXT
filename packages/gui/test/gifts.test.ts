@@ -1,12 +1,16 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createEngine, type CardDefinition } from "@sve/core";
-import { ALL_CARDS, ALL_SCRIPTS } from "@sve/core/sets";
+import { ALL_CARDS as CORE_CARDS, ALL_SCRIPTS } from "@sve/core/sets";
 import { describe, expect, it } from "vitest";
 import type { CardLang } from "../src/app/settings";
 import type { DataLang } from "../src/i18n/hant";
 import { Catalog } from "../src/app/catalog";
 import { giftLines, giftQuotes } from "../src/game/card/gifts";
+import { hasDataTexts, withDataTexts } from "../../../tools/lib/card-texts";
+
+// The cards with this machine's texts (not in the repository; the core has none): the checks of texts need them.
+const ALL_CARDS = withDataTexts(CORE_CARDS);
 
 // The card panel shows the abilities given to a card (the player view's gifts) as the giving card's text quotes them
 // (src/game/card/gifts.ts). Checked against every card: each card that gives an ability has its quotes in every card
@@ -58,7 +62,8 @@ function giftsGiven(def: string): number {
   return n;
 }
 
-describe("the abilities given to a card, in the card panel", () => {
+// Card texts: this machine's files (tools/lib/card-texts.ts), not in the repository; skipped without them.
+describe.skipIf(!hasDataTexts())("the abilities given to a card, in the card panel", () => {
   it("are the quotes of the giving card's text, in each card language", () => {
     const gremory = card("BP12-071");
     expect(LANGS.map((l) => giftQuotes(gremory.text[l]!, l))).toEqual([["{[lastwords]} Banish this card."], ["《谢幕曲》使这张卡消失"], ["ラストワードこれは消滅する"]]);
@@ -82,8 +87,12 @@ describe("the abilities given to a card, in the card panel", () => {
     expect(lines(nana, "en")).toEqual(['en At the start of your main phase, deal 2 damage to your leader', "en Activate {[cost01]}, discard 2 cards: Bury this."]);
     // BP13-119 given twice: two abilities.
     expect(lines([{ by: "BP13-119", ability: "lastWordsLeaderDraw" }, { by: "BP13-119", ability: "lastWordsLeaderDraw" }], "ja")).toHaveLength(2);
-    // A pre-release card's English text is a placeholder: its Japanese one.
-    expect(lines([{ by: "BP22-024", ability: "preventDamage" }], "en")).toEqual(["ja これは交戦ダメージを受けない"]);
+    expect(lines([{ by: "BP22-024", ability: "preventDamage" }], "en")).toEqual(["en This doesn't take combat damage."]);
+    // A pre-release card's English text is a placeholder (data/preview.ts; BP22 until 2026-10-18): its Japanese one.
+    const assault = catalog.def("BP22-024")!;
+    const preview = new Catalog([{ ...assault, preview: true, text: { ...assault.text, en: "unavailable" } }]);
+    const previewLines = giftLines([{ by: "BP22-024", ability: "preventDamage" }], preview, "en").map((l) => `${l.lang} ${l.text}`);
+    expect(previewLines).toEqual(["ja これは交戦ダメージを受けない"]);
     // A gift its card's text doesn't quote shows nothing (an equipment token that gives a keyword alone).
     expect(lines([{ by: "V1", ability: "x" }], "cn")).toEqual([]);
   });

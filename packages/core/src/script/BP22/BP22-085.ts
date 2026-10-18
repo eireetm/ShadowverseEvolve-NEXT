@@ -28,7 +28,7 @@ export default defineCard({
         },
         {
           id: "search",
-          label: "Pay 1: summon a フギン＆ムニン from your deck",
+          label: "Pay 1: summon a Huginn & Muninn from your deck",
           cost: playPointsCost(1),
           *resolve(fx) {
             yield* fx.search((id) => named(HUGINN_AND_MUNINN)(fx.game, id), { to: "field" });

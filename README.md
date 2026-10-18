@@ -16,12 +16,12 @@
   - 纯 TypeScript，结果确定，可以在没有界面的环境里运行，不依赖界面或文件。
   - 按综合规则（v1.26.1）逐条实现，规则判断都注明条款编号。
   - 支持 57 个卡包的 3,689 个卡牌定义，共 7,564 个印刷版本，异画共用同一个定义。
-  - BP22 是先行测试版：只有日文和中文数据（仓库旁边的 `BP22.json`，官方日文卡表），按日文实现、中文对照；英文卡名和文本暂时显示为 `unavailable`。等英文数据出来后补齐。
+  - BP22 的英文卡名和文本来自抓取数据里的英文翻译：官方英文版还没有这个卡包的数据。
 - **Bot（`@sve/bot`）**：界面上有三个难度，只用 Core 的公开 API：
   - Bot-简单：贪心，每个决策都模拟所有候选回答，评估局面后选最好的；
   - Bot-中等：规划整个回合，再模拟对手的下一回合，只用玩家看得到的信息；规划之前先找"确保能赢"的斩杀：在几个对手手牌和牌序的抽样里都能赢、对手应对也挡不住才执行；
-  - Bot-困难：同样规划（同样先找斩杀），但作弊，直接透过引擎读完整的局面（对手的手牌、双方牌组的顺序）；而且看得更远：每种打法都接着模拟对手的回合和自己的下一回合，再比较（手机上只模拟到对手的回合，想得快些）。
-  - 另有试验版 medium-beta（中等加上按费用曲线换牌、主战者体力的价值曲线，不作弊），只在 `npm run bot:arena` 里。
+  - Bot-困难：同样规划（同样先找斩杀），但作弊，直接透过引擎读完整的局面（对手的手牌、双方牌堆的顺序）；而且看得更远：每种打法都接着模拟对手的回合和自己的下一回合，再比较（手机上只模拟到对手的回合，想得快些）。
+  - 另有试验版 medium-beta（中等加上按消费曲线换牌、主战者体力的价值曲线，不作弊），只在 `npm run bot:arena` 里。
 - **GUI（`@sve/gui`）**：Web 界面（Vite + React），引擎和 Bot 在 Web Worker 里运行。
   - 牌桌按场地图摆放，点击或拖拽操作，有动画、箭头和音效；
   - 组卡界面：筛选、异画、赛制和禁卡表、卡组码；
@@ -35,7 +35,8 @@
 
 - 这是非官方的同人项目，与 Cygames、Bushiroad 等官方无关，不做商业用途。
 - 仓库**不包含任何卡图、官方美术或声音**。
-- 卡牌数据（`packages/core/data/`）包含卡名和卡牌文本，有英文、中文、日文三种，中文多为民间翻译，用于规则处理和显示。
+- 卡牌数据（`packages/core/data/<卡包>.json`）包含卡名（英文、中文、日文，中文多为民间翻译）、数值、类型等，用于规则处理和显示。
+- 仓库**不包含卡牌文本**：`npm run build:cards` 在本机生成英文、中文、日文的文本文件 `<卡包>_en.json`、`<卡包>_cn.json`、`<卡包>_ja.json`（需要仓库旁边的 `assets/`），开发服务器会显示它们。没有这些文件时游戏照常运行，只是不显示卡牌文本；也可以把文本文件放进 `packages/gui/public/text/`（见"自定义资源"）。
 - 想看到卡图，请把自己的图片放进 `packages/gui/public/`（见"自定义资源"）。
 
 ### 环境
@@ -77,10 +78,10 @@ npm run dev:gui
 | `npm run release:train -- --zip` | 打"训练数据包"：给帮忙跑对局的朋友 |
 | `npm run rl:ingest -- 文件夹` | 收下朋友们训练数据包里的对局：检查后并进数据集 |
 | `npm run rl:coverage -- 文件夹` | `bot:arena --out` 存下的对局里，每种决定 Bot 实际比较了几个答案：重放每一局，对每个决定用引擎列出全部合法答案，和规划型 Bot 会比较的答案数对照；"有好几个合法答案、却只比较一个"的决定类型（盲区）排在前面，写明理由的列为"有意为之"。`--games N` 只看前 N 局 |
-| `npm run rl:behaviour -- 文件夹` | `bot:arena --out` 存下的对局里的行为统计：守护在自己回合横置登场的比例、能用速攻的时机和用了几次、对局结束时先后手各剩多少进化点和超进化点、回合结束时手里还有打得出的随从的比例。用来比较新旧两版 Bot（同门互打的胜率看不出共同的盲区）。`--games N` 只看前 N 局 |
+| `npm run rl:behaviour -- 文件夹` | `bot:arena --out` 存下的对局里的行为统计：守护在自己回合横置登场的比例、能用速攻的时机和用了几次、对局结束时先后手各剩多少进化点和超进化点、回合结束时手里还有打得出的从者的比例。用来比较新旧两版 Bot（同门互打的胜率看不出共同的盲区）。`--games N` 只看前 N 局 |
 | `npm run rl:lethal -- 文件夹` | 统计 `bot:arena --out` 存下的对局里漏掉的斩杀：重放每一局，在每个己方主要阶段的决定上用宽搜索找"确保能赢"的斩杀（换 6 个公平抽样都能赢、对手应对也挡不住），找到了那回合却没赢就算漏掉；打印有漏斩杀的局数、漏的一方后来输掉的局数。较慢（每局几秒），`--games N` 只看前 N 局，`--workers N` 多进程 |
 | `npm run bench:throughput -- [random\|easy\|medium\|hard]` | 整台电脑一分钟能打多少局：多个进程同时开始（`--workers N`，默认 CPU 线程数），各打 `--seconds` 秒 |
-| `npm run build:cards` | 从抓取的卡牌数据（仓库旁边的 `assets/`，先行测试版的卡包读仓库旁边的 `BP22.json` 这类卡表，社区 DIY 卡包的卡表在 `packages/core/src/data/custom.ts`）重新生成 `packages/core/data/*.json` |
+| `npm run build:cards` | 从抓取的卡牌数据（仓库旁边的 `assets/`，先行测试版的卡包读仓库旁边的官方日文卡表（现在没有这样的卡包），社区 DIY 卡包的卡表在 `packages/core/src/data/custom.ts`）重新生成 `packages/core/data/*.json`（卡牌文本 `<卡包>_<语言>.json` 只在本机，不进仓库） |
 | `npm run scripts:index` | 新增卡牌脚本后，重新生成脚本注册表（`packages/core/src/script/<卡包>/index.ts`） |
 | `npm run cards:status` | 生成每张卡的实现和测试状态表（写到 `docs/card-status*.md`） |
 | `npm run rules:clauses` | 从综合规则的 PDF（仓库旁边的 `rules/`）提取条款编号表 `tools/data/cr-clauses.json` |
@@ -113,7 +114,7 @@ packages/
       events/ view/     对外事件；按玩家视角过滤隐藏信息
       sets/             各卡包的卡牌数据和脚本注册表
       testing/          测试工具（对局脚本、随机 agent、不变量检查）
-    data/               卡牌数据（<卡包>.json，由 build:cards 生成，不要手改）
+    data/               卡牌数据（<卡包>.json，由 build:cards 生成，不要手改；卡牌文本 <卡包>_<语言>.json 只在本机）
     test/               规则测试、卡牌测试、整局测试
   bot/                  Bot（@sve/bot），只用 Core 的公开 API
   server/               联机服务器（@sve/server）：按房间号转发消息、密钥、上限；scripts/ 里是安装脚本和打包
@@ -174,7 +175,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 |---|---|
 | `images/cards/<编号>` | 卡图；双面卡的背面是 `images/cards/<编号>_back` |
 | `images/cards/unknown` | 卡图缺失时的替代图（上面会写出卡名） |
-| `images/backs/default` | 主卡组的卡背（牌组、背面朝上的卡、对手的手牌） |
+| `images/backs/default` | 主卡组的卡背（牌堆、背面朝上的卡、对手的手牌） |
 | `images/backs/evolve` | 进化牌组的卡背（没有时用主卡组的卡背） |
 | `textures/board/field` | 一方的场地，对手的是同一张图旋转 180°。牌桌按原图（1586×992）上的格子摆卡，换图时要保持同样的尺寸和格子位置 |
 | `textures/menu/background_m` | 主界面的背景（设置、开局页也用） |
@@ -191,8 +192,8 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 | `audio/bgm/menu`、`audio/bgm/deck`、`audio/bgm/battle` | 背景音乐：主界面、组卡界面、对局中。循环播放，换界面时淡入淡出 |
 | `audio/sfx/<名字>` | 通用音效，名字见下表 |
 | `audio/cards/<编号>-p` | 这张卡被使用时（所有卡都可以有） |
-| `audio/cards/<编号>-a` | 这只随从攻击时 |
-| `audio/cards/<编号>-d` | 这只随从被破坏时 |
+| `audio/cards/<编号>-a` | 这只从者攻击时 |
+| `audio/cards/<编号>-d` | 这只从者被破坏时 |
 | `audio/cards/<主战者编号>-start` | 这位主战者的玩家的回合开始时（有它就不放 `turn`） |
 | `audio/cards/<主战者编号>-greet`、`-thank`、`-apologize`、`-applaud`、`-shock`、`-confuse`、`-taunt` | 这位主战者的玩家发快捷聊天时，依次是"你好。""谢谢你。""对不起……""真棒！""怎么回事？""令人困惑……""我必将胜利！" |
 
@@ -202,11 +203,11 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 |---|---|
 | `draw` | 抽牌 |
 | `search` | 检索（搜寻）并公开、或从墓场加入手牌的卡在牌桌上展示时（对手的卡翻开，自己的卡抖动） |
-| `spell`、`follower`、`amulet` | 使用法术、随从、护符（没有时用 `play`） |
+| `spell`、`follower`、`amulet` | 使用法术、从者、护符（没有时用 `play`） |
 | `play` | 以上三种共用的后备 |
-| `activated` | 使用启动能力（进化除外：进化放 `evolve`） |
-| `attack` | 随从攻击 |
-| `damage`、`leader-damage` | 随从、主战者受到伤害（主战者的没有时用 `damage`） |
+| `activated` | 使用起动能力（进化除外：进化放 `evolve`） |
+| `attack` | 从者攻击 |
+| `damage`、`leader-damage` | 从者、主战者受到伤害（主战者的没有时用 `damage`） |
 | `destroy` | 破坏 |
 | `evolve`、`super-evolve` | 进化、超进化（超进化的没有时用 `evolve`） |
 | `heal` | 回复 |
@@ -217,7 +218,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 | `discard` | 舍弃 |
 | `bounce` | 回到手牌 |
 | `counter` | 放置或取除指示物 |
-| `shuffle` | 洗切牌组 |
+| `shuffle` | 洗切牌堆 |
 | `turn` | 回合开始 |
 | `quick` | 快速提示弹出 |
 | `game-start` | 对局开始 |
@@ -225,8 +226,15 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 | `click` | 界面点击 |
 
 - 一张卡有自己的音效时，就不放对应的通用音效：`-p` 代替 `spell` / `follower` / `amulet`，`-a` 代替 `attack`，`-d` 代替 `destroy`。
-- 进化后的随从，先找进化卡的编号，再找原来那张卡的编号。
+- 进化后的从者，先找进化卡的编号，再找原来那张卡的编号。
 - 主战者的声音：所有人都听自己电脑上的这个文件。双职业时用对局里在前面的那张主战者（一般是主战者 1）。
+
+**卡牌文本**
+- `text/<卡包>_<语言>.json`（例如 `text/BP22_cn.json`；语言是 `en`、`cn`、`ja`）：卡牌的能力文本，格式和 `packages/core/data/<卡包>_<语言>.json` 完全一样，可以复制一份来改。
+- 有这个文件时，这个卡包这种语言的文本全部用它的：文件里没有列出的卡就没有这种语言的文本（显示别的语言的）。别的卡包、别的语言不变。卡名不在这里（在 `packages/core/data/<卡包>.json`）。
+- 没有这个文件时：开发服务器用本机的 `packages/core/data/<卡包>_<语言>.json`；发行版和手机 App 本身没有卡牌文本（PC 版的 `-private` 包把文本放在 `public/text/` 里）。
+- 只影响显示：规则、Bot 和联机都不读卡牌文本，联机时每个人看到的是自己的。文件读不了时会提示，并显示本机的文本。
+- 启动游戏时读取（手机上在设置里点"重新读取"也会读）。繁体中文由 `cn` 的文本转换。
 
 **字体和样式**
 - `fonts/<任意名>`：字体文件，在 `theme.css` 里用 `@font-face` 引用。
@@ -288,7 +296,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 - **版本**：两边的联机协议、卡牌（定义和实现状态）和规则代码的指纹都相同才能开始，联机界面会显示是否相同；版本号本身不比。规则代码的指纹只算会影响对局的部分：代码的注释和排版、卡面文本、中文和英文卡名、只决定玩家看到什么的代码都不算。房主选的禁卡表，对方也要有同样的一张（没有或不一样时，对方不能准备）。各自 `public/` 里的资源（卡图、音效、背景、字体、`theme.css`）、设置、界面语言、卡组都不用一样。同一版本的电脑版和安卓版可以互相联机；设置页最下面和联机界面都显示版本号，连不上时先确认双方的版本一样。
 - **对局**：双方各自运行同一局，只同步每一步的回答。断线后可以重连，接着打。
   - **悔棋**：房主在规则里勾选"允许悔棋"（使用服务器时在创建房间之前，也可以在房间里改）。对局中在侧边栏"调试"里点"撤销我的上一个回答"：你上一个回答之后对方还没操作过，两边就一起退回到那一步；对方操作过就不能撤销。观战者也跟着退。
-  - 联机时种子和"保存复现包"在对局结束后才显示（有了它们，改过的程序能推算出牌组顺序）。
+  - 联机时种子和"保存复现包"在对局结束后才显示（有了它们，改过的程序能推算出牌堆顺序）。
   - **回合时间限制**：房主在规则里勾选"回合时间限制"，填秒数（先给 600 秒，可填 10–3600）。每位玩家每轮有这么多秒：自己的回合，加上之后对手回合里自己回答快速等的时间；每到自己的回合重新计时。牌桌中间显示剩余时间，最后 30 秒变红；超时后程序自动结束回合。
   - **快速时点**：每个快速时点都由那位玩家自己的程序回答，对手看不出你手里有没有快速。侧边栏"调试"最上面有两个选项（默认关）："假快速时点"：没有能用的快速时也停 1 秒左右，像在考虑；"关闭快速时点"：所有快速时点都自动"不发动"，看起来像手里没有快速。
   - **聊天提醒**：设置 → 联机 →"联机聊天提醒"（默认关）。打开后，对手或观战者发了聊天消息时，屏幕上方会闪一下"有人发了一条聊天消息"；自己发的不提醒。
@@ -313,7 +321,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 - **PC 版**：`npm run release:pc -- --zip`
   - 在仓库旁边生成 `SVEN-<版本>-pc/` 文件夹和两个 zip：
     - `SVEN-<版本>-pc.zip`：只有程序，不带 `online-server.ini` 和 `public/` 里的文件。传到 GitHub 的 release，程序的更新下载的就是它。
-    - `SVEN-<版本>-pc-private.zip`：整个文件夹，带着 `online-server.ini` 和 `--public` 的资源。只私下发给朋友，不要传到 GitHub。文件夹里有这些时才生成。
+    - `SVEN-<版本>-pc-private.zip`：整个文件夹，带着 `online-server.ini`、卡牌文本（本机的 `packages/core/data/<卡包>_<语言>.json` 复制到 `public/text/`）和 `--public` 的资源。只私下发给朋友，不要传到 GitHub。文件夹里有这些时才生成。在游戏里更新不会动 `public/`，文本会留着。
   - 文件夹已经存在时不会覆盖：换一个 `--out <文件夹>`，或者先删掉旧的。
   - 里面有：
     - 程序（`app/`）；
@@ -340,7 +348,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
   - 密钥要备份，不要给别人。
   - 仓库根目录有 `online-server.ini` 时，App 带着这个服务器。
 - **联机**：双方的引擎指纹一样才能对局（`VERSION.txt` 和联机界面里都能看到）。
-  - 改了 `packages/core/` 或 `packages/gui/src/engine/` 的代码，或者卡牌数据里规则用到的部分（编号、卡名、费用、攻防、类型、职业、种族、印刷版本……），指纹就会变，大家都要换新版。
+  - 改了 `packages/core/` 或 `packages/gui/src/engine/` 的代码，或者卡牌数据里规则用到的部分（编号、卡名、消费、攻防、类型、职业、种族、印刷版本……），指纹就会变，大家都要换新版。
   - 联机协议（`packages/gui/src/net/` 的 `PROTOCOL`）变了也一样；只改了界面的版本可以和旧版互相联机。
   - 指纹不变的：只改注释或排版；只改卡面文本、中文或英文卡名；只改构建卡牌数据的代码（`packages/core/src/data/` 里的 `fixes.ts` 等）、`packages/core/src/testing/`、`src/engine/client.ts`，或者只决定玩家看到什么的代码（玩家视角、按视角隐藏的事件）（怎么算见 `packages/gui/fingerprint.ts`）。
 
@@ -409,7 +417,7 @@ An unofficial rules engine, AI and client for the *Shadowverse: Evolve* trading 
   - Plain TypeScript and deterministic. It runs headless, with no dependency on a UI or on files.
   - It implements the Comprehensive Rules (v1.26.1) clause by clause, and every rules decision cites its clause number.
   - It supports 3,689 card definitions from 57 sets, 7,564 printings in all; alternate arts share one definition.
-  - BP22 is a pre-release set: only Japanese and Chinese data exist (`BP22.json` next to the repository, the official Japanese card list). It is implemented from the Japanese text, checked against the Chinese; English names and texts show `unavailable` for now. They will be filled in once the English data is out.
+  - BP22's English names and texts are the scraped data's English translation: the official English data of this set isn't out yet.
 - **Bot (`@sve/bot`)**: three levels in the interface, on the Core's public API only:
   - Bot-Easy: greedy. For each decision it simulates every candidate answer and picks the best-scoring result.
   - Bot-Medium: plans its whole turn, then plays out the opponent's next turn. It uses only what its player can see. Before planning it looks for a sure lethal: one that wins in several samples of the opponent's hand and the deck order, whatever the opponent answers.
@@ -428,7 +436,8 @@ An unofficial rules engine, AI and client for the *Shadowverse: Evolve* trading 
 
 - This is an unofficial fan project. It is not affiliated with Cygames, Bushiroad or any other rights holder, and it is not for commercial use.
 - The repository contains **no card images, official artwork or sounds**.
-- The card data (`packages/core/data/`) holds card names and card text in English, Chinese and Japanese, used to apply the rules and to show the cards. Most of the Chinese text is a fan translation.
+- The card data (`packages/core/data/<set>.json`) holds card names (English, Chinese and Japanese; most of the Chinese is a fan translation), stats, traits and so on, used to apply the rules and to show the cards.
+- The repository has **no card texts**: `npm run build:cards` writes the English, Chinese and Japanese text files `<set>_en.json`, `<set>_cn.json`, `<set>_ja.json` on your machine (from the `assets/` folder next to the repository), and the dev server shows them. Without them the game runs as usual but shows no card text; text files can also go into `packages/gui/public/text/` (see "Custom resources").
 - To see card images, put your own pictures in `packages/gui/public/` (see "Custom resources").
 
 ### Requirements
@@ -473,7 +482,7 @@ Run these at the repository root:
 | `npm run rl:behaviour -- folder` | Behaviour counts in the games `bot:arena --out` kept: Ward followers entering engaged in their own turn, quick windows with something to play and the Quick plays made, evolution and super-evolution points left at the end of a game for the first and the second player, turns ended with a playable follower in hand. For comparing two versions of a bot (win rates between bots that share a blind spot can't show it). `--games N` takes the first N |
 | `npm run rl:lethal -- folder` | Missed lethal in the games `bot:arena --out` kept: replays each game and, at each main phase decision of the player whose turn it is, looks hard for a sure lethal (it wins in 6 fair samples, whatever the opponent answers); one found in a turn the player didn't win is a miss. Prints the games with a miss and those the player who missed it lost. Slow (seconds a game): `--games N` takes the first N, `--workers N` uses N processes |
 | `npm run bench:throughput -- [random\|easy\|medium\|hard]` | How many games the whole computer plays in a minute: several processes start together (`--workers N`, default: CPU threads), each plays for `--seconds` |
-| `npm run build:cards` | Rebuild `packages/core/data/*.json` from the scraped card data (the `assets/` folder next to the repository; a pre-release set from its card list next to the repository, such as `BP22.json`; a community-made set from its list in `packages/core/src/data/custom.ts`) |
+| `npm run build:cards` | Rebuild `packages/core/data/*.json` from the scraped card data (the `assets/` folder next to the repository; a pre-release set from its official Japanese card list next to the repository (none at the moment); a community-made set from its list in `packages/core/src/data/custom.ts`); the card texts, `<set>_<language>.json`, stay on this machine, out of the repository |
 | `npm run scripts:index` | Regenerate the card script registries (`packages/core/src/script/<set>/index.ts`) after adding scripts |
 | `npm run cards:status` | Write each card's implementation and test status (to `docs/card-status*.md`) |
 | `npm run rules:clauses` | Extract the clause table `tools/data/cr-clauses.json` from the Comprehensive Rules PDF (the `rules/` folder next to the repository) |
@@ -506,7 +515,7 @@ packages/
       events/ view/     events for the outside; hiding what a player can't see
       sets/             each set's card data and script registry
       testing/          test tools (game scripts, random agents, invariant checks)
-    data/               card data (<set>.json, generated by build:cards: don't edit by hand)
+    data/               card data (<set>.json, generated by build:cards: don't edit by hand; the card texts <set>_<language>.json stay on this machine)
     test/               rules tests, card tests, whole-game tests
   bot/                  the bot (@sve/bot), on the Core's public API only
   server/               the online server (@sve/server): messages passed by room code, keys, limits; scripts/: the install script and the package
@@ -621,6 +630,13 @@ Sound effects (28):
 - An evolved follower looks for its evolved card's number first, then the original card's.
 - A leader's voices: everyone hears their own file for that leader. In Cross Craft, the leader in front in the game (usually leader 1).
 
+**Card texts**
+- `text/<set>_<language>.json` (such as `text/BP22_cn.json`; the languages are `en`, `cn`, `ja`): the cards' texts, in exactly the format of `packages/core/data/<set>_<language>.json`. Copy one and edit it.
+- With such a file, that set's texts in that language all come from it: a card it doesn't list has no text in that language (another language's shows). Other sets and languages stay as they are. Card names aren't in it (they are in `packages/core/data/<set>.json`).
+- Without one: the dev server uses this machine's `packages/core/data/<set>_<language>.json`; the releases and the phone apps have no card texts of their own (the PC release's `-private` zip has them in `public/text/`).
+- Only what is shown: the rules, the bots and online play never read card texts, and in an online game each player sees their own. A file that can't be read is told, and this machine's texts show.
+- They are read when the game starts (on a phone also with Reload in the settings). Traditional Chinese is converted from the `cn` texts.
+
 **Fonts and style**
 - `fonts/<any name>`: font files, referenced from `theme.css` with `@font-face`.
 - `theme.css`: loaded after the built-in style, so it can override any color, size or font. Every element of the interface has a class starting with `sve-`. For example:
@@ -706,7 +722,7 @@ Come in two kinds: for PCs and for Android.
 - **PC**: `npm run release:pc -- --zip`
   - It writes a folder `SVEN-<version>-pc/` next to the repository, and two zips:
     - `SVEN-<version>-pc.zip`: the program only, without `online-server.ini` or the files in `public/`. It goes into the GitHub release, and is what the program's updates download.
-    - `SVEN-<version>-pc-private.zip`: the whole folder, with `online-server.ini` and the `--public` resources. Send it to friends only, never to GitHub. Written only when the folder has those.
+    - `SVEN-<version>-pc-private.zip`: the whole folder, with `online-server.ini`, the card texts (this machine's `packages/core/data/<set>_<language>.json`, copied to `public/text/`) and the `--public` resources. Send it to friends only, never to GitHub. Written only when the folder has those. Updates in the game never touch `public/`: the texts stay.
   - It never writes into an existing folder: pass another `--out <folder>`, or delete the old one first.
   - Inside:
     - the program (`app/`);

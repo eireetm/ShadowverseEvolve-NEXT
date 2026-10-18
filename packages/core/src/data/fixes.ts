@@ -301,20 +301,45 @@ export const DATA_FIXES: Readonly<Record<string, DataFix>> = {
   "BP09-P27": { back: BP09_090_BACK },
   // 天后 (a token, no other printing) has no Chinese text; its Japanese text is 【オーラ】, which the Chinese texts write 【灵气】.
   "BP06-T01": { effect_cn: "【灵气】" },
-  // BP22 (pre-release data, data/preview.ts): Chinese texts missing a word. BP22-051's Chinese text is empty and its Japanese
-  // text is only 【疾走】, which this set's Chinese texts write 【疾驰】 (BP22-034, 117). BP22-085's lacks the Fanfare icon its
-  // Japanese text starts with (ファンファーレ, 《入场曲》 in this set's Chinese texts, e.g. BP22-090).
-  "BP22-051": { effect_cn: "【疾驰】" },
-  "BP22-P28": { effect_cn: "【疾驰】" },
-  "BP22-085": {
-    effect_cn:
-      "《入场曲》从下述之中抉择1项。\n【1】使这张卡《攻击力》+1。\n【2】使这张卡获得【疾驰】能力。\n【3】《消费1》：从自己的牌堆之中搜寻1张『福金与雾尼』卡，并召唤到场上。",
-  },
-  // BP22-115's Chinese text puts the rest on the bottom of the deck; the printed card (Japanese, D:\xm\xm4\BP22-115.png) and the
-  // Japanese text put them into the cemetery ("残りを墓場に置く", confirmed by the project owner). Written as this set's Chinese
-  // texts write it (e.g. BP22-090 "将自己的牌堆顶2张卡置于墓场").
-  "BP22-115": { effect_cn: "《入场曲》查看自己的牌堆顶2张卡。从那之中，可以将1张哥布林类型·卡片公开并加入手牌。将剩余的卡置于墓场。" },
-  "BP22-P67": { effect_cn: "《入场曲》查看自己的牌堆顶2张卡。从那之中，可以将1张哥布林类型·卡片公开并加入手牌。将剩余的卡置于墓场。" },
+  // BP22's reprints scraped with Japanese data only: the Japanese name in the English name field and no Japanese name. Their
+  // names, class, stats, traits and texts are those of the reprinted cards (the official Japanese card list names them so).
+  ...Object.fromEntries(
+    (
+      [
+        ["Sekka, Fatebound Fox", "宿命の狐火・セッカ", ["R01"]], // BP13-001
+        ["Taketsumi, Aconite Paladin", "華の大将・タケツミ", ["R03"]], // BP14-018
+        ["Ceridwen, Eternity Hunter", "永劫を求む者・ケリドウェン", ["R05"]], // BP09-035
+        ["Ceridwen, Eternity Hunter (Evolved)", "永劫を求む者・ケリドウェン", ["R06"]], // BP09-036
+        ["Celestial Dragoon", "天威のドラグーン", ["R07"]], // BP15-060
+        ["Celestial Dragoon (Evolved)", "天威のドラグーン", ["R08"]], // BP15-061
+        ["Yuzuki, Bloodlord", "ブラッドロード・ユヅキ", ["R11"]], // BP15-080
+        ["Yuzuki, Bloodlord (Evolved)", "ブラッドロード・ユヅキ", ["R12"]], // BP15-081
+        ["Lunerian Paladin", "ルナールの聖騎士", ["R14"]], // BP13-091
+        ["Lunerian Paladin (Evolved)", "ルナールの聖騎士", ["R15"]], // BP13-092
+        ["Gilnelise, Ravenous Craving", "干絶の飢餓・ギルネリーゼ", ["R16"]], // BP15-113
+        ["Gilnelise, Ravenous Craving (Evolved)", "干絶の飢餓・ギルネリーゼ", ["R17"]], // BP15-114
+        ["Sirius Symboli [Escorte Étoile]", "〔Escorte étoile〕シリウスシンボリ", ["R20", "SL32"]], // ECP01-013
+        ["Cheval Grand", "シュヴァルグラン", ["R21", "SL33"]], // ECP01-019
+        ["Cheval Grand (Evolved)", "シュヴァルグラン", ["R22", "SL34"]], // ECP01-020
+        ["Jungle Pocket", "ジャングルポケット", ["R24", "SL36"]], // ECP01-049
+        ["Magic Sediment", "大地の魔片", ["T10"]], // BP01-T10
+      ] as const
+    ).flatMap(([name_en, name_ja, printings]) => printings.map((p) => [`BP22-${p}`, { name_en, name_ja }])),
+  ),
+  // The alternate arts of BP22-094 "Holy Saber (Evolved)" without the " (Evolved)" suffix: the same Japanese name ホーリーセイバー,
+  // stats and text, and their card type is Evolved (CR 5.16.1.1.1).
+  "BP22-SL24": { name_en: "Holy Saber (Evolved)" },
+  "BP22-U06": { name_en: "Holy Saber (Evolved)" },
+  // "Holy Kitty (Evolved)" has no text: its English and Japanese fields say "(No text.)" (the Japanese text with the icons as
+  // words is empty, like the official Japanese card list's).
+  "BP22-105": { effect_en: null, effect_ja: null },
+  "BP22-P59": { effect_en: null, effect_ja: null },
+  // CR 2.12.2.1 — the universe is printed with the collector number and the scraped data has no field for it. BP22-116–118
+  // (and their alternate arts) are Uma Musume collaboration followers in a set of no universe: every card with the trait ウマ娘
+  // belongs to that universe (the rest of the data has no exception; decided for BP22's pre-release data, 2026-10-01).
+  ...Object.fromEntries(
+    ["116", "SSP01", "117", "SL28", "118", "SL29", "SSP02"].map((p) => [`BP22-${p}`, { universe: "umamusume" as const }]),
+  ),
 };
 
 /** Apply the fix table to one raw card file. */

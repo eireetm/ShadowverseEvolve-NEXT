@@ -1,6 +1,6 @@
 // Public API of @sve/core — a headless, deterministic Shadowverse: Evolve rules engine.
 
-export type { CardDefinition, CardClass, CardType, DefId, PrintingId, LocalizedText } from "./model/card";
+export type { AdvancedIcon, CardDefinition, CardClass, CardType, DefId, PrintingId, LocalizedText } from "./model/card";
 export { CARD_CLASSES } from "./model/card";
 export type { PlayerId, CardId } from "./model/ids";
 export { opponentOf, PLAYERS } from "./model/ids";
@@ -39,7 +39,17 @@ export { redactEvent } from "./events/redact";
 export { CardDatabase, DEFAULT_LEADER } from "./data/database";
 export { CardDataError } from "./data/errors";
 export type { RawCardJson } from "./data/raw";
-export { readCardSetFile, type CardSetFile } from "./data/set-file";
+export {
+  CARD_TEXT_FORMAT,
+  CARD_TEXT_LANGS,
+  readCardSetFile,
+  readCardTextFile,
+  withCardTexts,
+  type CardSet,
+  type CardSetFile,
+  type CardTextFile,
+  type CardTextLang,
+} from "./data/set-file";
 
 export { Engine, createEngine, resolveConfig, type EngineOptions, type GameSetup, type GameConfigInput } from "./engine/engine";
 export { GameSession, isManualInput, type GameSnapshot, type SessionOptions } from "./engine/session";
