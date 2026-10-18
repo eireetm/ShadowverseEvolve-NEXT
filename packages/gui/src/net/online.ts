@@ -23,13 +23,14 @@ import { newRoomCode, newRoomPassword } from "./codes";
 import type { PeerLink } from "./link";
 import { answerConnection, BadCodeError, offerConnection, type ManualAttempt } from "./manual";
 import type { MessageKey } from "../i18n";
-import { BACKLOG_PIECE, CHAT_MAX, cleanName, MAX_SPECTATOR_SEATS, SPECTATOR_SEATS, turnLimitOf, watchedOptions, type Hello, type JoinAs, type NetMessage, type ReadyDeck, type Rules, type WatchedGame } from "./messages";
+import { BACKLOG_PIECE, CHAT_MAX, cleanName, MAX_SPECTATOR_SEATS, SPECTATOR_SEATS, turnLimitOf, watchedOptions, type Hello, type JoinAs, type NetMessage, type QuickChatId, type ReadyDeck, type Rules, type WatchedGame } from "./messages";
 import type { TurnServer } from "./relays";
 import { REVEAL_PAUSE_MS } from "../game/animation/plan";
 import { meet, type Admission, type Meeting, type MeetingHandlers } from "./rooms";
 import { serverNetwork, type JoinMode, type ProblemAt, type ServerProblem, type ServerRoom } from "./server";
 import { currentServers, serverNow, type ServerSettings } from "./server-config";
 import { currentLink, gameStarted, getOnline, NO_PREP, setChatRelay, setLink, setOnline, setUndoRequest, type OnlineError, type OnlineRole, type Prep } from "./state";
+import { quickChatHeard } from "../game/quick-chat";
 
 export { sendChat, useOnline, getOnline, canChat, type OnlinePhase } from "./state";
 
@@ -46,7 +47,18 @@ const myName = (): string => cleanName(getSettings().playerName);
 /** What this program tells the other one: who it is (the card data's fingerprint once the catalog is known), its person. */
 function helloOf(cards: string): Hello {
   const name = myName();
-  return { t: "hello", version: PROTOCOL, cards, engine: ENGINE, app: APP_VERSION, platform: PLATFORM, ...(name ? { name } : {}), share: getSettings().shareGames };
+  const { shareGames, blockQuickChat } = getSettings();
+  return {
+    t: "hello",
+    version: PROTOCOL,
+    cards,
+    engine: ENGINE,
+    app: APP_VERSION,
+    platform: PLATFORM,
+    ...(name ? { name } : {}),
+    share: shareGames,
+    ...(blockQuickChat ? { noQuickChat: true } : {}),
+  };
 }
 
 let hello: Hello = helloOf("");
@@ -75,11 +87,11 @@ export async function identify(catalog: Catalog): Promise<void> {
   for (const w of watchers) w.link.send(hello);
 }
 
-// The person changed their name, whether the server may keep their games, or whether their rooms are public: the other
-// side hears it, the game shows it, the lobby lists it.
+// The person changed their name, whether the server may keep their games, whether they block the quick chat, or whether
+// their rooms are public: the other side hears it, the game shows it, the lobby lists it.
 subscribeSettings(() => {
   const next = helloOf(hello.cards);
-  if (next.name !== hello.name || next.share !== hello.share) {
+  if (next.name !== hello.name || next.share !== hello.share || next.noQuickChat !== hello.noQuickChat) {
     hello = next;
     currentLink()?.send(hello);
     for (const w of watchers) w.link.send(hello);
@@ -275,9 +287,11 @@ async function receive(message: NetMessage): Promise<void> {
         setOnline({ chat: [...state.chat, { from: "watcher" as const, name: message.watcher, text: message.text }].slice(-200) });
         break;
       }
-      setOnline({ chat: [...state.chat, { from: "peer" as const, text: message.text }].slice(-200) });
+      setOnline({ chat: [...state.chat, { from: "peer" as const, text: message.text, ...quickOf(message) }].slice(-200) });
+      // A quick chat line: shown, and said by the other player's leader (theirs is the other seat).
+      if (message.quick && state.game?.seat != null) quickChatHeard(state.game.seat === 0 ? 1 : 0, message.quick, getOnline());
       // The host's spectators read the other player's lines too (the other player is player 2).
-      if (phase.role === "host") toWatchers({ t: "chat", text: message.text, seat: 1 });
+      if (phase.role === "host") toWatchers({ t: "chat", text: message.text, seat: 1, ...quickOf(message) });
       break;
     case "ping":
       link?.send({ t: "pong", n: message.n });
@@ -710,10 +724,13 @@ function dropWatchers(say = true): void {
   setOnline({ watchers: 0 });
 }
 
-// The host's own chat lines (state.ts sendChat): its spectators read them too (the host is player 1).
-setChatRelay((text) => {
-  if (getOnline().phase.kind === "connected") toWatchers({ t: "chat", text, seat: 0 });
+// The host's own chat lines (state.ts sendChat, sendQuickChat): its spectators read them too (the host is player 1).
+setChatRelay((text, quick) => {
+  if (getOnline().phase.kind === "connected") toWatchers({ t: "chat", text, seat: 0, ...(quick ? { quick } : {}) });
 });
+
+/** A chat message's quick chat line, if it is one, for a chat line or a message passed on. */
+const quickOf = (message: { quick?: QuickChatId }): { quick?: QuickChatId } => (message.quick ? { quick: message.quick } : {});
 
 /**
  * A spectator wrote in the chat: in a room whose rules let spectators write, the host shows it and passes it on to the other
@@ -776,8 +793,11 @@ function hear(message: NetMessage): void {
       setOnline({ watchers: message.n });
       break;
     case "chat":
-      if (message.seat !== undefined) setOnline({ chat: [...state.chat, { from: message.seat, text: message.text }].slice(-200) });
-      else if (message.watcher !== undefined) setOnline({ chat: [...state.chat, { from: "watcher" as const, name: message.watcher, text: message.text }].slice(-200) });
+      if (message.seat !== undefined) {
+        setOnline({ chat: [...state.chat, { from: message.seat, text: message.text, ...quickOf(message) }].slice(-200) });
+        // A player's quick chat line: shown, and said by their leader.
+        if (message.quick) quickChatHeard(message.seat, message.quick, getOnline());
+      } else if (message.watcher !== undefined) setOnline({ chat: [...state.chat, { from: "watcher" as const, name: message.watcher, text: message.text }].slice(-200) });
       break;
     case "rules":
       // What the host lets its spectators do: write in the chat (state.ts canChat), see the hidden cards (the engine).

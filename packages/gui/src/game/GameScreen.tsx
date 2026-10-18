@@ -15,6 +15,7 @@ import { setDetailsOpen, useDetailsOpen } from "./details";
 import { installLongPress } from "./long-press";
 import { DebugPanel } from "./debug/DebugPanel";
 import { LogPanel } from "./log/LogPanel";
+import { QuickChat } from "./QuickChat";
 import { WatchBar } from "./watch/WatchBar";
 
 type Tab = "log" | "debug" | "chat";
@@ -32,7 +33,8 @@ interface Props {
  * (lit cards, their menus, the buttons beside the mats) or in the decision window over it. The log and debug tabs are a
  * sidebar, hidden unless shown: it then covers the right of the table, which keeps its size. A replay being watched has its
  * playback bar under the card on the left (nobody answers anything). Online, the connection's state is under the menu
- * button, and the chat is a tab of the sidebar. On a small screen (a phone) the left column is a drawer
+ * button, and the chat is a tab of the sidebar. A player at the screen has the quick chat's button at the top right, left of
+ * the sidebar's (of the sidebar when it is shown). On a small screen (a phone) the left column is a drawer
  * like the sidebar: its button, or a long press on a card, opens it; the table takes the whole width.
  */
 export function GameScreen({ onMenu, onNewGame, onReplays, onOnline }: Props) {
@@ -134,11 +136,17 @@ export function GameScreen({ onMenu, onNewGame, onReplays, onOnline }: Props) {
             {shown === "log" ? <LogPanel update={update} /> : shown === "chat" ? <Chat /> : <DebugPanel update={update} />}
           </section>
         </aside>
-      ) : (
-        <button type="button" className="sve-sidebar-show" onClick={() => setSidebar(true)} data-testid="sidebar-show">
-          {t("game.showSidebar")}
-        </button>
-      )}
+      ) : null}
+      {seat !== null || !sidebar ? (
+        <div className={`sve-game-corner${sidebar ? " sve-game-corner-sidebar" : ""}`}>
+          {seat !== null ? <QuickChat update={update} /> : null}
+          {!sidebar ? (
+            <button type="button" className="sve-sidebar-show" onClick={() => setSidebar(true)} data-testid="sidebar-show">
+              {t("game.showSidebar")}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       {online?.desync ? <Desync at={online.desync} /> : null}
       <ZoneBrowser update={update} />
       <AnimationLayer update={update} />

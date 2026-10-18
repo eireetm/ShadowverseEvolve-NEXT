@@ -26,6 +26,7 @@ const context = (timed = true): SoundContext => ({
   typeOf: (def) => TYPES[def],
   // f1 is an evolved follower: its evolve card first.
   shownIds: (id) => (id === "f1" ? ["EV-P", "EV", "F-P", "F"] : []),
+  leaderIds: (player) => [`LD${player}-P`, `LD${player}`],
   timed,
 });
 
@@ -44,6 +45,14 @@ describe("sound files", () => {
     expect(cardSoundUrl(["BP01-001"], "p")).toBeNull();
     expect(bgmUrl("battle")).toBe("/audio/bgm/battle.mp3");
     expect(bgmUrl("menu")).toBeNull();
+  });
+
+  it("finds a leader's voices by its number: its player's turn, and each quick chat line", () => {
+    setResourceLists(["audio/cards/BP01-LD03-start.ogg", "audio/cards/BP01-LD03-greet.mp3", "audio/cards/BP01-LD03-taunt.m4a"], []);
+    expect(cardSoundUrl(["BP01-LD03"], "start")).toBe("/audio/cards/BP01-LD03-start.ogg");
+    expect(cardSoundUrl(["BP01-LD03"], "greet")).toBe("/audio/cards/BP01-LD03-greet.mp3");
+    expect(cardSoundUrl(["BP01-LD03"], "taunt")).toBe("/audio/cards/BP01-LD03-taunt.m4a");
+    expect(cardSoundUrl(["BP01-LD03"], "thank")).toBeNull();
   });
 });
 
@@ -105,6 +114,10 @@ describe("the sounds of an update", () => {
       ["heal", null],
       ["lose", null],
     ]);
+  });
+
+  it("a turn begins: its player's leader's voice, else the common sound", () => {
+    expect(planSounds([entry({ type: "turnStarted", turn: 3, player: 1 })], context())).toEqual([{ sfx: "turn", at: 0, card: { ids: ["LD1-P", "LD1"], kind: "start" } }]);
   });
 
   it("an activated ability played (CR 10.1.1.1); not an evolve ability (it sounds as it evolves), nor an automatic one", () => {

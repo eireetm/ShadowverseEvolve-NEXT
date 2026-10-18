@@ -193,6 +193,8 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 | `audio/cards/<编号>-p` | 这张卡被使用时（所有卡都可以有） |
 | `audio/cards/<编号>-a` | 这只随从攻击时 |
 | `audio/cards/<编号>-d` | 这只随从被破坏时 |
+| `audio/cards/<主战者编号>-start` | 这位主战者的玩家的回合开始时（有它就不放 `turn`） |
+| `audio/cards/<主战者编号>-greet`、`-thank`、`-apologize`、`-applaud`、`-shock`、`-confuse`、`-taunt` | 这位主战者的玩家发快捷聊天时，依次是"你好。""谢谢你。""对不起……""真棒！""怎么回事？""令人困惑……""我必将胜利！" |
 
 通用音效（28 个）：
 
@@ -224,6 +226,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 
 - 一张卡有自己的音效时，就不放对应的通用音效：`-p` 代替 `spell` / `follower` / `amulet`，`-a` 代替 `attack`，`-d` 代替 `destroy`。
 - 进化后的随从，先找进化卡的编号，再找原来那张卡的编号。
+- 主战者的声音：所有人都听自己电脑上的这个文件。双职业时用对局里在前面的那张主战者（一般是主战者 1）。
 
 **字体和样式**
 - `fonts/<任意名>`：字体文件，在 `theme.css` 里用 `@font-face` 引用。
@@ -289,6 +292,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
   - **回合时间限制**：房主在规则里勾选"回合时间限制"，填秒数（先给 600 秒，可填 10–3600）。每位玩家每轮有这么多秒：自己的回合，加上之后对手回合里自己回答快速等的时间；每到自己的回合重新计时。牌桌中间显示剩余时间，最后 30 秒变红；超时后程序自动结束回合。
   - **快速时点**：每个快速时点都由那位玩家自己的程序回答，对手看不出你手里有没有快速。侧边栏"调试"最上面有两个选项（默认关）："假快速时点"：没有能用的快速时也停 1 秒左右，像在考虑；"关闭快速时点"：所有快速时点都自动"不发动"，看起来像手里没有快速。
   - **聊天提醒**：设置 → 联机 →"联机聊天提醒"（默认关）。打开后，对手或观战者发了聊天消息时，屏幕上方会闪一下"有人发了一条聊天消息"；自己发的不提醒。
+  - **快捷聊天**：牌桌右上角"显示侧边栏"左边的"快捷聊天"，选一句发出去：所有人的屏幕上都会闪一下"xxx发送了：你好。"（各自的界面语言），聊天里也有这一句，发送者的主战者会说这句话（见"自定义资源"的声音）。侧边栏"调试"最上面的"屏蔽快捷聊天"（默认关）：任何一方打开，双方都不能用。和 AI 对局时也能用（只有提示和声音）。
 - **观战**：知道房间号的人点"观战"进房间看对局。P2P 的房间最多 2 人；用服务器时由服务器决定（默认 10 人）。
   - 只能看双方都看得到的信息（看不到手牌），可以换边；不能操作，也不能发言（能看到聊天）。
   - 使用服务器时，房主可以在规则里允许观战者看到手牌（观战者在"调试"里打开"显示所有背面的卡"）和发言。
@@ -582,6 +586,8 @@ Icon names: `fanfare`, `lastwords`, `act`, `evolve`, `engage`, `quick`, `q`, `ub
 | `audio/cards/<number>-p` | When this card is played (any card) |
 | `audio/cards/<number>-a` | When this follower attacks |
 | `audio/cards/<number>-d` | When this follower is destroyed |
+| `audio/cards/<leader number>-start` | When this leader's player's turn starts (instead of `turn`) |
+| `audio/cards/<leader number>-greet`, `-thank`, `-apologize`, `-applaud`, `-shock`, `-confuse`, `-taunt` | When this leader's player sends a quick chat line: "Hello.", "Thank you.", "Sorry...", "Awesome!", "What's going on?", "How puzzling...", "Victory will be mine!" in that order |
 
 Sound effects (28):
 
@@ -613,6 +619,7 @@ Sound effects (28):
 
 - A card's own sound replaces the matching effect: `-p` replaces `spell` / `follower` / `amulet`, `-a` replaces `attack`, `-d` replaces `destroy`.
 - An evolved follower looks for its evolved card's number first, then the original card's.
+- A leader's voices: everyone hears their own file for that leader. In Cross Craft, the leader in front in the game (usually leader 1).
 
 **Fonts and style**
 - `fonts/<any name>`: font files, referenced from `theme.css` with `@font-face`.
@@ -678,6 +685,7 @@ Sound effects (28):
   - **Turn time limit**: the host ticks "Turn time limit" in the rules and gives the seconds (600 at first, 10–3600). Each player has that many seconds for their turn plus their answers (Quick and the like) in the other player's turn after it, given again at the start of each of their turns. The middle of the table shows the time left, red in the last 30 seconds; out of time, the turn ends by itself.
   - **Quick windows**: each Quick window is answered by its player's own program, so the other player can't tell whether you have a Quick card. The sidebar's Debug tab begins with two options (off by default): "Fake Quick pauses": with nothing to play, the game still stops about a second, as if you were deciding; "Skip Quick windows": every Quick window is answered "no" for you, as if you had none.
   - **Chat notice**: Settings > Online > "Online chat notice" (off by default). With it on, "Someone sent a chat message" flashes at the top of the screen when the other player or a spectator writes in the chat; your own messages don't.
+  - **Quick chat**: "Quick chat", left of "Show sidebar" at the top right of the table, sends one of seven lines: everyone's screen flashes "xxx sent: Hello." (in their own interface language), it is in the chat, and the sender's leader says it (see the sounds in "Custom resources"). "Block the quick chat" at the top of the sidebar's Debug tab (off by default) turns it off for both players when either turns it on. It works against the AI too (the notice and the voice only).
 - **Watching**: anyone with the room code can click "Watch" to watch the room's games: 2 spectators a room at most without the server; with it, as many as the server says (10 by default).
   - Spectators see only what both players can see (no hands) and can swap sides; they can't play or chat (they read the chat).
   - On the server, the host's rules can let spectators see the hands (each turns on "Reveal all hidden cards" on the Debug tab) and write in the chat.

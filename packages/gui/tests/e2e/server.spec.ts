@@ -325,13 +325,21 @@ test("a room with a password, whose spectators may chat and see the hands; the o
   await host.getByTestId("online-ready").click();
   for (const page of [host, guest, spectator]) await expect(page.locator(".sve-table")).toBeVisible({ timeout: 30_000 });
 
+  // A player's quick chat line: all three see who said it (by name); a spectator has no quick chat.
+  await expect(spectator.getByTestId("quick-chat")).toHaveCount(0);
+  await host.getByTestId("quick-chat").click();
+  await host.getByTestId("quick-chat-greet").click();
+  await Promise.all([host, guest, spectator].map((page) => expect(page.getByTestId("chat-notice")).toHaveText("Host sent: Hello.")));
+
   // The spectator sees no hand until it turns "reveal all" on (its debug tab has it: the host allows it); then both.
   await expect.poll(async () => (await handFaces(spectator, 0)).cards, { timeout: 30_000 }).toBeGreaterThan(0);
   for (const seat of [0, 1] as const) expect((await handFaces(spectator, seat)).faces).toBe(0);
   await spectator.getByTestId("sidebar-show").click();
   await spectator.getByTestId("tab-debug").click();
-  // How a player's program answers their quick windows: a player's choice, not a spectator's.
-  await expect(spectator.getByTestId("debug-quick")).toHaveCount(0);
+  // How a player's program answers their quick windows: a player's choice, not a spectator's (who may block the quick chat
+  // for themself).
+  await expect(spectator.getByTestId("debug-fake-quick")).toHaveCount(0);
+  await expect(spectator.getByTestId("debug-block-quick-chat")).toBeVisible();
   // (Checked once the engine worker's update says so.)
   await spectator.getByTestId("debug-reveal-all").click();
   await expect(spectator.getByTestId("debug-reveal-all")).toBeChecked();

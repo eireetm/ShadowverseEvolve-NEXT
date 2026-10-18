@@ -74,7 +74,8 @@ export async function dialogBody(page: Page): Promise<Locator | null> {
 export async function pressAnnouncementOk(page: Page, tap = false): Promise<void> {
   const ok = page.getByTestId("announcement-ok");
   try {
-    await (tap ? ok.tap({ timeout: 1_500 }) : ok.click({ timeout: 1_500 }));
+    // (Within the 3 seconds it has: its window settles first, slower on a busy machine.)
+    await (tap ? ok.tap({ timeout: 2_500 }) : ok.click({ timeout: 2_500 }));
   } catch (err) {
     if ((await ok.count()) > 0) throw err;
   }
@@ -228,3 +229,23 @@ export async function toMainPhase(page: Page): Promise<void> {
   }
   throw new Error("no main phase");
 }
+
+/**
+ * As if the player had these files in public/ ("audio/sfx/search.mp3", "audio/cards/SD01-LD01-greet.mp3"): the page's audio
+ * elements only note what they would play (src/resources/sound.ts), which playedSounds tells.
+ */
+export async function recordSounds(page: Page, files: string[]): Promise<void> {
+  await page.evaluate(`(async () => {
+    window.__played = [];
+    window.Audio = class {
+      constructor(url) { this.src = url; this.paused = true; this.volume = 1; this.loop = false; }
+      play() { this.paused = false; window.__played.push(this.src.split("/").pop()); return Promise.resolve(); }
+      pause() { this.paused = true; }
+    };
+    const lookup = await import("/src/resources/lookup.ts");
+    lookup.setResourceLists(${JSON.stringify(files)}, []);
+  })()`);
+}
+
+/** The sound files played since recordSounds, by name ("SD01-LD01-greet.mp3"). */
+export const playedSounds = (page: Page): Promise<string[]> => page.evaluate(() => (window as unknown as { __played: string[] }).__played);
