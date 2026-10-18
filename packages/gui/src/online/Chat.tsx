@@ -1,6 +1,7 @@
 // The chat with the other player, in the online screen and in a game's sidebar. Only the online state
 // (net/state.ts): the game screen shows it without loading the connection code. A spectator reads both players' lines, and
-// writes when the room's rules let it (the online server's rooms); spectators' lines say who wrote them.
+// writes when the room's rules let it (the online server's rooms); spectators' lines say who wrote them. A quick chat line
+// (game/quick-chat.ts) reads in this person's language.
 import { useEffect, useRef, useState } from "react";
 import { useT } from "../i18n";
 import { CHAT_MAX } from "../net/messages";
@@ -35,7 +36,7 @@ export function Chat() {
         {chat.length === 0 && !readOnly ? <p className="sve-hint">{t("online.chatEmpty")}</p> : null}
         {chat.map((c, i) => (
           <p key={i} className={c.from === "me" ? "sve-online-mine" : c.from === "watcher" ? "sve-online-theirs sve-online-watcher" : "sve-online-theirs"}>
-            <strong>{who(c)}</strong> {c.text}
+            <strong>{who(c)}</strong> {c.quick ? t(`quickChat.${c.quick}` as const) : c.text}
           </p>
         ))}
       </div>

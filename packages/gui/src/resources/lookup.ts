@@ -3,6 +3,7 @@
 // (resources.ts loads them and applies the theme), so they also run in tests, without a browser.
 import type { CardInfo } from "../engine/protocol";
 import { hostApi } from "../host/api";
+import type { CardSoundKind } from "./sound-plan";
 
 const IMAGE = ["png", "jpg", "jpeg", "webp", "gif", "avif"];
 const AUDIO = ["mp3", "ogg", "wav", "m4a"];
@@ -105,7 +106,7 @@ export function sfxUrl(names: readonly string[]): string | null {
  * A card's own sound, named by the player: public/audio/cards/<number>-<kind>.* with the kind p (played), a (attacks) or d
  * (destroyed), for the first of the numbers (printing, definition; an evolved follower's evolve card first) that has one.
  */
-export function cardSoundUrl(ids: readonly string[], kind: "p" | "a" | "d"): string | null {
+export function cardSoundUrl(ids: readonly string[], kind: CardSoundKind): string | null {
   for (const id of ids) {
     const found = find(`audio/cards/${id}-${kind}`, AUDIO);
     if (found) return found;

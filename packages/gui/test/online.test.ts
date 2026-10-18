@@ -82,6 +82,12 @@ describe("messages", () => {
       engine: "def",
     });
     expect(parseMessage({ t: "chat", text: "x".repeat(900) })).toEqual({ t: "chat", text: "x".repeat(500) });
+    // A quick chat line names which (its text is the sender's words); a name it doesn't know is no quick chat line.
+    expect(parseMessage({ t: "chat", text: "你好。", quick: "greet", seat: 0 })).toEqual({ t: "chat", text: "你好。", quick: "greet", seat: 0 });
+    expect(parseMessage({ t: "chat", text: "?", quick: "wave" })).toEqual({ t: "chat", text: "?" });
+    // A person who blocks the quick chat says so (only `true` counts).
+    expect(parseMessage({ t: "hello", version: "online-6", cards: "abc", engine: "def", noQuickChat: true })).toEqual({ t: "hello", version: "online-6", cards: "abc", engine: "def", noQuickChat: true });
+    expect(parseMessage({ t: "hello", version: "online-6", cards: "abc", engine: "def", noQuickChat: "yes" })).toEqual({ t: "hello", version: "online-6", cards: "abc", engine: "def" });
     expect(parseMessage({ t: "ping", n: 3 })).toEqual({ t: "ping", n: 3 });
     expect(parseMessage({ t: "select", extra: 1 })).toEqual({ t: "select" });
     for (const bad of [null, "hi", 3, { t: "chat" }, { t: "ping", n: "3" }, { t: "hello", version: 1 }, { t: "hello", version: "online-2", cards: "abc" }, { t: "unknown" }]) {

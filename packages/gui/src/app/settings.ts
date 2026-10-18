@@ -69,6 +69,11 @@ export interface Settings {
    */
   fakeQuick: boolean;
   skipQuick: boolean;
+  /**
+   * The quick chat is off (game/quick-chat.ts): this person neither uses it nor is shown or told it; online, nobody in their
+   * games uses it (their program says so in "hello").
+   */
+  blockQuickChat: boolean;
 }
 
 const KEY = "sve-gui-settings";
@@ -104,6 +109,7 @@ export const DEFAULT_SETTINGS: Settings = {
   turnLimitSeconds: TURN_LIMIT.first,
   fakeQuick: false,
   skipQuick: false,
+  blockQuickChat: false,
 };
 
 /**

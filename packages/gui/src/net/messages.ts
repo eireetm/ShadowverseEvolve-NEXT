@@ -6,8 +6,9 @@ import type { FormatId, GameOptions, RecordedInput, TurnOrder } from "../engine/
 /**
  * Who a program is: the protocol, a fingerprint of its card data and one of its engine (the rules code): two programs play
  * a game only when all three are the same. Its version and platform are shown to the person (programs before 0.2.1 don't
- * say them); its person's name (cleanName; none: not given) and whether they let the online server keep their games
- * (`share`: the server keeps a game only when both players do). Said again when the name or the sharing changes.
+ * say them); its person's name (cleanName; none: not given), whether they let the online server keep their games
+ * (`share`: the server keeps a game only when both players do), and whether they block the quick chat (`noQuickChat`:
+ * then nobody in the game uses it; programs before it don't say). Said again when one of the last three changes.
  */
 export interface Hello {
   t: "hello";
@@ -18,7 +19,17 @@ export interface Hello {
   platform?: string;
   name?: string;
   share?: boolean;
+  noQuickChat?: boolean;
 }
+
+/**
+ * The quick chat's lines, in its menu's order (game/QuickChat.tsx): each person reads them in their own language, and the
+ * sender's leader says them (a leader's voices, public/audio/cards/<leader>-<id>).
+ */
+export const QUICK_CHATS = ["greet", "thank", "apologize", "applaud", "shock", "confuse", "taunt"] as const;
+export type QuickChatId = (typeof QUICK_CHATS)[number];
+
+export const isQuickChat = (value: unknown): value is QuickChatId => typeof value === "string" && (QUICK_CHATS as readonly string[]).includes(value);
 
 /** The longest name a person can give (characters). */
 export const NAME_MAX = 16;
@@ -112,9 +123,10 @@ export type NetMessage =
   | { t: "full" }
   /**
    * A chat line; passed on by the host, it says whose: the seat of the player who wrote it (to a spectator), or a
-   * spectator's name (`watcher`, "" when none was given: a room whose rules let spectators write).
+   * spectator's name (`watcher`, "" when none was given: a room whose rules let spectators write). A player's quick chat
+   * line says which (`quick`; `text` has it in the sender's language, for programs before it).
    */
-  | { t: "chat"; text: string; seat?: 0 | 1; watcher?: string }
+  | { t: "chat"; text: string; seat?: 0 | 1; watcher?: string; quick?: QuickChatId }
   /** The host: how many spectators are watching (to the players and the spectators). */
   | { t: "watchers"; n: number }
   /** The host, to a spectator: the game being played now (null: none yet), its inputs so far following as "backlog". */
@@ -253,6 +265,7 @@ export function parseMessage(value: unknown): NetMessage | null {
             ...(isString(m.platform, 20) ? { platform: m.platform } : {}),
             ...(isString(m.name, 64) && cleanName(m.name) !== "" ? { name: cleanName(m.name) } : {}),
             ...(typeof m.share === "boolean" ? { share: m.share } : {}),
+            ...(m.noQuickChat === true ? { noQuickChat: true } : {}),
           }
         : null;
     case "select":
@@ -268,6 +281,7 @@ export function parseMessage(value: unknown): NetMessage | null {
         text: m.text.slice(0, CHAT_MAX),
         ...(m.seat !== undefined ? { seat: m.seat } : {}),
         ...(m.watcher !== undefined ? { watcher: cleanName(m.watcher as string) } : {}),
+        ...(isQuickChat(m.quick) ? { quick: m.quick } : {}),
       };
     case "watchers":
       return isIndex(m.n) && m.n <= MAX_SPECTATOR_SEATS ? { t: "watchers", n: m.n } : null;

@@ -6,7 +6,7 @@ import { useSyncExternalStore } from "react";
 import type { FormatProblem } from "../formats/formats";
 import type { MessageKey } from "../i18n";
 import type { PeerLink, Route, Via } from "./link";
-import { CHAT_MAX, SPECTATOR_SEATS, type Hello, type JoinAs, type ReadyDeck, type Rules } from "./messages";
+import { CHAT_MAX, SPECTATOR_SEATS, type Hello, type JoinAs, type QuickChatId, type ReadyDeck, type Rules } from "./messages";
 import type { ServerSettings } from "./server-config";
 
 export type OnlinePhase =
@@ -38,6 +38,8 @@ export interface ChatLine {
   from: "me" | "peer" | 0 | 1 | "watcher";
   name?: string;
   text: string;
+  /** A quick chat line: which (shown in this person's language; `text` is the sender's). */
+  quick?: QuickChatId;
 }
 
 /**
@@ -114,9 +116,9 @@ export function useOnline(): OnlineState {
 // The connection (net/online.ts sets it): to the other player, or a spectator's to the host.
 let link: PeerLink | null = null;
 /** The host: its own chat lines go to the spectators too (net/online.ts sets it). */
-let chatRelay: ((text: string) => void) | null = null;
+let chatRelay: ((text: string, quick?: QuickChatId) => void) | null = null;
 
-export function setChatRelay(fn: ((text: string) => void) | null): void {
+export function setChatRelay(fn: ((text: string, quick?: QuickChatId) => void) | null): void {
   chatRelay = fn;
 }
 
@@ -150,6 +152,15 @@ export function sendChat(text: string): void {
   link.send({ t: "chat", text: line });
   chatRelay?.(line);
   setOnline({ chat: [...state.chat, { from: "me" as const, text: line }].slice(-200) });
+}
+
+/** A quick chat line (`text`: its words in this person's language, for programs before it); false when it can't be sent. */
+export function sendQuickChat(quick: QuickChatId, text: string): boolean {
+  if (!link || !canChat()) return false;
+  link.send({ t: "chat", text, quick });
+  chatRelay?.(text, quick);
+  setOnline({ chat: [...state.chat, { from: "me" as const, text, quick }].slice(-200) });
+  return true;
 }
 
 /** A game over the connection has begun: the online screen shows it. */

@@ -760,16 +760,50 @@ option {
   right: 0;
   bottom: 0;
   z-index: 50;
-  width: clamp(280px, 24vw, 400px);
+  width: var(--sve-sidebar-width, clamp(280px, 24vw, 400px));
   border-left: 1px solid var(--sve-border);
   box-shadow: -12px 0 30px #0008;
 }
 
-.sve-sidebar-show {
+/* The top right of a game: the quick chat (game/QuickChat.tsx), then the sidebar's button while the sidebar is hidden;
+   with it shown, the quick chat is left of it. */
+.sve-game-corner {
   position: absolute;
   top: 8px;
   right: 10px;
   z-index: 50;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.sve-game-corner-sidebar {
+  right: calc(var(--sve-sidebar-width, clamp(280px, 24vw, 400px)) + 10px);
+}
+
+.sve-quick-chat {
+  position: relative;
+}
+
+/* Its seven lines, under it. */
+.sve-quick-chat-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 100%;
+  padding: 8px;
+  border-radius: 10px;
+  background: rgb(20 26 36 / var(--sve-ui-alpha));
+  border: 1px solid var(--sve-action);
+  box-shadow: 0 10px 30px #000c;
+}
+
+.sve-quick-chat-menu button {
+  text-align: left;
+  white-space: nowrap;
 }
 
 .sve-sidebar-hide {
@@ -3839,9 +3873,13 @@ button.sve-online-thanks-sponsor:hover {
   z-index: 50;
 }
 
-.sve-game-compact .sve-sidebar-show {
+.sve-game-compact .sve-game-corner {
   top: 6px;
   right: 8px;
+}
+
+.sve-game-compact .sve-game-corner-sidebar {
+  right: calc(var(--sve-sidebar-width, clamp(280px, 24vw, 400px)) + 8px);
 }
 
 /* A finger on the table (a phone, a tablet): no scrolling, zooming or long-press menu of the browser (dragging a card is

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { clickCard, dialogBody, startGame, toMainPhase, useSettings } from "./helpers";
+import { clickCard, dialogBody, playedSounds, recordSounds, startGame, toMainPhase, useSettings } from "./helpers";
 
 // A card put into a hand in public (revealed from the deck, CR 5.21.1; taken from a cemetery, 4.9.2) is shown a moment where
 // it went: the other player's turns face up in their hand, shakes and turns back; one's own shakes. Done by hand (manual
@@ -22,26 +22,6 @@ async function watchFor(page: Page, selectors: string[]): Promise<void> {
 
 const seen = (page: Page, selector: string) => page.evaluate((s) => (window as unknown as Seen).__seen[s] === true, selector);
 
-/**
- * As if the player had these sound effects (public/audio/sfx/<name>.mp3): the page's audio elements only note what they
- * would play (src/resources/sound.ts).
- */
-async function recordSounds(page: Page, names: string[]): Promise<void> {
-  await page.evaluate(`(async () => {
-    window.__played = [];
-    window.Audio = class {
-      constructor(url) { this.src = url; this.paused = true; this.volume = 1; this.loop = false; }
-      play() { this.paused = false; window.__played.push(this.src.split("/").pop()); return Promise.resolve(); }
-      pause() { this.paused = true; }
-    };
-    const lookup = await import("/src/resources/lookup.ts");
-    lookup.setResourceLists(${JSON.stringify(names.map((n) => `audio/sfx/${n}.mp3`))}, []);
-  })()`);
-}
-
-/** The sound files played since recordSounds. */
-const played = (page: Page) => page.evaluate(() => (window as unknown as { __played: string[] }).__played);
-
 test("a card put into a hand in public: the opponent's turns face up a moment, one's own shakes", async ({ page }) => {
   const problems: string[] = [];
   page.on("pageerror", (e) => problems.push(e.message));
@@ -50,7 +30,7 @@ test("a card put into a hand in public: the opponent's turns face up a moment, o
   await toMainPhase(page);
   const manual = page.getByTestId("manual-dialog");
   await watchFor(page, [".sve-hand-own .sve-card-searched", ".sve-hand-opponent .sve-card-revealed"]);
-  await recordSounds(page, ["search"]);
+  await recordSounds(page, ["audio/sfx/search.mp3"]);
 
   // The opponent's: three cards of their deck into their cemetery, one of them back into their hand; its sound as it shows.
   const theirs = page.locator(".sve-hand-opponent .sve-card");
@@ -65,7 +45,7 @@ test("a card put into a hand in public: the opponent's turns face up a moment, o
   const revealed = page.locator(".sve-hand-opponent .sve-card-revealed");
   await expect(page.locator('.sve-hand-opponent .sve-card-revealed[data-def^="SD02-"]')).toHaveCount(1);
   await page.screenshot({ path: test.info().outputPath("revealed.png") });
-  await expect.poll(() => played(page)).toContain("search.mp3");
+  await expect.poll(() => playedSounds(page)).toContain("search.mp3");
   // Then a back again, like the rest of their hand.
   await expect(revealed).toHaveCount(0, { timeout: 5_000 });
   await expect(theirs).toHaveCount(before + 1);
@@ -125,7 +105,7 @@ test("a card an effect selects in the cemetery: the table points at it, it flies
   await manual.getByTestId("manual-move-field").click();
   await page.locator(".sve-mat-own .sve-field-slot .sve-card").filter({ has: page.locator('[data-printing^="CSD02c-004"]') }).first().click();
   // The sounds: the activated ability's as it is played, then the card's as it shows in the hand.
-  await recordSounds(page, ["search", "activated"]);
+  await recordSounds(page, ["audio/sfx/search.mp3", "audio/sfx/activated.mp3"]);
   await manual.getByRole("button", { name: /^Activate for free/ }).click();
   // Its target, the first follower offered: the last answer before the card goes (the arrow, then the flight, in one update).
   await expect(page.locator(".sve-decision")).toHaveAttribute("data-decision", "selectCards");
@@ -136,6 +116,6 @@ test("a card an effect selects in the cemetery: the table points at it, it flies
   if ((await ok.count()) > 0 && (await ok.isEnabled())) await ok.click();
   await expect(page.locator(".sve-decision")).toHaveAttribute("data-decision", "mainPhase");
   await expect.poll(() => page.evaluate(() => (window as unknown as { __shakeSeen: boolean }).__shakeSeen)).toBe(true);
-  await expect.poll(() => played(page)).toEqual(["activated.mp3", "search.mp3"]);
+  await expect.poll(() => playedSounds(page)).toEqual(["activated.mp3", "search.mp3"]);
   expect(problems).toEqual([]);
 });
