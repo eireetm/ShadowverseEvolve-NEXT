@@ -1,8 +1,8 @@
 // The phone and tablet apps' host (Android, iOS). Its files live in the app's own folder on the device —
 // Android/data/local.sve.next/files/ on Android, the app's Documents folder on iOS (the Files app shows it as
 // "On My iPhone > SVE NEXT"):
-//   public/   the player's own pictures, sounds, fonts and theme.css (README "Custom resources"): copied there (a USB cable,
-//             the Files app), or imported from a zip file in the settings;
+//   public/   the player's own pictures, sounds, fonts, theme.css and card texts (README "Custom resources"): copied there (a USB
+//             cable, the Files app), or imported from a zip file in the settings;
 //   decks/    deck files; the sample decks are put into decks/samples/ at the start when missing;
 //   replays/  saved replays;
 //   exports/  files handed to the person (a bug report file), shared from there.
@@ -13,7 +13,6 @@ import { Clipboard } from "@capacitor/clipboard";
 import { Capacitor } from "@capacitor/core";
 import { Directory, Encoding, Filesystem } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
-import { Unzip, UnzipInflate } from "fflate";
 import { goBack } from "../app/back";
 import { parseDeckFile } from "../decks/format";
 import type { SeatController } from "../engine/protocol";
@@ -23,6 +22,7 @@ import { setInBackground } from "../resources/sound";
 import type { DeckFileEntry, Host, HostInfo, ImportResult, ReplayFileEntry } from "./api";
 import { mergeResources } from "./bundled";
 import { resourcePathInZip } from "./zip-paths";
+import { readZipEntries, readZipEntry } from "./zip-reader";
 
 /** The app's platform: its own folder and its back button differ. */
 export type AppPlatform = "android" | "ios";
@@ -34,7 +34,7 @@ export type AppPlatform = "android" | "ios";
 let DIR = Directory.External;
 
 /** public/'s folders (README "Custom resources"), made at the start so the player sees where to copy their files. */
-const PUBLIC_FOLDERS = ["audio/bgm", "audio/sfx", "audio/cards", "images/cards", "images/backs", "images/credits", "textures/board", "textures/menu", "textures/icons", "fonts"];
+const PUBLIC_FOLDERS = ["audio/bgm", "audio/sfx", "audio/cards", "images/cards", "images/backs", "images/credits", "textures/board", "textures/menu", "textures/icons", "fonts", "text"];
 
 /** The sample decks (decks/samples), in the app. */
 const SAMPLES = import.meta.glob<string>("../../decks/samples/*.json", { eager: true, query: "?raw", import: "default" });
@@ -115,66 +115,30 @@ function toBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-function concat(chunks: Uint8Array[]): Uint8Array {
-  if (chunks.length === 1) return chunks[0]!;
-  const out = new Uint8Array(chunks.reduce((n, c) => n + c.length, 0));
-  let at = 0;
-  for (const chunk of chunks) {
-    out.set(chunk, at);
-    at += chunk.length;
-  }
-  return out;
-}
-
 /**
- * Import the resources of a zip file into public/ (zip-paths.ts decides where each goes; the rest is skipped). The zip is
- * read as a stream, and each file is written before much more is read: a zip of thousands of pictures fits in memory.
+ * Import the resources of a zip file into public/ (zip-paths.ts decides where each goes; the rest is skipped). The zip is read
+ * by its central directory, one file at a time (zip-reader.ts): a pack of thousands of pictures fits in memory, and a file the
+ * app can't read (another compression, a broken one) is left out and named, the others go in.
  */
-async function importZip(file: File, progress: (written: number) => void): Promise<ImportResult> {
-  let written = 0;
-  let skipped = 0;
-  let failure: unknown = null;
-  let queue: Promise<void> = Promise.resolve();
-  let queued = 0;
-  const unzip = new Unzip((entry) => {
+async function importZip(file: File, progress: (done: number, total: number) => void): Promise<ImportResult> {
+  const files = (await readZipEntries(file)).filter((entry) => !/[\\/]$/.test(entry.name));
+  const wanted = files.flatMap((entry) => {
     const target = resourcePathInZip(entry.name);
-    if (!target) {
-      if (!entry.name.endsWith("/")) skipped++;
-      return;
-    }
-    const chunks: Uint8Array[] = [];
-    entry.ondata = (err, data, final) => {
-      if (err) {
-        failure = err;
-        return;
-      }
-      chunks.push(data);
-      if (!final) return;
-      queued++;
-      queue = queue.then(async () => {
-        await Filesystem.writeFile({ path: `public/${target}`, directory: DIR, data: toBase64(concat(chunks)), recursive: true });
-        written++;
-        queued--;
-        progress(written);
-      });
-    };
-    entry.start();
+    return target === null ? [] : [{ entry, target }];
   });
-  unzip.register(UnzipInflate);
-  const reader = file.stream().getReader();
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (failure) throw failure;
-    if (done) {
-      unzip.push(new Uint8Array(0), true);
-      break;
+  let written = 0;
+  const failed: string[] = [];
+  for (const { entry, target } of wanted) {
+    try {
+      const data = await readZipEntry(file, entry);
+      await Filesystem.writeFile({ path: `public/${target}`, directory: DIR, data: toBase64(data), recursive: true });
+      written++;
+    } catch (err) {
+      failed.push(`${entry.name} (${err instanceof Error ? err.message : String(err)})`);
     }
-    unzip.push(value);
-    if (queued > 8) await queue;
+    progress(written + failed.length, wanted.length);
   }
-  await queue;
-  if (failure) throw failure;
-  return { written, skipped };
+  return { written, skipped: files.length - wanted.length, failed };
 }
 
 /** The list of the resources built into the app (vite.config.ts writes it; empty without them). */

@@ -351,7 +351,9 @@ export function readPackage(zip: Uint8Array, version: string): PackageFiles {
     files.set(parts.join("/"), folder ? null : entries[name]!);
   }
   const versionFile = files.get("VERSION.txt");
-  const said = versionFile ? /^﻿?Shadowverse: Evolve NEXT (\S+)/.exec(new TextDecoder().decode(versionFile))?.[1] : undefined;
+  // Its first line names the program: "Shadowverse: Evolve NEXT <version>" — the name before "SVE NEXT" (2026-10-18), which
+  // the releases keep there for the programs before (they read only that), or the new name.
+  const said = versionFile ? /^﻿?(?:SVE NEXT|Shadowverse: Evolve NEXT) (\S+)/.exec(new TextDecoder().decode(versionFile))?.[1] : undefined;
   if (said !== version) throw new UpdateError("badPackage", `VERSION.txt says ${said ?? "nothing"}, not ${version}`);
   for (const needed of ["server.mjs", "app/index.html"]) {
     if (!(files.get(needed) instanceof Uint8Array)) throw new UpdateError("badPackage", `no ${needed}`);

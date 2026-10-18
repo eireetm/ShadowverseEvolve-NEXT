@@ -105,7 +105,7 @@ function run(): void {
       res.end(JSON.stringify(relay.status()));
     } else if (req.url === "/" || req.url === "/status") {
       res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
-      res.end(`Shadowverse: Evolve NEXT — online server ${VERSION}: OK\n联机服务器正常运行。\n`);
+      res.end(`SVE NEXT — online server ${VERSION}: OK\n联机服务器正常运行。\n`);
     } else {
       res.writeHead(404, { "Content-Type": "text/plain" });
       res.end("not found\n");

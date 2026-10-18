@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shadowverse: Evolve NEXT — the online server: install it, or update it (run it again with a new package).
+# SVE NEXT — the online server: install it, or update it (run it again with a new package).
 #   sudo bash setup.sh <the server's public IP>
 # What it does: Node.js (from a mirror in China), the program in /opt/sve-server, its configuration in /etc/sve-server
 # (kept when it exists: the keys stay), a free certificate for the IP from Let's Encrypt (certbot; it renews itself every few
@@ -59,7 +59,7 @@ install -d -m 755 /opt/sve-server
 install -m 644 "$HERE/server.mjs" /opt/sve-server/server.mjs
 cat > /usr/local/bin/sve-server <<EOF
 #!/bin/sh
-# Shadowverse: Evolve NEXT online server (sve-server help)
+# SVE NEXT online server (sve-server help)
 exec $NODE /opt/sve-server/server.mjs "\$@"
 EOF
 chmod 755 /usr/local/bin/sve-server
@@ -104,7 +104,7 @@ RENEWED_LINEAGE=/etc/letsencrypt/live/sve-server sh /etc/letsencrypt/renewal-hoo
 say "系统服务 the service"
 cat > /etc/systemd/system/sve-server.service <<EOF
 [Unit]
-Description=Shadowverse: Evolve NEXT online server
+Description=SVE NEXT online server
 After=network-online.target
 Wants=network-online.target
 

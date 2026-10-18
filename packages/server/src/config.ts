@@ -221,7 +221,7 @@ export function clientConfigText(config: ServerConfig, name: string): string | n
   const key = config.keys.get(name);
   if (key === undefined) return null;
   return [
-    "; Shadowverse: Evolve NEXT — 联机服务器 / Online server / オンラインサーバー",
+    "; SVE NEXT — 联机服务器 / Online server / オンラインサーバー",
     "; 只给要一起玩的人，不要公开。Only for the people you play with: don't post it.",
     "[server]",
     `name = ${config.name}`,
@@ -233,7 +233,7 @@ export function clientConfigText(config: ServerConfig, name: string): string | n
 
 /** A new server's configuration file (setup.sh): this address, port 443 with the certificate, the defaults, one key. */
 export function newConfigText(address: string, keyName: string, key: string, tlsCert: string, tlsKey: string): string {
-  return `; Shadowverse: Evolve NEXT — online server (sve-server). Changes are read again within a few seconds,
+  return `; SVE NEXT — online server (sve-server). Changes are read again within a few seconds,
 ; except the port and the certificate files (then: sudo systemctl restart sve-server).
 ; 改了以后几秒内自动生效（端口和证书文件除外：改了要 sudo systemctl restart sve-server）。
 

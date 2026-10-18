@@ -92,7 +92,7 @@ writeWindowsText(join(out, "start.bat"), fill("start.bat"), false);
 writeWindowsText(join(out, "README.txt"), fill("README.txt"), true);
 writeWindowsText(
   join(out, "VERSION.txt"),
-  [`Shadowverse: Evolve NEXT ${version} - training kit`, `Job: ${job.id}`, `Built: ${new Date().toISOString().slice(0, 10)}`, `Source commit: ${job.commit}`, `Engine fingerprint: ${job.engine}`, `Bot fingerprint: ${job.bot}`, ""].join("\n"),
+  [`SVE NEXT ${version} - training kit`, `Job: ${job.id}`, `Built: ${new Date().toISOString().slice(0, 10)}`, `Source commit: ${job.commit}`, `Engine fingerprint: ${job.engine}`, `Bot fingerprint: ${job.bot}`, ""].join("\n"),
   false,
 );
 

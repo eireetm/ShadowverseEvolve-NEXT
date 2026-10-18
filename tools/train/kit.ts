@@ -68,7 +68,7 @@ if (option("--recheck") !== null) {
   const byMemory = Math.floor((freemem() - 1.5 * 2 ** 30) / (600 * 2 ** 20));
   const asked = Number(option("--workers"));
   const workers = Number.isInteger(asked) && asked > 0 ? asked : Math.max(1, Math.min(Math.floor(threads / 2), byMemory));
-  console.log(`Shadowverse: Evolve NEXT ${job.version} — 训练数据 / training data`);
+  console.log(`SVE NEXT ${job.version} — 训练数据 / training data`);
   console.log(`任务 job: ${job.id}（${job.description}）`);
   console.log(`这台电脑 this computer: ${threads} 个线程 threads, 内存 memory ${(totalmem() / 2 ** 30).toFixed(1)} GB（空闲 free ${(freemem() / 2 ** 30).toFixed(1)} GB）`);
   console.log(`使用 using ${workers} 个进程 processes（较低优先级 lower priority）`);

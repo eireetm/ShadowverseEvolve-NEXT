@@ -1,9 +1,9 @@
-Shadowverse: Evolve NEXT  {{version}}  训练数据包 / training kit
+SVE NEXT  {{version}}  训练数据包 / training kit
 
 【中文】
 
 这是什么
-  帮 Shadowverse: Evolve NEXT 的 AI 生成训练用的对局。在你的电脑上让 AI 自己和自己对战，把下完的对局存进 training 文件夹，你把这个文件夹里的文件发给作者就好。
+  帮 SVE NEXT 的 AI 生成训练用的对局。在你的电脑上让 AI 自己和自己对战，把下完的对局存进 training 文件夹，你把这个文件夹里的文件发给作者就好。
   不联网、不上传任何东西，也不记录任何个人信息（training\volunteer.txt 里只是一串随机字母，用来区分不同电脑的对局）。
 
 需要
@@ -25,7 +25,7 @@ Shadowverse: Evolve NEXT  {{version}}  训练数据包 / training kit
 【English】
 
 What this is
-  It makes games for training the AI of Shadowverse: Evolve NEXT: the AI plays itself on your computer, and every finished
+  It makes games for training the AI of SVE NEXT: the AI plays itself on your computer, and every finished
   game is saved in the training folder. Send the files in that folder to the author.
   Nothing goes online and nothing personal is written (training\volunteer.txt is only random letters that tell computers apart).
 
