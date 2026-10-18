@@ -1,5 +1,5 @@
 @echo off
-title Shadowverse: Evolve NEXT {{version}} - training data
+title SVE NEXT {{version}} - training data
 cd /d "%~dp0"
 where node >nul 2>nul
 if errorlevel 1 (

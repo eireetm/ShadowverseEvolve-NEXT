@@ -16,7 +16,7 @@ import { APP_VERSION } from "./version";
 
 type ResourceStatus =
   | { kind: "idle" }
-  | { kind: "importing"; written: number }
+  | { kind: "importing"; done: number; total: number }
   | { kind: "imported"; result: ImportResult }
   | { kind: "reloaded"; files: number }
   | { kind: "failed"; error: string };
@@ -31,9 +31,9 @@ function ResourcesSection() {
   const [status, setStatus] = useState<ResourceStatus>({ kind: "idle" });
   const importZip = async (file: File | undefined) => {
     if (!file) return;
-    setStatus({ kind: "importing", written: 0 });
+    setStatus({ kind: "importing", done: 0, total: 0 });
     try {
-      const result = await hostApi.importResources!(file, (written) => setStatus({ kind: "importing", written }));
+      const result = await hostApi.importResources!(file, (done, total) => setStatus({ kind: "importing", done, total }));
       await loadResources();
       setStatus({ kind: "imported", result });
     } catch (err) {
@@ -71,9 +71,14 @@ function ResourcesSection() {
           {t("settings.resourcesReload")}
         </button>
       </div>
-      {status.kind === "importing" ? <p className="sve-hint">{t("settings.resourcesImporting", { n: status.written })}</p> : null}
+      {status.kind === "importing" ? <p className="sve-hint">{t("settings.resourcesImporting", { n: status.done, total: status.total })}</p> : null}
       {status.kind === "imported" ? (
         <p className="sve-ok">{t("settings.resourcesImported", { written: status.result.written, skipped: status.result.skipped })}</p>
+      ) : null}
+      {status.kind === "imported" && status.result.failed.length > 0 ? (
+        <p className="sve-problem" data-testid="resources-import-failed">
+          {t("settings.resourcesImportFailed", { n: status.result.failed.length, files: status.result.failed.slice(0, 3).join("; ") + (status.result.failed.length > 3 ? " …" : "") })}
+        </p>
       ) : null}
       {status.kind === "reloaded" ? <p className="sve-ok">{t("settings.resourcesReloaded", { n: status.files })}</p> : null}
       {status.kind === "failed" ? <p className="sve-problem">{t("settings.resourcesFailed", { error: status.error })}</p> : null}

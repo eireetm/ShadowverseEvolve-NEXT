@@ -80,7 +80,7 @@ export function parseServerConfig(text: string): { servers: ServerSettings[]; pr
 
 /** The text of a server for the window: as its owner's program prints it (comments in the languages). */
 export function serverConfigText(server: ServerSettings): string {
-  return ["; Shadowverse: Evolve NEXT — 联机服务器 / Online server / オンラインサーバー", "[server]", `name = ${server.name}`, `address = ${server.address}`, `key = ${server.key}`, ""].join("\n");
+  return ["; SVE NEXT — 联机服务器 / Online server / オンラインサーバー", "[server]", `name = ${server.name}`, `address = ${server.address}`, `key = ${server.key}`, ""].join("\n");
 }
 
 /** Where the text in use came from: the PC release's file, what the browser saved, the build's, or nowhere. */

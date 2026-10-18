@@ -169,7 +169,7 @@ const sectionLines = (section: string, entries: readonly Entry[], settings: Sett
 
 /** A new settings file with every key, from these settings. */
 export function newSettingsFile(settings: Settings): string {
-  const lines = ["; Shadowverse: Evolve NEXT — settings.ini", ...LANGS.map((lang) => `; ${translate(lang, "settingsFile.about")}`)];
+  const lines = ["; SVE NEXT — settings.ini", ...LANGS.map((lang) => `; ${translate(lang, "settingsFile.about")}`)];
   for (const section of SECTIONS.keys()) lines.push("", ...sectionLines(section, ENTRIES.filter((e) => e.section === section), settings));
   return lines.join("\n") + "\n";
 }

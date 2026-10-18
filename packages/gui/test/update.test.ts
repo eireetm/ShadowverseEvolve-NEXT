@@ -311,6 +311,10 @@ describe("installing", () => {
     expect(files.get("public/textures/new")).toBeNull();
     expect(files.has(`SVEN-${NEW}-pc/server.mjs`)).toBe(false);
     expect(() => readPackage(packageZip(NEW), "0.4.3")).toThrow(/VERSION.txt says 0.4.2/);
+    // Its first line names the program: the name before "SVE NEXT" (the releases keep it there) or "SVE NEXT"; nothing else.
+    const named = (line: string) => packageZip(NEW, (files) => (files["VERSION.txt"] = enc(`${line}\nBuilt: 2026-10-18\n`)));
+    expect(readPackage(named(`SVE NEXT ${NEW}`), NEW).get("server.mjs")).toBeInstanceOf(Uint8Array);
+    expect(() => readPackage(named(`Another program ${NEW}`), NEW)).toThrow(/VERSION.txt says nothing/);
   });
 });
 

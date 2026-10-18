@@ -1,4 +1,4 @@
-Shadowverse: Evolve NEXT  {{version}}  联机服务器 / online server
+SVE NEXT  {{version}}  联机服务器 / online server
 
 【中文】
 

@@ -104,4 +104,4 @@ rmSync(out, { force: true });
 mkdirSync(dirname(out), { recursive: true });
 run("zip", ["-qry", out, "Payload"], work);
 rmSync(work, { recursive: true, force: true });
-console.log(`Shadowverse: Evolve NEXT ${version} (iOS, build ${build}, unsigned) -> ${out}`);
+console.log(`SVE NEXT ${version} (iOS, build ${build}, unsigned) -> ${out}`);

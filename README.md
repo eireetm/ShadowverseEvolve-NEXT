@@ -1,4 +1,4 @@
-# SVEN — Shadowverse: Evolve NEXT
+# SVEN — SVE NEXT
 
 **[中文](#中文) · [English](#english)**
 
@@ -8,7 +8,7 @@
 
 ## 中文
 
-《Shadowverse: Evolve》（影之诗：进化对决）实体卡牌游戏的非官方对战引擎、AI 和客户端。规则由引擎自动处理，可以对战 AI、联机、组卡组、看录像，支持PC和安卓平台。仅用于个人学习和测试。
+《Shadowverse: Evolve》（影之诗：进化对决）实体卡牌游戏的非官方对战引擎、AI 和客户端。规则由引擎自动处理，可以对战 AI、联机、组卡组、看录像，支持PC和安卓等平台。仅用于个人学习和测试。
 
 ### 内容
 
@@ -34,9 +34,7 @@
 ### 声明
 
 - 这是非官方的同人项目，与 Cygames、Bushiroad 等官方无关，不做商业用途。
-- 仓库**不包含任何卡图、官方美术或声音**。
-- 卡牌数据（`packages/core/data/<卡包>.json`）包含卡名（英文、中文、日文，中文多为民间翻译）、数值、类型等，用于规则处理和显示。
-- 仓库**不包含卡牌文本**：`npm run build:cards` 在本机生成英文、中文、日文的文本文件 `<卡包>_en.json`、`<卡包>_cn.json`、`<卡包>_ja.json`（需要仓库旁边的 `assets/`），开发服务器会显示它们。没有这些文件时游戏照常运行，只是不显示卡牌文本；也可以把文本文件放进 `packages/gui/public/text/`（见"自定义资源"）。
+- 仓库**不包含任何卡图、卡牌文本、官方美术或声音**。
 - 想看到卡图，请把自己的图片放进 `packages/gui/public/`（见"自定义资源"）。
 
 ### 环境
@@ -75,13 +73,13 @@ npm run dev:gui
 | `npm run bench` | 性能基准：随机对局、复制和抽样一局、Bot 每个决策的耗时 |
 | `npm run bot:arena -- [局数] [A] [B]` | Bot 互打（easy / medium / hard，试验版 medium-beta；sve-fool / sve-good / sve-planner 是模仿 SVE Simulator 三个 AI 的对照组，只用于测试）：示例卡组，两局一组交换座位、轮流打遍所有卡组组合，打印按"对"计分的得分和 95% 区间、先后手、先手胜率、回合数、每副卡组的得分和思考时间。`--decks sd01,sd02` 选卡组（`train` / `holdout` / `legal`：`tools/rl/decksets.json` 的卡组集，按标准赛制和它的禁卡表检查），`--mirror` 双方用同一副，`--workers 8` 多进程一起打，`--seed` 换一批对局，`--independent` 每局单独的种子，`--range a-b` 只打其中一段，`--out 文件夹` 存下每一局（可重放的记录 `games.jsonl.gz`）和报告，`--replays N` 把前 N 局存成对局界面能打开的录像。`medium:identity`（把手写估值从外面传进去，应和 medium 完全一样）和 `medium:negated`（估值反过来，应该几乎全输）用来检查估值接口 |
 | `npm run rl:verify -- 文件夹` | 重放 `bot:arena --out` 存下的对局：每个输入是否合法、结果是否和记录一样 |
-| `npm run release:train -- --zip` | 打"训练数据包"：给帮忙跑对局的朋友 |
+| `npm run release:train -- --zip` | 打"训练数据包"：给帮忙跑对局的人 |
 | `npm run rl:ingest -- 文件夹` | 收下朋友们训练数据包里的对局：检查后并进数据集 |
 | `npm run rl:coverage -- 文件夹` | `bot:arena --out` 存下的对局里，每种决定 Bot 实际比较了几个答案：重放每一局，对每个决定用引擎列出全部合法答案，和规划型 Bot 会比较的答案数对照；"有好几个合法答案、却只比较一个"的决定类型（盲区）排在前面，写明理由的列为"有意为之"。`--games N` 只看前 N 局 |
 | `npm run rl:behaviour -- 文件夹` | `bot:arena --out` 存下的对局里的行为统计：守护在自己回合横置登场的比例、能用速攻的时机和用了几次、对局结束时先后手各剩多少进化点和超进化点、回合结束时手里还有打得出的从者的比例。用来比较新旧两版 Bot（同门互打的胜率看不出共同的盲区）。`--games N` 只看前 N 局 |
 | `npm run rl:lethal -- 文件夹` | 统计 `bot:arena --out` 存下的对局里漏掉的斩杀：重放每一局，在每个己方主要阶段的决定上用宽搜索找"确保能赢"的斩杀（换 6 个公平抽样都能赢、对手应对也挡不住），找到了那回合却没赢就算漏掉；打印有漏斩杀的局数、漏的一方后来输掉的局数。较慢（每局几秒），`--games N` 只看前 N 局，`--workers N` 多进程 |
 | `npm run bench:throughput -- [random\|easy\|medium\|hard]` | 整台电脑一分钟能打多少局：多个进程同时开始（`--workers N`，默认 CPU 线程数），各打 `--seconds` 秒 |
-| `npm run build:cards` | 从抓取的卡牌数据（仓库旁边的 `assets/`，先行测试版的卡包读仓库旁边的官方日文卡表（现在没有这样的卡包），社区 DIY 卡包的卡表在 `packages/core/src/data/custom.ts`）重新生成 `packages/core/data/*.json`（卡牌文本 `<卡包>_<语言>.json` 只在本机，不进仓库） |
+| `npm run build:cards` | 从抓取的卡牌数据（仓库旁边的 `assets/`，先行测试版的卡包读仓库旁边的官方日文卡表（现在没有这样的卡包），社区 DIY 卡包的卡表在 `packages/core/src/data/custom.ts`）重新生成 `packages/core/data/*.json` |
 | `npm run scripts:index` | 新增卡牌脚本后，重新生成脚本注册表（`packages/core/src/script/<卡包>/index.ts`） |
 | `npm run cards:status` | 生成每张卡的实现和测试状态表（写到 `docs/card-status*.md`） |
 | `npm run rules:clauses` | 从综合规则的 PDF（仓库旁边的 `rules/`）提取条款编号表 `tools/data/cr-clauses.json` |
@@ -114,7 +112,7 @@ packages/
       events/ view/     对外事件；按玩家视角过滤隐藏信息
       sets/             各卡包的卡牌数据和脚本注册表
       testing/          测试工具（对局脚本、随机 agent、不变量检查）
-    data/               卡牌数据（<卡包>.json，由 build:cards 生成，不要手改；卡牌文本 <卡包>_<语言>.json 只在本机）
+    data/               卡牌数据（<卡包>.json和<卡包>_<语言>.json，由 build:cards 生成）
     test/               规则测试、卡牌测试、整局测试
   bot/                  Bot（@sve/bot），只用 Core 的公开 API
   server/               联机服务器（@sve/server）：按房间号转发消息、密钥、上限；scripts/ 里是安装脚本和打包
@@ -134,9 +132,9 @@ packages/
       host/             文件的读写：电脑上调用本机服务层，安卓上读写手机里的文件
       i18n/             界面文字（英文、中文、日文；Traditional Chinese 由中文转换）
       styles/           内置样式
-    public/             玩家的自定义资源（只有空文件夹进仓库）
+    public/             玩家的自定义资源
     decks/samples/      示例卡组
-    replays/            保存的录像（不进仓库）
+    replays/            保存的录像
     restrictions/       禁卡表，一个文件一张（格式见其中的 README.md）
     android/            安卓工程（Capacitor）
     ios/                iOS 工程（Capacitor，Xcode）
@@ -297,7 +295,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 - **对局**：双方各自运行同一局，只同步每一步的回答。断线后可以重连，接着打。
   - **悔棋**：房主在规则里勾选"允许悔棋"（使用服务器时在创建房间之前，也可以在房间里改）。对局中在侧边栏"调试"里点"撤销我的上一个回答"：你上一个回答之后对方还没操作过，两边就一起退回到那一步；对方操作过就不能撤销。观战者也跟着退。
   - 联机时种子和"保存复现包"在对局结束后才显示（有了它们，改过的程序能推算出牌堆顺序）。
-  - **回合时间限制**：房主在规则里勾选"回合时间限制"，填秒数（先给 600 秒，可填 10–3600）。每位玩家每轮有这么多秒：自己的回合，加上之后对手回合里自己回答快速等的时间；每到自己的回合重新计时。牌桌中间显示剩余时间，最后 30 秒变红；超时后程序自动结束回合。
+  - **回合时间限制**：房主在规则里勾选"回合时间限制"，填秒数（默认 600 秒，可填 10–3600）。每位玩家每轮有这么多秒：自己的回合，加上之后对手回合里自己回答快速等的时间；每到自己的回合重新计时。牌桌中间显示剩余时间，最后 30 秒变红；超时后程序自动结束回合。
   - **快速时点**：每个快速时点都由那位玩家自己的程序回答，对手看不出你手里有没有快速。侧边栏"调试"最上面有两个选项（默认关）："假快速时点"：没有能用的快速时也停 1 秒左右，像在考虑；"关闭快速时点"：所有快速时点都自动"不发动"，看起来像手里没有快速。
   - **聊天提醒**：设置 → 联机 →"联机聊天提醒"（默认关）。打开后，对手或观战者发了聊天消息时，屏幕上方会闪一下"有人发了一条聊天消息"；自己发的不提醒。
   - **快捷聊天**：牌桌右上角"显示侧边栏"左边的"快捷聊天"，选一句发出去：所有人的屏幕上都会闪一下"xxx发送了：你好。"（各自的界面语言），聊天里也有这一句，发送者的主战者会说这句话（见"自定义资源"的声音）。侧边栏"调试"最上面的"屏蔽快捷聊天"（默认关）：任何一方打开，双方都不能用。和 AI 对局时也能用（只有提示和声音）。
@@ -320,8 +318,8 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
   - 安卓的 versionCode 按版本号算（0.1.2 → 102，0.2.0 → 200）。每次都比上一次大，才能直接覆盖安装，并保留数据。
 - **PC 版**：`npm run release:pc -- --zip`
   - 在仓库旁边生成 `SVEN-<版本>-pc/` 文件夹和两个 zip：
-    - `SVEN-<版本>-pc.zip`：只有程序，不带 `online-server.ini` 和 `public/` 里的文件。传到 GitHub 的 release，程序的更新下载的就是它。
-    - `SVEN-<版本>-pc-private.zip`：整个文件夹，带着 `online-server.ini`、卡牌文本（本机的 `packages/core/data/<卡包>_<语言>.json` 复制到 `public/text/`）和 `--public` 的资源。只私下发给朋友，不要传到 GitHub。文件夹里有这些时才生成。在游戏里更新不会动 `public/`，文本会留着。
+    - `SVEN-<版本>-pc.zip`：只有程序，不带 `online-server.ini` 和 `public/` 里的文件。
+    - `SVEN-<版本>-pc-private.zip`：整个文件夹，带着 `online-server.ini` 和 `--public` 的资源。
   - 文件夹已经存在时不会覆盖：换一个 `--out <文件夹>`，或者先删掉旧的。
   - 里面有：
     - 程序（`app/`）；
@@ -365,7 +363,10 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
   - `--out <文件>`：打好后把 APK 拷到那里。
   - 版本号和 versionCode 见"发行版"。
 - **手机上的文件**：都在 `Android/data/local.sve.next/files/` 下。
-  - `public/`：资源，用数据线拷进去，或者在设置页导入 zip；
+  - `public/`：资源，用数据线拷进去，或者在设置页导入 zip：
+    - zip 里有 `public` 文件夹（例如把电脑版整理好的 `public` 文件夹直接压缩）时，整个文件夹原样导入，外面套几层文件夹都行；
+    - 没有时，导入 `images/`、`audio/`、`textures/`、`fonts/`、`text/` 和 `theme.css`（外面可以套一层文件夹）；
+    - 读不出来的文件会列出来，其余照常导入。
   - `decks/`、`replays/`：卡组和录像；
   - `exports/`：导出的文件，导出后会弹出分享菜单。
 - **要求**：安卓 7 以上，系统 WebView 103 以上；更旧时显示一个说明页。
@@ -409,7 +410,7 @@ while (game.decision) game.act(chooseAnswer(game.decision));
 
 ## English
 
-An unofficial rules engine, AI and client for the *Shadowverse: Evolve* trading card game. The engine applies the rules, so you can play against the AI, play online, build decks and watch replays, on a computer or an Android phone. It is meant for personal study and testing only.
+An unofficial rules engine, AI and client for the *Shadowverse: Evolve* trading card game. The engine applies the rules, so you can play against the AI, play online, build decks and watch replays, on PC, Android and other platforms. It is meant for personal study and testing only.
 
 ### What's inside
 
@@ -435,9 +436,7 @@ An unofficial rules engine, AI and client for the *Shadowverse: Evolve* trading 
 ### Disclaimer
 
 - This is an unofficial fan project. It is not affiliated with Cygames, Bushiroad or any other rights holder, and it is not for commercial use.
-- The repository contains **no card images, official artwork or sounds**.
-- The card data (`packages/core/data/<set>.json`) holds card names (English, Chinese and Japanese; most of the Chinese is a fan translation), stats, traits and so on, used to apply the rules and to show the cards.
-- The repository has **no card texts**: `npm run build:cards` writes the English, Chinese and Japanese text files `<set>_en.json`, `<set>_cn.json`, `<set>_ja.json` on your machine (from the `assets/` folder next to the repository), and the dev server shows them. Without them the game runs as usual but shows no card text; text files can also go into `packages/gui/public/text/` (see "Custom resources").
+- The repository contains **no card images, card texts, official artwork or sounds**.
 - To see card images, put your own pictures in `packages/gui/public/` (see "Custom resources").
 
 ### Requirements
@@ -476,13 +475,13 @@ Run these at the repository root:
 | `npm run bench` | Benchmarks: random games, copying and sampling a game, the bot's time per decision |
 | `npm run bot:arena -- [games] [A] [B]` | Bots against each other (easy / medium / hard, the trial medium-beta, and sve-fool / sve-good / sve-planner, imitations of SVE Simulator's three AIs used only as benchmarks): the sample decks, games in pairs with the seats swapped, going through every matchup of the decks; prints the score by pairs with a 95% interval, going first and second, the first player's win rate, game length, the score per deck and thinking time. `--decks sd01,sd02` picks decks (`train` / `holdout` / `legal`: the deck sets of `tools/rl/decksets.json`, checked against the standard format and its restriction list), `--mirror` gives both players the same deck, `--workers 8` plays on several processes, `--seed` another series of games, `--independent` a seed per game, `--range a-b` only part of the series, `--out folder` keeps every game (replayable records, `games.jsonl.gz`) and the report, `--replays N` saves the first N games as replays the GUI opens. `medium:identity` (the hand-written evaluation passed in from outside: plays exactly as medium) and `medium:negated` (the evaluation turned round: should lose nearly every game) check the evaluation interface |
 | `npm run rl:verify -- folder` | Replays the games `bot:arena --out` kept: is every input legal, does each game end as recorded |
-| `npm run release:train -- --zip` | Builds the training kit for friends who lend their computers |
+| `npm run release:train -- --zip` | Builds the training kit for people who lend their computers |
 | `npm run rl:ingest -- folder` | Takes the games friends made with the kit: checks them and adds them to the dataset |
 | `npm run rl:coverage -- folder` | How many answers a bot really compares at each kind of decision, in the games `bot:arena --out` kept: replays each game and, at every decision, sets the legal answers the engine lists against the answers a planner bot would compare. Decision types with several legal answers where only one is compared (blind spots) come first; those blind on purpose are marked with the reason. `--games N` takes the first N |
 | `npm run rl:behaviour -- folder` | Behaviour counts in the games `bot:arena --out` kept: Ward followers entering engaged in their own turn, quick windows with something to play and the Quick plays made, evolution and super-evolution points left at the end of a game for the first and the second player, turns ended with a playable follower in hand. For comparing two versions of a bot (win rates between bots that share a blind spot can't show it). `--games N` takes the first N |
 | `npm run rl:lethal -- folder` | Missed lethal in the games `bot:arena --out` kept: replays each game and, at each main phase decision of the player whose turn it is, looks hard for a sure lethal (it wins in 6 fair samples, whatever the opponent answers); one found in a turn the player didn't win is a miss. Prints the games with a miss and those the player who missed it lost. Slow (seconds a game): `--games N` takes the first N, `--workers N` uses N processes |
 | `npm run bench:throughput -- [random\|easy\|medium\|hard]` | How many games the whole computer plays in a minute: several processes start together (`--workers N`, default: CPU threads), each plays for `--seconds` |
-| `npm run build:cards` | Rebuild `packages/core/data/*.json` from the scraped card data (the `assets/` folder next to the repository; a pre-release set from its official Japanese card list next to the repository (none at the moment); a community-made set from its list in `packages/core/src/data/custom.ts`); the card texts, `<set>_<language>.json`, stay on this machine, out of the repository |
+| `npm run build:cards` | Rebuild `packages/core/data/*.json` from the scraped card data (the `assets/` folder next to the repository; a pre-release set from its official Japanese card list next to the repository (none at the moment); a community-made set from its list in `packages/core/src/data/custom.ts`) |
 | `npm run scripts:index` | Regenerate the card script registries (`packages/core/src/script/<set>/index.ts`) after adding scripts |
 | `npm run cards:status` | Write each card's implementation and test status (to `docs/card-status*.md`) |
 | `npm run rules:clauses` | Extract the clause table `tools/data/cr-clauses.json` from the Comprehensive Rules PDF (the `rules/` folder next to the repository) |
@@ -515,7 +514,7 @@ packages/
       events/ view/     events for the outside; hiding what a player can't see
       sets/             each set's card data and script registry
       testing/          test tools (game scripts, random agents, invariant checks)
-    data/               card data (<set>.json, generated by build:cards: don't edit by hand; the card texts <set>_<language>.json stay on this machine)
+    data/               card data (<set>.json and <set>_<language>.json, generated by build:cards)
     test/               rules tests, card tests, whole-game tests
   bot/                  the bot (@sve/bot), on the Core's public API only
   server/               the online server (@sve/server): messages passed by room code, keys, limits; scripts/: the install script and the package
@@ -535,9 +534,9 @@ packages/
       host/             file access: the local service on a computer, the phone's files on Android
       i18n/             interface text (English, Chinese, Japanese; Traditional Chinese converted from the Chinese)
       styles/           built-in style
-    public/             your own resources (only the empty folders are in the repository)
+    public/             your own resources
     decks/samples/      sample decks
-    replays/            saved replays (not in the repository)
+    replays/            saved replays
     restrictions/       restriction lists, one file each (format in its README.md)
     android/            the Android project (Capacitor)
     ios/                the iOS project (Capacitor, Xcode)
@@ -698,7 +697,7 @@ Sound effects (28):
 - **The game**: each program runs the same game and only the answers are exchanged. After a lost connection, reconnect and play on.
   - **Taking back**: the host ticks "Allow taking back answers" in the rules (on the server, before making the room; it can be changed in the room too). In the game, "Undo my last answer" on the sidebar's Debug tab takes both programs back to before your last answer, while the other player hasn't answered since; after they have, it can't. Spectators follow.
   - Online, the seed and "Save a bug report file" are shown once the game is over (with them, a changed program could work out the decks' order).
-  - **Turn time limit**: the host ticks "Turn time limit" in the rules and gives the seconds (600 at first, 10–3600). Each player has that many seconds for their turn plus their answers (Quick and the like) in the other player's turn after it, given again at the start of each of their turns. The middle of the table shows the time left, red in the last 30 seconds; out of time, the turn ends by itself.
+  - **Turn time limit**: the host ticks "Turn time limit" in the rules and gives the seconds (600 by default, 10–3600). Each player has that many seconds for their turn plus their answers (Quick and the like) in the other player's turn after it, given again at the start of each of their turns. The middle of the table shows the time left, red in the last 30 seconds; out of time, the turn ends by itself.
   - **Quick windows**: each Quick window is answered by its player's own program, so the other player can't tell whether you have a Quick card. The sidebar's Debug tab begins with two options (off by default): "Fake Quick pauses": with nothing to play, the game still stops about a second, as if you were deciding; "Skip Quick windows": every Quick window is answered "no" for you, as if you had none.
   - **Chat notice**: Settings > Online > "Online chat notice" (off by default). With it on, "Someone sent a chat message" flashes at the top of the screen when the other player or a spectator writes in the chat; your own messages don't.
   - **Quick chat**: "Quick chat", left of "Show sidebar" at the top right of the table, sends one of seven lines: everyone's screen flashes "xxx sent: Hello." (in their own interface language), it is in the chat, and the sender's leader says it (see the sounds in "Custom resources"). "Block the quick chat" at the top of the sidebar's Debug tab (off by default) turns it off for both players when either turns it on. It works against the AI too (the notice and the voice only).
@@ -721,8 +720,8 @@ Come in two kinds: for PCs and for Android.
   - Android's versionCode comes from it (0.1.2 → 102, 0.2.0 → 200). It must grow every time for the new APK to install over the old one and keep the data.
 - **PC**: `npm run release:pc -- --zip`
   - It writes a folder `SVEN-<version>-pc/` next to the repository, and two zips:
-    - `SVEN-<version>-pc.zip`: the program only, without `online-server.ini` or the files in `public/`. It goes into the GitHub release, and is what the program's updates download.
-    - `SVEN-<version>-pc-private.zip`: the whole folder, with `online-server.ini`, the card texts (this machine's `packages/core/data/<set>_<language>.json`, copied to `public/text/`) and the `--public` resources. Send it to friends only, never to GitHub. Written only when the folder has those. Updates in the game never touch `public/`: the texts stay.
+    - `SVEN-<version>-pc.zip`: the program only, without `online-server.ini` or the files in `public/`.
+    - `SVEN-<version>-pc-private.zip`: the whole folder, with `online-server.ini` and the `--public` resources.
   - It never writes into an existing folder: pass another `--out <folder>`, or delete the old one first.
   - Inside:
     - the program (`app/`);
@@ -752,6 +751,7 @@ Come in two kinds: for PCs and for Android.
   - Changing code in `packages/core/` or `packages/gui/src/engine/`, or what the rules read of the card data (numbers, card names, costs, attack and defense, types, classes, traits, printings ...), changes it, and everyone needs the new release.
   - So does a new online protocol (`PROTOCOL` in `packages/gui/src/net/`); a release that only changes the interface plays with the older one.
   - It stays the same when only comments or layout change; only card texts or Chinese and English card names; only the code that builds the card data (`fixes.ts` and the others in `packages/core/src/data/`), `packages/core/src/testing/`, `src/engine/client.ts`, or the code that only works out what a player is shown (the player view, the events as each player is told them) (how it is made: `packages/gui/fingerprint.ts`).
+
 ### Android app
 
 - **Build**: with Android Studio installed, `npm run android:apk` makes a debug APK at `packages/gui/android/app/build/outputs/apk/debug/app-debug.apk`.
@@ -765,7 +765,10 @@ Come in two kinds: for PCs and for Android.
   - `--out <file>`: copies the APK there.
   - The version and versionCode: see "Releases".
 - **Files on the phone**: all under `Android/data/local.sve.next/files/`.
-  - `public/`: resources, copied over USB or imported from a zip in the settings.
+  - `public/`: resources, copied over USB or imported from a zip in the settings:
+    - a zip with a `public` folder (the PC release's `public` folder zipped as it is, say) goes in whole, under however many folders;
+    - otherwise its `images/`, `audio/`, `textures/`, `fonts/`, `text/` and `theme.css` go in (in one folder or none);
+    - a file that can't be read is listed, and the others go in.
   - `decks/`, `replays/`: decks and replays.
   - `exports/`: exported files, handed to the share menu.
 - **Requirements**: Android 7 or later, with a system WebView of version 103 or later. An older WebView shows a page that says so.

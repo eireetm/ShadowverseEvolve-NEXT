@@ -79,7 +79,7 @@ const commit = git("rev-parse", "--short", "HEAD") || "unknown";
 const uncommitted = git("status", "--porcelain", "--untracked-files=no", "--", "packages") !== "";
 const fingerprint = engineFingerprint(gui);
 
-console.log(`Shadowverse: Evolve NEXT ${version} (PC) -> ${out}`);
+console.log(`SVE NEXT ${version} (PC) -> ${out}`);
 mkdirSync(out, { recursive: true });
 
 // 1. The app, without public/ (the release has its own), and without the project's online server: the release reads it from
@@ -131,6 +131,8 @@ writeWindowsText(join(out, "README.txt"), fill("README.txt"), true);
 writeWindowsText(
   join(out, "VERSION.txt"),
   [
+    // The program's name before "SVE NEXT" (2026-10-18): the updates of the programs before read the version from this line
+    // (host/update.ts), so it stays.
     `Shadowverse: Evolve NEXT ${version}`,
     `Built: ${new Date().toISOString().slice(0, 10)}`,
     `Source commit: ${commit}${uncommitted ? " (with changes not committed yet)" : ""}`,

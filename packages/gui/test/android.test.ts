@@ -24,6 +24,19 @@ describe("importing resources from a zip", () => {
       expect(resourcePathInZip(name)).toBeNull();
     }
   });
+
+  it("puts a whole public folder in as it is, however deep in the zip and however written", () => {
+    // The PC release's public/ zipped as it is (a pack someone made): all of it, its own files and folders too.
+    expect(resourcePathInZip("public/images/cards/BP01-001.webp")).toBe("images/cards/BP01-001.webp");
+    expect(resourcePathInZip("public/readme.txt")).toBe("readme.txt");
+    expect(resourcePathInZip("public/images/credits/beardad.png")).toBe("images/credits/beardad.png");
+    expect(resourcePathInZip("资源包/SVEN-0.4.1-pc/public/text/BP22_cn.json")).toBe("text/BP22_cn.json");
+    expect(resourcePathInZip("Public\\audio\\bgm\\menu.mp3")).toBe("audio/bgm/menu.mp3");
+    // Its folder entries, hidden files and macOS copies stay out.
+    for (const name of ["public/", "public", "public\\audio\\", "public/.gitignore", "public/images/cards/.gitkeep", "__MACOSX/public/theme.css"]) {
+      expect(resourcePathInZip(name), name).toBeNull();
+    }
+  });
 });
 
 describe("resources built into the app", () => {

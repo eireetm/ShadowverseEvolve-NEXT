@@ -43,6 +43,8 @@ export interface ImportResult {
   written: number;
   /** Files of the zip outside the resource folders (README "Custom resources"), not imported. */
   skipped: number;
+  /** Files that should have gone in but couldn't be read (another compression, a broken one): "name (why)". */
+  failed: string[];
 }
 
 export interface Host {
@@ -92,7 +94,7 @@ export interface Host {
   /** The Android app: how many resources are built into it (a release with resources; host/bundled.ts). */
   readonly bundledResources?: number;
   /** The Android app: import resources from a zip file into that folder. */
-  importResources?(file: File, progress: (written: number) => void): Promise<ImportResult>;
+  importResources?(file: File, progress: (done: number, total: number) => void): Promise<ImportResult>;
 }
 
 const encodePath = (path: string): string => path.split("/").map(encodeURIComponent).join("/");

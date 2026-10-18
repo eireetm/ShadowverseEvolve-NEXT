@@ -7,6 +7,7 @@ import { spawn } from "node:child_process";
 import { createReadStream, existsSync, mkdirSync, statSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { dirname, extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { HostConfig } from "./config.ts";
@@ -21,7 +22,7 @@ import { localSources, Updater } from "./update.ts";
 declare const __SVE_VERSION__: string;
 
 // The window's title: start.bat's has no version, as an update replaces the program while that window stays.
-process.title = `Shadowverse: Evolve NEXT ${__SVE_VERSION__}`;
+process.title = `SVE NEXT ${__SVE_VERSION__}`;
 
 // The release's folder: where server.mjs, the bundle of this file, is.
 const root = dirname(fileURLToPath(import.meta.url));
@@ -293,11 +294,16 @@ function openBrowser(url: string): void {
   }
 }
 
-// The port in use (another program has it): the next ones.
-let tries = 0;
+// The port taken (another program has it: EADDRINUSE) or forbidden (EACCES, even as administrator: Windows reserves
+// blocks of about 100 ports for Hyper-V / WSL / Docker, anywhere in its dynamic range, which on some PCs starts at 1025):
+// the next few ports, then fixed ports far away, so the address — and what the browser keeps for it — is the same from
+// one start to the next; at last any free port the system picks (port 0 is never in a reserved block).
+const firstPort = port;
+const fallbacks = [...Array.from({ length: 9 }, (_, i) => port + 1 + i), 27170, 37170, 21170, 0];
 server.on("error", (err: NodeJS.ErrnoException) => {
-  if (err.code === "EADDRINUSE" && tries++ < 10) {
-    port++;
+  if ((err.code === "EADDRINUSE" || err.code === "EACCES") && fallbacks.length > 0) {
+    if (port === firstPort) console.log(`  ${port}: ${err.code}`);
+    port = fallbacks.shift()!;
     server.listen(port, HOST);
     return;
   }
@@ -305,8 +311,9 @@ server.on("error", (err: NodeJS.ErrnoException) => {
   process.exit(1);
 });
 server.on("listening", () => {
+  port = (server.address() as AddressInfo).port; // port 0: the one the system picked
   const url = `http://${HOST}:${port}/`;
-  console.log(`Shadowverse: Evolve NEXT ${__SVE_VERSION__}`);
+  console.log(`SVE NEXT ${__SVE_VERSION__}`);
   console.log(`  ${url}`);
   console.log("  浏览器没有自动打开时，手动打开上面的地址。关掉这个窗口就退出。");
   console.log("  ブラウザが開かないときは、上のアドレスを開いてください。このウィンドウを閉じると終了します。");

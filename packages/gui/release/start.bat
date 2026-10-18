@@ -1,7 +1,7 @@
 @echo off
 rem One block: cmd reads all of it before it runs, so an update can replace this file while it runs.
 (
-  title Shadowverse: Evolve NEXT
+  title SVE NEXT
   cd /d "%~dp0"
   where node >nul 2>nul
   if errorlevel 1 (
