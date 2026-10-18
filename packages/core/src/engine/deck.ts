@@ -41,9 +41,12 @@ export function implementationStatus(scripts: ScriptRegistry, def: CardDefinitio
   return hasCardText(def) ? "missing" : "vanilla";
 }
 
-/** Card text in any language: a Japanese-only card (BP21-PR10) has an empty English text. */
+/**
+ * Card text in any language (a Japanese-only card, BP21-PR10, has an empty English text): the data build marks the cards
+ * without (`textless`), as the texts themselves may not be there (they are only shown).
+ */
 export function hasCardText(def: CardDefinition): boolean {
-  return def.text.en !== "" || (def.text.ja ?? "") !== "";
+  return def.textless !== true;
 }
 
 /**

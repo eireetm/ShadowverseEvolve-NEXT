@@ -1,5 +1,5 @@
 {
- "format": 1,
+ "format": 2,
  "set": "SD04",
  "printings": 22,
  "cards": [
@@ -21,11 +21,6 @@
    "cost": 8,
    "attack": 7,
    "defense": 8,
-   "text": {
-    "en": "{[fanfare]} Deal 5 damage to each enemy follower on the field.",
-    "cn": "《入场曲》给予敌方的全体从者各5点伤害。",
-    "ja": "《ファンファーレ》相手のフォロワーすべてに5ダメージ。"
-   },
    "traits": [
     "竜族"
    ]
@@ -52,11 +47,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Choose one of the following effects. (1) Increase your maximum play points by 1.\n(2) Draw a card.",
-    "cn": "从下述之中抉择1项。\n【1】将自己的PP最大值+1点。\n【2】抽取1张卡。",
-    "ja": "下記から1つチョイスする。【1】自分のPP最大値を+1する。【2】1枚引く。"
-   },
    "traits": [
     "竜族"
    ]
@@ -81,11 +71,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.",
-    "cn": "《进化》《消费1》：使这张卡进化。",
-    "ja": "《進化》《コスト1》：これは進化する。"
-   },
    "traits": [
     "竜族"
    ]
@@ -111,11 +96,6 @@
    "cost": null,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "On Evolve: Select an enemy follower on the field and deal it 3 damage.",
-    "cn": "【进化时】选择敌方的1个从者。给予其3点伤害。",
-    "ja": "【進化時】相手のフォロワー1体を選ぶ。それに3ダメージ。"
-   },
    "traits": [
     "竜族"
    ]
@@ -138,11 +118,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} If Overflow is active for you, select an enemy follower on the field and deal it 4 damage. (Overflow becomes active if your maximum number of play points is at least 7.)",
-    "cn": "《入场曲》如果处于【觉醒】状态的话，选择敌方的1个从者。给予其4点伤害。（如果自己的PP最大值为7点及以上的话，就会处于【觉醒】状态）",
-    "ja": "《ファンファーレ》【覚醒】状態なら、相手のフォロワー1体を選ぶ。それに4ダメージ。(自分のPP最大値が7以上なら、【覚醒】状態になる)"
-   },
    "traits": [
     "ドラゴニュート",
     "プリンセス"
@@ -166,11 +141,6 @@
    "cost": 4,
    "attack": 4,
    "defense": 5,
-   "text": {
-    "en": "Ward. (This follower can be engaged when it's put onto your field or during your end phase. When followers with Ward are engaged, your opponent can only attack them.)\n{[fanfare]} If Overflow is active for you, give this follower {[attack]}+2/{[defense]}+2.",
-    "cn": "【守护】（当这张卡召唤到场上时，或在自己的结束阶段，可以将这张卡横置。只要有「处于横置状态并持有【守护】能力的从者」存在，敌方不能攻击那以外的目标）\n《入场曲》如果处于【觉醒】状态的话，使这张卡《攻击力》+2/《生命值》+2。",
-    "ja": "【守護】(これが場に出たときか、自分のエンドフェイズにこれをアクトできる。相手は、アクト状態の【守護】を持つフォロワー以外を攻撃できない)\n《ファンファーレ》【覚醒】状態なら、これは《攻撃力》+2/《体力》+2する。"
-   },
    "traits": [
     "竜使い"
    ]
@@ -193,11 +163,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost00]}: Evolve this follower.\nStrike: Give this follower {[attack]}+1.",
-    "cn": "《进化》《消费0》：使这张卡进化。\n【攻击时】使这张卡《攻击力》+1。",
-    "ja": "《進化》《コスト0》：これは進化する。\n【攻撃時】これは《攻撃力》+1する。"
-   },
    "traits": [
     "獣"
    ]
@@ -220,11 +185,6 @@
    "cost": null,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "Strike: Give this follower {[attack]}+1/{[defense]}+1.",
-    "cn": "【攻击时】使这张卡《攻击力》+1/《生命值》+1。",
-    "ja": "【攻撃時】これは《攻撃力》+1/《体力》+1する。"
-   },
    "traits": [
     "獣"
    ]
@@ -247,11 +207,6 @@
    "cost": 4,
    "attack": 5,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} Select an enemy follower on the field and deal it 3 damage.",
-    "cn": "《入场曲》选择敌方的1个从者。给予其3点伤害。",
-    "ja": "《ファンファーレ》相手のフォロワー1体を選ぶ。それに3ダメージ。"
-   },
    "traits": [
     "竜族"
    ]
@@ -274,11 +229,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[fanfare]} If Overflow is active for you, put a Dragon token into your EX area.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《入场曲》如果处于【觉醒】状态的话，将1张『飞龙』卡置于EX区域。\n―――――――――――――――\n『飞龙』《龙族职业》龙裔类型·从者《消费4》《攻击力》5/《生命值》5",
-    "ja": "《進化》《コスト1》：これは進化する。\n《ファンファーレ》【覚醒】状態なら、『ドラゴン』1枚をEXエリアに置く。\n―――――――――――――――\n『ドラゴン』《ドラゴン》竜族・フォロワー《コスト4》《攻撃力》5/《体力》5"
-   },
    "traits": [
     "竜使い"
    ]
@@ -301,11 +251,6 @@
    "cost": null,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "On Evolve: If Overflow is active for you, give this follower {[attack]}+2. (Overflow becomes active if your maximum number of play points is at least 7.)",
-    "cn": "【进化时】如果处于【觉醒】状态的话，使这张卡《攻击力》+2。（如果自己的PP最大值为7点及以上的话，就会处于【觉醒】状态）",
-    "ja": "【進化時】【覚醒】状態なら、これは《攻撃力》+2する。(自分のPP最大値が7以上なら、【覚醒】状態になる)"
-   },
    "traits": [
     "竜使い"
    ]
@@ -329,11 +274,6 @@
    "cost": 4,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "{[fanfare]} If Overflow is active for you, give this follower Storm. (Followers with Storm can attack enemy followers and leaders on the turn they're put onto your field.)",
-    "cn": "《入场曲》如果处于【觉醒】状态的话，使这张卡获得【疾驰】能力。（持有【疾驰】能力的从者，在召唤到场上的当回合即可进行攻击）",
-    "ja": "《ファンファーレ》【覚醒】状態なら、これは【疾走】を持つ。(【疾走】を持つフォロワーは、場に出たターンから攻撃できる)"
-   },
    "traits": [
     "海洋"
    ]

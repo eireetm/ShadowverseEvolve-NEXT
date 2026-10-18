@@ -1,4 +1,4 @@
-import { backFaceId, CARD_CLASSES, type CardClass, type CardDefinition, type CardType, type LocalizedText, type TriggerIcon } from "../model/card";
+import { backFaceId, CARD_CLASSES, type AdvancedIcon, type CardClass, type CardDefinition, type CardType, type LocalizedText, type TriggerIcon } from "../model/card";
 import { englishText, japaneseKey, japaneseWordsKey, PREVIEW_TEXT, treatedAs, withoutReminders, withoutTreatedAs, wordDice, type TextSource } from "./english-text";
 import type { RawCardJson } from "./raw";
 import { MAGICAL_ITEM, UNIVERSE_OF_SET } from "./universes";
@@ -518,6 +518,7 @@ export function groupPrintings(printings: readonly NormalizedPrinting[], support
     else delete def.universe;
     const alternates = list.filter((p) => p.alternateName !== null);
     if (alternates.length > 0) def.alternateNames = Object.fromEntries(alternates.map((p) => [p.printing, p.alternateName!]));
+    markTextFacts(def);
     defs.push(def);
     setOf[canonical.printing] = canonical.set;
     if (list.some((p) => p.back !== null)) {
@@ -547,5 +548,33 @@ function backFaceDefinition(front: string, list: readonly NormalizedPrinting[]):
   if (!traits) throw new CardDataError(`${front}: no printing's back face has Japanese traits (data/fixes.ts)`);
   const conflict = withTraits.find((p) => JSON.stringify(p.back!.traits) !== JSON.stringify(traits));
   if (conflict) throw new CardDataError(`${conflict.printing}: back face traits differ from ${withTraits[0]!.printing}`);
-  return { id: backFaceId(front), printings: [], ...canonical.def, traits: [...traits], frontFace: front };
+  return markTextFacts({ id: backFaceId(front), printings: [], ...canonical.def, traits: [...traits], frontFace: front });
+}
+
+/**
+ * What the program needs from a definition's texts, kept with its data: the texts are in files apart that aren't in the
+ * repository (set-file.ts), and a program may run without them. No text at all: nothing to script (deck.ts hasCardText).
+ * The icons of its advanced abilities (advancedIconsOf).
+ */
+function markTextFacts(def: CardDefinition): CardDefinition {
+  if (def.text.en === "" && (def.text.ja ?? "") === "") def.textless = true;
+  const icons = advancedIconsOf(def.text);
+  if (icons) def.advancedIcons = icons;
+  return def;
+}
+
+/** An advanced ability's icon in a card text: {[adv]} {[feed]} {[ride]}, or the words the Chinese and Japanese texts write. */
+const ADVANCED_ICON = /\{\[(adv|feed|ride)\]\}|(高等起动|进阶起动|アドバンス起動)|(吃饭|食事)|(凭依|憑依)/g;
+
+/**
+ * CR 14.2.2 / 14.4.9 — the icons of a card's advanced activated abilities in its text's order (the token explanations after
+ * "―" left out), when one is a serve ability's {[feed]} or a Ride ability's {[ride]}, which the scripts write as advanced
+ * ones: the first text that has any tells (English, then Japanese, then Chinese). Undefined when all are {[adv]} or none.
+ */
+export function advancedIconsOf(text: LocalizedText): AdvancedIcon[] | undefined {
+  for (const t of [text.en, text.ja, text.cn]) {
+    const icons = [...(t ?? "").split("―")[0]!.matchAll(ADVANCED_ICON)].map((m): AdvancedIcon => (m[1] as AdvancedIcon | undefined) ?? (m[2] ? "adv" : m[3] ? "feed" : "ride"));
+    if (icons.length > 0) return icons.some((icon) => icon !== "adv") ? icons : undefined;
+  }
+  return undefined;
 }

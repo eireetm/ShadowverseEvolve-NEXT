@@ -4,19 +4,23 @@
 //     same turned 180 degrees), back and back_e (the card backs of the main deck and the evolve deck), unknown (for any
 //     missing image) and, if there, the backgrounds background_m / background_d / background_f. Never shipped;
 //  3. the built-in style (plain colors and text).
-// The host lists what there is once at start; nothing is requested that isn't there. The lookups are in lookup.ts.
+// The host lists what there is once at start; nothing is requested that isn't there. The lookups are in lookup.ts. The
+// card texts (the player's in public/text/, else this machine's): card-texts.ts.
 import { useSyncExternalStore } from "react";
 import { hostApi } from "../host/api";
+import { loadCardTexts } from "./card-texts";
 import { battleImageUrl, builderImageUrl, cardBackUrl, evolveBackUrl, fieldImageUrl, hasResource, menuImageUrl, setResourceLists, unknownImageUrl } from "./lookup";
 
 let version = 0;
 const listeners = new Set<() => void>();
 
-/** Load the lists of resources (public/ and the Misc images) and apply the theme ones. */
+/** Load the lists of resources (public/ and the Misc images), apply the theme ones and read the card texts. */
 export async function loadResources(): Promise<void> {
   const [resources, info] = await Promise.allSettled([hostApi.resources(), hostApi.info()]);
-  setResourceLists(resources.status === "fulfilled" ? resources.value : [], info.status === "fulfilled" ? info.value.misc : []);
+  const files = resources.status === "fulfilled" ? resources.value : [];
+  setResourceLists(files, info.status === "fulfilled" ? info.value.misc : []);
   applyTheme();
+  await loadCardTexts(files);
   version++;
   for (const listener of listeners) listener();
 }

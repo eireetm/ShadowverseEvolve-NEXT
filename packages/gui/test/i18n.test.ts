@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { createEngine, type Decision, type DeckList } from "@sve/core";
-import { ALL_CARDS, ALL_SCRIPTS } from "@sve/core/sets";
+import { ALL_CARDS as CORE_CARDS, ALL_SCRIPTS } from "@sve/core/sets";
 import { describe, expect, it } from "vitest";
 import { Catalog, cardName, cardText } from "../src/app/catalog";
 import type { UiLang } from "../src/app/settings";
@@ -13,6 +13,10 @@ import { en, type MessageKey } from "../src/i18n/en";
 import { ja } from "../src/i18n/ja";
 import { OPTION_TEXT } from "../src/i18n/option-text";
 import { zh } from "../src/i18n/zh";
+import { hasDataTexts, withDataTexts } from "../../../tools/lib/card-texts";
+
+// The cards with this machine's texts (not in the repository; the core has none): the checks of texts need them.
+const ALL_CARDS = withDataTexts(CORE_CARDS);
 
 // The interface in English, Chinese and Japanese: every message in each language, and what the engine words in English
 // (the options of choices, counters, deck problems) said again in the person's language.
@@ -120,15 +124,19 @@ describe("options of choices", () => {
     expect(scriptLabel("A label no script has", { catalog, lang: "cn" })).toBe("A label no script has");
   });
 
-  it("show a pre-release card (BP22) with the English placeholder, and its Japanese name and text where a language lacks them", () => {
-    const deadly = catalog.def("BP22-002")!;
-    // The Chinese name from the translation table (data/preview-bp22.ts).
+  it.skipIf(!hasDataTexts())("show a pre-release card with the English placeholder, and its Japanese name and text where a language lacks them", () => {
+    // BP22 was a pre-release set (data/preview.ts) until 2026-10-18; it has its English names and texts now.
+    const noxious = catalog.def("BP22-002")!;
+    expect([cardName(noxious, "en"), cardText(noxious, "en").slice(0, 5)]).toEqual(["Noxious Elf", "Bane."]);
+    // A pre-release card: its English name and text are a placeholder.
+    const deadly = { ...noxious, preview: true as const, names: { ...noxious.names, en: "unavailable" }, text: { ...noxious.text, en: "unavailable" } };
     expect([cardName(deadly, "en"), cardName(deadly, "ja"), cardName(deadly, "cn")]).toEqual(["unavailable", "デッドリーエルフ", "死噬精灵"]);
     expect([cardText(deadly, "en"), cardText(deadly, "ja").slice(0, 4), cardText(deadly, "cn").slice(0, 4)]).toEqual(["unavailable", "【必殺】", "【必杀】"]);
     // Without a Chinese name or text, the Japanese ones, not the placeholder.
     const bare = { ...deadly, names: { ...deadly.names, cn: null }, text: { ...deadly.text, cn: null } };
     expect([cardName(bare, "cn"), cardText(bare, "cn").slice(0, 4)]).toEqual(["デッドリーエルフ", "【必殺】"]);
     // Reprints keep their cards' names (BP22-T05 is BP01-T03 Fairy).
+    expect(catalog.def("BP01-T03")!.printings).toContain("BP22-T05");
     expect(cardName(catalog.def("BP01-T03"), "en")).toBe("Fairy");
   });
 
@@ -150,7 +158,7 @@ describe("options of choices", () => {
     const ub = catalog.def("CP04-001")!;
     expect(say(choose("unionBurst", ["0", "CP04-001 ability 2 (fanfare)"], ["1", "CP04-001 ability 3 (activated)"]), "cn")).toEqual([
       `${cardName(ub, "cn")}：第 2 个能力（入场曲）`,
-      `${cardName(ub, "cn")}：第 3 个能力（启动）`,
+      `${cardName(ub, "cn")}：第 3 个能力（起动）`,
     ]);
     expect(say(choose("effect", ["Goblin", "Goblin"], ["(other name)", "Another card name"]), "ja")).toEqual([cardName(catalog.named("Goblin"), "ja"), "その他のカード名"]);
   });

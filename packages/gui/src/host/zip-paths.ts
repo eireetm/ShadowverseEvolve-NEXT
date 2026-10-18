@@ -1,8 +1,8 @@
 // Importing the player's resources from a zip file (the Android app): where each file of the zip goes in
 // public/. Pure: tested without a phone (test/android-host.test.ts).
 
-/** The folders of public/ a zip may fill (README "Custom resources"), and its style sheet. */
-const FOLDERS = ["audio", "images", "textures", "fonts"];
+/** The folders of public/ a zip may fill (README "Custom resources"; text: the player's card texts), and its style sheet. */
+const FOLDERS = ["audio", "images", "textures", "fonts", "text"];
 
 const isResource = (parts: readonly string[]): boolean =>
   (parts.length === 1 && parts[0] === "theme.css") || (parts.length > 1 && FOLDERS.includes(parts[0]!));

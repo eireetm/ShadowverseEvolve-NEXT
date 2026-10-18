@@ -261,6 +261,11 @@ export interface AbilitySummary {
   custom?: boolean;
   quick?: boolean;
   advanced?: boolean;
+  /**
+   * The icon an advanced ability is printed with, when it isn't {[adv]} (高等起动 / アドバンス起動): a serve ability's {[feed]}
+   * (吃饭 / 食事, CR 14.2.2) or a Ride ability's {[ride]} (凭依 / 憑依, CR 14.4.9). The button says the card text's word.
+   */
+  advancedIcon?: "feed" | "ride";
   /** CR 12.2 — an evolve ability. */
   evolve?: boolean;
   /** A given ability (not printed on the card). */

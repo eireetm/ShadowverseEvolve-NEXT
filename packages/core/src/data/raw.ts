@@ -53,8 +53,9 @@ export interface RawCardJson {
    */
   custom?: true;
   /**
-   * Set only by data/preview.ts: the printing's universe (CR 2.12.2.1), which the pre-release data doesn't give; otherwise
-   * it comes from the set (data/universes.ts).
+   * Set only by data/preview.ts and data/fixes.ts: the printing's universe (CR 2.12.2.1), which neither the pre-release data
+   * nor the scraped data gives (a collaboration card in a set of no universe, BP22-116); otherwise it comes from the set
+   * (data/universes.ts).
    */
   universe?: Universe;
 }

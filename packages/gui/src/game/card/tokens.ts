@@ -56,7 +56,7 @@ const LABELS: Record<DataLang, Record<string, string>> = {
     q: "クイック",
     attack: "攻撃力",
     defense: "体力",
-    feed: "出走",
+    feed: "食事",
     ub: "UB",
     ride: "憑依",
     adv: "アドバンス起動",

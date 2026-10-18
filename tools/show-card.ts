@@ -14,6 +14,7 @@ import { createEngine, type CardDefinition } from "../packages/core/src";
 import { PREVIEW_SETS, previewRawCards, type PreviewSetFile } from "../packages/core/src/data/preview";
 import type { RawCardJson } from "../packages/core/src/data/raw";
 import { ALL_CARDS, ALL_SCRIPTS } from "../packages/core/src/sets";
+import { withDataTexts } from "./lib/card-texts";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -26,7 +27,8 @@ if (args.length === 0) {
   process.exit(1);
 }
 
-const engine = createEngine({ cards: ALL_CARDS, scripts: ALL_SCRIPTS });
+// The card texts are this machine's files (lib/card-texts.ts): the core has none.
+const engine = createEngine({ cards: withDataTexts(ALL_CARDS), scripts: ALL_SCRIPTS });
 const db = engine.db;
 
 /** Printings of the pre-release sets' data files (data/preview.ts), read when first needed. */

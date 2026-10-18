@@ -65,7 +65,7 @@ describe("BP22 Runecraft", () => {
     expect(d({ me: { hand: ["BP22-045"], deck: ["V1", "V3", "V5"], playPoints: 2 } }).play("BP22-045").zone("me", "banished")).toEqual(["V1", "V3"]);
     const t = d({ me: { field: ["BP22-045"], banished: n(10, "V1"), playPoints: 2 } }).activate("BP22-045");
     expect([t.field(), t.keywords("BP22-T03")]).toEqual([["BP22-045", "BP05-T04", "BP22-T03"], ["storm"]]);
-    const one = d({ me: { field: ["BP22-045", "V1", "V1", "V1"], banished: n(10, "V1"), playPoints: 2 } }).activate("BP22-045").choose("レディアントアーティファクト");
+    const one = d({ me: { field: ["BP22-045", "V1", "V1", "V1"], banished: n(10, "V1"), playPoints: 2 } }).activate("BP22-045").choose("Radiant Artifact");
     expect(one.field()).toEqual(["BP22-045", "V1", "V1", "V1", "BP22-T03"]);
     expect(d({ me: { field: ["BP22-045"], banished: n(9, "V1"), playPoints: 2 } }).canActivate("BP22-045")).toBe(false);
   });

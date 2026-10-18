@@ -1,5 +1,5 @@
 {
- "format": 1,
+ "format": 2,
  "set": "PR",
  "printings": 7,
  "cards": [
@@ -21,12 +21,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": null,
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "PR-261",
@@ -46,12 +42,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": null,
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "PR-262",
@@ -71,12 +63,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": null,
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "PR-263",
@@ -96,12 +84,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": null,
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "PR-264",
@@ -121,12 +105,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": null,
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "PR-265",
@@ -146,12 +126,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": null,
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "PR-405",
@@ -171,12 +147,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": null,
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   }
  ]
 }

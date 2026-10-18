@@ -91,22 +91,26 @@ export function timingLabel(timing: string | undefined, t: Translate): string {
   return t(`timing.${known ?? "other"}` as MessageKey);
 }
 
-/** "Act (2) engage", "Fanfare", ... */
+/**
+ * "Act (2) engage", "Fanfare", ... An advanced ability says its icon instead of "Act", as the card text does: "Advanced (4)",
+ * a serve ability "Feed (1)", a Ride ability "Ride (1)" (高等起动 / 吃饭 / 凭依 in Chinese).
+ */
 export function abilityLabel(summary: AbilitySummary | undefined, t: Translate): string {
   if (!summary) return t("ability.unknown");
   const granted = summary.granted ? ` (${t("ability.granted")})` : "";
   if (summary.kind === "automatic") return timingLabel(summary.timing, t) + granted;
   if (summary.kind === "spell") return t("ability.spell") + granted;
   if (summary.kind === "unknown") return t("ability.unknown") + granted;
+  const act = !summary.advanced ? "ability.act" : summary.advancedIcon === "feed" ? "ability.feed" : summary.advancedIcon === "ride" ? "ability.ride" : "ability.advanced";
   const parts = [
     summary.quick ? t("ability.quick") : null,
-    t("ability.act"),
+    t(act),
     summary.pp ? t("ability.cost", { n: summary.pp }) : null,
     summary.engage ? t("ability.engage") : null,
     summary.bury ? t("ability.bury") : null,
     summary.leaderDefense ? t("ability.leaderDefense", { n: summary.leaderDefense }) : null,
-    summary.custom ? t("ability.custom") : null,
-    summary.advanced ? t("ability.advanced") : null,
+    // Serving and riding (a Drive Point into the drive zone) are the costs their icons stand for.
+    summary.custom && !summary.advancedIcon ? t("ability.custom") : null,
   ];
   return parts.filter((p): p is string => p !== null).join(" ") + granted;
 }

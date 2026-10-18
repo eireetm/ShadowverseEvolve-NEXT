@@ -1,10 +1,14 @@
 import { createEngine } from "@sve/core";
-import { ALL_CARDS, ALL_SCRIPTS } from "@sve/core/sets";
+import { ALL_CARDS as CORE_CARDS, ALL_SCRIPTS } from "@sve/core/sets";
 import { describe, expect, it } from "vitest";
 import { Catalog, cardText } from "../src/app/catalog";
 import type { CardLang } from "../src/app/settings";
 import { tokenLinks } from "../src/game/card/token-links";
 import { loadHant } from "../src/i18n/hant";
+import { hasDataTexts, withDataTexts } from "../../../tools/lib/card-texts";
+
+// The cards with this machine's texts (not in the repository; the core has none): the checks of texts need them.
+const ALL_CARDS = withDataTexts(CORE_CARDS);
 
 // The card panel's links to the tokens a card's text names (src/game/card/token-links.ts), checked on cards that show each
 // part of the rules, and on every card: the languages of a card link the same tokens (so a new card whose text names a token
@@ -40,7 +44,8 @@ function linked(id: string, lang: "en" | "ja" | "cn"): { body: Set<string>; all:
   return { body, all };
 }
 
-describe("links to the tokens a card's text names", () => {
+// Card texts: this machine's files (tools/lib/card-texts.ts), not in the repository; skipped without them.
+describe.skipIf(!hasDataTexts())("links to the tokens a card's text names", () => {
   it("English: whole names, longest first, lists before 'token', and bare names where nothing else is meant", () => {
     // "Fairy Wisp" is one token, not "Fairy".
     expect(links("BP01-010", "en")).toEqual(["Fairy Wisp → BP01-T02"]);
@@ -113,9 +118,10 @@ describe("links to the tokens a card's text names", () => {
       for (const lang of ["en", "ja", "cn"] as const) for (const t of linked(card.id, lang)?.all ?? []) reached[lang].add(t);
     }
     const missing = (lang: "en" | "ja" | "cn") => tokens.filter((t) => !reached[lang].has(t.id)).map((t) => t.id);
-    // English: the pre-release placeholders and two tokens only named in texts without English.
-    expect(missing("en")).toEqual(["BP22-T01", "BP22-T02", "BP22-T03", "DSD01a-T01", "DSD01b-T01"].filter((id) => tokens.some((t) => t.id === id)));
-    // Pre-release cards (BP22) are left out of this check: their tokens' Japanese and Chinese names come from their texts.
+    // English: two tokens only named in texts without English.
+    expect(missing("en")).toEqual(["DSD01a-T01", "DSD01b-T01"].filter((id) => tokens.some((t) => t.id === id)));
+    // Pre-release cards (data/preview.ts) are left out of this check: their tokens' Japanese and Chinese names come from their
+    // texts.
     expect(missing("ja").filter((id) => !catalog.def(id)!.preview)).toEqual([]);
     expect(missing("cn").filter((id) => !catalog.def(id)!.preview)).toEqual([]);
   });

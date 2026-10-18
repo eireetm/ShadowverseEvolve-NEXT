@@ -1,5 +1,5 @@
 {
- "format": 1,
+ "format": 2,
  "set": "BP07",
  "printings": 238,
  "cards": [
@@ -22,11 +22,6 @@
    "cost": 4,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower. Activate only if you’ve played at least 5 cards this turn.\nWhenever a Naterran Great Tree is put onto your field, recover 1 play point.",
-    "cn": "《进化》《消费1》：使这张卡进化。这个能力在「这个回合中自己已使用的卡片张数」为5张及以上的话才可使用。\n当『那塔拉的大树』召唤到自己的场上时，将自己的PP回复1点。",
-    "ja": "進化コスト1：これは進化する。この能力は「このターン中に自分がプレイしたカードの枚数」が5枚以上なら使える。\n自分の場に『ナテラの大樹』が出たとき、自分のPPを1回復する。"
-   },
    "traits": [
     "自然",
     "獣"
@@ -52,11 +47,6 @@
    "cost": null,
    "attack": 6,
    "defense": 6,
-   "text": {
-    "en": "Storm.\nWhenever a Naterran Great Tree is put onto your field, recover 1 play point.",
-    "cn": "【疾驰】\n当『那塔拉的大树』召唤到自己的场上时，将自己的PP回复1点。",
-    "ja": "【疾走】\n自分の場に『ナテラの大樹』が出たとき、自分のPPを1回復する。"
-   },
    "traits": [
     "自然",
     "獣"
@@ -82,11 +72,6 @@
    "cost": 6,
    "attack": 4,
    "defense": 6,
-   "text": {
-    "en": "{[fanfare]} Put a Fairy Wisp token into your EX area. Give {[attack]}+2 to each Pixie token follower on your field.\nWhile this card is on your field, each Pixie token on your field has Storm and Assail.\nWhenever a Pixie token is put onto your field, give it {[attack]}+2.",
-    "cn": "只要有这张卡存在，使自己场上的全体妖精类型·衍生物各获得【疾驰】【指定攻击】能力。\n当妖精类型·衍生物召唤到自己的场上时，使其《攻击力》+2。\n《入场曲》将1张『妖精萤火』卡置于EX区域。使自己场上的全体妖精类型·衍生物各《攻击力》+2。\n―――――――――――――――\n『妖精萤火』《精灵职业》妖精类型·从者《消费0》《攻击力》1/《生命值》1",
-    "ja": "これがいる限り、自分の場の妖精・トークンすべては【疾走】【指定攻撃】を持つ。\n自分の場に妖精・トークンが出たとき、それは攻撃力+2する。\nファンファーレ『フェアリーウィスプ』1枚をEXエリアに置く。自分の場の妖精・トークンすべては攻撃力+2する。\n―――――――――――――――\n『フェアリーウィスプ』エルフ妖精・フォロワーコスト0攻撃力1/体力1"
-   },
    "traits": [
     "エルフ族"
    ]
@@ -110,11 +95,6 @@
    "cost": 9,
    "attack": 7,
    "defense": 7,
-   "text": {
-    "en": "When this card is discarded, put a Naterran Great Tree token into your EX area.\nWhen playing this card, bury 4 Natura cards: This card costs 4 less to play.\n------------\n{[fanfare]} Select a {[forestcraft]} follower that costs 5 or less in your cemetery and summon it.",
-    "cn": "当将这张卡从自己的手牌中舍弃时，将1张『那塔拉的大树』卡置于EX区域。\n将这张卡使用之际，将场上的4张自然类型·卡片置于墓场：将消费-4。\n《入场曲》选择自己的墓场中的原始消费为5及以下的1张《精灵职业》从者卡。将其召唤到场上。",
-    "ja": "これを自分の手札から捨てたとき、『ナテラの大樹』1枚をEXエリアに置く。\nこれをプレイする際、場の自然・カード4枚を墓場に置く：コストを-4する。\nファンファーレ自分の墓場の元のコスト5以下のエルフフォロワー1枚を選ぶ。それを場に出す。"
-   },
    "traits": [
     "自然",
     "精霊"
@@ -139,11 +119,6 @@
    "cost": 5,
    "attack": 3,
    "defense": 5,
-   "text": {
-    "en": "{[evolve]} {[cost02]}: Evolve this follower.\nWard.\nAt the start of your end phase, give your leader {[defense]}+4 and, if a follower was put from your field into the cemetery this turn, give this follower {[attack]} +2/{[defense]}+2.",
-    "cn": "《进化》《消费2》：使这张卡进化。\n【守护】\n当自己的结束阶段到来时，使自己的主战者《生命值》+4。这个回合，已有自己的从者从场上置于墓场的话，使这张卡《攻击力》+2/《生命值》+2。",
-    "ja": "進化コスト2：これは進化する。\n【守護】\n自分のエンドフェイズが来たとき、自分のリーダーは体力+4する。このターン、自分のフォロワーが場から墓場に置かれていたなら、これは攻撃力+2/体力+2する。"
-   },
    "traits": [
     "獣"
    ]
@@ -167,11 +142,6 @@
    "cost": null,
    "attack": 4,
    "defense": 6,
-   "text": {
-    "en": "Ward.\nOn Evolve - Select a follower in your cemetery that costs 3 or less and summon it.\nAt the start of your end phase, give your leader {[defense]}+4 and, if a follower was put from your field into the cemetery this turn, give this follower {[attack]} +2/{[defense]}+2.",
-    "cn": "【守护】\n当自己的结束阶段到来时，使自己的主战者《生命值》+4。这个回合，已有自己的从者从场上置于墓场的话，使这张卡《攻击力》+2/《生命值》+2。\n【进化时】选择自己的墓场中的原始消费为3及以下的1张从者卡。将其召唤到场上。",
-    "ja": "【守護】\n自分のエンドフェイズが来たとき、自分のリーダーは体力+4する。このターン、自分のフォロワーが場から墓場に置かれていたなら、これは攻撃力+2/体力+2する。\n【進化時】自分の墓場の元のコスト3以下のフォロワー1枚を選ぶ。それを場に出す。"
-   },
    "traits": [
     "獣"
    ]
@@ -196,11 +166,6 @@
    "cost": 0,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Select a Ladica, the Stoneclaw on your field and give it {[attack]} +1/{[defense]}+1. Combo (5) - Deal damage equal to its attack to each enemy follower on the field.",
-    "cn": "选择自己场上的1个『回归的拥抱·拉缇卡』。使其《攻击力》+1/《生命值》+1。【连击_5】给予敌方场上的全体从者各与「选择的从者的攻击力」等量的伤害。",
-    "ja": "自分の場の『回帰する抱擁・ラティカ』1体を選ぶ。それは攻撃力+1/体力+1する。【コンボ_5】相手の場のフォロワーすべてに「それの攻撃力」と同じダメージ。"
-   },
    "traits": [
     "自然",
     "獣"
@@ -225,11 +190,6 @@
    "cost": 3,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[fanfare]} Put a Naterran Great Tree or Fairy token into your EX area.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《入场曲》将1张『那塔拉的大树』卡或1张『妖精』卡置于EX区域。\n―――――――――――――――\n『那塔拉的大树』《中立职业》自然类型·护符《消费1》当这张卡离开场上时，抽取1张卡。将自己的1张手牌舍弃。《起动》《消费1》：将这张卡置于墓场。\n『妖精』《精灵职业》妖精类型·从者《消费1》《攻击力》1/《生命值》1",
-    "ja": "進化コスト1：これは進化する。\nファンファーレ『ナテラの大樹』1枚か『フェアリー』1枚をEXエリアに置く。\n―――――――――――――――\n『ナテラの大樹』ニュートラル自然・アミュレットコスト1これが場を離れたとき、1枚引く。自分の手札1枚を捨てる。起動コスト1：これを墓場に置く。\n『フェアリー』エルフ妖精・フォロワーコスト1攻撃力1/体力1"
-   },
    "traits": [
     "自然",
     "精霊"
@@ -254,11 +214,6 @@
    "cost": null,
    "attack": 3,
    "defense": 4,
-   "text": {
-    "en": "On Evolve: Select an enemy follower on the field and deal it 2 damage. If there at least 3 cards in your EX area, deal 4 damage instead.",
-    "cn": "【进化时】选择敌方场上的1个从者。给予其2点伤害。如果自己EX区域的卡片为3张及以上的话，转变为4点伤害。",
-    "ja": "【進化時】相手の場のフォロワー1体を選ぶ。それに2ダメージ。自分のEXエリアのカードが3枚以上なら、代わりに4ダメージ。"
-   },
    "traits": [
     "自然",
     "精霊"
@@ -283,11 +238,6 @@
    "cost": 2,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} Put a Naterran Great Tree token into your EX area.\nWhile this card is on your field, any Naterran Great Tree you play costs 1 less.",
-    "cn": "只要有这张卡存在，自己将『那塔拉的大树』卡使用之际，将其消费-1。\n《入场曲》将1张『那塔拉的大树』卡置于EX区域。\n―――――――――――――――\n『那塔拉的大树』《中立职业》自然类型·护符《消费1》当这张卡离开场上时，抽取1张卡。将自己的1张手牌舍弃。《起动》《消费1》：将这张卡置于墓场。",
-    "ja": "これがいる限り、自分が『ナテラの大樹』をプレイする際、コストを-1する。\nファンファーレ『ナテラの大樹』1枚をEXエリアに置く。\n―――――――――――――――\n『ナテラの大樹』ニュートラル自然・アミュレットコスト1これが場を離れたとき、1枚引く。自分の手札1枚を捨てる。起動コスト1：これを墓場に置く。"
-   },
    "traits": [
     "自然",
     "精霊"
@@ -311,11 +261,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Select up to 2 Pixie followers on your field or in your EX area and give them {[attack]}+1. Combo (3) - Draw a card.",
-    "cn": "选择「自己场上或自己EX区域的妖精类型·从者卡」最多2张。使其各《攻击力》+1。【连击_3】抽取1张卡。",
-    "ja": "自分の場や自分のEXエリアの妖精・フォロワー2枚まで選ぶ。それは攻撃力+1する。【コンボ_3】1枚引く。"
-   },
    "traits": [
     "エルフ族"
    ]
@@ -338,11 +283,6 @@
    "cost": 1,
    "attack": 1,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} Select an enemy leader or enemy follower on the field and deal it 1 damage. If this card wasn't put onto the field from hand, deal 2 damage instead.\nActivate {[engage]}, put this card on the bottom of it's owner's deck: Select a Fable follower on your field or in your EX area and place 2 Fable counters on it.",
-    "cn": "《入场曲》选择敌方的1位主战者或敌方场上的1个从者。给予其1点伤害。如果这张卡从手牌以外召唤到场上的话，转变为2点伤害。\n《起动》将这张卡《横置》置于牌堆底：选择自己场上或自己EX区域的1张童话类型·从者卡。将2个童话指示物置于到其上。",
-    "ja": "ファンファーレ相手のリーダー1人か相手の場のフォロワー1体を選ぶ。それに1ダメージ。これが手札以外から場に出ていたなら、代わりに2ダメージ。\n起動これをアクトデッキの下に置く：自分の場か自分のEXエリアの童話・フォロワー1枚を選ぶ。それに童話カウンター2つを置く。"
-   },
    "traits": [
     "獣",
     "童話"
@@ -367,11 +307,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} Put a Naterran Great Tree token into your EX area.\nActivate Banish a Naterran Great Tree from your field: Give your leader {[defense]}+3. Activate only once per turn.",
-    "cn": "《入场曲》将1张『那塔拉的大树』卡置于EX区域。\n《起动》将场上的1个『那塔拉的大树』消失：使自己的主战者《生命值》+3。这个能力在1回合可以使用1次。\n―――――――――――――――\n『那塔拉的大树』《中立职业》自然类型·护符《消费1》当这张卡离开场上时，抽取1张卡。将自己的1张手牌舍弃。《起动》《消费1》：将这张卡置于墓场。",
-    "ja": "ファンファーレ『ナテラの大樹』1枚をEXエリアに置く。\n起動場の『ナテラの大樹』1つを消滅：自分のリーダーは体力+3する。この能力は1ターンに1回使える。\n―――――――――――――――\n『ナテラの大樹』ニュートラル自然・アミュレットコスト1これが場を離れたとき、1枚引く。自分の手札1枚を捨てる。起動コスト1：これを墓場に置く。"
-   },
    "traits": [
     "自然",
     "植物族"
@@ -395,11 +330,6 @@
    "cost": 1,
    "attack": 1,
    "defense": 1,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[fanfare]} Put a Naterran Great Tree token into your EX area.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《入场曲》将1张『那塔拉的大树』卡置于EX区域。\n―――――――――――――――\n『那塔拉的大树』《中立职业》自然类型·护符《消费1》当这张卡离开场上时，抽取1张卡。将自己的1张手牌舍弃。《起动》《消费1》：将这张卡置于墓场。",
-    "ja": "進化コスト1：これは進化する。\nファンファーレ『ナテラの大樹』1枚をEXエリアに置く。\n―――――――――――――――\n『ナテラの大樹』ニュートラル自然・アミュレットコスト1これが場を離れたとき、1枚引く。自分の手札1枚を捨てる。起動コスト1：これを墓場に置く。"
-   },
    "traits": [
     "狩人"
    ]
@@ -422,11 +352,6 @@
    "cost": null,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "On Evolve - Select a Natura card in your cemetery and add it to your hand.",
-    "cn": "【进化时】选择自己的墓场中的1张自然类型·卡片。将其加入手牌。",
-    "ja": "【進化時】自分の墓場の自然・カード1枚を選ぶ。それを手札に加える。"
-   },
    "traits": [
     "狩人"
    ]
@@ -449,11 +374,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} If there's another Fable card on your field, search your deck for a Fable follower, put it into your EX area, then shuffle your deck. You may place a Fable counter on that follower.",
-    "cn": "《入场曲》如果自己的场上有其他的童话类型·卡片的话，从自己的牌堆之中搜寻1张童话类型·从者卡，并置于EX区域。可以将1个童话指示物置于到其上。",
-    "ja": "ファンファーレ自分の場に他の童話・カードがあるなら、自分のデッキから童話・フォロワー1枚を探し、EXエリアに置く。それに童話カウンター1つを置いてよい。"
-   },
    "traits": [
     "童話"
    ]
@@ -477,11 +397,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Put a Naterran Great Tree token into your EX area. Combo (3) - Put 2 instead and give your leader {[defense]}+2.",
-    "cn": "将1张『那塔拉的大树』卡置于EX区域。【连击_3】转变为2张。使自己的主战者《生命值》+2。\n―――――――――――――――\n『那塔拉的大树』《中立职业》自然类型·护符《消费1》当这张卡离开场上时，抽取1张卡。将自己的1张手牌舍弃。《起动》《消费1》：将这张卡置于墓场。",
-    "ja": "『ナテラの大樹』1枚をEXエリアに置く。【コンボ_3】代わりに2枚。自分のリーダーは体力+2する。\n―――――――――――――――\n『ナテラの大樹』ニュートラル自然・アミュレットコスト1これが場を離れたとき、1枚引く。自分の手札1枚を捨てる。起動コスト1：これを墓場に置く。"
-   },
    "traits": [
     "自然"
    ]
@@ -505,11 +420,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\nWard.\n{[fanfare]} You may put a Naterran Great Tree token onto your field or into your EX area.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n【守护】\n《入场曲》可以将1张『那塔拉的大树』卡置于场上或EX区域。\n―――――――――――――――\n『那塔拉的大树』《中立职业》自然类型·护符《消费1》当这张卡离开场上时，抽取1张卡。将自己的1张手牌舍弃。《起动》《消费1》：将这张卡置于墓场。",
-    "ja": "《進化》《コスト1》：これは進化する。\n【守护】\n《ファンファーレ》『ナテラの大樹』1枚を場かEXエリアに置いてよい。\n―――――――――――――――\n『ナテラの大樹』《ニュートラル》自然・アミュレット《コスト1》これが場を離れたとき、1枚引く。自分の手札1枚を捨てる。《起動》《コスト1》：これを墓場に置く。"
-   },
    "traits": [
     "自然",
     "指揮官",
@@ -535,11 +445,6 @@
    "cost": null,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "Ward.\nOn Evolve: Look at the top 4 cards of your deck. You may put up to 2 Natura cards from among them into your EX area. Put the rest on the bottom of your deck in any order.\nActivate Banish 2 cards named Naterran Great Tree from your field: Select a Natura follower on your field and give it {[attack]}+2.",
-    "cn": "【守护】\n【进化时】查看自己的牌堆顶4张卡。从那之中，可以将自然类型·卡片最多2张置于EX区域。将剩余的卡以任意顺序置于牌堆底。\n《起动》将场上的2个『那塔拉的大树』消失：选择自己场上的1个自然类型·从者。使其《攻击力》+2。",
-    "ja": "【守護】\n【進化時】自分のデッキの上4枚を見る。その中から、自然・カード2枚までEXエリアに置いてよい。残りを好きな順にデッキの下に置く。\n起動場の『ナテラの大樹』2つを消滅：自分の場の自然・フォロワー1体を選ぶ。それは攻撃力+2する。"
-   },
    "traits": [
     "自然",
     "指揮官",
@@ -565,11 +470,6 @@
    "cost": 6,
    "attack": 4,
    "defense": 6,
-   "text": {
-    "en": "Storm.\n{[fanfare]} Select a Princess's Strike in your cemetery and play it for 0 play points.\nActivate {[engage]} 2 cards named Naterran Great Tree on your field: Give this follower {[attack]}+3. Give your leader {[defense]}+2.",
-    "cn": "【疾驰】\n《入场曲》选择自己的墓场中的1张『光辉剑击』卡。将其以「消费变为0」使用。\n《起动》将场上的2个『那塔拉的大树』《横置》：使这张卡《攻击力》+3。使自己的主战者《生命值》+2。",
-    "ja": "【疾走】\nファンファーレ自分の墓場の『輝ける剣撃』1枚を選ぶ。それのコストを0にしてプレイする。\n起動場の『ナテラの大樹』2つをアクト：これは攻撃力+3する。自分のリーダーは体力+2する。"
-   },
    "traits": [
     "自然",
     "指揮官",
@@ -596,11 +496,6 @@
    "cost": 3,
    "attack": 4,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} If there are at least 5 {[swordcraft]} followers in your cemetery, select an enemy follower on the field and destroy it.\nWhile there are at least 10 {[swordcraft]} followers in your cemetery, this follower has Storm.",
-    "cn": "只要自己的墓场中的《皇家护卫职业》从者卡有10张及以上存在，使这张卡获得【疾驰】能力。\n《入场曲》如果自己的墓场中的《皇家护卫职业》从者卡为5张及以上的话，选择敌方场上的1个从者。将其破坏。",
-    "ja": "自分の墓場にロイヤルフォロワーが10枚以上ある限り、これは【疾走】を持つ。\nファンファーレ自分の墓場のロイヤルフォロワーが5枚以上なら、相手の場のフォロワー1体を選ぶ。それを破壊する。"
-   },
    "traits": [
     "暗殺者",
     "忍者"
@@ -627,11 +522,6 @@
    "cost": 2,
    "attack": 1,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost02]}: Evolve this follower.\nWhile this follower is reserved on your field, it has Intimidate and Aura.\nAt the start of your end phase, select an enemy follower on the field and deal it 1 damage.",
-    "cn": "《进化》《消费2》：使这张卡进化。\n只要这张卡以竖置状态存在，使这张卡获得【威压】【灵气】能力。\n当自己的结束阶段到来时，选择敌方场上的1个从者。给予其1点伤害。",
-    "ja": "進化コスト2：これは進化する。\nこれがスタンド状態である限り、これは【威圧】【オーラ】を持つ。\n自分のエンドフェイズが来たとき、相手の場のフォロワー1体を選ぶ。それに1ダメージ。"
-   },
    "traits": [
     "暗殺者"
    ]
@@ -657,11 +547,6 @@
    "cost": null,
    "attack": 2,
    "defense": 4,
-   "text": {
-    "en": "On Evolve: Select an enemy leader or enemy follower on the field and deal it 2 damage.\nWhile this follower is reserved on your field, it has Intimidate and Aura.\nAt the start of your end phase, select an enemy follower on the field and deal it 1 damage.",
-    "cn": "只要这张卡以竖置状态存在，使这张卡获得【威压】【灵气】能力。\n当自己的结束阶段到来时，选择敌方场上的1个从者。给予其1点伤害。\n【进化时】选择敌方的1位主战者或敌方场上的1个从者。给予其2点伤害。",
-    "ja": "これがスタンド状態である限り、これは【威圧】【オーラ】を持つ。\n自分のエンドフェイズが来たとき、相手の場のフォロワー1体を選ぶ。それに1ダメージ。\n【進化時】相手のリーダー1人か相手の場のフォロワー1体を選ぶ。それに2ダメージ。"
-   },
    "traits": [
     "暗殺者"
    ]
@@ -685,11 +570,6 @@
    "cost": 3,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "When playing this card, engage 2 cards named Naterran Great Tree on your field: This card costs 2 less to play.\nThis card costs 1 less to play if there's a Bayleon, Sovereign Light on your field.\n-----------\nSelect an enemy follower on the field and deal it 4 damage.",
-    "cn": "将这张卡使用之际，将场上的2个『那塔拉的大树』《横置》：将消费-2。\n将这张卡使用之际，如果自己的场上有『王者威光·贝里昂』的话，将消费-1。\n选择敌方场上的1个从者。给予其4点伤害。",
-    "ja": "これをプレイする際、場の『ナテラの大樹』2つをアクト：コストを-2する。\nこれをプレイする際、自分の場に『王たる光・ベイリオン』がいるなら、コストを-1する。\n相手の場のフォロワー1体を選ぶ。それに4ダメージ。"
-   },
    "traits": [
     "自然",
     "指揮官",
@@ -715,11 +595,6 @@
    "cost": 3,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\nBane.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n【必杀】",
-    "ja": "進化コスト1：これは進化する。\n【必殺】"
-   },
    "traits": [
     "兵士",
     "暗殺者"
@@ -744,11 +619,6 @@
    "cost": null,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "Bane.\nOn Evolve - Select an enemy follower on the field and deal it 2 damage. If there are at least 2 Assassin followers in your cemetery, destroy it instead.",
-    "cn": "【必杀】\n【进化时】选择敌方场上的1个从者。给予其2点伤害。如果自己的墓场中的暗杀者类型·从者卡为2张及以上的话，转变为将其破坏。",
-    "ja": "【必殺】\n【進化時】相手の場のフォロワー1体を選ぶ。それに2ダメージ。自分の墓場の暗殺者・フォロワーが2枚以上なら、代わりに破壊する。"
-   },
    "traits": [
     "兵士",
     "暗殺者"
@@ -772,11 +642,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "{[act]} {[cost01]}, {[engage]}: Select an enemy leader or enemy follower on the field and deal it damage equal to this follower's attack.\n{[act]} {[cost03]}, {[engage]}: Select an enemy amulet on the field and banish it.",
-    "cn": "《起动》《消费1》将这张卡《横置》：选择敌方的1位主战者或敌方场上的1个从者。给予其与「这张卡的攻击力」等量的伤害。\n《起动》《消费3》将这张卡《横置》：选择敌方场上的1个护符。将其消失。",
-    "ja": "起動コスト1これをアクト：相手のリーダー1人か相手の場のフォロワー1体を選ぶ。それに「これの攻撃力」と同じダメージ。\n起動コスト3これをアクト：相手の場のアミュレット1つを選ぶ。それを消滅させる。"
-   },
    "traits": [
     "兵士"
    ]
@@ -800,11 +665,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[quick]}\nSelect an enemy follower on the field and deal it 2 damage. If there's a Mistolina, Forest Princess on your field, deal 6 damage instead.",
-    "cn": "《快速》\n选择敌方场上的1个从者。给予其2点伤害。如果自己的场上有『森林公主·米丝特莉娜』的话，转变为6点伤害。",
-    "ja": "クイック\n相手の場のフォロワー1体を選ぶ。それに2ダメージ。自分の場に『森の姫・ミストリナ』がいるなら、代わりに6ダメージ。"
-   },
    "traits": [
     "自然",
     "指揮官",
@@ -830,11 +690,6 @@
    "cost": 3,
    "attack": 4,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} {[engage]} a Naterran Great Tree on your field: Give this follower Storm.",
-    "cn": "《入场曲》将场上的1个『那塔拉的大树』《横置》：使这张卡获得【疾驰】能力。",
-    "ja": "ファンファーレ場の『ナテラの大樹』1つをアクト：これは【疾走】を持つ。"
-   },
    "traits": [
     "自然",
     "兵士",
@@ -860,11 +715,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} You may put a Naterran Great Tree token onto your field or into your EX area.\nActivate {[engage]} and any number of cards named Naterran Great Tree on your field: Select an enemy follower on the field and deal it damage equal to the number of cards named Naterran Great Tree engaged this way.",
-    "cn": "《入场曲》可以将1张『那塔拉的大树』卡置于场上或EX区域。\n《起动》将这张卡《横置》将场上的『那塔拉的大树』任意张数《横置》：选择敌方场上的1个从者。给予其与「以这横置的『那塔拉的大树』的张数」等量的伤害。\n―――――――――――――――\n『那塔拉的大树』《中立职业》自然类型·护符《消费1》当这张卡离开场上时，抽取1张卡。将自己的1张手牌舍弃。《起动》《消费1》：将这张卡置于墓场。",
-    "ja": "ファンファーレ『ナテラの大樹』1枚を場かEXエリアに置いてよい。\n起動これをアクト場の『ナテラの大樹』を好きな枚数アクト：相手の場のフォロワー1体を選ぶ。それに「アクトした『ナテラの大樹』の枚数」と同じダメージ。\n―――――――――――――――\n『ナテラの大樹』ニュートラル自然・アミュレットコスト1これが場を離れたとき、1枚引く。自分の手札1枚を捨てる。起動コスト1：これを墓場に置く。"
-   },
    "traits": [
     "自然",
     "兵士",
@@ -889,11 +739,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.",
-    "cn": "《进化》《消费1》：使这张卡进化。",
-    "ja": "進化コスト1：これは進化する。"
-   },
    "traits": [
     "指揮官"
    ]
@@ -916,11 +761,6 @@
    "cost": null,
    "attack": 3,
    "defense": 4,
-   "text": {
-    "en": "{[lastwords]} Put this card into its owner's EX area unevolved.",
-    "cn": "《谢幕曲》将这张卡置于EX区域。",
-    "ja": "ラストワードこれをEXエリアに置く。"
-   },
    "traits": [
     "指揮官"
    ]
@@ -944,11 +784,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Put a Naterran Great Tree token onto your field and into your EX area.",
-    "cn": "将1个『那塔拉的大树』召唤。将1张『那塔拉的大树』卡置于EX区域。\n―――――――――――――――\n『那塔拉的大树』《中立职业》自然类型·护符《消费1》当这张卡离开场上时，抽取1张卡。将自己的1张手牌舍弃。《起动》《消费1》：将这张卡置于墓场。",
-    "ja": "『ナテラの大樹』1つを出す。『ナテラの大樹』1枚をEXエリアに置く。\n―――――――――――――――\n『ナテラの大樹』ニュートラル自然・アミュレットコスト1これが場を離れたとき、1枚引く。自分の手札1枚を捨てる。起動コスト1：これを墓場に置く。"
-   },
    "traits": [
     "自然"
    ]
@@ -971,11 +806,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "When this card is discarded, select an enemy follower on the field and engage it.\n----------\nSelect an enemy follower on the field and engage it. Draw a card.",
-    "cn": "当将这张卡从自己的手牌中舍弃时，选择敌方场上的1个从者。将其横置。\n----------\n选择敌方场上的1个从者。将其横置。抽取1张卡。",
-    "ja": "これを自分の手札から捨てたとき、相手の場のフォロワー1体を選ぶ。それをアクトする。\n----------\n相手の場のフォロワー1体を選ぶ。それをアクトする。1枚引く。"
-   },
    "traits": [
     "兵士",
     "メイド"
@@ -1000,11 +830,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[fanfare]} Put a Repair Mode token into your EX area.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《入场曲》将1张『修复模式』卡置于EX区域。\n―――――――――――――――\n『修复模式』《中立职业》机械类型·法术《消费1》《快速》使自己的主战者《生命值》+1。",
-    "ja": "進化コスト1：これは進化する。\nファンファーレ『リペアモード』1枚をEXエリアに置く。\n―――――――――――――――\n『リペアモード』ニュートラル機械・スペルコスト1クイック自分のリーダーは体力+1する。"
-   },
    "traits": [
     "機械",
     "ゴーレム"
@@ -1029,11 +854,6 @@
    "cost": null,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "While this card is on your field, any Machina card you play from the EX area costs 1 less.\n4 times per turn, when you play a Machina card, select an enemy follower on the field and deal it 1 damage.",
-    "cn": "只要有这张卡存在，自己将EX区域的机械类型·卡片使用之际，将其消费-1。\n每个回合4次，自己将机械类型·卡片使用时，选择敌方场上的1个从者。给予其1点伤害。",
-    "ja": "これがいる限り、自分がEXエリアの機械・カードをプレイする際、コストを-1する。\nターンごとに4回、自分が機械・カードをプレイしたとき、相手の場のフォロワー1体を選ぶ。それに1ダメージ。"
-   },
    "traits": [
     "機械",
     "ゴーレム"
@@ -1058,11 +878,6 @@
    "cost": 7,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "Rush.\n{[fanfare]} Look at the top 5 cards of your deck. From among them, you may summon any number of Machina followers that cost a total of 6 or less. Put the rest on the bottom of your deck in any order.\nAt the start of your end phase, give each other Machina follower on your field {[attack]} +1/{[defense]}+1.",
-    "cn": "【突进】\n当自己的结束阶段到来时，使自己场上的其他的全体机械类型·从者各《攻击力》+1/《生命值》+1。\n《入场曲》查看自己的牌堆顶5张卡。从那之中，直到原始消费的合计变为6及以下、可以将机械类型·从者卡任意张数召唤到场上。将剩余的卡以任意顺序置于牌堆底。",
-    "ja": "【突進】\n自分のエンドフェイズが来たとき、自分の場の他の機械・フォロワーすべては攻撃力+1/体力+1する。\nファンファーレ自分のデッキの上5枚を見る。その中から、機械・フォロワーを元のコストの合計が6以下になるように好きな枚数場に出してよい。残りを好きな順にデッキの下に置く。"
-   },
    "traits": [
     "機械",
     "超克"
@@ -1087,11 +902,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 4,
-   "text": {
-    "en": "{[fanfare]}, Earth Rite: Choose one of the following. If this card was put onto the field from the cemetery, choose up to 3 instead. (1) Select an enemy follower on the field and deal it 5 damage. (2) Give this follower {[attack]}+3. (3) Draw 2 cards.\n{[act]} {[cost06]}: Summon this card from your cemetery. Give it Storm and \"{[lastwords]} Banish this follower.\"",
-    "cn": "《入场曲》【土之秘术】从下述之中抉择1项。如果这张卡从墓场召唤到场上的话，转变为最多3项。\n【1】选择敌方场上的1个从者。给予其5点伤害。\n【2】使这张卡《攻击力》+3。\n【3】抽取2张卡。\n《起动》《消费6》：将自己的墓场中的这张卡召唤到场上。使这张卡获得【疾驰】与「《谢幕曲》使这张卡消失」能力。",
-    "ja": "ファンファーレ【土の秘術】下記から1つチョイスする。これが墓場から場に出ていたなら、代わりに3つまで。\n【1】相手の場のフォロワー1体を選ぶ。それに5ダメージ。【2】これは攻撃力+3する。【3】2枚引く。\n起動コスト6：自分の墓場のこれを場に出す。これは【疾走】と「ラストワードこれは消滅する」を持つ。"
-   },
    "traits": [
     "魔法使い"
    ]
@@ -1115,11 +925,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[fanfare]} Discard a spell: Draw a card.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《入场曲》将手牌中的1张法术卡舍弃：抽取1张卡。",
-    "ja": "進化コスト1：これは進化する。\nファンファーレ手札のスペル1枚を捨てる：1枚引く。"
-   },
    "traits": [
     "魔法使い"
    ]
@@ -1143,11 +948,6 @@
    "cost": null,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "On Evolve - Search your deck for a Splendid Conjury, put it into your EX area, then shuffle your deck. Spellchain (10): It costs 2 less to play this turn.",
-    "cn": "【进化时】从自己的牌堆之中搜寻1张『绚丽的术式』卡，并置于EX区域。【魔力连锁_10】这个回合，将其使用之际，将其消费-2。",
-    "ja": "【進化時】自分のデッキから『美麗なる術式』1枚を探し、EXエリアに置く。【スペルチェイン_10】このターン、それをプレイする際、コストを-2する。"
-   },
    "traits": [
     "魔法使い"
    ]
@@ -1171,11 +971,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "When a Tetra, Sapphire Rebel is put onto your field, {[cost01]}: Put this card from your cemetery into your EX area.\n------------\n{[quick]}\nSelect an enemy follower on the field and deal it 2 damage.",
-    "cn": "当『苍蓝反叛者·坦忒菈』召唤到自己的场上时，《消费1》：将自己的墓场中的这张卡置于EX区域。\n----------\n《快速》\n选择敌方场上的1个从者。给予其2点伤害。",
-    "ja": "自分の場に『蒼の反逆者・テトラ』が出たとき、コスト1：自分の墓場のこれをEXエリアに置く。\n----------\nクイック\n相手の場のフォロワー1体を選ぶ。それに2ダメージ。"
-   },
    "traits": [
     "機械",
     "ゴーレム"
@@ -1200,11 +995,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost02]}: Evolve this follower.\nWard.\n{[fanfare]} Look at the top 4 cards of your deck. You may put a Machina card from among them into your EX area. Put the rest on the bottom of your deck in any order.",
-    "cn": "《进化》《消费2》：使这张卡进化。\n【守护】\n《入场曲》查看自己的牌堆顶4张卡。从那之中，可以将1张机械类型·卡片置于EX区域。将剩余的卡以任意顺序置于牌堆底。",
-    "ja": "進化コスト2：これは進化する。\n【守護】\nファンファーレ自分のデッキの上4枚を見る。その中から、機械・カード1枚をEXエリアに置いてよい。残りを好きな順にデッキの下に置く。"
-   },
    "traits": [
     "機械",
     "ゴーレム"
@@ -1229,11 +1019,6 @@
    "cost": null,
    "attack": 4,
    "defense": 3,
-   "text": {
-    "en": "Ward.\nOn Evolve - Select an enemy follower on the field and deal it damage equal to 2 times the number of Machina cards in your EX area.",
-    "cn": "【守护】\n【进化时】选择敌方场上的1个从者。给予其与「自己EX区域的机械类型·卡片的张数」的2倍等量的伤害。",
-    "ja": "【守護】\n【進化時】相手の場のフォロワー1体を選ぶ。それに「自分のEXエリアの機械・カードの枚数」の2倍のダメージ。"
-   },
    "traits": [
     "機械",
     "ゴーレム"
@@ -1258,11 +1043,6 @@
    "cost": 2,
    "attack": 3,
    "defense": 1,
-   "text": {
-    "en": "{[fanfare]} Put a Repair Mode token into your EX area.\nOnce per turn, when you play a Machina card, draw a card.",
-    "cn": "每个回合1次，当自己将机械类型·卡片使用时，抽取1张卡。\n《入场曲》将1张『修复模式』卡置于EX区域。\n―――――――――――――――\n『修复模式』《中立职业》机械类型·法术《消费1》《快速》使自己的主战者《生命值》+1。",
-    "ja": "ターンごとに1回、自分が機械・カードをプレイしたとき、1枚引く。\nファンファーレ『リペアモード』1枚をEXエリアに置く。\n―――――――――――――――\n『リペアモード』ニュートラル機械・スペルコスト1クイック自分のリーダーは体力+1する。"
-   },
    "traits": [
     "機械",
     "禁忌"
@@ -1288,11 +1068,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Select up to 3 enemy followers on the field and deal 3 damage divided between them. If there's an Eleanor, Cosmic Flower on your field, deal 5 damage divided between them instead.",
-    "cn": "选择敌方场上的从者最多3个。给予其合计3点伤害，任意分配。如果自己的场上有『天外之花·爱莲娜』的话，转变为5点伤害。",
-    "ja": "相手の場のフォロワー3体まで選ぶ。それに3ダメージを割りふる。自分の場に『天外の華・エレノア』がいるなら、代わりに5ダメージ。"
-   },
    "traits": [
     "魔法使い"
    ]
@@ -1315,11 +1090,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} Put an Assembly Droid or Repair Mode token into your EX area.\nActivate {[engage]}, banish a Machina card from your EX area: Select and enemy follower on the field and deal it damage equal to the number of Machina cards in your EX area.",
-    "cn": "《入场曲》将1张『生产器械』卡或1张『修复模式』卡置于EX区域。\n《起动》将这张卡《横置》将EX区域的1张机械类型·卡片消失：选择敌方场上的1个从者。给予其与「自己EX区域的机械类型·卡片的张数」等量的伤害。",
-    "ja": "ファンファーレ『プロダクトマシーン』1枚か『リペアモード』1枚をEXエリアに置く。\n起動これをアクトEXエリアの機械・カード1枚を消滅：相手の場のフォロワー1体を選ぶ。それに「自分のEXエリアの機械・カードの枚数」と同じダメージ。"
-   },
    "traits": [
     "機械",
     "魔法使い"
@@ -1343,11 +1113,6 @@
    "cost": 1,
    "attack": 2,
    "defense": 1,
-   "text": {
-    "en": "{[fanfare]} Choose one of the following. (1) Put an Assembly Droid token into your EX area. (2) If there are at least 3 Machina cards in your EX area, give this follower {[attack]}+1/{[defense]}+1 and Rush.",
-    "cn": "《入场曲》从下述之中抉择1项。\n【1】将1张『生产器械』卡置于EX区域。\n【2】如果自己EX区域的机械类型·卡片为3张及以上的话，使这张卡《攻击力》+1/《生命值》+1，并获得【突进】能力。\n―――――――――――――――\n『生产器械』《中立职业》机械类型·从者《消费1》《攻击力》1/《生命值》1《起动》将这张卡《横置》将场上的3个机械类型·从者置于墓场：选择敌方场上的1个从者。给予其5点伤害。",
-    "ja": "ファンファーレ下記から1つチョイスする。【1】『プロダクトマシーン』1枚をEXエリアに置く。【2】自分のEXエリアの機械・カードが3枚以上なら、これは攻撃力+1/体力+1して、【突進】を持つ。\n―――――――――――――――\n『プロダクトマシーン』ニュートラル機械・フォロワーコスト1攻撃力1/体力1起動これをアクト場の機械・フォロワー3体を墓場に置く：相手の場のフォロワー1体を選ぶ。それに5ダメージ。"
-   },
    "traits": [
     "機械",
     "ゴーレム"
@@ -1371,11 +1136,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.",
-    "cn": "《进化》《消费1》：使这张卡进化。",
-    "ja": "進化コスト1：これは進化する。"
-   },
    "traits": [
     "魔法使い"
    ]
@@ -1398,11 +1158,6 @@
    "cost": null,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "On Evolve: Choose one of the following. (1) Summon a Magic Sediment token. (2) Earth Rite: Select up to 2 enemy followers on the field and deal 4 damage divided between them.",
-    "cn": "【进化时】从下述之中抉择1项。\n【1】将1个『大地之魔片』召唤。\n【2】【土之秘术】选择敌方场上的从者最多2个。给予其合计4点伤害，任意分配。\n―――――――――――――――\n『大地之魔片』《巫师职业》土之印类型·护符《消费1》【蓄积】",
-    "ja": "【進化時】下記から1つチョイスする。【1】『大地の魔片』1つを出す。【2】【土の秘術】相手の場のフォロワー2体まで選ぶ。それに4ダメージを割りふる。\n―――――――――――――――\n『大地の魔片』ウィッチ土の印・アミュレットコスト1【スタック】"
-   },
    "traits": [
     "魔法使い"
    ]
@@ -1425,11 +1180,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Select an enemy card on the field and put it on the bottom of its owner's deck. Its controller may summon a follower or amulet from their hand.",
-    "cn": "选择敌方场上的1张卡。其玩家将其置于牌堆底。其玩家可以将自身的手牌中的1张「从者卡或护符卡」召唤到场上。（置于到牌堆的衍生物会从游戏中移出）",
-    "ja": "相手の場のカード1枚を選ぶ。それのプレイヤーはそれをデッキの下に置く。それのプレイヤーは自身の手札のフォロワーかアミュレット1枚を場に出してよい。（デッキに置いたトークンはゲームから取り除く）"
-   },
    "traits": [
     "魔法使い"
    ]
@@ -1453,11 +1203,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[fanfare]} Look at the top 2 cards of your deck. You may reveal a Machina card from among them and add it to your hand. Put rest on the bottom of your deck in any order.\nActivate {[engage]}, put this card into your cemetery: Deal 1 damage to each enemy leader. Activate only if you have at least 3 Machina cards in your EX area.",
-    "cn": "《入场曲》查看自己的牌堆顶2张卡。从那之中，可以将1张机械类型·卡片公开并加入手牌。将剩余的卡以任意顺序置于牌堆底。\n《起动》将这张卡《横置》置于墓场：给予敌方的全体主战者各1点伤害。这个能力在「自己EX区域的机械类型·卡片」为3张及以上的话才可使用。",
-    "ja": "ファンファーレ自分のデッキの上2枚を見る。その中から、機械・カード1枚を公開して手札に加えてよい。残りを好きな順にデッキの下に置く。\n起動これをアクト墓場に置く：相手のリーダーすべてに1ダメージ。この能力は自分のEXエリアの機械・カードが3枚以上なら使える。"
-   },
    "traits": [
     "機械"
    ]
@@ -1481,11 +1226,6 @@
    "cost": 4,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "{[evolve]} {[cost02]}: Evolve this follower.\n{[evolve]} {[cost00]}: Evolve this follower. Acivate only if there are at least 10 Natura cards in your cemetery.\n{[fanfare]} Look at the top 3 cards of your deck. You may reveal a Natura card from among them and add it to your hand. Bury the rest.",
-    "cn": "《进化》《消费2》：使这张卡进化。\n《进化》《消费0》：使这张卡进化。这个能力在「自己的墓场中的自然类型·卡片」为10张及以上的话才可使用。\n《入场曲》查看自己的牌堆顶3张卡。从那之中，可以将1张自然类型·卡片公开并加入手牌。将剩余的卡置于墓场。",
-    "ja": "進化コスト2：これは進化する。\n進化コスト0：これは進化する。この能力は自分の墓場の自然・カードが10枚以上なら使える。\nファンファーレ自分のデッキの上3枚を見る。その中から、自然・カード1枚を公開して手札に加えてよい。残りを墓場に置く。"
-   },
    "traits": [
     "自然",
     "ドラゴニュート"
@@ -1511,11 +1251,6 @@
    "cost": null,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "On Evolve - Choose one of the following. (1) Select an enemy follower on the field. Deal it 4 damage, search your deck for a Shadow’s Corrosion and put it into your EX area, then shuffle your deck. (2) Select a Shadow’s Corrosion in your cemetery and play it for 0 play points.",
-    "cn": "【进化时】从下述之中抉择1项。\n【1】选择敌方场上的1个从者。给予其4点伤害。从自己的牌堆中搜寻1张『影之侵蚀』卡，并置于EX区域。\n【2】选择自己的墓场中的1张『影之侵蚀』卡。将其以「消费变为0」使用。",
-    "ja": "【進化時】下記から1つチョイスする。【1】相手の場のフォロワー1体を選ぶ。それに4ダメージ。自分のデッキから『影の侵食』1枚を探し、EXエリアに置く。【2】自分の墓場の『影の侵食』1枚を選ぶ。それのコストを0にしてプレイする。"
-   },
    "traits": [
     "自然",
     "ドラゴニュート"
@@ -1540,11 +1275,6 @@
    "cost": 7,
    "attack": 6,
    "defense": 6,
-   "text": {
-    "en": "Ward.\n{[fanfare]} Look at the top 5 cards of your deck. From among them, you may reveal up to 2 Marine followers not named Neptune, Tidemistress and add them to your hand. Put the rest on the bottom of your deck in any order. You may summon a Marine follower that costs 5 or less from your hand and give it {[attack]}+2/{[defense]}+2.",
-    "cn": "【守护】\n《入场曲》查看自己的牌堆顶5张卡。从那之中，可以将「与这张卡不同名的海洋类型·从者卡」最多2张公开并加入手牌。将剩余的卡以任意顺序置于牌堆底。可以将自己的手牌中的原始消费为5及以下的1张海洋类型·从者卡召唤到场上。使其《攻击力》+2/《生命值》+2。",
-    "ja": "【守護】\nファンファーレ自分のデッキの上5枚を見る。その中から、「これと同名を除く海洋・フォロワー」2枚まで公開して手札に加えてよい。残りを好きな順にデッキの下に置く。自分の手札の元のコスト5以下の海洋・フォロワー1枚を場に出してよい。それは攻撃力+2/体力+2する。"
-   },
    "traits": [
     "竜使い",
     "海洋"
@@ -1569,11 +1299,6 @@
    "cost": 8,
    "attack": 6,
    "defense": 6,
-   "text": {
-    "en": "When this card is discarded, {[cost01]}: Select an enemy follower on the field and deal it 3 damage.\n-----------\nActivate Banish a Naterran Great Tree from your field: Deal 3 damage to each enemy follower on the field.",
-    "cn": "当将这张卡从自己的手牌中舍弃时，《消费1》：选择敌方场上的1个从者。给予其3点伤害。\n《起动》将场上的1个『那塔拉的大树』消失：给予敌方场上的全体从者各3点伤害。",
-    "ja": "これを自分の手札から捨てたとき、コスト1：相手の場のフォロワー1体を選ぶ。それに3ダメージ。\n起動場の『ナテラの大樹』1つを消滅：相手の場のフォロワーすべてに3ダメージ。"
-   },
    "traits": [
     "自然",
     "竜族"
@@ -1598,11 +1323,6 @@
    "cost": 1,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[fanfare]} If Overflow is active for you, look at the top 3 cards of your deck. You may put a {[dragoncraft]} follower from among them into your EX area. Put the rest on the bottom of your deck in any order.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《入场曲》如果处于【觉醒】状态的话，查看自己的牌堆顶3张卡。从那之中，可以将1张《龙族职业》从者卡置于EX区域。将剩余的卡以任意顺序置于牌堆底。",
-    "ja": "進化コスト1：これは進化する。\nファンファーレ【覚醒】状態なら、自分のデッキの上3枚を見る。その中から、ドラゴンフォロワー1枚をEXエリアに置いてよい。残りを好きな順にデッキの下に置く。"
-   },
    "traits": [
     "ドラゴニュート"
    ]
@@ -1626,11 +1346,6 @@
    "cost": null,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "On Evolve - Select another {[dragoncraft]} follower on your field or in your EX area and give it {[attack]}+1/{[defense]}+1.",
-    "cn": "【进化时】选择自己场上的其他的1个《龙族职业》从者或自己EX区域的1张《龙族职业》从者卡。使其《攻击力》+1/《生命值》+1。",
-    "ja": "【進化時】自分の場の他のドラゴンフォロワー1体か自分のEXエリアのドラゴンフォロワー1枚を選ぶ。それは攻撃力+1/体力+1する。"
-   },
    "traits": [
     "ドラゴニュート"
    ]
@@ -1654,11 +1369,6 @@
    "cost": 3,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "This card can't be played from the EX area.\nAt the start of your end phase, if this card is in your EX area, deal 1 damage to each enemy leader for every 5 Natura cards in your cemetery.\n-----------\nSelect an enemy follower on the field. Deal it 4 damage and, if there's a Valdain, Cursed Shadow on your field, put this card into its owner's EX area.",
-    "cn": "当自己的结束阶段到来时，如果这张卡在EX区域的话，给予敌方的全体主战者各「自己的墓场中的自然类型·卡片」每有5张为1点伤害。\n----------\n这张卡从EX区域不能使用。\n选择敌方场上的1个从者。给予其4点伤害。如果自己的场上有『诅咒之影·拜迪』的话，将这张卡置于EX区域。",
-    "ja": "自分のエンドフェイズが来たとき、これがEXエリアにあるなら、相手のリーダーすべてに「自分の墓場の自然・カード」5枚につき1ダメージ。\n----------\nこれはEXエリアからプレイできない。\n相手の場のフォロワー1体を選ぶ。それに4ダメージ。自分の場に『呪われし影・ヴァイディ』がいるなら、これをEXエリアに置く。"
-   },
    "traits": [
     "自然",
     "ドラゴニュート"
@@ -1682,11 +1392,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} Give your leader {[defense]}+1 for every Marine follower on your field.",
-    "cn": "《入场曲》使自己的主战者《生命值》+X。X为「自己场上的海洋类型·从者的数量」。",
-    "ja": "ファンファーレ自分のリーダーは体力+Xする。Xは「自分の場の海洋・フォロワーの数」である。"
-   },
    "traits": [
     "海洋"
    ]
@@ -1710,11 +1415,6 @@
    "cost": 4,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[fanfare]} Banish a Naterran Great Tree on your field: Give this follower {[attack]}+2/{[defense]}+2.\n{[lastwords]} Summon a Naterran Great Tree token.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《入场曲》将场上的1个『那塔拉的大树』消失：使这张卡《攻击力》+2/《生命值》+2。\n《谢幕曲》将1个『那塔拉的大树』召唤。\n―――――――――――――――\n『那塔拉的大树』《中立职业》自然类型·护符《消费1》当这张卡离开场上时，抽取1张卡。将自己的1张手牌舍弃。《起动》《消费1》：将这张卡置于墓场。",
-    "ja": "進化コスト1：これは進化する。\nファンファーレ場の『ナテラの大樹』1つを消滅：これは攻撃力+2/体力+2する。\nラストワード『ナテラの大樹』1つを出す。\n―――――――――――――――\n『ナテラの大樹』ニュートラル自然・アミュレットコスト1これが場を離れたとき、1枚引く。自分の手札1枚を捨てる。起動コスト1：これを墓場に置く。"
-   },
    "traits": [
     "自然",
     "竜族"
@@ -1739,11 +1439,6 @@
    "cost": null,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "On Evolve - Select an enemy follower on the field and deal it 3 damage.\n{[lastwords]} Summon a Naterran Great Tree token.",
-    "cn": "【进化时】选择敌方场上的1个从者。给予其3点伤害。\n《谢幕曲》将1个『那塔拉的大树』召唤。",
-    "ja": "【進化時】相手の場のフォロワー1体を選ぶ。それに3ダメージ。\nラストワード『ナテラの大樹』1つを出す。"
-   },
    "traits": [
     "自然",
     "竜族"
@@ -1768,11 +1463,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} Banish a Naterran Great Tree from your field: Increase your max play points by 1.\n{[lastwords]} Put a Naterran Great Tree token onto your field.",
-    "cn": "《入场曲》将场上的1个『那塔拉的大树』消失：使自己的PP最大值+1点。\n《谢幕曲》将1个『那塔拉的大树』召唤。\n―――――――――――――――\n『那塔拉的大树』《中立职业》自然类型·护符《消费1》当这张卡离开场上时，抽取1张卡。将自己的1张手牌舍弃。《起动》《消费1》：将这张卡置于墓场。",
-    "ja": "ファンファーレ場の『ナテラの大樹』1つを消滅：自分のPP最大値を+1する。\nラストワード『ナテラの大樹』1つを出す。\n―――――――――――――――\n『ナテラの大樹』ニュートラル自然・アミュレットコスト1これが場を離れたとき、1枚引く。自分の手札1枚を捨てる。起動コスト1：これを墓場に置く。"
-   },
    "traits": [
     "自然",
     "竜族"
@@ -1796,11 +1486,6 @@
    "cost": 3,
    "attack": 2,
    "defense": 4,
-   "text": {
-    "en": "Whenever a Dragonewt follower on your field attacks, deal 2 damage to each enemy leader.",
-    "cn": "当自己场上的龙人类型·从者进行攻击时，给予敌方的全体主战者各2点伤害。",
-    "ja": "自分の場のドラゴニュート・フォロワーが攻撃したとき、相手のリーダーすべてに2ダメージ。"
-   },
    "traits": [
     "ドラゴニュート"
    ]
@@ -1824,11 +1509,6 @@
    "cost": 2,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} Summon a Naterran Great Tree token. If Overflow is active for you, summon up to 2 instead and give this follower Rush.",
-    "cn": "《入场曲》将1个『那塔拉的大树』召唤。如果处于【觉醒】状态的话，转变为最多2个。使这张卡获得【突进】能力。\n―――――――――――――――\n『那塔拉的大树』《中立职业》自然类型·护符《消费1》当这张卡离开场上时，抽取1张卡。将自己的1张手牌舍弃。《起动》《消费1》：将这张卡置于墓场。",
-    "ja": "ファンファーレ『ナテラの大樹』1つを出す。【覚醒】状態なら、代わりに2つまで。これは【突進】を持つ。\n―――――――――――――――\n『ナテラの大樹』ニュートラル自然・アミュレットコスト1これが場を離れたとき、1枚引く。自分の手札1枚を捨てる。起動コスト1：これを墓場に置く。"
-   },
    "traits": [
     "自然",
     "竜族"
@@ -1852,11 +1532,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost02]}: Evolve this follower.\n{[fanfare]} If Overflow is active for you, select an enemy follower on the field and deal it 2 damage.",
-    "cn": "《进化》《消费2》：使这张卡进化。\n《入场曲》如果处于【觉醒】状态的话，选择敌方场上的1个从者。给予其2点伤害。",
-    "ja": "進化コスト2：これは進化する。\nファンファーレ【覚醒】状態なら、相手の場のフォロワー1体を選ぶ。それに2ダメージ。"
-   },
    "traits": [
     "竜使い"
    ]
@@ -1879,11 +1554,6 @@
    "cost": null,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "On Evolve - Select a {[dragoncraft]} follower that costs 3 or less in your cemetery and summon it.",
-    "cn": "【进化时】选择自己的墓场中的原始消费为3及以下的1张《龙族职业》从者卡。将其召唤到场上。",
-    "ja": "【進化時】自分の墓場の元のコスト3以下のドラゴンフォロワー1枚を選ぶ。それを場に出す。"
-   },
    "traits": [
     "竜使い"
    ]
@@ -1906,11 +1576,6 @@
    "cost": 2,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "{[act]} {[cost02]}, bury this card: Deal 3 damage to each follower on the field and your leader.",
-    "cn": "《起动》《消费2》将这张卡置于墓场：给予场上的全体从者与自己的主战者各3点伤害。",
-    "ja": "起動コスト2これを墓場に置く：場のフォロワーすべてと自分のリーダーに3ダメージ。"
-   },
    "traits": [
     "海洋"
    ]
@@ -1934,11 +1599,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Summon a Naterran Great Tree token. If Overflow is active for you, summon up to 3 instead.",
-    "cn": "将1个『那塔拉的大树』召唤。如果处于【觉醒】状态的话，转变为最多3个。\n―――――――――――――――\n『那塔拉的大树』《中立职业》自然类型·护符《消费1》当这张卡离开场上时，抽取1张卡。将自己的1张手牌舍弃。《起动》《消费1》：将这张卡置于墓场。",
-    "ja": "『ナテラの大樹』1つを出す。【覚醒】状態なら、代わりに3つまで。\n―――――――――――――――\n『ナテラの大樹』ニュートラル自然・アミュレットコスト1これが場を離れたとき、1枚引く。自分の手札1枚を捨てる。起動コスト1：これを墓場に置く。"
-   },
    "traits": [
     "自然"
    ]
@@ -1962,11 +1622,6 @@
    "cost": 2,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower. Activate only if there are 5 Machina followers on your field.\nActivate Banish 2 Machina cards from your cemetery: Summon an Assembly Droid token. Activate only once per turn.",
-    "cn": "《进化》《消费1》：使这张卡进化。这个能力在「自己场上的机械类型·从者」为5个的话才可使用。\n《起动》将墓场中的2张机械类型·卡片消失：将1个『生产器械』召唤。这个能力在1回合可以使用1次。",
-    "ja": "進化コスト1：これは進化する。この能力は自分の場の機械・フォロワーが5体なら使える。\n起動墓場の機械・カード2枚を消滅：『プロダクトマシーン』1体を出す。この能力は1ターンに1回使える。"
-   },
    "traits": [
     "機械",
     "魔界"
@@ -1993,11 +1648,6 @@
    "cost": null,
    "attack": 5,
    "defense": 4,
-   "text": {
-    "en": "Storm.\n{[act]} {[cost02]}, banish an Alpha Drive from your cemetery: Give each Machina follower on your field {[attack]}+2/ {[defense]}+2 and Rush. Activate only once per turn.",
-    "cn": "【疾驰】\n《起动》《消费2》将墓场中的1张『原初之一』卡消失：使自己场上的全体机械类型·从者各《攻击力》+2/《生命值》+2、并获得【突进】能力。这个能力在1回合可以使用1次。",
-    "ja": "【疾走】\n起動コスト2墓場の『ファースト・ワン』1枚を消滅：自分の場の機械・フォロワーすべては攻撃力+2/体力+2して、【突進】を持つ。この能力は1ターンに1回使える。"
-   },
    "traits": [
     "機械",
     "魔界"
@@ -2022,11 +1672,6 @@
    "cost": 7,
    "attack": 4,
    "defense": 6,
-   "text": {
-    "en": "{[fanfare]} Select up to 2 Vampire cards that cost a total of 6 or less in your cemetery and put them into your EX area. They cost 0 play points to play this turn.\nActivate {[engage]}: Select an enemy follower on the field and deal it damage equal to the number of Vampire cards on your field.",
-    "cn": "《入场曲》直到原始消费的合计变为6及以下、选择自己的墓场中的吸血鬼类型·卡片最多2张。将其置于EX区域。这个回合，将其使用之际，将其消费变为0。\n《起动》将这张卡《横置》：选择敌方场上的1个从者。给予其与「自己场上的吸血鬼类型·卡片的张数」等量的伤害。",
-    "ja": "ファンファーレ自分の墓場の吸血鬼・カードを元のコストの合計が6以下になるように2枚まで選ぶ。それをEXエリアに置く。このターン、それをプレイする際、コストを0にする。\n起動これをアクト：相手の場のフォロワー1体を選ぶ。それに「自分の場の吸血鬼・カードの枚数」と同じダメージ。"
-   },
    "traits": [
     "吸血鬼"
    ]
@@ -2050,11 +1695,6 @@
    "cost": 4,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} Search your deck for a Machina follower that costs 3 or less, summon it, then shuffle your deck.\n{[lastwords]} Give your leader {[defense]}+2.",
-    "cn": "《入场曲》从自己的牌堆之中搜寻原始消费为3及以下的1张机械类型·从者卡，并召唤到场上。\n《谢幕曲》使自己的主战者《生命值》+2。",
-    "ja": "ファンファーレ自分のデッキから元のコスト3以下の機械・フォロワー1枚を探し、場に出す。\nラストワード自分のリーダーは体力+2する。"
-   },
    "traits": [
     "機械",
     "魔界"
@@ -2079,11 +1719,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[fanfare]} Bury the top card of your deck.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《入场曲》将自己的牌堆顶1张卡置于墓场。",
-    "ja": "進化コスト1：これは進化する。\nファンファーレ自分のデッキの上1枚を墓場に置く。"
-   },
    "traits": [
     "魔界"
    ]
@@ -2107,11 +1742,6 @@
    "cost": null,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "On Evolve - Select an enemy follower on the field and deal it 2 damage. Necrocharge (10) - Deal 4 damage instead.",
-    "cn": "【进化时】选择敌方场上的1个从者。给予其2点伤害。【死灵充能_10】转变为4点伤害。",
-    "ja": "【進化時】相手の場のフォロワー1体を選ぶ。それに2ダメージ。【ネクロチャージ_10】代わりに4ダメージ。"
-   },
    "traits": [
     "魔界"
    ]
@@ -2136,11 +1766,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Choose one of the following. (1) Select a Machina follower in your cemetery and add it to your hand. (2) Select a Mono, Garnet Rebel in your cemetery and summon it.",
-    "cn": "从下述之中抉择1项。\n【1】选择自己的墓场中的1张机械类型·从者卡。将其加入手牌。\n【2】选择自己的墓场中的1张『绯红抗战者·莫诺』卡。将其召唤到场上。",
-    "ja": "下記から1つチョイスする。【1】自分の墓場の機械・フォロワー1枚を選ぶ。それを手札に加える。【2】自分の墓場の『真紅の抗戦者・モノ』1枚を選ぶ。それを場に出す。"
-   },
    "traits": [
     "機械",
     "魔界"
@@ -2165,11 +1790,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[fanfare]} Bury the top 2 cards of your deck.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《入场曲》将自己的牌堆顶2张卡置于墓场。",
-    "ja": "進化コスト1：これは進化する。\nファンファーレ自分のデッキの上2枚を墓場に置く。"
-   },
    "traits": [
     "機械",
     "死者"
@@ -2194,11 +1814,6 @@
    "cost": null,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "On Evolve - Select a Machina card that costs 2 or less in your cemetery and put it into your EX area. It costs 2 less to play this turn.",
-    "cn": "【进化时】选择自己的墓场中的原始消费为2及以下的1张机械类型·卡片。将其置于EX区域。这个回合，将其使用之际，使其消费-2。",
-    "ja": "【進化時】自分の墓場の元のコスト2以下の機械・カード1枚を選ぶ。それをEXエリアに置く。このターン、それをプレイする際、コストを-2する。"
-   },
    "traits": [
     "機械",
     "死者"
@@ -2222,11 +1837,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} Discard a card: Put the top card of your deck into your EX area. If it’s a follower, give it  {[attack]} +1/{[defense]}+1.",
-    "cn": "《入场曲》将1张手牌舍弃：将自己的牌堆顶1张卡置于EX区域。如果置于EX区域的卡片为从者卡的话，使其《攻击力》+1/《生命值》+1。",
-    "ja": "ファンファーレ手札1枚を捨てる：自分のデッキの上1枚をEXエリアに置く。EXエリアに置いたカードがフォロワーなら、それは攻撃力+1/体力+1する。"
-   },
    "traits": [
     "魔界"
    ]
@@ -2250,11 +1860,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Select an enemy follower on the field and deal it 4 damage. If there is a Nicola, Forbidden Strength on your field, deal 6 damage instead.",
-    "cn": "选择敌方场上的1个从者。给予其4点伤害。如果自己的场上有『禁断之腕·尼古拉』的话，转变为6点伤害。",
-    "ja": "相手の場のフォロワー1体を選ぶ。それに4ダメージ。自分の場に『禁絶の腕・ニコラ』がいるなら、代わりに6ダメージ。"
-   },
    "traits": [
     "機械",
     "死者"
@@ -2278,11 +1883,6 @@
    "cost": 4,
    "attack": 2,
    "defense": 5,
-   "text": {
-    "en": "Assail. Bane.\nWhile there's another Machina follower on your field, this follower has Rush.",
-    "cn": "【指定攻击】【必杀】\n只要自己的场上有其他的机械类型·从者存在，使这张卡获得【突进】能力。",
-    "ja": "【指定攻撃】【必殺】\n自分の場に他の機械・フォロワーがいる限り、これは【突進】を持つ。"
-   },
    "traits": [
     "機械",
     "死者"
@@ -2307,11 +1907,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[lastwords]} Summon an Assembly Droid token.",
-    "cn": "《谢幕曲》将1个『生产器械』召唤。\n―――――――――――――――\n『生产器械』《中立职业》机械类型·从者《消费1》《攻击力》1/《生命值》1《起动》将这张卡《横置》将场上的3个机械类型·从者置于墓场：选择敌方场上的1个从者。给予其5点伤害。",
-    "ja": "ラストワード『プロダクトマシーン』1体を出す。\n―――――――――――――――\n『プロダクトマシーン』ニュートラル機械・フォロワーコスト1攻撃力1/体力1起動これをアクト場の機械・フォロワー3体を墓場に置く：相手の場のフォロワー1体を選ぶ。それに5ダメージ。"
-   },
    "traits": [
     "機械",
     "死者"
@@ -2335,11 +1930,6 @@
    "cost": 4,
    "attack": 6,
    "defense": 6,
-   "text": {
-    "en": "{[evolve]} {[cost03]}: Evolve this follower.\n{[fanfare]} Deal 3 damage to your leader.",
-    "cn": "《进化》《消费3》：使这张卡进化。\n《入场曲》给予自己的主战者3点伤害。",
-    "ja": "進化コスト3：これは進化する。\nファンファーレ自分のリーダーに3ダメージ。"
-   },
    "traits": [
     "魔界"
    ]
@@ -2362,11 +1952,6 @@
    "cost": null,
    "attack": 8,
    "defense": 8,
-   "text": {
-    "en": "On Evolve - Select up to 2 enemy followers on the field and destroy them.",
-    "cn": "【进化时】选择敌方场上的从者最多2个。将其破坏。",
-    "ja": "【進化時】相手の場のフォロワー2体まで選ぶ。それを破壊する。"
-   },
    "traits": [
     "魔界"
    ]
@@ -2389,11 +1974,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "Whenever a follower on your field evolves, summon 2 Ghost tokens.\nActivate {[engage]}: Select a Ghost on your field and give it Bane.",
-    "cn": "当自己场上的从者进化时，将2个『怨灵』召唤。\n《起动》将这张卡《横置》：选择自己场上的1个『怨灵』。使其获得【必杀】能力。\n―――――――――――――――\n『怨灵』《梦魇职业》死者类型·从者《消费1》《攻击力》1/《生命值》1【疾驰】当自己的结束阶段到来时，使这张卡消失。",
-    "ja": "自分の場のフォロワーが進化したとき、『ゴースト』2体を出す。\n起動これをアクト：自分の場の『ゴースト』1体を選ぶ。それは【必殺】を持つ。\n―――――――――――――――\n『ゴースト』ナイトメア死者・フォロワーコスト1攻撃力1/体力1【疾走】自分のエンドフェイズが来たとき、これは消滅する。"
-   },
    "traits": [
     "死者"
    ]
@@ -2417,11 +1997,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[fanfare]} Look at the top 2 cards of your deck. You may reveal a Machina card from among them and add it to your hand. Put the rest on the bottom of your deck in any order.\nActivate {[engage]}, bury this card: Put an Assembly Droid token into your EX area. Activate only if you have at least 5 Machina cards in your cemetery.",
-    "cn": "《入场曲》查看自己的牌堆顶2张卡。从那之中，可以将1张机械类型·卡片公开并加入手牌。将剩余的卡以任意顺序置于牌堆底。\n《起动》将这张卡《横置》置于墓场：将1张『生产器械』卡置于EX区域。这个能力在「自己的墓场中的机械类型·卡片」为5张及以上的话才可使用。",
-    "ja": "ファンファーレ自分のデッキの上2枚を見る。その中から、機械・カード1枚を公開して手札に加えてよい。残りを好きな順にデッキの下に置く。\n起動これをアクト墓場に置く：『プロダクトマシーン』1枚をEXエリアに置く。この能力は自分の墓場の機械・カードが5枚以上なら使える。"
-   },
    "traits": [
     "機械"
    ]
@@ -2445,11 +2020,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost07]}: Evolve this follower.\n{[fanfare]} Put a Repair Mode token into your EX area.\nActivate Banish a Repair Mode from your EX area: This card's Evolve costs 1 less this turn.",
-    "cn": "《进化》《消费7》：使这张卡进化。\n《入场曲》将1张『修复模式』卡置于EX区域。\n《起动》将EX区域的1张『修复模式』卡消失：这个回合，将这张卡的《进化》消费-1。\n―――――――――――――――\n『修复模式』《中立职业》机械类型·法术《消费1》《快速》使自己的主战者《生命值》+1。",
-    "ja": "進化コスト7：これは進化する。\nファンファーレ『リペアモード』1枚をEXエリアに置く。\n起動EXエリアの『リペアモード』1枚を消滅：このターン、これの進化コストを-1する。\n―――――――――――――――\n『リペアモード』ニュートラル機械・スペルコスト1クイック自分のリーダーは体力+1する。"
-   },
    "traits": [
     "機械",
     "信仰",
@@ -2476,11 +2046,6 @@
    "cost": null,
    "attack": 5,
    "defense": 4,
-   "text": {
-    "en": "On Evolve: Destroy each enemy follower on the field.\n{[act]} {[cost00]}: Select a Machina follower that costs 2 or less in your cemetery and summon it. Activate only once per turn.",
-    "cn": "【进化时】将敌方场上的全体从者破坏。\n《起动》《消费0》：选择自己的墓场中的原始消费为2及以下的1张机械类型·从者卡。将其召唤到场上。这个能力在1回合可以使用1次。",
-    "ja": "【進化時】相手の場のフォロワーすべてを破壊する。\n起動コスト0：自分の墓場の元のコスト2以下の機械・フォロワー1枚を選ぶ。それを場に出す。この能力は1ターンに1回使える。"
-   },
    "traits": [
     "機械",
     "信仰",
@@ -2508,11 +2073,6 @@
    "cost": 5,
    "attack": 3,
    "defense": 7,
-   "text": {
-    "en": "Ward.\nWhen this card leaves your field, draw a card for every prayer counter on it.\nAt the start of your end phase, select a card on your field. Place a prayer counter on it and give your leader {[defense]}+2.",
-    "cn": "【守护】\n当这张卡离开场上时，置于到这张卡上的祈祷指示物每有1个，抽取1张卡。\n当自己的结束阶段到来时，选择自己场上的1张卡片。将1个祈祷指示物置于到其上。使自己的主战者《生命值》+2。",
-    "ja": "【守護】\nこれが場を離れたとき、これに置かれていた祈りカウンター1つにつき、1枚引く。\n自分のエンドフェイズが来たとき、自分の場のカード1枚を選ぶ。それに祈りカウンター1つを置く。自分のリーダーは体力+2する。"
-   },
    "traits": [
     "信仰",
     "先導",
@@ -2538,11 +2098,6 @@
    "cost": 5,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "Rush.\n{[fanfare]} Put 2 Repair Mode tokens into your EX area. Recover 2 play points.\nStrike - Draw a card. If there are 5 cards named Repair Mode in your EX area, draw 2 instead.",
-    "cn": "【突进】\n【攻击时】抽取1张卡。如果自己EX区域的『修复模式』卡为5张的话，转变为抽取2张卡。\n《入场曲》将2张『修复模式』卡置于EX区域。将自己的PP回复2点。\n―――――――――――――――\n『修复模式』《中立职业》机械类型·法术《消费1》《快速》使自己的主战者《生命值》+1。",
-    "ja": "【突進】\n【攻撃時】1枚引く。自分のEXエリアの『リペアモード』が5枚なら、代わりに2枚。\nファンファーレ『リペアモード』2枚をEXエリアに置く。自分のPPを2回復する。\n―――――――――――――――\n『リペアモード』ニュートラル機械・スペルコスト1クイック自分のリーダーは体力+1する。"
-   },
    "traits": [
     "機械",
     "信仰",
@@ -2568,11 +2123,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[fanfare]} Each player puts a Repair Mode token into their EX area.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《入场曲》每位玩家各将1张『修复模式』卡置于EX区域。\n―――――――――――――――\n『修复模式』《中立职业》机械类型·法术《消费1》《快速》使自己的主战者《生命值》+1。",
-    "ja": "進化コスト1：これは進化する。\nファンファーレ各プレイヤーは『リペアモード』1枚をEXエリアに置く。\n―――――――――――――――\n『リペアモード』ニュートラル機械・スペルコスト1クイック自分のリーダーは体力+1する。"
-   },
    "traits": [
     "信仰"
    ]
@@ -2596,11 +2146,6 @@
    "cost": null,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "On Evolve - Select an enemy follower costs X or less on the field and destroy it. X equals the number of cards in your EX area.",
-    "cn": "【进化时】选择原始消费为X及以下的敌方场上的1个从者。将其破坏。X为「自己EX区域的卡片的张数」。",
-    "ja": "【進化時】元のコストX以下の相手の場のフォロワー1体を選ぶ。それを破壊する。Xは「自分のEXエリアのカードの枚数」である。"
-   },
    "traits": [
     "信仰"
    ]
@@ -2625,11 +2170,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Choose one of the following. (1) Banish 2 cards named Repair Mode from your EX area: Search your deck for a Machina follower that costs 3 or less, summon it, then shuffle your deck. (2) Banish 5 cards named Repair Mode from your EX area: Search your deck for a Machina follower that costs 6 or less, summon it, then shuffle your deck.",
-    "cn": "从下述之中抉择1项。\n【1】将EX区域的2张『修复模式』卡消失：从自己的牌堆中搜寻原始消费为3及以下的1张机械类型·从者卡，并召唤到场上。\n【2】将EX区域的5张『修复模式』卡消失：从自己的牌堆中搜寻原始消费为6及以下的1张机械类型·从者卡，并召唤到场上。",
-    "ja": "下記から1つチョイスする。【1】EXエリアの『リペアモード』2枚を消滅：自分のデッキから元のコスト3以下の機械・フォロワー1枚を探し、場に出す。【2】EXエリアの『リペアモード』5枚を消滅：自分のデッキから元のコスト6以下の機械・フォロワー1枚を探し、場に出す。"
-   },
    "traits": [
     "機械",
     "信仰"
@@ -2653,11 +2193,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 1,
-   "text": {
-    "en": "{[fanfare]} If this card wasn't put onto the field from hand, select an enemy follower on the field and deal it 3 damage.\n{[act]} {[cost01]}, discard this card: Give your leader {[defense]}+1. Put this card into your deck 3rd from the top.",
-    "cn": "《入场曲》如果这张卡从手牌以外召唤到场上的话，选择敌方场上的1个从者。给予其3点伤害。\n《起动》《消费1》将手牌中的这张卡舍弃：使自己的主战者《生命值》+1。将这张卡置于自己的牌堆顶第3张。",
-    "ja": "ファンファーレこれが手札以外から場に出ていたなら、相手の場のフォロワー1体を選ぶ。それに3ダメージ。\n起動コスト1手札のこれを捨てる：自分のリーダーは体力+1する。これを自分のデッキの上から3番目に置く。"
-   },
    "traits": [
     "獣",
     "童話"
@@ -2682,11 +2217,6 @@
    "cost": 2,
    "attack": 1,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\nStorm.\nStrike - Put a Repair Mode token into your EX area. Then, if there are at least 3 cards named Repair Mode in your EX area, give this follower {[attack]}+1.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n【疾驰】\n【攻击时】将1张『修复模式』卡置于EX区域。那之后，如果自己EX区域的『修复模式』卡为3张及以上的话，使这张卡《攻击力》+1。\n―――――――――――――――\n『修复模式』《中立职业》机械类型·法术《消费1》《快速》使自己的主战者《生命值》+1。",
-    "ja": "進化コスト1：これは進化する。\n【疾走】\n【攻撃時】『リペアモード』1枚をEXエリアに置く。その後、自分のEXエリアの『リペアモード』が3枚以上なら、これは攻撃力+1する。\n―――――――――――――――\n『リペアモード』ニュートラル機械・スペルコスト1クイック自分のリーダーは体力+1する。"
-   },
    "traits": [
     "機械",
     "鳥族"
@@ -2711,11 +2241,6 @@
    "cost": null,
    "attack": 2,
    "defense": 4,
-   "text": {
-    "en": "Storm.\nStrike - Put a Repair Mode token into your EX area. Then, if there are at least 3 cards named Repair Mode in your EX area, give this follower {[attack]}+1.\nOn Evolve - Put a Repair Mode token into your EX area.",
-    "cn": "【疾驰】\n【攻击时】将1张『修复模式』卡置于EX区域。那之后，如果自己EX区域的『修复模式』卡为3张及以上的话，使这张卡《攻击力》+1。\n【进化时】将1张『修复模式』卡置于EX区域。",
-    "ja": "【疾走】\n【攻撃時】『リペアモード』1枚をEXエリアに置く。その後、自分のEXエリアの『リペアモード』が3枚以上なら、これは攻撃力+1する。\n【進化時】『リペアモード』1枚をEXエリアに置く。"
-   },
    "traits": [
     "機械",
     "鳥族"
@@ -2739,11 +2264,6 @@
    "cost": 2,
    "attack": 1,
    "defense": 3,
-   "text": {
-    "en": "Ward.\n{[fanfare]} Draw a card. If there are 5 cards in your EX area, instead search your deck for any card, add it to your hand, then shuffle your deck.",
-    "cn": "【守护】\n《入场曲》抽取1张卡。如果自己EX区域的卡片为5张的话，转变为从自己的牌堆之中搜寻1张卡片，并加入手牌。",
-    "ja": "【守護】\nファンファーレ1枚引く。自分のEXエリアのカードが5枚なら、代わりに自分のデッキからカード1枚を探し、手札に加える。"
-   },
    "traits": [
     "狂信"
    ]
@@ -2767,11 +2287,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "Ward.\n{[fanfare]}/{[lastwords]} Put a Repair Mode token into your EX area.",
-    "cn": "【守护】\n《入场曲》《谢幕曲》将1张『修复模式』卡置于EX区域。\n―――――――――――――――\n『修复模式』《中立职业》机械类型·法术《消费1》《快速》使自己的主战者《生命值》+1。",
-    "ja": "【守護】\nファンファーレラストワード『リペアモード』1枚をEXエリアに置く。\n―――――――――――――――\n『リペアモード』ニュートラル機械・スペルコスト1クイック自分のリーダーは体力+1する。"
-   },
    "traits": [
     "機械",
     "信仰"
@@ -2795,11 +2310,6 @@
    "cost": 4,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.",
-    "cn": "《进化》《消费1》：使这张卡进化。",
-    "ja": "進化コスト1：これは進化する。"
-   },
    "traits": [
     "信仰",
     "童話"
@@ -2823,11 +2333,6 @@
    "cost": null,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "On Evolve - Look at the top 5 cards of your deck. From among them, you may summon a Fable follower that costs 5 or less or Fable amulet that costs 5 or less. Put the rest on the bottom of your deck in any order.",
-    "cn": "【进化时】查看自己的牌堆顶5张卡。从那之中，可以将原始消费为5及以下的1张童话类型·从者卡或原始消费为5及以下的1张童话类型·护符卡召唤到场上。将剩余的卡以任意顺序置于牌堆底。",
-    "ja": "【進化時】自分のデッキの上5枚を見る。その中から、元のコスト5以下の童話・フォロワーか元のコスト5以下の童話・アミュレット1枚を場に出してよい。残りを好きな順にデッキの下に置く。"
-   },
    "traits": [
     "信仰",
     "童話"
@@ -2852,11 +2357,6 @@
    "cost": 2,
    "attack": 1,
    "defense": 3,
-   "text": {
-    "en": "Storm.\nStrike - Select an enemy leader or enemy follower on the field and deal it 1 damage.",
-    "cn": "【疾驰】\n【攻击时】选择敌方的1位主战者或敌方场上的1个从者。给予其1点伤害。",
-    "ja": "【疾走】\n【攻撃時】相手のリーダー1人か相手の場のフォロワー1体を選ぶ。それに1ダメージ。"
-   },
    "traits": [
     "自然",
     "光輝",
@@ -2882,11 +2382,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[fanfare]} Look at the top 2 cards of your deck. You may reveal a Machina card from among them and add it to your hand. Put the rest on the bottom of your deck in any order.\nActivate {[engage]}, bury this card: Put a Repair Mode token into your EX area. Activate only if you have at least 2 Machina followers on your field.",
-    "cn": "《入场曲》查看自己的牌堆顶2张卡。从那之中，可以将1张机械类型·卡片公开并加入手牌。将剩余的卡以任意顺序置于牌堆底。\n《起动》将这张卡《横置》置于墓场：将1张『修复模式』卡置于EX区域。这个能力在「自己场上的机械类型·从者」为2个及以上的话才可使用。\n―――――――――――――――\n『修复模式』《中立职业》机械类型·法术《消费1》《快速》使自己的主战者《生命值》+1。",
-    "ja": "ファンファーレ自分のデッキの上2枚を見る。その中から、機械・カード1枚を公開して手札に加えてよい。残りを好きな順にデッキの下に置く。\n起動これをアクト墓場に置く：『リペアモード』1枚をEXエリアに置く。この能力は自分の場の機械・フォロワーが2体以上なら使える。\n―――――――――――――――\n『リペアモード』ニュートラル機械・スペルコスト1クイック自分のリーダーは体力+1する。"
-   },
    "traits": [
     "機械"
    ]
@@ -2909,11 +2404,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[fanfare]} Look at the top 3 cards of your deck. You may reveal a {[havencraft]} follower from among them and add it to your hand. Put the rest on the bottom of your deck in any order.\n{[act]} {[cost01]}, {[engage]}, bury this card: You may summon a follower with \"Meowskers\" in its name from your hand.",
-    "cn": "《入场曲》查看自己的牌堆顶3张卡。从那之中，可以将1张《主教职业》从者卡公开并加入手牌。将剩余的卡以任意顺序置于牌堆底。\n《起动》《消费1》将这张卡《横置》置于墓场：可以将自己的手牌中的1张「卡片名包含『喵鲁』的从者卡」召唤到场上。",
-    "ja": "ファンファーレ自分のデッキの上3枚を見る。その中から、ビショップフォロワー1枚を公開して手札に加えてよい。残りを好きな順にデッキの下に置く。\n起動コスト1これをアクト墓場に置く：自分の手札の「カード名に『ムニャール』を含むフォロワー」1枚を場に出してよい。"
-   },
    "traits": [
     "自然",
     "光輝",
@@ -2940,11 +2430,6 @@
    "cost": 6,
    "attack": 6,
    "defense": 6,
-   "text": {
-    "en": "{[fanfare]} Banish 3 Machina cards from your cemetery: Choose up to 2 of the following. (1) Select an enemy follower on the field and destroy it. (2) Select an enemy amulet on the field and destroy it. (3) Deal 3 damage to each enemy leader. (4) Search your deck for a Machina card not named Technolord, reveal it, add it to your hand, then shuffle your deck.",
-    "cn": "《入场曲》将墓场中的3张机械类型·卡片消失：从下述之中抉择2项。\n【1】选择敌方场上的1个从者。将其破坏。\n【2】选择敌方场上的1个护符。将其破坏。\n【3】给予敌方的全体主战者各3点伤害。\n【4】从自己的牌堆之中搜寻1张「与这张卡不同名的机械类型·卡片」，并加入手牌。",
-    "ja": "ファンファーレ墓場の機械・カード3枚を消滅：下記から2つまでチョイスする。【1】相手の場のフォロワー1体を選ぶ。それを破壊する。【2】相手の場のアミュレット1つを選ぶ。それを破壊する。【3】相手のリーダーすべてに3ダメージ。【4】自分のデッキから「これと同名を除く機械・カード」1枚を探し、手札に加える。"
-   },
    "traits": [
     "機械",
     "大神"
@@ -2969,11 +2454,6 @@
    "cost": 4,
    "attack": 0,
    "defense": 4,
-   "text": {
-    "en": "Rush. Assail. Bane.\n{[lastwords]} Banish a Naterran Great Tree from your field or EX area: Put this card onto its owner's field engaged and evolve it. If you didn't evolve it, banish it.",
-    "cn": "【突进】【指定攻击】【必杀】\n《谢幕曲》将场上或EX区域的1张『那塔拉的大树』卡消失：将这张卡以横置状态召唤到场上。使这张卡进化。如果没有进化的话，使这张卡消失。",
-    "ja": "【突進】【指定攻撃】【必殺】\nラストワード場かEXエリアの『ナテラの大樹』1枚を消滅：これをアクト状態で場に出す。これは進化する。進化しなかったなら、これは消滅する。"
-   },
    "traits": [
     "自然",
     "大神"
@@ -2998,11 +2478,6 @@
    "cost": null,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "Ward.\n{[lastwords]} Give your leader {[defense]}+2.",
-    "cn": "【守护】\n《谢幕曲》使自己的主战者《生命值》+2。",
-    "ja": "【守護】\nラストワード自分のリーダーは体力+2する。"
-   },
    "traits": [
     "自然",
     "大神"
@@ -3027,11 +2502,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "Ward.\n{[fanfare]} Put an Assembly Droid or Repair Mode token into your EX area.\nActivate {[engage]}: Select an enemy follower on the field and deal it 4 damage. Activate only if there are at least 5 Machina cards in your cemetery.",
-    "cn": "【守护】\n《入场曲》将1张『生产器械』卡或1张『修复模式』卡置于EX区域。\n《起动》将这张卡《横置》：选择敌方场上的1个从者。给予其4点伤害。这个能力在「自己的墓场中的机械类型·卡片」为5张及以上的话才可使用。",
-    "ja": "【守護】\nファンファーレ『プロダクトマシーン』1枚か『リペアモード』1枚をEXエリアに置く。\n起動これをアクト：相手の場のフォロワー1体を選ぶ。それに4ダメージ。この能力は自分の墓場の機械・カードが5枚以上なら使える。"
-   },
    "traits": [
     "機械",
     "天使"
@@ -3056,11 +2526,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} You may put a Naterran Great Tree token onto your field or into your EX area. Then, if there are least 5 Natura cards on your field and/or in your EX area, look at the top 3 cards of your deck. You may reveal a Natura card from among them and add it to your hand. Put the rest on the bottom of your deck in any order.",
-    "cn": "《入场曲》可以将1张『那塔拉的大树』卡置于场上或EX区域。那之后，如果「自己场上与自己EX区域的」自然类型·卡片为5张及以上的话，查看自己的牌堆顶3张卡。从那之中，可以将1张自然类型·卡片公开并加入手牌。将剩余的卡以任意顺序置于牌堆底。\n―――――――――――――――\n『那塔拉的大树』《中立职业》自然类型·护符《消费1》当这张卡离开场上时，抽取1张卡。将自己的1张手牌舍弃。《起动》《消费1》：将这张卡置于墓场。",
-    "ja": "ファンファーレ『ナテラの大樹』1枚を場かEXエリアに置いてよい。その後、自分の場や自分のEXエリアの自然・カードが5枚以上なら、自分のデッキの上3枚を見る。その中から、自然・カード1枚を公開して手札に加えてよい。残りを好きな順にデッキの下に置く。\n―――――――――――――――\n『ナテラの大樹』ニュートラル自然・アミュレットコスト1これが場を離れたとき、1枚引く。自分の手札1枚を捨てる。起動コスト1：これを墓場に置く。"
-   },
    "traits": [
     "自然",
     "傭兵"
@@ -3085,11 +2550,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost02]}: Evolve this follower.\nStrike - Select a Neutral spell that costs 3 or less in your cemetery and play it for 0 play points.",
-    "cn": "《进化》《消费2》：使这张卡进化。\n【攻击时】选择自己的墓场中的原始消费为3及以下的1张《中立职业》法术卡。将其以「消费变为0」使用。",
-    "ja": "進化コスト2：これは進化する。\n【攻撃時】自分の墓場の元のコスト3以下のニュートラルスペル1枚を選ぶ。それのコストを0にしてプレイする。"
-   },
    "traits": [
     "超克"
    ]
@@ -3113,11 +2573,6 @@
    "cost": null,
    "attack": 3,
    "defense": 4,
-   "text": {
-    "en": "On Evolve - {[cost05]}: Bury the top 5 cards of your deck. Give this follower Storm.\nStrike - Select a Neutral spell that costs 3 or less in your cemetery and play it for 0 play points.",
-    "cn": "【攻击时】选择自己的墓场中的原始消费为3及以下的1张《中立职业》法术卡。将其以「消费变为0」使用。\n【进化时】《消费5》：将自己的牌堆顶5张卡置于墓场。使这张卡获得【疾驰】能力。",
-    "ja": "【攻撃時】自分の墓場の元のコスト3以下のニュートラルスペル1枚を選ぶ。それのコストを0にしてプレイする。\n【進化時】コスト5：自分のデッキの上5枚を墓場に置く。これは【疾走】を持つ。"
-   },
    "traits": [
     "超克"
    ]
@@ -3141,11 +2596,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[lastwords]} Put a Repair Mode token into your EX area.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《谢幕曲》将1张『修复模式』卡置于EX区域。\n―――――――――――――――\n『修复模式』《中立职业》机械类型·法术《消费1》《快速》使自己的主战者《生命值》+1。",
-    "ja": "進化コスト1：これは進化する。\nラストワード『リペアモード』1枚をEXエリアに置く。\n―――――――――――――――\n『リペアモード』ニュートラル機械・スペルコスト1クイック自分のリーダーは体力+1する。"
-   },
    "traits": [
     "機械",
     "ゴブリン"
@@ -3170,11 +2620,6 @@
    "cost": null,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "On Evolve - Summon an Assembly Droid token.\n{[lastwords]} Put a Repair Mode token into your EX area.",
-    "cn": "【进化时】将1个『生产器械』召唤。\n《谢幕曲》将1张『修复模式』卡置于EX区域。\n―――――――――――――――\n『生产器械』《中立职业》机械类型·从者《消费1》《攻击力》1/《生命值》1《起动》将这张卡《横置》将场上的3个机械类型·从者置于墓场：选择敌方场上的1个从者。给予其5点伤害。",
-    "ja": "【進化時】『プロダクトマシーン』1体を出す。\nラストワード『リペアモード』1枚をEXエリアに置く。\n―――――――――――――――\n『プロダクトマシーン』ニュートラル機械・フォロワーコスト1攻撃力1/体力1起動これをアクト場の機械・フォロワー3体を墓場に置く：相手の場のフォロワー1体を選ぶ。それに5ダメージ。"
-   },
    "traits": [
     "機械",
     "ゴブリン"
@@ -3200,11 +2645,6 @@
    "cost": 1,
    "attack": 1,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} You may put a Naterran Great Tree token onto your field or into your EX area. Give your leader {[defense]}+1.\n{[lastwords]} Discard a Natura card: Draw a card.",
-    "cn": "《入场曲》可以将1张『那塔拉的大树』卡置于场上或EX区域。使自己的主战者《生命值》+1。\n《谢幕曲》将手牌中的1张自然类型·卡片舍弃：抽取1张卡。\n―――――――――――――――\n『那塔拉的大树』《中立职业》自然类型·护符《消费1》当这张卡离开场上时，抽取1张卡。将自己的1张手牌舍弃。《起动》《消费1》：将这张卡置于墓场。",
-    "ja": "ファンファーレ『ナテラの大樹』1枚を場かEXエリアに置いてよい。自分のリーダーは体力+1する。\nラストワード手札の自然・カード1枚を捨てる：1枚引く。\n―――――――――――――――\n『ナテラの大樹』ニュートラル自然・アミュレットコスト1これが場を離れたとき、1枚引く。自分の手札1枚を捨てる。起動コスト1：これを墓場に置く。"
-   },
    "traits": [
     "自然",
     "コック"
@@ -3229,11 +2669,6 @@
    "cost": 3,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Select an enemy follower on the field. Destroy it and give each Maisha, Hero of Purgation on your field {[attack]}+1 for every follower in your cemetery.",
-    "cn": "选择敌方场上的1个从者。将其破坏。使自己场上的全体『肃清的英雄·梅希亚』各《攻击力》+X。X为「自己的墓场中的从者的数量」。",
-    "ja": "相手の場のフォロワー1体を選ぶ。それを破壊する。自分の場の『粛清の英雄・メイシア』すべては攻撃力+Xする。Xは「自分の墓場のフォロワーの数」である。"
-   },
    "traits": [
     "超克"
    ]
@@ -3256,11 +2691,6 @@
    "cost": 5,
    "attack": 4,
    "defense": 5,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[fanfare]} Give your leader {[defense]}+3.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《入场曲》使自己的主战者《生命值》+3。",
-    "ja": "進化コスト1：これは進化する。\nファンファーレ自分のリーダーは体力+3する。"
-   },
    "traits": [
     "天使"
    ]
@@ -3283,11 +2713,6 @@
    "cost": null,
    "attack": 5,
    "defense": 6,
-   "text": {
-    "en": "{[lastwords]} Deal 3 damage to each enemy leader.",
-    "cn": "《谢幕曲》给予敌方的全体主战者各3点伤害。",
-    "ja": "ラストワード相手のリーダーすべてに3ダメージ。"
-   },
    "traits": [
     "天使"
    ]
@@ -3312,11 +2737,6 @@
    "cost": 1,
    "attack": 1,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} Put an Assembly Droid or Repair Mode token into your EX area.\n{[lastwords]} Discard a Machina card: Draw a card.",
-    "cn": "《入场曲》将1张『生产器械』卡或1张『修复模式』卡置于EX区域。\n《谢幕曲》将手牌中的1张机械类型·卡片舍弃：抽取1张卡。",
-    "ja": "ファンファーレ『プロダクトマシーン』1枚か『リペアモード』1枚をEXエリアに置く。\nラストワード手札の機械・カード1枚を捨てる：1枚引く。"
-   },
    "traits": [
     "機械",
     "傭兵"
@@ -3341,11 +2761,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "Rush.\n{[lastwords]} {[cost01]}, banish a Naterran Great Tree from your field or EX area: Search your deck for an Extreme Carrot, summon it, then shuffle your deck. Give your leader {[defense]}+1.",
-    "cn": "【突进】\n《谢幕曲》《消费1》将场上或EX区域的1张『那塔拉的大树』卡消失：从自己的牌堆之中搜寻1张『极品大萝卜』卡，并召唤到场上。使自己的主战者《生命值》+1。",
-    "ja": "【突進】\nラストワードコスト1場かEXエリアの『ナテラの大樹』1枚を消滅：自分のデッキから『エクストリームキャロット』1枚を探し、場に出す。自分のリーダーは体力+1する。"
-   },
    "traits": [
     "自然",
     "傭兵"
@@ -3369,12 +2784,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": "",
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "BP07-LD02",
@@ -3395,12 +2806,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": "",
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "BP07-LD03",
@@ -3420,12 +2827,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": "",
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   },
   {
    "id": "BP07-T01",
@@ -3448,11 +2851,6 @@
    "cost": 1,
    "attack": 1,
    "defense": 1,
-   "text": {
-    "en": "Activate {[engage]}, bury 3 Machina followers: Select an enemy follower on the field and deal it 5 damage.",
-    "cn": "《起动》将这张卡《横置》将场上的3个机械类型·从者置于墓场：选择敌方场上的1个从者。给予其5点伤害。",
-    "ja": "起動これをアクト場の機械・フォロワー3体を墓場に置く：相手の場のフォロワー1体を選ぶ。それに5ダメージ。"
-   },
    "traits": [
     "機械"
    ]
@@ -3478,11 +2876,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[quick]}\nGive your leader {[defense]}+1.",
-    "cn": "《快速》\n使自己的主战者《生命值》+1。",
-    "ja": "クイック\n自分のリーダーは体力+1する。"
-   },
    "traits": [
     "機械"
    ]
@@ -3509,11 +2902,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "When this card leaves the field, draw a card, then discard a card.\n{[act]} {[cost01]}: Bury this card.",
-    "cn": "当这张卡离开场上时，抽取1张卡。将自己的1张手牌舍弃。\n《起动》《消费1》：将这张卡置于墓场。",
-    "ja": "これが場を離れたとき、1枚引く。自分の手札1枚を捨てる。\n起動コスト1：これを墓場に置く。"
-   },
    "traits": [
     "自然"
    ]

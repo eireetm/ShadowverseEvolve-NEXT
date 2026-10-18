@@ -1,10 +1,13 @@
 // The app's state: what the engine worker published (catalog, the game's latest update, the log) and the errors to show.
-// Components read it with useApp(select); only the worker's messages change it.
+// Components read it with useApp(select); the worker's messages change it, and the card texts read the catalog's.
 import { useSyncExternalStore } from "react";
 import { EngineClient } from "../engine/client";
-import type { GameUpdate, LogEntry } from "../engine/protocol";
+import type { CatalogCard, GameUpdate, LogEntry } from "../engine/protocol";
+import { translate } from "../i18n";
+import { cardTextProblems, onCardTexts, withShownTexts } from "../resources/card-texts";
 import { playUpdateSounds } from "../resources/sound";
 import { Catalog } from "./catalog";
+import { getSettings } from "./settings";
 
 export interface AppError {
   id: number;
@@ -39,6 +42,9 @@ export const engine = new EngineClient();
 
 let nextError = 1;
 
+/** The catalog as the worker published it: without card texts, which the page reads (resources/card-texts.ts). */
+let dataCatalog: CatalogCard[] | null = null;
+
 const beforeUpdate = new Set<(update: GameUpdate) => void>();
 
 /** Run `fn` with each update just before it is shown (the table's animations note where the cards were). */
@@ -50,7 +56,8 @@ export function onBeforeUpdate(fn: (update: GameUpdate) => void): () => void {
 engine.subscribe((message) => {
   switch (message.kind) {
     case "ready":
-      setState({ ready: true, catalog: new Catalog(message.catalog) });
+      dataCatalog = message.catalog;
+      setState({ ready: true, catalog: new Catalog(withShownTexts(message.catalog)) });
       break;
     case "update": {
       const update = message.update;
@@ -68,6 +75,17 @@ engine.subscribe((message) => {
     default:
       break;
   }
+});
+
+/** The player's text files told as unusable at the last reading (each is told once, not at every reading). */
+let toldTextProblems = new Set<string>();
+
+// The card texts read (again): the catalog with them; a file of the player's that couldn't be used is told.
+onCardTexts(() => {
+  if (dataCatalog) setState({ catalog: new Catalog(withShownTexts(dataCatalog)) });
+  const problems = new Set(cardTextProblems());
+  for (const file of problems) if (!toldTextProblems.has(file)) reportError(translate(getSettings().uiLang, "resources.ownTextBad", { file }));
+  toldTextProblems = problems;
 });
 
 export function reportError(message: string): void {

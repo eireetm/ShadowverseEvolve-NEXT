@@ -1,5 +1,5 @@
 {
- "format": 1,
+ "format": 2,
  "set": "BP13",
  "printings": 240,
  "cards": [
@@ -24,11 +24,6 @@
    "cost": 1,
    "attack": 1,
    "defense": 1,
-   "text": {
-    "en": "{[fanfare]} Look at the top 3 cards of your deck. You may reveal a {[forestcraft]} card that costs 2 or less from among them and add it to your hand. Put the rest on the bottom of your deck in any order. If you revealed a card, discard a card.\n{[act]} {[cost03]}, banish this card and 2 other cards from your cemetery: You may summon a Sekka, Ninefold Blaze from your evolve deck.",
-    "cn": "《入场曲》查看自己的牌堆顶3张卡。从那之中，可以将原始消费为2及以下的1张《精灵职业》卡片公开并加入手牌。将剩余的卡以任意顺序置于牌堆底。如果将原始消费为2及以下的《精灵职业》卡片公开的话，将自己的1张手牌舍弃。\n《起动》《消费3》：将墓场中的这张卡与2张卡片消失：可以将自己的进化牌组中的1张『九火石炎·雪华』卡召唤到场上。",
-    "ja": "ファンファーレ自分のデッキの上3枚を見る。その中から、元のコスト2以下のエルフカード1枚を公開して手札に加えてよい。残りを好きな順にデッキの下に置く。元のコスト2以下のエルフカードを公開したなら、自分の手札1枚を捨てる。\n起動コスト3墓場のこれとカード2枚を消滅：自分のエボルヴデッキの『九火石炎・セッカ』1枚を場に出してよい。"
-   },
    "traits": [
     "荒野",
     "狩人",
@@ -58,11 +53,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} Choose one. (1) Search your deck for a Resolve of the Nine-Tailed Fox, reveal it, add it to your hand, then shuffle. (2) Select a Resolve of the Nine-Tailed Fox in your cemetery and add it to your hand.",
-    "cn": "《入场曲》从下述之中抉择1项。\n【1】从自己的牌堆之中搜寻1张『九尾的决意』卡，并加入手牌。\n【2】选择自己的墓场中的1张『九尾的决意』卡。将其加入手牌。",
-    "ja": "ファンファーレ下記から1つチョイスする。【1】自分のデッキから『九尾の決意』1枚を探し、手札に加える。【2】自分の墓場の『九尾の決意』1枚を選ぶ。それを手札に加える。"
-   },
    "traits": [
     "荒野",
     "狩人",
@@ -89,11 +79,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "This card can't be played from the EX area.\n----------\n{[evolve]} {[cost01]}: Evolve this follower.\nWhile this card is on your field or in your EX area, each Pixie token follower on your field has Rush.\n{[fanfare]} Put a Fairy token into your EX area.\n{[lastwords]} You may put this card into its owner's EX area.",
-    "cn": "这张卡从EX区域不能使用。\n《进化》《消费1》：使这张卡进化。\n只要有这张卡在场上或EX区域存在，使自己场上的全体妖精类型·衍生物·从者各获得【突进】能力。\n《入场曲》将1张『妖精』卡置于EX区域。\n《谢幕曲》可以将这张卡置于EX区域。",
-    "ja": "これはEXエリアからプレイできない。\n進化コスト1：これは進化する。\nこれが場かEXエリアにある限り、自分の場の妖精・トークン・フォロワーすべては【突進】を持つ。\nファンファーレ『フェアリー』1枚をEXエリアに置く。\nラストワードこれをEXエリアに置いてよい。"
-   },
    "traits": [
     "妖精",
     "プリンセス",
@@ -120,11 +105,6 @@
    "cost": null,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "Each Pixie token follower on your field has Rush.\nOn Evolve - Search your deck for a Pixie amulet that costs 2 or less, summon it, then shuffle.\n{[lastwords]} You may put this card into its owner's EX area.",
-    "cn": "只要有这张卡在场上存在，使自己场上的全体妖精类型·衍生物·从者各获得【突进】能力。\n【进化时】从自己的牌堆之中搜寻原始消费为2及以下的1张妖精类型·护符卡，并召唤到场上。\n《谢幕曲》可以将这张卡置于EX区域。",
-    "ja": "これが場にいる限り、自分の場の妖精・トークン・フォロワーすべては【突進】を持つ。\n【進化時】自分のデッキから元のコスト2以下の妖精・アミュレット1枚を探し、場に出す。\nラストワードこれをEXエリアに置いてよい。"
-   },
    "traits": [
     "妖精",
     "プリンセス",
@@ -149,11 +129,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\nStrike - Select an enemy follower on the field. If there are at least 5 {[forestcraft]} spells with different names in your cemetery, give it {[attack]}-2/{[defense]}-2 and give this follower {[attack]}+2/{[defense]}+2",
-    "cn": "《进化》《消费1》：使这张卡进化。\n【攻击时】选择敌方场上的1个从者。如果自己的墓场中的《精灵职业》法术卡的卡片名的种类数量为5种类及以上的话，使其《攻击力》-2/《生命值》-2。使这张卡《攻击力》+2/《生命值》+2。",
-    "ja": "進化コスト1：これは進化する。\n【攻撃時】相手の場のフォロワー1体を選ぶ。自分の墓場にあるエルフスペルのカード名の種類数が5種類以上なら、それは攻撃力-2/体力-2する。これは攻撃力+2/体力+2する。"
-   },
    "traits": [
     "エルフ族",
     "キラー"
@@ -177,11 +152,6 @@
    "cost": null,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "On Evolve - Look at the top 5 cards of your deck. You may reveal a {[forestcraft]} spell from among them and add it to your hand. You may also bury a {[forestcraft]} spell. Put the rest on the bottom of your deck in any order.\nStrike - Select an enemy follower on the field. If there are at least 5 {[forestcraft]} spells with different names in your cemetery, give it {[attack]}-2/{[defense]}-2 and give this follower {[attack]}+2/{[defense]}+2",
-    "cn": "【攻击时】选择敌方场上的1个从者。如果自己的墓场中的《精灵职业》法术卡的卡片名的种类数量为5种类及以上的话，使其《攻击力》-2/《生命值》-2。使这张卡《攻击力》+2/《生命值》+2。\n【进化时】查看自己的牌堆顶5张卡。从那之中，可以将1张《精灵职业》法术卡公开并加入手牌。可以将1张《精灵职业》法术卡置于墓场。将剩余的卡以任意顺序置于牌堆底。",
-    "ja": "【攻撃時】相手の場のフォロワー1体を選ぶ。自分の墓場にあるエルフスペルのカード名の種類数が5種類以上なら、それは攻撃力-2/体力-2する。これは攻撃力+2/体力+2する。\n【進化時】自分のデッキの上5枚を見る。その中から、エルフスペル1枚を公開して手札に加えてよい。エルフスペル1枚を墓場に置いてよい。残りを好きな順にデッキの下に置く。"
-   },
    "traits": [
     "エルフ族",
     "キラー"
@@ -206,11 +176,6 @@
    "cost": 5,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "Activate {[engage]}, banish 3 cards from your cemetery: Summon a Keenedge Artifact and a Mystic Artifact token.",
-    "cn": "《起动》将这张卡《横置》将墓场中的3张卡片消失：将1个『锋锐的创造物』与1个『神秘的创造物』召唤到场上。\n―――――――――――――――\n『锋锐的创造物』《中立职业》超克类型·从者《消费5》《攻击力》3/《生命值》4【突进】【吸血】\n『神秘的创造物』《中立职业》超克类型·从者《消费3》《攻击力》2/《生命值》3【守护】《入场曲》抽取1张卡。",
-    "ja": "起動これをアクト墓場のカード3枚を消滅：『エッジアーティファクト』1体と『ミスティックアーティファクト』1体を場に出す。\n―――――――――――――――\n『エッジアーティファクト』ニュートラル超克・フォロワーコスト5攻撃力3/体力4【突進】【ドレイン】\n『ミスティックアーティファクト』ニュートラル超克・フォロワーコスト3攻撃力2/体力3【守護】ファンファーレ1枚引く。"
-   },
    "traits": [
     "超克",
     "キラー"
@@ -235,11 +200,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Choose up to 2. (1) Select a Sekka, Ninefold Blaze on your field and, if there are at least 9 cards in your banished zone, give it {[attack]}+2/{[defense]}+2 and Storm. (2) Select a follower with \"Sekka\" in its name on your field and an enemy follower on the field. Give the first follower {[attack]}+2/{[defense]}+2 and deal the second follower damage equal to the first's attack.",
-    "cn": "从下述之中抉择最多2项。\n【1】选择自己场上的1个『九火石炎·雪华』。如果自己的消失领域为9张及以上的话，使其《攻击力》+2/《生命值》+2，并获得【疾驰】能力。\n【2】选择自己场上的1个「卡片名包含『雪华』的从者」与敌方场上的1个从者。使前者《攻击力》+2/《生命值》+2。给予后者与「前者的攻击力」等量的伤害。",
-    "ja": "下記から2つまでチョイスする。【1】自分の場の『九火石炎・セッカ』1体を選ぶ。自分の消滅領域が9枚以上なら、それは攻撃力+2/体力+2して、【疾走】を持つ。【2】自分の場の「カード名に『セッカ』を含むフォロワー」1体と相手の場のフォロワー1体を選ぶ。前者は攻撃力+2/体力+2する。後者に「前者の攻撃力」と同じダメージ。"
-   },
    "traits": [
     "荒野",
     "狩人",
@@ -265,11 +225,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[fanfare]} Give each Pixie token follower in your EX area {[attack]}+1/{[defense]}+1.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《入场曲》使自己的EX区域的全体妖精类型·衍生物·从者卡各《攻击力》+1/《生命值》+1。",
-    "ja": "進化コスト1：これは進化する。\nファンファーレ自分のEXエリアの妖精・トークン・フォロワーすべては攻撃力+1/体力+1する。"
-   },
    "traits": [
     "エルフ族"
    ]
@@ -293,11 +248,6 @@
    "cost": null,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "On Evolve - Summon up to 2 Pixie token followers from your EX area.",
-    "cn": "【进化时】将自己的EX区域的妖精类型·衍生物·从者卡最多2张召唤到场上。",
-    "ja": "【進化時】自分のEXエリアの妖精・トークン・フォロワー2枚まで場に出す。"
-   },
    "traits": [
     "エルフ族"
    ]
@@ -320,11 +270,6 @@
    "cost": 5,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "{[fanfare]} Look at the top 4 cards of your deck. You may reveal a Beast follower from among them and add it to your hand. Put the rest on the bottom of your deck in any order.\nActivate {[engage]}: You may summon a Beast follower that costs 4 or less from your hand.",
-    "cn": "《入场曲》查看自己的牌堆顶4张卡。从那之中，可以将1张野兽类型·从者卡公开并加入手牌。将剩余的卡以任意顺序置于牌堆底。\n《起动》将这张卡《横置》：可以将自己的手牌中的原始消费为4及以下的1张野兽类型·从者卡召唤到场上。",
-    "ja": "ファンファーレ自分のデッキの上4枚を見る。その中から、獣・フォロワー1枚を公開して手札に加えてよい。残りを好きな順にデッキの下に置く。\n起動これをアクト：自分の手札の元のコスト4以下の獣・フォロワー1枚を場に出してよい。"
-   },
    "traits": [
     "狩人",
     "獣"
@@ -349,11 +294,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[fanfare]} Put a Fairy token into your EX area.\nActivate {[engage]}, bury this card: Draw 2 cards. Activate only if there are at least 3 Pixie followers in your EX area.",
-    "cn": "《入场曲》将1张『妖精』卡置于EX区域。\n《起动》将这张卡《横置》置于墓场。抽取2张卡。这个能力在自己的EX区域的妖精类型·从者卡为3张及以上的话才可使用。\n―――――――――――――――\n『妖精』《精灵职业》妖精类型·从者《消费1》《攻击力》1/《生命值》1",
-    "ja": "ファンファーレ『フェアリー』1枚をEXエリアに置く。\n起動これをアクト墓場に置く：2枚引く。この能力は自分のEXエリアの妖精・フォロワーが3枚以上なら使える。\n―――――――――――――――\n『フェアリー』エルフ妖精・フォロワーコスト1攻撃力1/体力1"
-   },
    "traits": [
     "妖精"
    ]
@@ -378,11 +318,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.",
-    "cn": "《进化》《消费1》：使这张卡进化。",
-    "ja": "進化コスト1：これは進化する。"
-   },
    "traits": [
     "妖精"
    ]
@@ -407,11 +342,6 @@
    "cost": null,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "On Evolve - Put a Fairy Wisp and Fairy token into your EX area. Then, if there are at least 3 Pixie followers in your EX area, give your leader {[defense]}+2.",
-    "cn": "【进化时】将1张『妖精萤火』卡与1张『妖精』卡置于EX区域。如果自己的EX区域的妖精类型·从者为3张及以上的话，使自己的主战者《生命值》+2。\n―――――――――――――――\n『妖精萤火』《精灵职业》妖精类型·从者《消费0》《攻击力》1/《生命值》1\n『妖精』《精灵职业》妖精类型·从者《消费1》《攻击力》1/《生命值》1",
-    "ja": "【進化時】『フェアリーウィスプ』1枚と『フェアリー』1枚をEXエリアに置く。自分のEXエリアの妖精・フォロワーが3枚以上なら、自分のリーダーは体力+2する。\n―――――――――――――――\n『フェアリーウィスプ』エルフ妖精・フォロワーコスト0攻撃力1/体力1\n『フェアリー』エルフ妖精・フォロワーコスト1攻撃力1/体力1"
-   },
    "traits": [
     "妖精"
    ]
@@ -434,11 +364,6 @@
    "cost": 3,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "Storm.\nStrike - Banish the top 3 cards of your deck: Give this follower {[attack]}+1/{[defense]}+1.",
-    "cn": "【疾驰】\n【攻击时】将牌堆顶3张卡消失：使这张卡《攻击力》+1/《生命值》+1。",
-    "ja": "【疾走】\n【攻撃時】デッキの上3枚を消滅：これは攻撃力+1/体力+1する。"
-   },
    "traits": [
     "エルフ族"
    ]
@@ -462,11 +387,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "This card costs 1 less to play if a Beast follower not named Gazania Fox was returned to hand from your field this turn.\n----------\n{[fanfare]} Select an enemy follower on the field and deal it 1 damage. If there's a Beast follower that costs 5 or more on your field, deal it 4 damage instead and give this follower Aura.",
-    "cn": "将这张卡使用之际，这个回合，如果已有自己的「与这张卡不同名的野兽类型·从者」从场上放回到手牌的话，将消费-1。\n《入场曲》选择敌方场上的1个从者。给予其1点伤害。如果自己的场上有原始消费为5及以上的野兽类型·从者的话，转变为4点伤害。使这张卡获得【灵气】能力。",
-    "ja": "これをプレイする際、このターン、自分の「これと同名を除く獣・フォロワー」が場から手札に戻っていたなら、コストを-1する。\nファンファーレ相手の場のフォロワー1体を選ぶ。それに1ダメージ。自分の場に元のコスト5以上の獣・フォロワーがいるなら、代わりに4ダメージ。これは【オーラ】を持つ。"
-   },
    "traits": [
     "精霊",
     "植物族",
@@ -491,11 +411,6 @@
    "cost": 6,
    "attack": 5,
    "defense": 6,
-   "text": {
-    "en": "Ward.\nAt the start of your end phase, select an enemy follower on the field and engage it. It doesn't refresh during its controller's next start phase.",
-    "cn": "【守护】\n当自己的结束阶段到来时，选择敌方场上的1个从者。将其横置。使其在下个其玩家的开始阶段中不能竖置。",
-    "ja": "【守護】\n自分のエンドフェイズが来たとき、相手の場のフォロワー1体を選ぶ。それをアクトする。それは次のそれのプレイヤーのスタートフェイズにスタンドしない。"
-   },
    "traits": [
     "精霊",
     "植物族"
@@ -521,11 +436,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 1,
-   "text": {
-    "en": "{[fanfare]} Summon a Fairy token. Look at the top 3 cards of your deck. You may reveal a Pixie card from among them and add it to your hand. Put the rest on the bottom of your deck in any order.",
-    "cn": "《入场曲》将1个『妖精』召唤到场上。查看自己的牌堆顶3张卡。从那之中，可以将1张妖精类型·卡片公开并加入手牌。将剩余的卡以任意顺序置于牌堆底。\n―――――――――――――――\n『妖精』《精灵职业》妖精类型·从者《消费1》《攻击力》1/《生命值》1",
-    "ja": "ファンファーレ『フェアリー』1体を場に出す。自分のデッキの上3枚を見る。その中から、妖精・カード1枚を公開して手札に加えてよい。残りを好きな順にデッキの下に置く。\n―――――――――――――――\n『フェアリー』エルフ妖精・フォロワーコスト1攻撃力1/体力1"
-   },
    "traits": [
     "妖精",
     "狩人"
@@ -551,11 +461,6 @@
    "cost": 6,
    "attack": 3,
    "defense": 5,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\nStorm.\n{[fanfare]} Bury another Levin follower: Select an enemy follower on the field and destroy it.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n【疾驰】\n《入场曲》将场上的其他的1个雷维翁类型·从者置于墓场：选择敌方场上的1个从者。将其破坏。",
-    "ja": "進化コスト1：これは進化する。\n【疾走】\nファンファーレ場の他のレヴィオン・フォロワー1体を墓場に置く：相手の場のフォロワー1体を選ぶ。それを破壊する。"
-   },
    "traits": [
     "指揮官",
     "レヴィオン",
@@ -582,11 +487,6 @@
    "cost": null,
    "attack": 4,
    "defense": 6,
-   "text": {
-    "en": "Storm.\nStrike - Select up to 1 enemy follower on the field and destroy it. Give this follower {[attack]}+X/{[defense]}+X, where X equals the number of followers that were put from the field into the cemetery this turn.\n{[act]} {[cost02]}: Refresh this follower. Activate only if there are at least 10 Levin cards in your cemetery.",
-    "cn": "【疾驰】\n【攻击时】选择敌方场上的从者最多1个。将其破坏。使这张卡《攻击力》+X/《生命值》+X。X为「这个回合，从场上置于墓场的从者的数量」。\n《起动》《消费2》：将这张卡竖置。这个能力在自己的墓场中的雷维翁类型·卡片为10张及以上的话才能使用。",
-    "ja": "【疾走】\n【攻撃時】相手の場のフォロワー1体まで選ぶ。それを破壊する。これは攻撃力+X/体力+Xする。Xは「このターン、場から墓場に置かれたフォロワーの数」である。\n起動コスト2：これをスタンドする。この能力は自分の墓場のレヴィオン・カードが10枚以上なら使える。"
-   },
    "traits": [
     "指揮官",
     "レヴィオン",
@@ -613,11 +513,6 @@
    "cost": 7,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "{[fanfare]} Banish the top 10 cards of your deck. Deal 5 damage to each enemy leader and enemy follower on the field. If there are at least 20 cards in your banished zone, deal 10 damage instead. If there are at least 30, deal 20 damage instead.",
-    "cn": "《入场曲》将自己的牌堆顶10张卡消失。给予敌方的全体主战者与敌方场上的全体从者各5点伤害。如果自己的消失领域为20张及以上的话，转变为各10点伤害。如果自己的消失领域为30张及以上的话，转变为各20点伤害。",
-    "ja": "ファンファーレ自分のデッキの上10枚を消滅させる。相手のリーダーすべてと相手の場のフォロワーすべてに5ダメージ。自分の消滅領域が20枚以上なら、代わりに10ダメージ。自分の消滅領域が30枚以上なら、代わりに20ダメージ。"
-   },
    "traits": [
     "機械",
     "超克",
@@ -643,11 +538,6 @@
    "cost": 4,
    "attack": 4,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\nYour token followers don't take ability damage.\nDuring your turn, whenever an Officer follower is put onto your field, give your leader {[defense]}+1.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n只要有这张卡存在，使自己场上的全体衍生物·从者各不会受到能力伤害。\n自己的回合中，当士兵类型·从者召唤到自己的场上时，使自己的主战者《生命值》+1。",
-    "ja": "進化コスト1：これは進化する。\nこれが場にいる限り、自分の場のトークン・フォロワーすべては能力ダメージを受けない。\n自分のターン中、自分の場に兵士・フォロワーが出たとき、自分のリーダーは体力+1する。"
-   },
    "traits": [
     "指揮官"
    ]
@@ -670,11 +560,6 @@
    "cost": null,
    "attack": 5,
    "defense": 4,
-   "text": {
-    "en": "Your token followers don't take ability damage.\nOn Evolve - Summon 3 Shield Guardian tokens.\nDuring your turn, whenever an Officer follower is put onto your field, give your leader {[defense]}+1.",
-    "cn": "只要有这张卡存在，使自己场上的全体衍生物·从者各不会受到能力伤害。\n自己的回合中，当士兵类型·从者召唤到自己的场上时，使自己的主战者《生命值》+1。\n【进化时】将3个『战盾卫士』召唤到场上。\n―――――――――――――――\n『战盾卫士』《皇家护卫职业》士兵类型·从者《消费1》《攻击力》1/《生命值》1",
-    "ja": "これが場にいる限り、自分の場のトークン・フォロワーすべては能力ダメージを受けない。\n自分のターン中、自分の場に兵士・フォロワーが出たとき、自分のリーダーは体力+1する。\n【進化時】『シールドガーディアン』3体を場に出す。\n―――――――――――――――\n『シールドガーディアン』ロイヤル兵士・フォロワーコスト1攻撃力1/体力1【守護】"
-   },
    "traits": [
     "指揮官"
    ]
@@ -698,11 +583,6 @@
    "cost": 1,
    "attack": 3,
    "defense": 1,
-   "text": {
-    "en": "At the start of your end phase, if there's a Commander card that costs 3 or more on your field, {[cost01]}: Summon this card from your cemetery.\n----------\nAssail.\nThis follower can't attack enemy leaders.",
-    "cn": "【指定攻击】\n这张卡不能对敌方的主战者进行攻击。\n当自己的结束阶段到来时，如果自己的场上有原始消费为3及以上的指挥官类型·卡片的话，《消费1》：将自己的墓场中的这张卡召唤到场上。",
-    "ja": "【指定攻撃】\nこれは相手のリーダーを攻撃できない。\n自分のエンドフェイズが来たとき、自分の場に元のコスト3以上の指揮官・カードがあるなら、コスト1：自分の墓場のこれを場に出す。"
-   },
    "traits": [
     "兵士"
    ]
@@ -728,11 +608,6 @@
    "cost": 3,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "You may play this card for 2 more play points.\n----------\nSelect an enemy follower on the field. Deal it 3 damage and search your deck for a Yurius, Levin Duke, summon it, then shuffle. If you played this card for 2 more play points, also search your deck for an Albert, Levin Saber, summon it, then shuffle.",
-    "cn": "将这张卡使用之际，可以将消费+2。\n选择敌方场上的1个从者。给予其3点伤害。从自己的牌堆之中搜寻1张『雷维翁公爵·尤里乌斯』卡，并召唤到场上。如果将消费+2的话，从自己的牌堆之中搜寻1张『雷维翁剑士·阿尔贝尔』卡，并召唤到场上。",
-    "ja": "これをプレイする際、コストを+2してよい。\n相手の場のフォロワー1体を選ぶ。それに3ダメージ。自分のデッキから『レヴィオンデューク・ユリウス』1枚を探し、場に出す。コストを+2したなら、自分のデッキから『レヴィオンセイバー・アルベール』1枚を探し、場に出す。"
-   },
    "traits": [
     "指揮官",
     "レヴィオン"
@@ -758,11 +633,6 @@
    "cost": 1,
    "attack": 1,
    "defense": 1,
-   "text": {
-    "en": "{[evolve]} {[cost03]}: Evolve this follower.\n{[fanfare]} Discard a Levin card: Search your deck for a {[swordcraft]} follower with \"Albert\" in its name, reveal it, add it to your hand, then shuffle.",
-    "cn": "《进化》《消费3》：使这张卡进化。\n《入场曲》将手牌中的1张雷维翁类型·卡片舍弃：从自己的牌堆之中搜寻1张「卡片名包含『阿尔贝尔』的《皇家护卫职业》从者卡」，并加入手牌。",
-    "ja": "進化コスト3：これは進化する。\nファンファーレ手札のレヴィオン・カード1枚を捨てる：自分のデッキから「カード名に『アルベール』を含むロイヤルフォロワー」1枚を探し、手札に加える。"
-   },
    "traits": [
     "兵士",
     "レヴィオン"
@@ -788,11 +658,6 @@
    "cost": null,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "On Evolve - You may summon a {[swordcraft]} follower with \"Albert\" in its name that costs X or less from your hand. X equals your max play points.\nDuring your turn, whenever a {[swordcraft]} follower with \"Albert\" in its name is put onto your field, {[cost01]}: Select an enemy follower on the field and deal it 3 damage.",
-    "cn": "自己的回合中，当「卡片名包含『阿尔贝尔』的《皇家护卫职业》从者」召唤到自己的场上时，《消费1》：选择敌方场上的1个从者。给予其3点伤害。\n【进化时】可以将自己的手牌中的原始消费为X及以下的1张「卡片名包含『阿尔贝尔』的《皇家护卫职业》从者卡」召唤到场上。X为「自己的PP最大值」。",
-    "ja": "自分のターン中、自分の場に「カード名に『アルベール』を含むロイヤルフォロワー」が出たとき、コスト1：相手の場のフォロワー1体を選ぶ。それに3ダメージ。\n【進化時】自分の手札の元のコストX以下の「カード名に『アルベール』を含むロイヤルフォロワー」1枚を場に出してよい。Xは「自分のPP最大値」である。"
-   },
    "traits": [
     "兵士",
     "レヴィオン"
@@ -818,11 +683,6 @@
    "cost": 4,
    "attack": 4,
    "defense": 3,
-   "text": {
-    "en": "When playing this card, bury a Levin follower that costs 3 or less: This card costs 3 less to play.\n----------\n{[fanfare]} Select an enemy follower on the field and deal it 4 damage.",
-    "cn": "将这张卡使用之际，将原始消费为3及以下的场上的1个雷维翁类型·从者置于墓场：将消费-3。\n《入场曲》选择敌方场上的1个从者。给予其4点伤害。",
-    "ja": "これをプレイする際、元のコスト3以下の場のレヴィオン・フォロワー1体を墓場に置く：コストを-3する。\nファンファーレ相手の場のフォロワー1体を選ぶ。それに4ダメージ。"
-   },
    "traits": [
     "兵士",
     "レヴィオン",
@@ -848,11 +708,6 @@
    "cost": 1,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} {[cost03]} Summon a Steelclad Knight and Shield Guardian token.\nDuring your turn, whenever a {[swordcraft]} token follower is put onto your field, select an enemy follower on the field and deal it 1 damage.",
-    "cn": "自己的回合中，当《皇家护卫职业》衍生物·从者召唤到自己的场上时，选择敌方场上的1个从者。给予其1点伤害。\n《入场曲》《消费3》：将1个『铁甲骑士』与1个『战盾卫士』召唤到场上。\n―――――――――――――――\n『铁甲骑士』《皇家护卫职业》士兵类型·从者《消费2》《攻击力》2/《生命值》2\n『战盾卫士』《皇家护卫职业》士兵类型·从者《消费1》《攻击力》1/《生命值》1【守护】",
-    "ja": "自分のターン中、自分の場にロイヤルトークン・フォロワーが出たとき、相手の場のフォロワー1体を選ぶ。それに1ダメージ。\nファンファーレコスト3：『スティールナイト』1体と『シールドガーディアン』1体を場に出す。\n―――――――――――――――\n『スティールナイト』ロイヤル兵士・フォロワーコスト2攻撃力2/体力2\n『シールドガーディアン』ロイヤル兵士・フォロワーコスト1攻撃力1/体力1【守護】"
-   },
    "traits": [
     "指揮官",
     "獣"
@@ -877,11 +732,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[fanfare]} Select an enemy follower on the field and, if there are at least 5 Levin cards in your cemetery, deal it 3 damage.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《入场曲》选择敌方场上的1个从者。如果自己的墓场中的雷维翁类型·卡片为5张及以上的话，给予其3点伤害。",
-    "ja": "進化コスト1：これは進化する。\nファンファーレ相手の場のフォロワー1体を選ぶ。自分の墓場のレヴィオン・カードが5枚以上なら、それに3ダメージ。"
-   },
    "traits": [
     "指揮官",
     "レヴィオン"
@@ -906,11 +756,6 @@
    "cost": null,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "On Evolve - Look at the top 4 cards of your deck. You may reveal a Levin card from among them and add it to your hand. Put the rest on the bottom of your deck in any order.",
-    "cn": "【进化时】查看自己的牌堆顶4张卡。从那之中，可以将1张雷维翁类型·卡片公开并加入手牌。将剩余的卡以任意顺序置于牌堆底。",
-    "ja": "【進化時】自分のデッキの上4枚を見る。その中から、レヴィオン・カード1枚を公開して手札に加えてよい。残りを好きな順にデッキの下に置く。"
-   },
    "traits": [
     "指揮官",
     "レヴィオン"
@@ -935,11 +780,6 @@
    "cost": 1,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "Ward.\n{[fanfare]} Discard a Levin card: Draw a card.\nAt the start of your end phase, if there are at least 5 Levin cards in your cemetery, give your leader {[defense]}+1.",
-    "cn": "【守护】\n当自己的结束阶段到来时，如果自己的墓场中的雷维翁类型·卡片为5张及以上的话，使自己的主战者《生命值》+1。\n《入场曲》将手牌中的1张雷维翁类型·卡片舍弃：抽取1张卡。",
-    "ja": "【守護】\n自分のエンドフェイズが来たとき、自分の墓場のレヴィオン・カードが5枚以上なら、自分のリーダーは体力+1する。\nファンファーレ手札のレヴィオン・カード1枚を捨てる：1枚引く。"
-   },
    "traits": [
     "兵士",
     "レヴィオン"
@@ -964,11 +804,6 @@
    "cost": 2,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "Rush.\nWhile there are at least 5 Levin cards in your cemetery, this follower has Assail and \"Strike: Give this follower {[attack]}+2/{[defense]}+1.\"",
-    "cn": "【突进】\n只要自己的墓场中的雷维翁类型·卡片有5张及以上存在，使这张卡获得【指定攻击】与「【攻击时】使这张卡《攻击力》+2/《生命值》+1」能力。",
-    "ja": "【突進】\n自分の墓場にレヴィオン・カードが5枚以上ある限り、これは【指定攻撃】と「【攻撃時】これは攻撃力+2/体力+1する」を持つ。"
-   },
    "traits": [
     "兵士",
     "レヴィオン"
@@ -993,11 +828,6 @@
    "cost": 2,
    "attack": 1,
    "defense": 4,
-   "text": {
-    "en": "{[fanfare]} Select an enemy follower on the field and deal it 1 damage. If there's another Heroic follower on your field, deal it 4 damage instead.\n{[lastwords]} Look at the top card of your deck. If it's a Heroic card, you may put it into your EX area.",
-    "cn": "《入场曲》选择敌方场上的1个从者。给予其1点伤害。如果自己的场上有其他的英雄类型·从者的话，转变为4点伤害。\n《谢幕曲》查看自己的牌堆顶1张卡。从那之中，可以将1张英雄类型·卡片置于EX区域。",
-    "ja": "ファンファーレ相手の場のフォロワー1体を選ぶ。それに1ダメージ。自分の場に他のヒーロー・フォロワーがいるなら、代わりに4ダメージ。\nラストワード自分のデッキの上1枚を見る。その中から、ヒーロー・カード1枚をEXエリアに置いてよい。"
-   },
    "traits": [
     "兵士",
     "ヒーロー"
@@ -1022,11 +852,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "You may play this card for 4 more play points.\n----------\nSearch your deck for a Mina, Levin Vice Leader; Mona, Levin Mage; or Mena, Levin Duelist, reveal it, add it to your hand, then shuffle. If you played this card for 4 more play points, search for 1 of each instead, summon them, then shuffle.",
-    "cn": "将这张卡使用之际，可以将消费+4。\n从自己的牌堆之中搜寻1张「『雷维翁副团长·玛姆』卡或『雷维翁魔法师·蜜姆』卡或『雷维翁武斗家·梅姆』卡」，并加入手牌。如果将消费+4的话，转变为搜寻各1张，并召唤到场上。",
-    "ja": "これをプレイする際、コストを+4してよい。\n自分のデッキから『レヴィオンの副団長・マイム』か『レヴィオンの魔術師・ミイム』か『レヴィオンの武闘家・メイム』1枚を探し、手札に加える。コストを+4したなら、代わりにそれぞれ1枚を探し、場に出す。"
-   },
    "traits": [
     "指揮官",
     "兵士",
@@ -1054,11 +879,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} Discard an Academic card: Draw a card. If there are at least 5 Academic cards in your cemetery, put an Anne's Summoning token into your EX Area.\nActivate {[engage]}: You may play a Rending Blast from your evolve deck. Activate only if there are at least 15 Academic cards in your cemetery.",
-    "cn": "《入场曲》将手牌中的1张学院类型·卡片舍弃：抽取1张卡。如果自己的墓场中的学院类型·卡片为5张及以上的话，将1张『安的巨大英灵』卡置于EX区域。\n《起动》将这张卡《横置》：可以将自己的进化牌组中的1张『卓越爆击』卡使用。这个能力在自己的墓场中的学院类型·卡片为15张及以上的话才可使用。",
-    "ja": "ファンファーレ手札の学院・カード1枚を捨てる：1枚引く。自分の墓場の学院・カードが5枚以上なら、『アンの大英霊』1枚をEXエリアに置く。\n起動これをアクト：自分のエボルヴデッキの『イクシードブラスト』1枚をプレイしてよい。この能力は自分の墓場の学院・カードが15枚以上なら使える。"
-   },
    "traits": [
     "魔法使い",
     "学院",
@@ -1085,11 +905,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "At the start of your end phase, if you played a Mage follower and a Mage spell this turn, place a mana counter on this card in your EX area.\n----------\n{[evolve]} {[cost04]}: Evolve this follower.\n{[act]} {[cost00]}: Put this card from your hand into your EX area. If there are at least 5 Mage followers and at least 5 Mage spells in your cemetery, place a mana counter on this card in your EX area.",
-    "cn": "《进化》《消费4》：使这张卡进化。\n当自己的结束阶段到来时，这个回合，如果自己已将魔法使类型·从者卡与魔法使类型·法术卡使用的话，将1个魔力指示物置于到自己EX区域的这张卡上。\n《起动》《消费0》：将自己的手牌中的这张卡置于EX区域。如果自己的墓场中的魔法使类型·从者卡与魔法使类型·法术卡各为5张及以上的话，将1个魔力指示物置于到EX区域的这张卡上。",
-    "ja": "進化コスト4：これは進化する。\n自分のエンドフェイズが来たとき、このターン、自分が魔法使い・フォロワーと魔法使い・スペルをプレイしていたなら、自分のEXエリアのこれに魔力カウンター1個を置く。\n起動コスト0：自分の手札のこれをEXエリアに置く。自分の墓場の魔法使い・フォロワーと魔法使い・スペルがそれぞれ5枚以上なら、EXエリアのこれに魔力カウンター1個を置く。"
-   },
    "traits": [
     "魔法使い"
    ]
@@ -1114,11 +929,6 @@
    "cost": null,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "On Evolve - Select up to X Mage spells with different names that cost 3 or less in your cemetery and put them into your EX area. X equals the number of mana counters on this card. The selected spells cost 3 less to play this turn. Remove all mana counters from this card.",
-    "cn": "【进化时】选择自己的墓场中的原始消费为3及以下的、卡片名各不相同的魔法使类型·法术卡最多X张。将其置于EX区域。X为「这张卡的魔力指示物的数量」。这个回合，将其使用之际，将其消费-3。将这张卡的全部魔力指示物取除。",
-    "ja": "【進化時】自分の墓場の元のコスト3以下の魔法使い・スペルをカード名が異なるようにX枚まで選ぶ。それをEXエリアに置く。Xは「これの魔力カウンターの数」である。このターン、それをプレイする際、コストを-3する。これの魔力カウンターすべてを取る。"
-   },
    "traits": [
     "魔法使い"
    ]
@@ -1143,11 +953,6 @@
    "cost": 3,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Deal 8 damage to each enemy leader.",
-    "cn": "给予敌方的全体主战者各8点伤害。",
-    "ja": "相手のリーダーすべてに8ダメージ。"
-   },
    "traits": [
     "魔法使い",
     "学院",
@@ -1173,11 +978,6 @@
    "cost": 1,
    "attack": 1,
    "defense": 1,
-   "text": {
-    "en": "{[evolve]} {[cost02]}: Evolve this follower.\nWard.\n{[fanfare]} Look at the top 5 cards of your deck. Bury 1 from among them. Put the rest on the bottom of your deck in any order.",
-    "cn": "《进化》《消费2》：使这张卡进化。\n【守护】\n《入场曲》查看自己的牌堆顶5张卡。从那之中，将1张卡置于墓场。将剩余的卡以任意顺序置于牌堆底。",
-    "ja": "進化コスト2：これは進化する。\n【守護】\nファンファーレ自分のデッキの上5枚を見る。その中から、1枚を墓場に置く。残りを好きな順にデッキの下に置く。"
-   },
    "traits": [
     "錬金術師",
     "星神"
@@ -1201,11 +1001,6 @@
    "cost": null,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "Ward.\nOn Evolve - Select an enemy follower on the field. If there are at least 6 cards with different base costs in your cemetery, deal it 4 damage, draw 2 cards, then discard a card.",
-    "cn": "【守护】\n【进化时】选择敌方场上的1个从者。如果自己的墓场中的卡片的原始消费的种类数量为6种类及以上的话，给予其4点伤害。抽取2张卡。将自己的1张手牌舍弃。",
-    "ja": "【守護】\n【進化時】相手の場のフォロワー1体を選ぶ。自分の墓場にあるカードの元のコストの種類数が6種類以上なら、それに4ダメージ。2枚引く。自分の手札1枚を捨てる。"
-   },
    "traits": [
     "錬金術師",
     "星神"
@@ -1230,11 +1025,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} Discard an Academic card: Draw a card. If there are at least 5 Academic cards in your cemetery, put a Resentful Blaze token into your EX area.\nActivate {[engage]}: Select an enemy follower on the field and deal it 1 damage.",
-    "cn": "《入场曲》将手牌中的1张学院类型·卡片舍弃：抽取1张卡。如果自己的墓场中的学院类型·卡片为5张及以上的话，将1张『致命炽燃』卡置于EX区域。\n《起动》将这张卡《横置》：选择敌方场上的1个从者。给予其1点伤害。",
-    "ja": "ファンファーレ手札の学院・カード1枚を捨てる：1枚引く。自分の墓場の学院・カードが5枚以上なら、『フェイタルバーン』1枚をEXエリアに置く。\n起動これをアクト：相手の場のフォロワー1体を選ぶ。それに1ダメージ。"
-   },
    "traits": [
     "魔法使い",
     "学院",
@@ -1260,11 +1050,6 @@
    "cost": 6,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Each player declares a follower on their field and, starting with the active player, gives control of it to another player of their choice. (Move it to the field of another player whose field isn't full.)",
-    "cn": "每位玩家，各指定自身场上的1个从者，从回合玩家开始、顺序将指定的从者移交于自身以外的玩家。（移动到场上未到上限的自身以外的玩家的场上）",
-    "ja": "各プレイヤーは、自身の場のフォロワー1体を指定し、ターンプレイヤーから順にそれを自身以外のプレイヤーに渡す。（場が上限ではない自身以外のプレイヤーの場に移動する）"
-   },
    "traits": [
     "魔法使い",
     "禁忌"
@@ -1290,11 +1075,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.",
-    "cn": "《进化》《消费1》：使这张卡进化。",
-    "ja": "進化コスト1：これは進化する。"
-   },
    "traits": [
     "魔法使い",
     "禁忌"
@@ -1320,11 +1100,6 @@
    "cost": null,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "On Evolve - You may put a Mage spell from your hand into your EX area. It costs 3 less to play this turn.",
-    "cn": "【进化时】可以将自己的手牌中的1张魔法使类型·法术卡置于EX区域。这个回合，将其使用之际，将其消费-3。",
-    "ja": "【進化時】自分の手札の魔法使い・スペル1枚をEXエリアに置いてよい。このターン、それをプレイする際、コストを-3する。"
-   },
    "traits": [
     "魔法使い",
     "禁忌"
@@ -1348,11 +1123,6 @@
    "cost": 6,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "{[fanfare]} Deal 2 damage to each enemy follower on the field. Earth Rite: Deal 2 damage to each enemy follower on the field.\n{[lastwords]} Summon a Magic Sediment token.",
-    "cn": "《入场曲》给予敌方场上的全体从者各2点伤害。【土之秘术】给予敌方场上的全体从者各2点伤害。\n《谢幕曲》将1个『大地之魔片』召唤到场上。\n―――――――――――――――\n『大地之魔片』《巫师职业》土之印类型·护符《消费1》【蓄积】",
-    "ja": "ファンファーレ相手の場のフォロワーすべてに2ダメージ。【土の秘術】相手の場のフォロワーすべてに2ダメージ。\nラストワード『大地の魔片』1つを場に出す。\n―――――――――――――――\n『大地の魔片』ウィッチ土の印・アミュレットコスト1【スタック】"
-   },
    "traits": [
     "ゴーレム"
    ]
@@ -1377,11 +1147,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Select an enemy follower on the field and deal it 2 damage. If there are at least 2 Mage followers on your field, deal 4 damage instead and deal 1 damage to its leader.",
-    "cn": "选择敌方场上的1个从者。给予其2点伤害。如果自己场上的魔法使类型·从者为2个及以上的话，转变为4点伤害。给予其主战者1点伤害。",
-    "ja": "相手の場のフォロワー1体を選ぶ。それに2ダメージ。自分の場の魔法使い・フォロワーが2体以上なら、代わりに4ダメージ。それのリーダーに1ダメージ。"
-   },
    "traits": [
     "魔法使い"
    ]
@@ -1404,11 +1169,6 @@
    "cost": 2,
    "attack": 1,
    "defense": 1,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[fanfare]} Draw a card. Discard a card. Give your leader {[defense]}+1.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《入场曲》抽取1张卡。将自己的1张手牌舍弃。使自己的主战者《生命值》+1。",
-    "ja": "進化コスト1：これは進化する。\nファンファーレ1枚引く。自分の手札1枚を捨てる。自分のリーダーは体力+1する。"
-   },
    "traits": [
     "魔法生物",
     "獣"
@@ -1432,11 +1192,6 @@
    "cost": null,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "On Evolve - Select an enemy follower on the field. Deal 1 damage to it and its leader.",
-    "cn": "【进化时】选择敌方场上的1个从者。给予其与其主战者各1点伤害。",
-    "ja": "【進化時】相手の場のフォロワー1体を選ぶ。それとそれのリーダーに1ダメージ。"
-   },
    "traits": [
     "魔法生物",
     "獣"
@@ -1460,11 +1215,6 @@
    "cost": 5,
    "attack": 4,
    "defense": 5,
-   "text": {
-    "en": "{[fanfare]} Put the top card of your deck into your EX area. Give your leader {[defense]}+X, where X equals the card's cost.",
-    "cn": "《入场曲》将自己的牌堆顶1张卡置于EX区域。使自己的主战者《生命值》+X。X为「置于EX区域的卡片的原始消费值」。",
-    "ja": "ファンファーレ自分のデッキの上1枚をEXエリアに置く。自分のリーダーは体力+Xする。Xは「EXエリアに置いたカードの元のコスト」である。"
-   },
    "traits": [
     "魔法使い"
    ]
@@ -1487,11 +1237,6 @@
    "cost": 3,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} Select a Beast or Arcanaform follower that costs 2 or less in your cemetery and summon it.",
-    "cn": "《入场曲》选择自己的墓场中的原始消费为2及以下的1张野兽类型·从者卡或原始消费为2及以下的1张魔法生物类型·从者卡。将其召唤到场上。",
-    "ja": "ファンファーレ自分の墓場の元のコスト2以下の獣・フォロワー1枚か元のコスト2以下の魔法生物・フォロワー1枚を選ぶ。それを場に出す。"
-   },
    "traits": [
     "魔法使い",
     "獣"
@@ -1515,11 +1260,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Select a card in your cemetery. Banish it, search your deck for a card with the same cost and card type, reveal it, add it to your hand, then shuffle.",
-    "cn": "选择自己的墓场中的1张卡片。将其消失。从自己的牌堆之中搜寻1张「原始消费值与种类与其相同的卡片」，并加入手牌。",
-    "ja": "自分の墓場のカード1枚を選ぶ。それを消滅させる。自分のデッキから「元のコストと種類がそれと同じカード」1枚を探し、手札に加える。"
-   },
    "traits": [
     "魔法使い"
    ]
@@ -1543,11 +1283,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "This card costs 1 less to play if there are at least 5 Chess cards in your cemetery.\n----------\nSelect a Chess follower on your field. Destroy it, search your deck for an X-cost Chess follower, summon it, then shuffle. X equals the selected follower's cost plus 2.",
-    "cn": "将这张卡使用之际，如果自己的墓场中的西洋棋类型·卡片为5张及以上的话，将消费-1。\n选择自己场上的1个西洋棋类型·从者。将其破坏。从自己的牌堆之中搜寻原始消费为X的1张西洋棋类型·从者卡，并召唤到场上。X为「选择的从者的原始消费值+2」。",
-    "ja": "これをプレイする際、自分の墓場のチェス・カードが5枚以上なら、コストを-1する。\n自分の場のチェス・フォロワー1体を選ぶ。それを破壊する。自分のデッキから元のコストXのチェス・フォロワー1枚を探し、場に出す。Xは「選んだフォロワーの元のコスト+2」である。"
-   },
    "traits": [
     "チェス"
    ]
@@ -1573,11 +1308,6 @@
    "cost": 4,
    "attack": 4,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost04]}: Evolve this follower.\nRush.\n{[fanfare]} The next Draconic Duelist card you play this turn costs 3 less to play.",
-    "cn": "《进化》《消费4》：使这张卡进化。\n【突进】\n《入场曲》这个回合，下次自己将武斗龙人类型·卡片使用之际，将消费-3。",
-    "ja": "進化コスト4：これは進化する。\n【突進】\nファンファーレこのターン、次に自分が武闘竜人・カードをプレイする際、コストを-3する。"
-   },
    "traits": [
     "荒野",
     "ドラゴニュート",
@@ -1604,11 +1334,6 @@
    "cost": null,
    "attack": 6,
    "defense": 5,
-   "text": {
-    "en": "Assail.\nOn Evolve - Select a Draconic Duelist follower that costs X or less in your cemetery and summon it. X equals this follower's attack.",
-    "cn": "【指定攻击】\n【进化时】选择自己的墓场中的原始消费为X及以下的1张武斗龙人·从者卡。将其召唤到场上。X为「这张卡的攻击力」。",
-    "ja": "【指定攻撃】\n【進化時】自分の墓場の元のコストX以下の武闘竜人・フォロワー1枚を選ぶ。それを場に出す。Xは「これの攻撃力」である。"
-   },
    "traits": [
     "荒野",
     "ドラゴニュート",
@@ -1635,11 +1360,6 @@
    "cost": 10,
    "attack": 5,
    "defense": 9,
-   "text": {
-    "en": "Each Dragon on your field has Storm and Drain.\nAt the start of your end phase, select up to 2 enemy followers on the field. During their controller's next turn, they can't attack enemies.\n{[act]} {[cost00]}: Summon a Dragon token. Activate only once per turn.",
-    "cn": "只要有这张卡在场上存在，使自己场上的全体『飞龙』各获得【疾驰】【吸血】能力。\n当自己的结束阶段到来时，选择敌方场上的从者最多2个。下个其玩家的回合中，使其不能对敌方进行攻击。\n《起动》《消费0》：将1个『飞龙』召唤到场上。这个能力在1回合可以使用1次。",
-    "ja": "これが場にいる限り、自分の場の『ドラゴン』すべては【疾走】【ドレイン】を持つ。\n自分のエンドフェイズが来たとき、相手の場のフォロワー2体まで選ぶ。次のそれのプレイヤーのターン中、それは相手を攻撃できない。\n起動コスト0：『ドラゴン』1体を場に出す。この能力は1ターンに1回使える。"
-   },
    "traits": [
     "竜使い",
     "武闘竜人",
@@ -1664,11 +1384,6 @@
    "cost": 2,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower. Activate only if Overflow is active for you.\nThis follower can't attack enemies.",
-    "cn": "《进化》《消费1》：使这张卡进化。这个能力在处于【觉醒】状态的话才可使用。\n这张卡不能对敌方进行攻击。",
-    "ja": "進化コスト1：これは進化する。この能力は【覚醒】状態なら使える。\nこれは相手を攻撃できない。"
-   },
    "traits": [
     "不死鳥"
    ]
@@ -1691,11 +1406,6 @@
    "cost": null,
    "attack": 6,
    "defense": 6,
-   "text": {
-    "en": "At the start of your end phase, select an enemy follower on the field. If you have 10 max play points, banish it and give your leader {[defense]}+3.",
-    "cn": "当自己的结束阶段到来时，选择敌方场上的1个从者。如果自己的PP最大值为10点的话，将其消失。使自己的主战者《生命值》+3。",
-    "ja": "自分のエンドフェイズが来たとき、相手の場のフォロワー1体を選ぶ。自分のPP最大値が10なら、それを消滅させる。自分のリーダーは体力+3する。"
-   },
    "traits": [
     "不死鳥"
    ]
@@ -1719,11 +1429,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "While there's an amulet on your field, this follower has Rush.\n{[fanfare]} If there are at least 3 Draconic Duelist cards on your field, increase your max play points by 1.",
-    "cn": "只要自己的场上有护符存在，使这张卡获得【突进】能力。\n《入场曲》如果自己场上的武斗龙人类型·卡片为3张及以上的话，将自己的PP最大值+1点。",
-    "ja": "自分の場にアミュレットがある限り、これは【突進】を持つ。\nファンファーレ自分の場の武闘竜人・カードが3枚以上なら、自分のPP最大値を+1する。"
-   },
    "traits": [
     "武闘竜人",
     "キラー"
@@ -1748,11 +1453,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "You may play this card for 3 more play points.\n----------\nSelect an enemy follower on the field. Deal it 3 damage and, if you played this card for 3 more play points, search your deck for a Drache, Fiery Dragonlord, summon it, give it Assail, then shuffle.",
-    "cn": "将这张卡使用之际，可以将消费+3。\n选择敌方场上的1个从者。给予其3点伤害。如果将消费+3的话，从自己的牌堆之中搜寻1张『焦热龙翼·德莱克』卡，并召唤到场上。使其获得【指定攻击】能力。",
-    "ja": "これをプレイする際、コストを+3してよい。\n相手の場のフォロワー1体を選ぶ。それに3ダメージ。コストを+3したなら、自分のデッキから『焦熱の竜翼・ドラーク』1枚を探し、場に出す。それは【指定攻撃】を持つ。"
-   },
    "traits": [
     "荒野",
     "ドラゴニュート",
@@ -1778,11 +1478,6 @@
    "cost": 4,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[fanfare]} Select an enemy follower on the field and, if Overflow is active for you, deal it 4 damage.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《入场曲》选择敌方场上的1个从者。如果处于【觉醒】状态的话，给予其4点伤害。",
-    "ja": "進化コスト1：これは進化する。\nファンファーレ相手の場のフォロワー1体を選ぶ。【覚醒】状態なら、それに4ダメージ。"
-   },
    "traits": [
     "ドラゴニュート",
     "武闘竜人"
@@ -1807,11 +1502,6 @@
    "cost": null,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "On Evolve - Search your deck for a Draconic Duelist follower that costs 3 or less, summon it, then shuffle.",
-    "cn": "【进化时】从自己的牌堆之中搜寻原始消费为3及以下的1张武斗龙人类型·从者卡，并召唤到场上。",
-    "ja": "【進化時】自分のデッキから元のコスト3以下の武闘竜人・フォロワー1枚を探し、場に出す。"
-   },
    "traits": [
     "ドラゴニュート",
     "武闘竜人"
@@ -1835,11 +1525,6 @@
    "cost": 7,
    "attack": 5,
    "defense": 6,
-   "text": {
-    "en": "Ward.\n{[fanfare]} Look at the top 5 cards of your deck. You may reveal any number of {[dragoncraft]} cards that cost 7 or more and add them to your hand. Put the rest on the bottom of your deck in any order.",
-    "cn": "【守护】\n《入场曲》查看自己的牌堆顶5张卡。从那之中，可以将原始消费为7及以上的《龙族职业》卡片任意数量公开并加入手牌。将剩余的卡以任意顺序置于牌堆底。",
-    "ja": "【守護】\nファンファーレ自分のデッキの上5枚を見る。その中から、元のコスト7以上のドラゴンカードを好きな枚数公開して手札に加えてよい。残りを好きな順にデッキの下に置く。"
-   },
    "traits": [
     "竜族"
    ]
@@ -1862,11 +1547,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "As an additional cost to play this card, engage a {[dragoncraft]} follower that costs 7 or more on your field.\n----------\nDeal 2 damage to each enemy leader. Give your leader {[defense]}+2. Draw 2 cards.",
-    "cn": "将这张卡使用之际，作为额外消费、将原始消费为7及以上的场上的1个《龙族职业》从者横置。（不能支付额外消费将不能使用）\n给予敌方的全体主战者各2点伤害。使自己的主战者《生命值》+2。抽取2张卡。",
-    "ja": "これをプレイする際、追加コストとして元のコスト7以上の場のドラゴンフォロワー1体をアクトする。（追加コストを支払わなければプレイできない）\n相手のリーダーすべてに2ダメージ。自分のリーダーは体力+2する。2枚引く。"
-   },
    "traits": [
     "竜族"
    ]
@@ -1889,11 +1569,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.",
-    "cn": "《进化》《消费1》：使这张卡进化。",
-    "ja": "進化コスト1：これは進化する。"
-   },
    "traits": [
     "海洋"
    ]
@@ -1916,11 +1591,6 @@
    "cost": null,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "On Evolve - Look at the top 4 cards of your deck. You may put a Marine card from among them into your EX area. Put the rest on the bottom of your deck in any order.",
-    "cn": "【进化时】查看自己的牌堆顶4张卡。从那之中，可以将1张海洋类型·卡片置于EX区域。将剩余的卡以任意顺序置于牌堆底。",
-    "ja": "【進化時】自分のデッキの上4枚を見る。その中から、海洋・カード1枚をEXエリアに置いてよい。残りを好きな順にデッキの下に置く。"
-   },
    "traits": [
     "海洋"
    ]
@@ -1944,11 +1614,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} Look at the top card of your deck. If it's a Draconic Duelist card, you may reveal it and add it to your hand. If Overflow is active for you, give your leader {[defense]}+2.",
-    "cn": "《入场曲》查看自己的牌堆顶1张卡。从那之中，可以将1张武斗龙人类型·卡片公开并加入手牌。如果处于【觉醒】状态的话，使自己的主战者《生命值》+2。",
-    "ja": "ファンファーレ自分のデッキの上1枚を見る。その中から、武闘竜人・カード1枚を公開して手札に加えてよい。【覚醒】状態なら、自分のリーダーは体力+2する。"
-   },
    "traits": [
     "ドラゴニュート",
     "武闘竜人"
@@ -1973,11 +1638,6 @@
    "cost": 1,
    "attack": 1,
    "defense": 1,
-   "text": {
-    "en": "{[fanfare]} Discard an Armed card: Search your deck for an Armed spell, reveal it, add it to your hand, then shuffle.",
-    "cn": "《入场曲》将手牌中的1张武装类型·卡片舍弃：从自己的牌堆之中搜寻1张武装类型·法术卡，并加入手牌。",
-    "ja": "ファンファーレ手札の武装・カード1枚を捨てる：自分のデッキから武装・スペル1枚を探し、手札に加える。"
-   },
    "traits": [
     "ドラゴニュート",
     "竜族",
@@ -2002,11 +1662,6 @@
    "cost": 2,
    "attack": 3,
    "defense": 1,
-   "text": {
-    "en": "Rush.\n{[fanfare]} Give this follower {[attack]}+X, where X is the number of other Marine followers on your field.",
-    "cn": "【突进】\n《入场曲》使这张卡《攻击力》+X。X为「自己场上的其他的海洋类型·从者的数量」。",
-    "ja": "【突進】\nファンファーレこれは攻撃力+Xする。Xは「自分の場の他の海洋・フォロワーの数」である。"
-   },
    "traits": [
     "海洋"
    ]
@@ -2029,11 +1684,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "As an additional cost to play this card, bury a Dragonewt follower.\n----------\nSelect an enemy follower on the field. Deal it 4 damage and draw a card.",
-    "cn": "将这张卡使用之际，作为额外消费、将场上的1个龙人类型·从者置于墓场。（不能支付额外消费将不能使用）\n选择敌方场上的1个从者。给予其4点伤害。抽取1张卡。",
-    "ja": "これをプレイする際、追加コストとして場のドラゴニュート・フォロワー1体を墓場に置く。（追加コストを支払わなければプレイできない）\n相手の場のフォロワー1体を選ぶ。それに4ダメージ。1枚引く。"
-   },
    "traits": [
     "ドラゴニュート"
    ]
@@ -2057,11 +1707,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "This card can't be played from the EX area while there are dormancy counters on it.\n----------\n{[evolve]} {[cost01]}: Evolve this follower.\nAt the start of your main phase, remove a dormancy counter from this card in your EX area: If there are no dormancy counters on this card, summon it.\n{[lastwords]} Put this card into its owner's EX area. Place 2 dormancy counters on it.",
-    "cn": "只要有休眠指示物置于这张卡存在，这张卡从EX区域不能使用。\n《进化》《消费1》：使这张卡进化。\n当自己的主要阶段到来时，将EX区域的这张卡的1个休眠指示物取除：如果没有休眠指示物置于这张卡的话，将这张卡召唤到场上。\n《谢幕曲》将这张卡置于EX区域。将2个休眠指示物置于到EX区域的这张卡上。",
-    "ja": "これに休眠カウンターが置かれている限り、これはEXエリアからプレイできない。\n進化コスト1：これは進化する。\n自分のメインフェイズが来たとき、EXエリアのこれの休眠カウンター1個を取る：これに休眠カウンターが置かれていないなら、これを場に出す。\nラストワードこれをEXエリアに置く。EXエリアのこれに休眠カウンター2個を置く。"
-   },
    "traits": [
     "荒野",
     "吸血鬼"
@@ -2086,11 +1731,6 @@
    "cost": null,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[lastwords]} Put this card and a Blood Arts token into its owner's EX area. Place 2 dormancy counters on this card.",
-    "cn": "《谢幕曲》将这张卡与1张『血红獠牙』卡置于EX区域。将2个休眠指示物置于到EX区域的这张卡上。\n―――――――――――――――\n『血红獠牙』《梦魇职业》荒野类型·吸血鬼类型·法术《消费1》给予自己的主战者1点伤害。给予敌方场上的全体从者各1点伤害。使自己场上的全体『永劫的吸血鬼·亚瑞札特』各《攻击力》+1，并获得【吸血】能力。如果自己的进化牌组中的正面放置的『永劫的吸血鬼·亚瑞札特』为3张的话，再使其《攻击力》+3/《生命值》+3。",
-    "ja": "ラストワードこれと『紅の牙』1枚をEXエリアに置く。EXエリアのこれに休眠カウンター2個を置く。\n―――――――――――――――\n『紅の牙』ナイトメア荒野・吸血鬼・スペルコスト1自分のリーダーに1ダメージ。相手の場のフォロワーすべてに1ダメージ。自分の場の『永劫の吸血鬼・アルザード』すべては攻撃力+1して、【ドレイン】を持つ。自分のエボルヴデッキの表向きの『永劫の吸血鬼・アルザード』が3枚なら、さらに攻撃力+3/体力+3する。"
-   },
    "traits": [
     "荒野",
     "吸血鬼"
@@ -2116,11 +1756,6 @@
    "cost": 2,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "During your turn, whenever your leader loses defense, choose one that you haven't chosen this turn. (1) Select an enemy follower on the field and deal it damage equal to the number of times your leader has lost defense this turn. (2) Give this follower {[attack]}+1/{[defense]}+1. (3) Give this follower Storm.",
-    "cn": "自己的回合中，当自己的主战者的生命值减少时，从下述之中抉择1项。这个回合，使这个能力不能抉择已抉择的选择项。\n【1】选择敌方场上的1个从者。给予其与「这个回合中自己的主战者生命值减少的次数」等量的伤害。\n【2】使这张卡《攻击力》+1/《生命值》+1。\n【3】使这张卡获得【疾驰】能力。",
-    "ja": "自分のターン中、自分のリーダーの体力が減少したとき、下記から1つチョイスする。このターン、この能力でチョイスした選択肢はチョイスできない。【1】相手の場のフォロワー1体を選ぶ。それに「このターン中に自分のリーダーの体力が減少した回数」と同じダメージ。【2】これは攻撃力+1/体力+1する。【3】これは【疾走】を持つ。"
-   },
    "traits": [
     "魔界",
     "キラー"
@@ -2145,11 +1780,6 @@
    "cost": 3,
    "attack": 1,
    "defense": 4,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\nBane.\n{[lastwords]} Select an enemy follower on the field and deal it 3 damage.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n【必杀】\n《谢幕曲》选择敌方场上的1个从者。给予其3点伤害。",
-    "ja": "進化コスト1：これは進化する。\n【必殺】\nラストワード相手の場のフォロワー1体を選ぶ。それに3ダメージ。"
-   },
    "traits": [
     "死者",
     "キラー"
@@ -2174,11 +1804,6 @@
    "cost": null,
    "attack": 2,
    "defense": 5,
-   "text": {
-    "en": "Bane.\nOn Evolve - Put a Darkest Desire token into your EX area.\n{[lastwords]} Select an enemy follower on the field and deal it 3 damage.",
-    "cn": "【必杀】\n【进化时】将1张『悖德的欲望』卡置于EX区域。\n《谢幕曲》选择敌方场上的1个从者。给予其3点伤害。\n―――――――――――――――\n『悖德的欲望』《梦魇职业》死者类型·杀手类型·法术《消费1》将这张卡使用之际，作为额外消费、将场上的2个从者置于墓场。给予敌方的全体主战者各2点伤害。使自己的主战者《生命值》+2。",
-    "ja": "【必殺】\n【進化時】『インモラルディザイア』1枚をEXエリアに置く。\nラストワード相手の場のフォロワー1体を選ぶ。それに3ダメージ。\n―――――――――――――――\n『インモラルディザイア』ナイトメア死者・キラー・スペルコスト1これをプレイする際、追加コストとして場のフォロワー2体を墓場に置く。相手のリーダーすべてに2ダメージ。自分のリーダーは体力+2する。"
-   },
    "traits": [
     "死者",
     "キラー"
@@ -2204,11 +1829,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "Necrocharge (10) - This follower has Rush and Bane.\n{[fanfare]} Choose one. (1) Select a Soulstrike in your cemetery and put it into your EX area. NC (20) - It costs 2 less to play this turn. (2) Bury the top 2 cards of your deck.",
-    "cn": "【死灵充能_10】使这张卡获得【突进】【必杀】能力。\n《入场曲》从下述之中抉择1项。\n【1】选择自己的墓场中的1张『入魂一刀』卡。将其置于EX区域。【NC_20】这个回合，将其使用之际，将其消费-2。\n【2】将自己的牌堆顶2张卡置于墓场。",
-    "ja": "【ネクロチャージ_10】これは【突進】【必殺】を持つ。 \nファンファーレ下記から1つチョイスする。【1】自分の墓場の『魂の一刀』1枚を選ぶ。それをEXエリアに置く。【NC_20】このターン、それをプレイする際、コストを-2する。【2】自分のデッキの上2枚を墓場に置く。"
-   },
    "traits": [
     "荒野",
     "死者"
@@ -2234,11 +1854,6 @@
    "cost": 4,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "{[fanfare]} Select an {[abysscraft]} follower not named Chris, Beyond the Patch that costs 5 or less in your cemetery. Necrocharge (10) - Summon it and give it Ward.",
-    "cn": "《入场曲》选择自己的墓场中的1张「与这张卡不同名的原始消费为5及以下的《梦魇职业》从者卡」。【死灵充能_10】将其召唤到场上。使其获得【守护】能力。",
-    "ja": "ファンファーレ自分の墓場の「これと同名を除く元のコスト5以下のナイトメアフォロワー」1枚を選ぶ。【ネクロチャージ_10】それを場に出す。それは【守護】を持つ。"
-   },
    "traits": [
     "死者",
     "キラー"
@@ -2262,11 +1877,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost02]}: Evolve this follower.\n{[fanfare]} Bury another follower: This card's Evolve costs 1 less this turn.",
-    "cn": "《进化》《消费2》：使这张卡进化。\n《入场曲》将场上的其他的1个从者置于墓场：这个回合，将这张卡的《进化》消费-1。",
-    "ja": "進化コスト2：これは進化する。\nファンファーレ場の他のフォロワー1体を墓場に置く：このターン、これの進化コストを-1する。"
-   },
    "traits": [
     "獣",
     "キラー"
@@ -2290,11 +1900,6 @@
    "cost": null,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "On Evolve - Select an enemy follower on the field and deal it 3 damage. If a follower was put from your field into the cemetery this turn, deal 4 damage instead and draw a card.",
-    "cn": "【进化时】选择敌方场上的1个从者。给予其3点伤害。这个回合，如果已有自己的从者从场上置于墓场的话，转变为4点伤害。抽取1张卡。",
-    "ja": "【進化時】相手の場のフォロワー1体を選ぶ。それに3ダメージ。このターン、自分のフォロワーが場から墓場に置かれていたなら、代わりに4ダメージ。1枚引く。"
-   },
    "traits": [
     "獣",
     "キラー"
@@ -2318,11 +1923,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "Storm.\n{[fanfare]} If there's an evolved follower on your field, give this follower {[attack]}+1/{[defense]}+1.",
-    "cn": "【疾驰】\n《入场曲》如果自己的场上有进化后从者的话，使这张卡《攻击力》+1/《生命值》+1。",
-    "ja": "【疾走】\nファンファーレ自分の場にエボルヴフォロワーがいるなら、これは攻撃力+1/体力+1する。"
-   },
    "traits": [
     "死者",
     "キラー"
@@ -2348,11 +1948,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Select an enemy follower on the field and deal it 4 damage. Necrocharge (20) - Deal 4 damage to its leader.",
-    "cn": "选择敌方场上的1个从者。给予其4点伤害。【死灵充能_20】给予其主战者4点伤害。",
-    "ja": "相手の場のフォロワー1体を選ぶ。それに4ダメージ。【ネクロチャージ_20】それのリーダーに4ダメージ。"
-   },
    "traits": [
     "荒野",
     "死者"
@@ -2377,11 +1972,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[fanfare]} Bury the top card of your deck.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《入场曲》将自己的牌堆顶1张卡置于墓场。",
-    "ja": "進化コスト1：これは進化する。\nファンファーレ自分のデッキの上1枚を墓場に置く。"
-   },
    "traits": [
     "死霊術師"
    ]
@@ -2405,11 +1995,6 @@
    "cost": null,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "On Evolve - Select a Departed follower that costs 3 or less in your cemetery and summon it.",
-    "cn": "【进化时】选择自己的墓场中的原始消费为3及以下的1张死者类型·从者卡。将其召唤到场上。",
-    "ja": "【進化時】自分の墓場の元のコスト3以下の死者・フォロワー1枚を選ぶ。それを場に出す。"
-   },
    "traits": [
     "死霊術師"
    ]
@@ -2432,11 +2017,6 @@
    "cost": 1,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[fanfare]} If there's a follower with \"Ghost\" in its name in your EX area, draw a card",
-    "cn": "《入场曲》如果自己的EX区域有「卡片名包含『怨灵』的从者卡」的话，抽取1张卡。",
-    "ja": "ファンファーレ自分のEXエリアに「カード名に『ゴースト』を含むフォロワー」があるなら、1枚引く。"
-   },
    "traits": [
     "死者"
    ]
@@ -2459,11 +2039,6 @@
    "cost": 6,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "{[fanfare]}/{[lastwords]} Select an enemy follower on the field. Deal 4 damage to it and 1 damage to its leader.",
-    "cn": "《入场曲》《谢幕曲》选择敌方场上的1个从者。给予其4点伤害。给予其主战者1点伤害。",
-    "ja": "ファンファーレラストワード相手の場のフォロワー1体を選ぶ。それに4ダメージ。それのリーダーに1ダメージ。"
-   },
    "traits": [
     "死者"
    ]
@@ -2487,11 +2062,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Put 2 Ghost tokens into your EX area. They cost 1 less to play this turn.",
-    "cn": "将2张『怨灵』卡置于EX区域。这个回合，将其使用之际，将其消费-1。\n―――――――――――――――\n『怨灵』《梦魇职业》死者类型·从者《消费1》《攻击力》1/《生命值》1【疾驰】当自己的结束阶段到来时，使这张卡消失。",
-    "ja": "『ゴースト』2枚をEXエリアに置く。このターン、それをプレイする際、コストを-1する。\n―――――――――――――――\n『ゴースト』ナイトメア死者・フォロワーコスト1攻撃力1/体力1【疾走】自分のエンドフェイズが来たとき、これは消滅する。"
-   },
    "traits": [
     "死者"
    ]
@@ -2515,11 +2085,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Activate {[engage]}, bury this card: Deal 1 damage to your leader. Draw a card.",
-    "cn": "《起动》将这张卡《横置》置于墓场：给予自己的主战者1点伤害。抽取1张卡。",
-    "ja": "起動これをアクト墓場に置く：自分のリーダーに1ダメージ。1枚引く。"
-   },
    "traits": [
     "吸血鬼"
    ]
@@ -2543,11 +2108,6 @@
    "cost": 2,
    "attack": 3,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost05]}: Evolve this follower.\n{[fanfare]} Give your leader {[defense]}-2: Select an enemy follower that costs 2 or less on the field and destroy it.",
-    "cn": "《进化》《消费5》：使这张卡进化。\n《入场曲》主战者的《生命值》-2:选择原始消费为2及以下的敌方场上的1个从者。将其破坏。",
-    "ja": "進化コスト5：これは進化する。\nファンファーレリーダーの体力-2：元のコスト2以下の相手の場のフォロワー1体を選ぶ。それを破壊する。"
-   },
    "traits": [
     "狂信",
     "キラー"
@@ -2573,11 +2133,6 @@
    "cost": null,
    "attack": 6,
    "defense": 5,
-   "text": {
-    "en": "On Evolve - Deal 3 damage to each enemy leader and enemy follower on the field. Give your leader {[defense]}+3.",
-    "cn": "【进化时】给予敌方的全体主战者与敌方场上的全体从者各3点伤害。使自己的主战者《生命值》+3。",
-    "ja": "【進化時】相手のリーダーすべてと相手の場のフォロワーすべてに3ダメージ。自分のリーダーは体力+3する。"
-   },
    "traits": [
     "狂信",
     "キラー"
@@ -2602,11 +2157,6 @@
    "cost": 6,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "{[fanfare]} anish 2 amulets from your cemetery: Select an enemy follower on the field. Banish it, deal 3 damage to its leader, and give your leader {[defense]}+3.\nActivate Bury an amulet: You may summon a {[havencraft]} follower or amulet that costs 3 or less from your hand. Activate only once per turn.",
-    "cn": "《入场曲》将墓场中的2张护符卡消失：选择敌方场上的1个从者。将其消失。给予其主战者3点伤害。使自己的主战者《生命值》+3。\n《起动》将场上的1个护符置于墓场：可以将自己的手牌中的1张「原始消费为3及以下的《主教职业》从者卡或原始消费为3及以下的《主教职业》护符卡」召唤到场上。这个能力在1回合可以使用1次。",
-    "ja": "ファンファーレ墓場のアミュレット2枚を消滅：相手の場のフォロワー1体を選ぶ。それを消滅させる。それのリーダーに3ダメージ。自分のリーダーは体力+3する。\n起動場のアミュレット1つを墓場に置く：自分の手札の元のコスト3以下のビショップフォロワーか元のコスト3以下のビショップアミュレット1枚を場に出してよい。この能力は1ターンに1回使える。"
-   },
    "traits": [
     "信仰",
     "獣"
@@ -2632,11 +2182,6 @@
    "cost": 2,
    "attack": 1,
    "defense": 1,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\nWard.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n【守护】",
-    "ja": "進化コスト1：これは進化する。\n【守護】"
-   },
    "traits": [
     "信仰",
     "獣"
@@ -2662,11 +2207,6 @@
    "cost": null,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "Ward.\nOn Evolve - Look at the top 4 cards of your deck. You may summon a follower that costs 2 or less from among them. Put the rest on the bottom of your deck in any order. If you summoned a follower with Ward, give your leader {[defense]}+2.",
-    "cn": "【守护】\n【进化时】查看自己的牌堆顶4张卡。从那之中，可以将原始消费为2及以下的1张从者卡召唤到场上。将剩余的卡以任意顺序置于牌堆底。如果其为持有【守护】能力的从者的话，使自己的主战者《生命值》+2。",
-    "ja": "【守護】\n【進化時】自分のデッキの上4枚を見る。その中から、元のコスト2以下のフォロワー1枚を場に出してよい。残りを好きな順にデッキの下に置く。それが【守護】を持つフォロワーなら、自分のリーダーは体力+2する。"
-   },
    "traits": [
     "信仰",
     "獣"
@@ -2691,11 +2231,6 @@
    "cost": 15,
    "attack": 10,
    "defense": 10,
-   "text": {
-    "en": "This card costs 5 less to play if there are no cards on your field. This card costs 5 less to play if there are 2 other cards or less in your hand. This card costs 5 less to play if there are at least 15 cards in your cemetery.\n----------\n{[fanfare]} Select an enemy follower on the field and destroy it.",
-    "cn": "将这张卡使用之际，如果自己的场上没有卡片的话，将消费-5。如果自己的手牌中的其他的卡片为2张及以下的话，将消费-5。如果自己的墓场为15张及以上的话，将消费-5。\n《入场曲》选择敌方场上的1个从者。将其破坏。",
-    "ja": "これをプレイする際、自分の場にカードがないなら、コストを-5する。自分の手札の他のカードが2枚以下なら、コストを-5する。自分の墓場が15枚以上なら、コストを-5する。\nファンファーレ相手の場のフォロワー1体を選ぶ。それを破壊する。"
-   },
    "traits": [
     "信仰",
     "偶像",
@@ -2720,11 +2255,6 @@
    "cost": 3,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "During your turn, whenever a follower that costs 2 or less is put onto your field, select an enemy leader or enemy follower on the field and deal it 1 damage.",
-    "cn": "自己的回合中，当原始消费为2及以下的从者召唤到自己的场上时，选择敌方的1位主战者或敌方场上的1个从者。给予其1点伤害。",
-    "ja": "自分のターン中、自分の場に元のコスト2以下のフォロワーが出たとき、相手のリーダー1人か相手の場のフォロワー1体を選ぶ。それに1ダメージ。"
-   },
    "traits": [
     "信仰",
     "獣"
@@ -2748,11 +2278,6 @@
    "cost": 1,
    "attack": 1,
    "defense": 3,
-   "text": {
-    "en": "{[evolve]} {[cost02]}: Evolve this follower.\nWard.",
-    "cn": "《进化》《消费2》：使这张卡进化。\n【守护】",
-    "ja": "進化コスト2：これは進化する。\n【守護】"
-   },
    "traits": [
     "狂信",
     "キラー"
@@ -2776,11 +2301,6 @@
    "cost": null,
    "attack": 2,
    "defense": 4,
-   "text": {
-    "en": "Ward.\nOn Evolve - Select up to 2 enemy followers on the field. They don't refresh during their controller's next start phase.",
-    "cn": "【守护】\n【进化时】选择敌方场上的从者最多2个。使其在下个其玩家的开始阶段中不能竖置。",
-    "ja": "【守護】\n【進化時】相手の場のフォロワー2体まで選ぶ。それは次のそれのプレイヤーのスタートフェイズにスタンドしない。"
-   },
    "traits": [
     "狂信",
     "キラー"
@@ -2805,11 +2325,6 @@
    "cost": 3,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "Ward.\n{[fanfare]} Look at the top 5 cards of your deck. You may summon an amulet that costs 2 or less from among them. Put the rest on the bottom of your deck in any order.\nActivate {[engage]}: Select an amulet on your field and destroy it.",
-    "cn": "【守护】\n《入场曲》查看自己的牌堆顶5张卡。从那之中，可以将原始消费为2及以下的1张护符卡召唤到场上。将剩余的卡以任意顺序置于牌堆底。\n《起动》将这张卡《横置》：选择自己场上的1个护符。将其破坏。",
-    "ja": "【守護】\nファンファーレ自分のデッキの上5枚を見る。その中から、元のコスト2以下のアミュレット1枚を場に出してよい。残りを好きな順にデッキの下に置く。\n起動これをアクト：自分の場のアミュレット1つを選ぶ。それを破壊する。"
-   },
    "traits": [
     "信仰"
    ]
@@ -2833,11 +2348,6 @@
    "cost": 2,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "As an additional cost to play this card, you may bury an amulet.\n----------\nSelect an enemy follower on the field and deal it 3 damage. If you paid this card's additional cost, deal 5 damage instead.",
-    "cn": "将这张卡使用之际，可以作为额外消费、将场上的1个护符置于墓场。\n选择敌方场上的1个从者。给予其3点伤害。如果将这张卡的额外消费支付的话，转变为5点伤害。",
-    "ja": "これをプレイする際、追加コストとして場のアミュレット1つを墓場に置いてよい。\n相手の場のフォロワー1体を選ぶ。それに3ダメージ。これの追加コストを払っていたなら、代わりに5ダメージ。"
-   },
    "traits": [
     "信仰"
    ]
@@ -2860,11 +2370,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\nWard.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n【守护】",
-    "ja": "進化コスト1：これは進化する。\n【守護】"
-   },
    "traits": [
     "信仰",
     "獣"
@@ -2888,11 +2393,6 @@
    "cost": null,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "Ward.\nOn Evolve - Look at the top 4 cards of your deck. You may reveal a Beast card from among them and add it to your hand. Put the rest on the bottom of your deck in any order.",
-    "cn": "【守护】\n【进化时】查看自己的牌堆顶4张卡。从那之中，可以将1张野兽类型·卡片公开并加入手牌。将剩余的卡以任意顺序置于牌堆底。",
-    "ja": "【守護】\n【進化時】自分のデッキの上4枚を見る。その中から、獣・カード1枚を公開して手札に加えてよい。残りを好きな順にデッキの下に置く。"
-   },
    "traits": [
     "信仰",
     "獣"
@@ -2916,11 +2416,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 3,
-   "text": {
-    "en": "{[fanfare]} Discard a card: Look at the top 4 cards of your deck. You may reveal a spell or amulet from among them and add it to your hand. Put the rest on the bottom of your deck in any order.",
-    "cn": "《入场曲》将1张手牌舍弃：查看自己的牌堆顶4张卡。从那之中，可以将1张「法术卡或护符卡」公开并加入手牌。将剩余的卡以任意顺序置于牌堆底。",
-    "ja": "ファンファーレ手札1枚を捨てる：自分のデッキの上4枚を見る。その中から、スペルかアミュレット1枚を公開して手札に加えてよい。残りを好きな順にデッキの下に置く。"
-   },
    "traits": [
     "信仰",
     "鳥族"
@@ -2945,11 +2440,6 @@
    "cost": 7,
    "attack": 4,
    "defense": 7,
-   "text": {
-    "en": "Ward.\n{[fanfare]} Search your deck for a Faith follower with 2 attack or less, summon it, then shuffle.",
-    "cn": "【守护】\n《入场曲》从自己的牌堆之中搜寻攻击力为2及以下的1张信仰类型·从者卡，并召唤到场上。",
-    "ja": "【守護】\nファンファーレ自分のデッキから攻撃力2以下の信仰・フォロワー1枚を探し、場に出す。"
-   },
    "traits": [
     "信仰"
    ]
@@ -2972,11 +2462,6 @@
    "cost": 2,
    "attack": 0,
    "defense": 5,
-   "text": {
-    "en": "Ward.\n{[fanfare]} If this follower wasn't put onto the field from hand, give it {[attack]}+2.",
-    "cn": "【守护】\n《入场曲》如果这张卡从手卡以外召唤到场上的话，使这张卡《攻击力》+2。",
-    "ja": "【守護】\nファンファーレこれが手札以外から場に出ていたなら、これは攻撃力+2する。"
-   },
    "traits": [
     "信仰",
     "獣"
@@ -3001,11 +2486,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[act]} {[cost05]}, {[engage]}, bury this card: Select an enemy follower on the field and destroy it.\n{[lastwords]} Give your leader {[defense]}+1. Draw a card.",
-    "cn": "《谢幕曲》使自己的主战者《生命值》+1。抽取1张卡。\n《起动》《消费5》将这张卡《横置》置于墓场：选择敌方场上的1个从者。将其破坏。",
-    "ja": "ラストワード自分のリーダーは体力+1する。1枚引く。\n起動コスト5これをアクト墓場に置く：相手の場のフォロワー1体を選ぶ。それを破壊する。"
-   },
    "traits": [
     "狂信"
    ]
@@ -3029,11 +2509,6 @@
    "cost": 7,
    "attack": 6,
    "defense": 6,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\nWard.\n{[fanfare]} ou may summon a follower that costs 6 or less from your hand. Give it \"At the start of your end phase, return this card to its owner's hand.\"",
-    "cn": "《进化》《消费1》：使这张卡进化。\n【守护】\n《入场曲》可以将自己的手牌中的原始消费为6及以下的1张从者卡召唤到场上。使其获得「当自己的结束阶段到来时，将这张卡放回手牌」能力。",
-    "ja": "進化コスト1：これは進化する。\n【守護】\nファンファーレ自分の手札の元のコスト6以下のフォロワー1枚を場に出してよい。それは「自分のエンドフェイズが来たとき、これを手札に戻す」を持つ。"
-   },
    "traits": [
     "天使",
     "大神"
@@ -3059,11 +2534,6 @@
    "cost": null,
    "attack": 7,
    "defense": 7,
-   "text": {
-    "en": "Ward.\nOn Evolve - Select another follower on the field and put it into its owner's EX area. If you put it into your EX area, summon it engaged.",
-    "cn": "【守护】\n【进化时】选择场上的其他的1个从者。将其置于EX区域。如果将其置于到自己的EX区域的话，将其以横置状态召唤到场上。",
-    "ja": "【守護】\n【進化時】場の他のフォロワー1体を選ぶ。それをEXエリアに置く。それを自分のEXエリアに置いたなら、それをアクト状態で場に出す。"
-   },
    "traits": [
     "天使",
     "大神"
@@ -3088,11 +2558,6 @@
    "cost": 8,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Banish each card on the field and in the EX area. Each player banishes the top 10 cards of their deck.",
-    "cn": "将场上的全体卡片与EX区域的全体卡片各消失。每位玩家，各将自身的牌堆顶10张卡消失。",
-    "ja": "場のカードすべてとEXエリアのカードすべてを消滅させる。各プレイヤーは、自身のデッキの上10枚を消滅させる。"
-   },
    "traits": [
     "大神",
     "魔王",
@@ -3117,11 +2582,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost02]}: Evolve this follower.\nDuring your turn, whenever a follower is put from your field into the cemetery, deal 1 damage to each enemy leader.",
-    "cn": "《进化》《消费2》：使这张卡进化。\n自己的回合中，当自己的从者从场上置于墓场时，给予敌方的全体主战者各1点伤害。",
-    "ja": "進化コスト2：これは進化する。\n自分のターン中、自分のフォロワーが場から墓場に置かれたとき、相手のリーダーすべてに1ダメージ。"
-   },
    "traits": [
     "超克",
     "キラー"
@@ -3145,11 +2605,6 @@
    "cost": null,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "On Evolve - Bury another follower: Summon a Keenedge Artifact token.\nDuring your turn, whenever a follower is put from your field into the cemetery, deal 1 damage to each enemy leader.",
-    "cn": "自己的回合中，当自己的从者从场上置于墓场时，给予敌方的全体主战者各1点伤害。\n【进化时】将场上的其他的1个从者置于墓场：将1个『锋锐的创造物』召唤到场上。\n―――――――――――――――\n『锋锐的创造物』《中立职业》超克类型·从者《消费5》《攻击力》3/《生命值》4【突进】【吸血】",
-    "ja": "自分のターン中、自分のフォロワーが場から墓場に置かれたとき、相手のリーダーすべてに1ダメージ。\n【進化時】場の他のフォロワー1体を墓場に置く：『エッジアーティファクト』1体を場に出す。\n―――――――――――――――\n『エッジアーティファクト』ニュートラル超克・フォロワーコスト5攻撃力3/体力4【突進】【ドレイン】"
-   },
    "traits": [
     "超克",
     "キラー"
@@ -3174,11 +2629,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 4,
-   "text": {
-    "en": "{[fanfare]} Select an enemy follower on the field. If there are at least 3 faceup evolved followers in your evolve deck, deal 5 damage to it and 3 damage to its leader.",
-    "cn": "《入场曲》选择敌方场上的1个从者。如果自己的进化牌组中的正面放置的进化后从者卡为3张及以上的话，给予其5点伤害。给予其主战者3点伤害。",
-    "ja": "ファンファーレ相手の場のフォロワー1体を選ぶ。自分のエボルヴデッキの表向きのエボルヴフォロワーが3枚以上なら、それに5ダメージ。それのリーダーに3ダメージ。"
-   },
    "traits": [
     "光輝",
     "キラー"
@@ -3202,11 +2652,6 @@
    "cost": 4,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "{[quick]}\nThis card costs 3 less to play if there's an Archfiend follower on your field.\n----------\nSelect 2 enemy followers on the field. Deal 5 damage to one and engage the other.",
-    "cn": "《快速》\n将这张卡使用之际，如果自己的场上有魔王类型·从者的话，将消费-3。\n选择敌方场上的1个从者与敌方场上的其他的1个从者。给予前者5点伤害。将后者横置。",
-    "ja": "クイック\nこれをプレイする際、自分の場に魔王・フォロワーがいるなら、コストを-3する。\n相手の場のフォロワー1体と相手の場の他のフォロワー1体を選ぶ。前者に5ダメージ。後者をアクトする。"
-   },
    "traits": [
     "魔王"
    ]
@@ -3230,11 +2675,6 @@
    "cost": 4,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\n{[fanfare]} Draw a card.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n《入场曲》抽取1张卡。",
-    "ja": "進化コスト1：これは進化する。\nファンファーレ1枚引く。"
-   },
    "traits": [
     "商人"
    ]
@@ -3258,11 +2698,6 @@
    "cost": null,
    "attack": 5,
    "defense": 5,
-   "text": {
-    "en": "On Evolve - Select an enemy follower on the field and deal it damage equal to the number of cards in your hand.",
-    "cn": "【进化时】选择敌方场上的1个从者。给予其与「自己的手牌的张数」等量的伤害。",
-    "ja": "【進化時】相手の場のフォロワー1体を選ぶ。それに「自分の手札の枚数」と同じダメージ。"
-   },
    "traits": [
     "商人"
    ]
@@ -3285,11 +2720,6 @@
    "cost": 10,
    "attack": 7,
    "defense": 7,
-   "text": {
-    "en": "Ward.\n{[fanfare]} Give your leader {[defense]}+7.\n{[q]}Activate {[cost04]}, discard this card: Select an enemy follower on the field and destroy it.",
-    "cn": "【守护】\n《入场曲》使自己的主战者《生命值》+7。\n《快速》《起动》《消费4》：将手牌中的这张卡舍弃：选择敌方场上的1个从者。将其破坏。",
-    "ja": "【守護】\nファンファーレ自分のリーダーは体力+7する。\nQ起動コスト4手札のこれを捨てる：相手の場のフォロワー1体を選ぶ。それを破壊する。"
-   },
    "traits": [
     "光輝"
    ]
@@ -3312,11 +2742,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 4,
-   "text": {
-    "en": "{[fanfare]} Select a follower with {[evolve]} in your cemetery and add it to your hand.\nWhenever a follower on your field evolves, give this follower Rush.",
-    "cn": "当自己场上的从者进化时，使这张卡获得【突进】能力。\n《入场曲》选择自己的墓场中的持有《进化》能力的1张从者卡。将其加入手牌。",
-    "ja": "自分の場のフォロワーが進化したとき、これは【突進】を持つ。\nファンファーレ自分の墓場の進化を持つフォロワー1枚を選ぶ。それを手札に加える。"
-   },
    "traits": [
     "探偵"
    ]
@@ -3339,11 +2764,6 @@
    "cost": 2,
    "attack": 2,
    "defense": 2,
-   "text": {
-    "en": "{[evolve]} {[cost01]}: Evolve this follower.\nWard.",
-    "cn": "《进化》《消费1》：使这张卡进化。\n【守护】",
-    "ja": "進化コスト1：これは進化する。\n【守護】"
-   },
    "traits": [
     "ゴブリン"
    ]
@@ -3366,11 +2786,6 @@
    "cost": null,
    "attack": 3,
    "defense": 3,
-   "text": {
-    "en": "Ward.\nOn Evolve - The next time this follower would take damage this turn, it doesn't.",
-    "cn": "【守护】\n【进化时】这个回合，使这张卡不会受到下次伤害。",
-    "ja": "【守護】\n【進化時】このターン、これは次のダメージを受けない。"
-   },
    "traits": [
     "ゴブリン"
    ]
@@ -3394,11 +2809,6 @@
    "cost": 3,
    "attack": 3,
    "defense": 4,
-   "text": {
-    "en": "{[fanfare]} Search your deck for a Neutral spell that costs 1 or less, reveal it, add it to your hand, then shuffle.",
-    "cn": "《入场曲》从自己的牌堆之中搜寻原始消费为1及以下的1张《中立职业》法术卡，并加入手牌。",
-    "ja": "ファンファーレ自分のデッキから元のコスト1以下のニュートラルスペル1枚を探し、手札に加える。"
-   },
    "traits": [
     "堕天使"
    ]
@@ -3421,11 +2831,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Select a follower on your field. Give it \"{[lastwords]} Give your leader {[defense]}+2. Draw a card\" for the rest of this turn.",
-    "cn": "选择自己场上的1个从者。这个回合，使其获得「《谢幕曲》使自己的主战者《生命值》+2。抽取1张卡」能力。",
-    "ja": "自分の場のフォロワー1体を選ぶ。このターン、それは「ラストワード自分のリーダーは体力+2する。1枚引く」を持つ。"
-   },
    "traits": [
     "傭兵"
    ]
@@ -3451,11 +2856,6 @@
    "cost": 2,
    "attack": 4,
    "defense": 4,
-   "text": {
-    "en": "Rush. Ward.\n{[fanfare]} Give your leader {[defense]}+2.\nAt the start of your main phase, banish this card.",
-    "cn": "【突进】【守护】\n当自己的主要阶段到来时，使这张卡消失。\n《入场曲》使自己的主战者《生命值》+2。",
-    "ja": "【突進】【守護】\n自分のメインフェイズが来たとき、これは消滅する。\nファンファーレ自分のリーダーは体力+2する。"
-   },
    "traits": [
     "ゴーレム",
     "魔法生物",
@@ -3481,11 +2881,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Choose one. (1) Select an enemy follower on the field and deal it 4 damage. (2) Select 2 enemy followers on the field and, if there are at least 15 Academic cards in your cemetery, deal them 4 damage.",
-    "cn": "从下述之中抉择1项。\n【1】选择敌方场上的1个从者。给予其4点伤害。\n【2】选择敌方场上的从者最多2个。如果自己的墓场中的学院类型·卡片为15张及以上的话，给予其4点伤害。",
-    "ja": "下記から1つチョイスする。【1】相手の場のフォロワー1体を選ぶ。それに4ダメージ。【2】相手の場のフォロワー2体を選ぶ。自分の墓場の学院・カードが15枚以上なら、それに4ダメージ。"
-   },
    "traits": [
     "魔法使い",
     "学院",
@@ -3512,11 +2907,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "Deal 1 damage to your leader and each enemy follower on the field. Give each Aluzard, Timeworn Vampire on your field {[attack]}+1 and Drain, then give them {[attack]}+3/{[defense]}+3 if there are 3 faceup evolved followers named Aluzard, Timeworn Vampire in your evolve deck.",
-    "cn": "给予自己的主战者1点伤害。给予敌方场上的全体从者各1点伤害。使自己场上的全体『永劫的吸血鬼·亚瑞札特』各《攻击力》+1，并获得【吸血】能力。如果自己的进化牌组中的正面放置的『永劫的吸血鬼·亚瑞札特』为3张的话，再使其《攻击力》+3/《生命值》+3。",
-    "ja": "自分のリーダーに1ダメージ。相手の場のフォロワーすべてに1ダメージ。自分の場の『永劫の吸血鬼・アルザード』すべては攻撃力+1して、【ドレイン】を持つ。自分のエボルヴデッキの表向きの『永劫の吸血鬼・アルザード』が3枚なら、さらに攻撃力+3/体力+3する。"
-   },
    "traits": [
     "荒野",
     "吸血鬼"
@@ -3541,11 +2931,6 @@
    "cost": 1,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "As an additional cost to play this card, bury 2 followers.\n----------\nDeal 2 damage to each enemy leader. Give your leader {[defense]}+2.",
-    "cn": "将这张卡使用之际，作为额外消费、将场上的2个从者置于墓场。（不能支付额外消费将不能使用）\n给予敌方的全体主战者各2点伤害。使自己的主战者《生命值》+2。",
-    "ja": "これをプレイする際、追加コストとして場のフォロワー2体を墓場に置く。（追加コストを支払わなければプレイできない）\n相手のリーダーすべてに2ダメージ。自分のリーダーは体力+2する。"
-   },
    "traits": [
     "死者",
     "キラー"
@@ -3569,11 +2954,6 @@
    "cost": 5,
    "attack": 3,
    "defense": 4,
-   "text": {
-    "en": "Rush. Drain.",
-    "cn": "【突进】【吸血】",
-    "ja": "【突進】【ドレイン】"
-   },
    "traits": [
     "超克"
    ]

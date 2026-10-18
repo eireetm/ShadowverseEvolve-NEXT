@@ -1,12 +1,11 @@
 import type { CardClass, Universe } from "../model/card";
 import { CardDataError } from "./errors";
-import { BP22_CHINESE_NAMES } from "./preview-bp22";
 import type { RawCardJson, RawRuling } from "./raw";
 
 /**
  * Pre-release sets ("先行" data): a set published in Japanese and Chinese before its English release comes as one file
- * of the Japanese official card list instead of the scraped `assets/<card>/<card>.json` files, e.g. BP22 (2026-10-01).
- * Its cards are implemented from the Japanese text, checked against the Chinese
+ * of the Japanese official card list instead of the scraped `assets/<card>/<card>.json` files, e.g. BP22 from 2026-10-01
+ * until its data was scraped (2026-10-18). Its cards are implemented from the Japanese text, checked against the Chinese
  * text (decided by the project owner); their English name and text are a placeholder (english-text.ts PREVIEW_TEXT)
  * until the English data is out, when the set leaves this list and is built from the scraped files like every other.
  *
@@ -17,15 +16,14 @@ import type { RawCardJson, RawRuling } from "./raw";
 export interface PreviewSet {
   file: string;
   /**
-   * Chinese card names by Japanese name, which the official Japanese list doesn't give (e.g. data/preview-bp22.ts, from the
-   * project owner's translation table). Names it lacks come from other cards' Chinese texts (chineseNamesFromTexts).
+   * Chinese card names by Japanese name, which the official Japanese list doesn't give (BP22's came from the project owner's
+   * translation table). Names it lacks come from other cards' Chinese texts (chineseNamesFromTexts).
    */
   chineseNames?: Readonly<Record<string, string>>;
 }
 
-export const PREVIEW_SETS: Readonly<Record<string, PreviewSet>> = {
-  BP22: { file: "BP22.json", chineseNames: BP22_CHINESE_NAMES },
-};
+/** None now: BP22 is built from the scraped data since 2026-10-18. */
+export const PREVIEW_SETS: Readonly<Record<string, PreviewSet>> = {};
 
 /**
  * One card of a pre-release file. Only the fields the build needs: the release date, rarity, product name, flavor text

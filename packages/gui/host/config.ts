@@ -35,6 +35,11 @@ export interface HostConfig {
    * server.mjs. The dev server keeps none unless SVE_SERVER_FILE names one (the browser keeps it).
    */
   serverFile?: string;
+  /**
+   * The card text files the data build wrote on this machine (packages/core/data/<SET>_<lang>.json), which aren't in the
+   * repository: the texts shown unless the player's own (public/text/) replace them. A release's server has none.
+   */
+  cardTextsDir?: string;
 }
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -48,6 +53,7 @@ export function hostConfig(root: string = packageRoot): HostConfig {
     replaysDir: join(root, "replays"),
     assetsDir,
     miscDir: join(assetsDir, "Misc"),
+    cardTextsDir: join(root, "..", "core", "data"),
     ...(process.env.SVE_SETTINGS_FILE ? { settingsFile: resolve(process.env.SVE_SETTINGS_FILE) } : {}),
     ...(process.env.SVE_SERVER_FILE ? { serverFile: resolve(process.env.SVE_SERVER_FILE) } : {}),
   };

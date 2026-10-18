@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { clickCard, showSidebar, startGame, toMainPhase, tokenByHand, useSettings } from "./helpers";
+import { hasCardTexts, clickCard, showSidebar, startGame, toMainPhase, tokenByHand, useSettings } from "./helpers";
 
 // What a decision is part of (the engine worker follows it, engine/processing.ts): the decision window and the table name the
 // card or ability being played and show its text. And the card panel shows what playing a card in the hand costs now when
@@ -47,14 +47,17 @@ test("the ability being processed, in the decision window and beside the table; 
   await page.getByTestId("card-menu").getByRole("menuitem").first().click();
   const dialog = page.getByTestId("decision-dialog");
   await expect(dialog.getByTestId("processing")).toContainText("Processing Mysteria, Magic Founder — Fanfare");
-  await expect(dialog.locator(".sve-processing-text")).toContainText("Reveal an Academic follower from your hand");
+  // Its paragraph of the card text (this machine's texts, which a clone of the repository hasn't).
+  if (hasCardTexts) await expect(dialog.locator(".sve-processing-text")).toContainText("Reveal an Academic follower from your hand");
   await dialog.getByRole("button", { name: "Yes" }).click();
 
   // Its target is chosen on the table: beside it, one line that opens the same text.
   const table = page.getByTestId("table-processing");
   await expect(table).toContainText("Processing Mysteria, Magic Founder — Fanfare");
-  await table.locator("summary").click();
-  await expect(table.locator(".sve-processing-text")).toContainText("deal it 2 damage");
+  if (hasCardTexts) {
+    await table.locator("summary").click();
+    await expect(table.locator(".sve-processing-text")).toContainText("deal it 2 damage");
+  }
   await clickCard(page.locator(".sve-mat-opponent .sve-field-slot .sve-card-candidate").first());
   // Then its cost: which Academic follower to reveal (Palla, among the hand's) — still part of the Fanfare.
   await expect(table).toContainText("Processing Mysteria, Magic Founder — Fanfare");

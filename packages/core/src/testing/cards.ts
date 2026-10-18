@@ -21,6 +21,8 @@ function base(id: string, o: Common): Omit<CardDefinition, "type" | "cost" | "at
     class: o.class ?? "Neutral",
     traits: o.traits ?? [],
     text: { en: o.text ?? "", cn: null, ja: null },
+    // No text: nothing to script, as the data build marks a real card (CardDefinition.textless).
+    ...(o.text ? {} : { textless: true as const }),
   };
 }
 

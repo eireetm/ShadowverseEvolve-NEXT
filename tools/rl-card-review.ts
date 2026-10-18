@@ -12,6 +12,7 @@ import { join } from "node:path";
 import { CARD_FEATURE_COLUMNS, refFrom, refPartial, type CardRef, type RefFilter } from "../packages/bot/src";
 import { createEngine, randomAnswer, seedRng, type GameSession } from "../packages/core/src";
 import { ALL_CARDS, ALL_SCRIPTS } from "../packages/core/src/sets";
+import { withDataTexts } from "./lib/card-texts";
 import { TRAIT_NAMES } from "../packages/gui/src/app/traits";
 import { checkReferences } from "./rl/ref-oracle";
 import { gameLines } from "./rl/records";
@@ -20,7 +21,8 @@ import { DECK_SETS, ROOT, sampleDeck } from "./rl/series";
 
 const args = process.argv.slice(2);
 const games = Number(args[args.indexOf("--games") + 1] ?? 300) || 300;
-const engine = createEngine({ cards: ALL_CARDS, scripts: ALL_SCRIPTS });
+// The card texts are this machine's files (lib/card-texts.ts): the core has none.
+const engine = createEngine({ cards: withDataTexts(ALL_CARDS), scripts: ALL_SCRIPTS });
 const analyses = analyzeScripts(ALL_SCRIPTS);
 
 const ZONE: Record<string, string> = { field: "战场", cemetery: "墓场", hand: "手牌", deck: "牌组", ex: "额外区", evolveDeck: "进化牌组", banished: "消失领域", evolveZone: "进化区", leader: "主战者", other: "（某个区域）" };

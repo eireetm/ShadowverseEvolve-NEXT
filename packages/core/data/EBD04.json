@@ -1,5 +1,5 @@
 {
- "format": 1,
+ "format": 2,
  "set": "EBD04",
  "printings": 3,
  "cards": [
@@ -23,12 +23,8 @@
    "cost": null,
    "attack": null,
    "defense": null,
-   "text": {
-    "en": "",
-    "cn": null,
-    "ja": ""
-   },
-   "traits": []
+   "traits": [],
+   "textless": true
   }
  ]
 }

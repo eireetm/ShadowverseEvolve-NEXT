@@ -1,9 +1,17 @@
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { expect, type Locator, type Page } from "@playwright/test";
 
 // Shared steps of the end-to-end tests: settings before the page loads, the way from the main menu into a game, and
 // answering decisions the way a person does: on the table (lit cards and their menus, the buttons beside the mats) or in
 // the decision window.
 export const SETTINGS_KEY = "sve-gui-settings";
+
+/**
+ * Whether this machine has the card text files (packages/core/data/<SET>_<lang>.json: npm run build:cards writes them, the
+ * repository doesn't have them), which the dev server shows. The checks of card texts are skipped without them.
+ */
+export const hasCardTexts = existsSync(fileURLToPath(new URL("../../../core/data/BP01_en.json", import.meta.url)));
 
 /** Settings the page starts with (the app reads them from localStorage). */
 export async function useSettings(page: Page, settings: Record<string, unknown>): Promise<void> {

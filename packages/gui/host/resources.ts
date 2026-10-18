@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, extname, join, relative, sep } from "node:path";
 import type { HostConfig } from "./config.ts";
 
@@ -106,4 +106,26 @@ export function listResources(cfg: HostConfig): string[] {
   };
   if (existsSync(cfg.publicDir)) walk(cfg.publicDir);
   return out.sort();
+}
+
+/** A card text file's name: "BP22_cn.json" (packages/core/data/set-file.ts). */
+const CARD_TEXT_FILE = /^[A-Za-z0-9]+_(?:en|cn|ja)\.json$/;
+
+/**
+ * The card text files of this machine (HostConfig.cardTextsDir), parsed, unchecked (the page checks them as the player's);
+ * none without the folder. One that isn't JSON is left out.
+ */
+export function readCardTexts(cfg: HostConfig): unknown[] {
+  const dir = cfg.cardTextsDir;
+  if (!dir || !existsSync(dir)) return [];
+  return readdirSync(dir)
+    .filter((name) => CARD_TEXT_FILE.test(name))
+    .sort()
+    .flatMap((name) => {
+      try {
+        return [JSON.parse(readFileSync(join(dir, name), "utf8")) as unknown];
+      } catch {
+        return [];
+      }
+    });
 }

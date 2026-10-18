@@ -37,22 +37,22 @@ function lines(log: LogEntry[]): string[] {
 
 describe("the log: cards put into a deck", () => {
   it("says the top, the bottom, or the place from the top", () => {
-    expect(lines(entries({ type: "cardsMoved", moves: [intoDeck("bottom")] }))).toEqual(["1 张卡：牌组 → 牌组底"]);
-    expect(lines(entries({ type: "cardsMoved", moves: [intoDeck("top", "hand")] }))).toEqual(["1 张卡：手牌 → 牌组顶"]);
-    expect(lines(entries({ type: "cardsMoved", moves: [intoDeck(2, "cemetery")] }))).toEqual(["1 张卡：墓场 → 牌组顶起第3张"]);
-    expect(lines(entries({ type: "cardsMoved", moves: [intoDeck(0, "cemetery")] }))).toEqual(["1 张卡：墓场 → 牌组顶"]);
+    expect(lines(entries({ type: "cardsMoved", moves: [intoDeck("bottom")] }))).toEqual(["1 张卡：牌堆 → 牌堆底"]);
+    expect(lines(entries({ type: "cardsMoved", moves: [intoDeck("top", "hand")] }))).toEqual(["1 张卡：手牌 → 牌堆顶"]);
+    expect(lines(entries({ type: "cardsMoved", moves: [intoDeck(2, "cemetery")] }))).toEqual(["1 张卡：墓场 → 牌堆顶起第3张"]);
+    expect(lines(entries({ type: "cardsMoved", moves: [intoDeck(0, "cemetery")] }))).toEqual(["1 张卡：墓场 → 牌堆顶"]);
     // Two places in one move: two parts.
-    expect(lines(entries({ type: "cardsMoved", moves: [intoDeck("top", "hand"), intoDeck("bottom", "hand")] }))).toEqual(["1 张卡：手牌 → 牌组顶 · 1 张卡：手牌 → 牌组底"]);
+    expect(lines(entries({ type: "cardsMoved", moves: [intoDeck("top", "hand"), intoDeck("bottom", "hand")] }))).toEqual(["1 张卡：手牌 → 牌堆顶 · 1 张卡：手牌 → 牌堆底"]);
   });
 
   it("says only the deck when that deck is shuffled right after, not when it is used or something is played first", () => {
     const shuffle: GameEvent = { type: "deckShuffled", player: 0 };
-    expect(lines(entries({ type: "cardsMoved", moves: [intoDeck("top", "hand")] }, shuffle))).toEqual(["1 张卡：手牌 → 牌组"]);
+    expect(lines(entries({ type: "cardsMoved", moves: [intoDeck("top", "hand")] }, shuffle))).toEqual(["1 张卡：手牌 → 牌堆"]);
     // The other player's deck shuffled: this one's place stands.
-    expect(lines(entries({ type: "cardsMoved", moves: [intoDeck("top", "hand")] }, { type: "deckShuffled", player: 1 }))).toEqual(["1 张卡：手牌 → 牌组顶"]);
+    expect(lines(entries({ type: "cardsMoved", moves: [intoDeck("top", "hand")] }, { type: "deckShuffled", player: 1 }))).toEqual(["1 张卡：手牌 → 牌堆顶"]);
     const played: GameEvent = { type: "cardPlayed", player: 1, card: "x", def: "V1", from: "hand" };
-    expect(lines(entries({ type: "cardsMoved", moves: [intoDeck("bottom")] }, played, shuffle))[0]).toBe("1 张卡：牌组 → 牌组底");
+    expect(lines(entries({ type: "cardsMoved", moves: [intoDeck("bottom")] }, played, shuffle))[0]).toBe("1 张卡：牌堆 → 牌堆底");
     const drawn: GameEvent = { type: "cardsMoved", moves: [{ ...intoDeck(undefined), from: { player: 0, zone: "deck", faceUp: false }, to: { player: 0, zone: "hand", faceUp: false }, reason: "draw" }] };
-    expect(lines(entries({ type: "cardsMoved", moves: [intoDeck("top", "hand")] }, drawn, shuffle))[0]).toBe("1 张卡：手牌 → 牌组顶");
+    expect(lines(entries({ type: "cardsMoved", moves: [intoDeck("top", "hand")] }, drawn, shuffle))[0]).toBe("1 张卡：手牌 → 牌堆顶");
   });
 });

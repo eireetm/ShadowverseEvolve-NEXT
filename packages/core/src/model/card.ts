@@ -33,6 +33,9 @@ export type CardClass = (typeof CARD_CLASSES)[number];
 export const TRIGGER_ICONS = ["critical", "draw", "stand", "heal"] as const;
 export type TriggerIcon = (typeof TRIGGER_ICONS)[number];
 
+/** The icon an advanced activated ability is printed with: {[adv]}, a serve ability's {[feed]}, a Ride ability's {[ride]}. */
+export type AdvancedIcon = "adv" | "feed" | "ride";
+
 export const UNIVERSES = ["umamusume", "cinderellaGirls", "vanguard", "princessConnect"] as const;
 export type Universe = (typeof UNIVERSES)[number];
 
@@ -95,7 +98,20 @@ export interface CardDefinition {
   attack: number | null;
   /** CR 2.8. null when the card has no defense value. */
   defense: number | null;
+  /**
+   * The card's text in each language, only shown: the rules never read it (the scripts are the cards' abilities). The data
+   * keeps the texts in files of their own, one per language, that aren't in the repository (data/set-file.ts): without
+   * them a definition has an empty English text and null others.
+   */
   text: LocalizedText;
+  /** The card has no text in any language (a vanilla card): it needs no script. The data build marks it (deck.ts). */
+  textless?: true;
+  /**
+   * The icons of its advanced activated abilities in their order, when one isn't {[adv]}: a serve ability's {[feed]} (CR
+   * 14.2.2) or a Ride ability's {[ride]} (14.4.9), which the scripts write as advanced ones. The data build reads them from
+   * the text, so that a program without the texts still words their buttons.
+   */
+  advancedIcons?: readonly AdvancedIcon[];
   /**
    * CR 2.13 — printings that show another name (an alternate name), e.g. BP02-070 "La+ Darkness,
    * Laplace's Demon" is a printing of Vania, Vampire Princess. Display only: rules and effects

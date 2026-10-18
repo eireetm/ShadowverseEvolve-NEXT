@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { CardDatabase, createEngine } from "../../src";
 import { BP01_CARDS, BP01_SCRIPTS } from "../../src/sets/bp01";
+import { hasDataTexts, withDataTexts } from "../../../../tools/lib/card-texts";
 
 const db = new CardDatabase(BP01_CARDS);
+/** With this machine's card texts (not in the repository; the core has none): the checks of texts need them. */
+const withTexts = new CardDatabase(withDataTexts(BP01_CARDS));
 
 describe("BP01 card data", () => {
   it("merges the 273 BP01 printings into 209 card definitions", () => {
@@ -19,9 +22,9 @@ describe("BP01 card data", () => {
     expect(db.ofPrinting("BP01-SL01")).toBe(roseQueen);
   });
 
-  it("uses the canonical printing's English text (effect_en) for every printing", () => {
+  it.skipIf(!hasDataTexts())("uses the canonical printing's English text (effect_en) for every printing", () => {
     // BP01-P16's official text prints the pre-rename keyword "Piercing Attack" (now Assail, CR 12.11).
-    expect(db.ofPrinting("BP01-P16").text.en).toBe("Assail.\n{[lastwords]} Increase your maximum play points by 1.");
+    expect(withTexts.ofPrinting("BP01-P16").text.en).toBe("Assail.\n{[lastwords]} Increase your maximum play points by 1.");
   });
 
   it("CR 5.16.1.1.1 — every evolved card has a base card with the same name", () => {
@@ -59,10 +62,14 @@ describe("BP01 card data", () => {
     expect(db.tokenNamed("Goblin")).toBeUndefined();
   });
 
-  it("keeps Chinese and Japanese names / text for display", () => {
-    const c = db.get("BP01-006");
-    expect(c.names).toEqual({ en: "Robin Hood", cn: "罗宾汉", ja: "ロビンフッド" });
-    expect(c.text.cn).toContain("4点伤害");
+  it("keeps Chinese and Japanese names for display", () => {
+    expect(db.get("BP01-006").names).toEqual({ en: "Robin Hood", cn: "罗宾汉", ja: "ロビンフッド" });
+  });
+
+  it.skipIf(!hasDataTexts())("has the Chinese text in the text files", () => {
+    expect(withTexts.get("BP01-006").text.cn).toContain("4点伤害");
+    // The core's own definitions have no texts.
+    expect(db.get("BP01-006").text).toEqual({ en: "", cn: null, ja: null });
   });
 
   it("reports which cards are implemented", () => {
@@ -75,6 +82,8 @@ describe("BP01 card data", () => {
     expect(engine.implementationStatus("BP01-171")).toBe("scripted");
     expect(engine.implementationStatus("BP01-174")).toBe("scripted");
     expect(engine.implementationStatus("BP01-SL01")).toBe("scripted"); // alternate art -> BP01-001
-    expect(BP01_CARDS.filter((c) => c.text.en === "")).toHaveLength(22);
+    // The cards without text, as the data build marks them (the texts may not be there).
+    expect(BP01_CARDS.filter((c) => c.textless)).toHaveLength(22);
+    if (hasDataTexts()) expect(withDataTexts(BP01_CARDS).filter((c) => c.text.en === "")).toHaveLength(22);
   });
 });

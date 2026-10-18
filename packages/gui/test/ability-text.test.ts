@@ -1,9 +1,13 @@
 import type { AbilityDef } from "@sve/core";
-import { ALL_CARDS, ALL_SCRIPTS } from "@sve/core/sets";
+import { ALL_CARDS as CORE_CARDS, ALL_SCRIPTS } from "@sve/core/sets";
 import { describe, expect, it } from "vitest";
 import { loadHant, type DataLang } from "../src/i18n/hant";
 import { rankOf, textGroupOf } from "../src/engine/game-host";
 import { abilityLine, locateAbilityText, locateQuotedText, markedLines, MARKED_TIMINGS, OTHER_LINES, paragraphs } from "../src/game/card/ability-text";
+import { hasDataTexts, withDataTexts } from "../../../tools/lib/card-texts";
+
+// The cards with this machine's texts (not in the repository; the core has none): the checks of texts need them.
+const ALL_CARDS = withDataTexts(CORE_CARDS);
 
 // A choice between pending abilities, and a decision asked while an ability is being played, show what the ability says: its
 // paragraph of the card text (two Fanfares of one card read the same by their timing alone). Checked against every card, in
@@ -44,7 +48,8 @@ const DATA_PROBLEMS: readonly string[] = [
   "CP02-069 en activated 1/1",
 ];
 
-describe("an ability's paragraph of its card text", () => {
+// Card texts: this machine's files (tools/lib/card-texts.ts), not in the repository; skipped without them.
+describe.skipIf(!hasDataTexts())("an ability's paragraph of its card text", () => {
   it("tells CP04-037 Karyl's two Fanfares apart, in every card language", () => {
     const abilities = ALL_SCRIPTS["CP04-037"]!.abilities ?? [];
     expect(rankOf(abilities, 0)).toEqual({ rank: 0, count: 2 });

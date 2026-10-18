@@ -9,10 +9,10 @@ import { join, relative } from "node:path";
  *  - the core's code: the rules, the card scripts, the loading of the card data (engineCode);
  *  - what the rules read of the card data (rulesDataOf);
  *  - the worker that runs a game (src/engine; not client.ts, the page's side of it).
- * Not, so that they don't part players: comments and the code's layout (codeOf); the card texts and the English, Chinese and
- * alternate names; the modules that build the card data files (CARD_DATA_BUILD), the core's test helpers, and the code that
- * only works out what a player is shown (DISPLAY_ONLY). `gui` is packages/gui. vite.config.ts builds it into the app;
- * scripts/release-pc.ts writes it into a release's VERSION.txt.
+ * Not, so that they don't part players: comments and the code's layout (codeOf); the card texts (their own files,
+ * CARD_TEXT_FILE) and the English, Chinese and alternate names; the modules that build the card data files (CARD_DATA_BUILD),
+ * the core's test helpers, and the code that only works out what a player is shown (DISPLAY_ONLY). `gui` is packages/gui.
+ * vite.config.ts builds it into the app; scripts/release-pc.ts writes it into a release's VERSION.txt.
  */
 export function engineFingerprint(gui: string): string {
   const hash = createHash("sha256");
@@ -20,16 +20,20 @@ export function engineFingerprint(gui: string): string {
   hash.update("engine 2\n");
   for (const { name, file } of engineCode(gui)) add(hash, name, codeOf(readFileSync(file, "utf8")));
   const data = join(gui, "..", "core", "data");
-  for (const name of readdirSync(data).filter((n) => n.endsWith(".json")).sort()) {
+  for (const name of readdirSync(data).filter((n) => n.endsWith(".json") && !CARD_TEXT_FILE.test(n)).sort()) {
     add(hash, `data/${name}`, rulesDataOf(JSON.parse(readFileSync(join(data, name), "utf8"))));
   }
   return hash.digest("hex").slice(0, 16);
 }
 
+/** A set's card texts in one language (`BP22_cn.json`, core/data/set-file.ts): the rules don't read them. */
+export const CARD_TEXT_FILE = /_(?:en|cn|ja)\.json$/;
+
 /**
  * The core's alone, its source and card data as they are (comments too): what games played without the app depend on — the
  * training kit's, taken back by npm run rl:ingest (a change of the app's worker host doesn't make them another engine's).
- * The kits and replay certificates recorded these values, so the way it is made stays.
+ * The kits and replay certificates recorded these values, so the way it is made stays — but for the card text files
+ * (CARD_TEXT_FILE, since 2026-10-18): they aren't in the repository, and a machine without them plays the same games.
  */
 export function rulesFingerprint(gui: string): string {
   const hash = createHash("sha256");
@@ -37,7 +41,7 @@ export function rulesFingerprint(gui: string): string {
     for (const name of readdirSync(dir).sort()) {
       const full = join(dir, name);
       if (statSync(full).isDirectory()) walk(root, full);
-      else if (/\.(ts|json)$/.test(name)) {
+      else if (/\.(ts|json)$/.test(name) && !CARD_TEXT_FILE.test(name)) {
         hash.update(relative(root, full).split("\\").join("/"));
         hash.update(readFileSync(full, "utf8").replace(/\r\n/g, "\n"));
       }
@@ -59,7 +63,7 @@ function add(hash: Hash, name: string, content: string): void {
  * the data files). It only shapes the data files, which count by what the rules read; the game loads them with the other
  * modules there (database.ts, set-file.ts, universes.ts, errors.ts), which count.
  */
-export const CARD_DATA_BUILD: ReadonlySet<string> = new Set(["custom.ts", "english-text.ts", "fixes.ts", "normalize.ts", "preview.ts", "preview-bp22.ts", "raw.ts"]);
+export const CARD_DATA_BUILD: ReadonlySet<string> = new Set(["custom.ts", "english-text.ts", "fixes.ts", "normalize.ts", "preview.ts", "raw.ts"]);
 
 /**
  * Code that only works out what a player is shown: the player view (with the abilities given to cards) and the events as

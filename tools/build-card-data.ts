@@ -7,7 +7,8 @@
  * Every printing of every set is read, so that alternate printings in other sets (promos,
  * reprints, special art) join their card's definition. Only cards with a printing in a
  * supported set (SUPPORTED_SETS) become definitions; each is written to the data file of its
- * canonical printing's set. Also writes docs/card-data-report.md.
+ * canonical printing's set (`<SET>.json`), its texts to the set's text file of each language (`<SET>_en.json`,
+ * `<SET>_cn.json`, `<SET>_ja.json`). Also writes docs/card-data-report.md.
  *
  * Pre-release sets (data/preview.ts, e.g. BP22) are read from their Japanese data file next to the assets folder
  * (D:\SVE\BP22.json) instead. Custom (community-made) sets (data/custom.ts, e.g. DIY01) are listed in the repository;
@@ -24,7 +25,7 @@ import { PREVIEW_SETS, previewRawCards, type PreviewKind, type PreviewSetFile } 
 import { CUSTOM_SETS, customRawCards } from "../packages/core/src/data/custom";
 import type { RawCardJson } from "../packages/core/src/data/raw";
 import { CardDatabase } from "../packages/core/src/data/database";
-import { CARD_SET_FORMAT, type CardSetFile } from "../packages/core/src/data/set-file";
+import { CARD_SET_FORMAT, CARD_TEXT_FORMAT, CARD_TEXT_LANGS, type CardSetFile, type CardTextFile } from "../packages/core/src/data/set-file";
 import { SUPPORTED_SETS } from "../packages/core/src/sets/supported";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -163,8 +164,16 @@ mkdirSync(outDir, { recursive: true });
 const summary: string[] = [];
 for (const set of SUPPORTED_SETS) {
   const defs = cards.filter((c) => setOf[c.id] === set);
-  const file: CardSetFile = { format: CARD_SET_FORMAT, set, printings: defs.reduce((n, c) => n + c.printings.length, 0), cards: defs };
+  // The definitions without their texts, and the texts in a file per language (set-file.ts), which the GUI lets the player
+  // replace with their own (public/text/).
+  const cardsOnly = defs.map(({ text: _text, ...rest }) => rest);
+  const file: CardSetFile = { format: CARD_SET_FORMAT, set, printings: defs.reduce((n, c) => n + c.printings.length, 0), cards: cardsOnly };
   writeFileSync(join(outDir, `${set}.json`), JSON.stringify(file, null, 1) + "\n", "utf8");
+  for (const lang of CARD_TEXT_LANGS) {
+    const listed = defs.flatMap((c): [string, string][] => (c.text[lang] == null ? [] : [[c.id, c.text[lang]!]]));
+    const texts: CardTextFile = { format: CARD_TEXT_FORMAT, set, lang, cards: Object.fromEntries(listed) };
+    writeFileSync(join(outDir, `${set}_${lang}.json`), JSON.stringify(texts, null, 1) + "\n", "utf8");
+  }
   const own = defs.flatMap((c) => c.printings).filter((p) => raws.get(p)!.set === set).length;
   const alt = defs.filter((c) => c.printings.length > 1).length;
   const line = `${set}: ${own} printings of the set + ${file.printings - own} in other sets -> ${defs.length} definitions (${alt} with several printings)`;

@@ -98,7 +98,7 @@ export const OTHER_LINES: Readonly<Record<string, Partial<Record<DataLang, reado
   "BP21-037": { en: [0, 1], cn: [0, 1], ja: [0, 1] },
   "BP21-075": { en: [0, 1], cn: [0, 1], ja: [0, 1] },
   "CP03-064": { en: [0, 1], cn: [0, 1], ja: [0, 1] },
-  "BP22-037": { cn: [1, 2], ja: [1, 2] },
+  "BP22-037": { en: [1, 2], cn: [1, 2], ja: [1, 2] },
   // Delayed triggers alone: the ability or spell that sets each one up.
   "BP01-056": { en: [1], cn: [2], ja: [2] },
   "BP03-089": { en: [0], cn: [0], ja: [0] },
@@ -168,7 +168,7 @@ function readsAsTrigger(paragraph: string, lang: DataLang): boolean {
   const first = outsideQuotes(paragraph, lang).split(lang === "en" ? /(?<=[.!])\s/ : /。/)[0]!.trim();
   if (lang === "en") {
     if (/\bwould\b/i.test(first.split(",")[0]!) || /^When (?:playing|you would play)\b/i.test(first)) return false;
-    return /^(?:(?:Once|Twice|Three times|Four times|\d+ times) (?:per turn|on each of your turns|during each of your turns)|During (?:your|each opponent's|your opponent's) turn|For the rest of this turn)?[, ]*(?:when(?:ever)?\b|at the (?:start|end|beginning)\b|the (?:first|next) time\b)/i.test(
+    return /^(?:(?:Once|Twice|Three times|Four times|\d+ times) (?:per turn|on each of your turns|during (?:each of )?your turns?)|During (?:your|each opponent's|your opponent's) turn|For the rest of this turn)?[, ]*(?:when(?:ever)?\b|at the (?:start|end|beginning)\b|the (?:first|next) time\b)/i.test(
       first,
     );
   }

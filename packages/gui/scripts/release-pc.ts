@@ -3,10 +3,11 @@
  * (host/release-server.ts), the sample decks, and the empty folders for the player's own files. `npm run release:pc` at the
  * repository root; options (after `--`):
  *   --out <folder>     where (default: SVEN-<version>-pc beside the repository). It must not exist yet, or be empty.
- *   --public <folder>  copy this folder's files into the release's public/ (default: none, only the empty folders)
+ *   --public <folder>  copy this folder's files into the release's public/ (default: none, only the empty folders and the
+ *                      card texts, public/text/)
  *   --zip              also write the zips: <folder>.zip, the program only, for GitHub's release (the program's updates
- *                      download it: host/update.ts); <folder>-private.zip, the whole folder with online-server.ini and the
- *                      resources, to send to friends (only when the folder has those)
+ *                      download it: host/update.ts); <folder>-private.zip, the whole folder with online-server.ini, the
+ *                      card texts and the resources, to send to friends (only when the folder has those)
  * The version is packages/gui/package.json's. VERSION.txt also gets the commit and the engine fingerprint: online, both
  * programs need the same fingerprint.
  */
@@ -106,6 +107,13 @@ mkdirSync(join(out, "replays"), { recursive: true });
 for (const keep of filesUnder(join(gui, "public")).filter((path) => basename(path) === ".gitkeep")) {
   mkdirSync(join(out, "public", dirname(keep)), { recursive: true });
 }
+// The card texts of this machine (packages/core/data/<SET>_<lang>.json, not in the repository): the program has none of its
+// own, they are the player's files in public/text/ — so, as every file of public/, in the -private zip only, never in
+// GitHub's (5.), and an update leaves them (host/update.ts). The --public folder's own texts go over them.
+const dataDir = join(repo, "packages", "core", "data");
+const texts = readdirSync(dataDir).filter((name) => /^[A-Za-z0-9]+_(?:en|cn|ja)\.json$/.test(name));
+for (const name of texts) cpSync(join(dataDir, name), join(out, "public", "text", name));
+console.log(texts.length > 0 ? `card texts: ${texts.length} files in public/text/ (the -private zip only)` : "card texts: none on this machine (npm run build:cards writes them)");
 if (ownPublic) cpSync(ownPublic, join(out, "public"), { recursive: true });
 
 // The online server's configuration, when the project has one (online-server.ini at the repository's root, not in the
