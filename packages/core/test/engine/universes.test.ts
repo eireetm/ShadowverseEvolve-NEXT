@@ -19,6 +19,12 @@ describe("CR 6.1.1.5 — the deck's universe", () => {
     expect(deckUniverse(E.db, { ...deck, leader: "BP01-LD01" })).toBeNull();
   });
 
+  it("PR-260–265 are Vanguard leaders (their printed universe, CR 2.12.2.1): with Vanguard cards, a Vanguard deck", () => {
+    for (const p of ["PR-260", "PR-261", "PR-262", "PR-263", "PR-264", "PR-265"]) expect(E.db.ofPrinting(p).universe, p).toBe("vanguard");
+    expect(deckUniverse(E.db, { leader: "PR-261", main: ["CP03-009", "CP03-004"], evolve: ["CP03-127"] })).toBe("vanguard");
+    expect(deckUniverse(E.db, { leader: "PR-261", main: ["CP03-009", "BP01-020"], evolve: ["CP03-127"] })).toBeNull();
+  });
+
   it("is recorded in the player's state and public in the player view", () => {
     const deck = { leader: "CP01-LD01", main: Array<string>(40).fill("CP01-007"), evolve: [CARROT] };
     const other = { main: Array<string>(40).fill("BP01-001"), evolve: [] };

@@ -340,6 +340,10 @@ export const DATA_FIXES: Readonly<Record<string, DataFix>> = {
   ...Object.fromEntries(
     ["116", "SSP01", "117", "SL28", "118", "SL29", "SSP02"].map((p) => [`BP22-${p}`, { universe: "umamusume" as const }]),
   ),
+  // PR-260–265, the promotional Cardfight!! Vanguard leaders (Leon Soryu, Aichi Sendou, Asaka Narumi, Toshiki Kai, Ren
+  // Suzugamori, Misaki Tokura), print "カードファイト!! ヴァンガード" with their collector numbers: Vanguard universe leaders
+  // in the PR set, which has no universe.
+  ...Object.fromEntries(["260", "261", "262", "263", "264", "265"].map((n) => [`PR-${n}`, { universe: "vanguard" as const }])),
 };
 
 /** Apply the fix table to one raw card file. */
