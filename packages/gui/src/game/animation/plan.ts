@@ -121,6 +121,18 @@ export const TIMING = {
  */
 export const REVEAL_PAUSE_MS = TIMING.flight + TIMING.revealIn + TIMING.revealStay;
 
+/**
+ * A die's window (board/DiceRoll.tsx): the die tumbles, lands on its number and stays; it goes sooner when another roll is
+ * waiting, and without animations it shows its number at once and stays `still`.
+ */
+export const DICE = { spin: 900, stay: 1300, next: 500, still: 1500 } as const;
+
+/**
+ * How long until the last of `n` dice rolled in one update has landed, shown one after another: the bots' or the other
+ * program's next answer waits that long (as for a reveal, when HostSettings.revealPauseMs is on).
+ */
+export const diceLanded = (n: number): number => (n > 0 ? n * DICE.spin + (n - 1) * DICE.next : 0);
+
 
 /** The order of an update's animation (animation/AnimationLayer.tsx), and when its cards are hit (the sounds too). */
 export interface Timeline {

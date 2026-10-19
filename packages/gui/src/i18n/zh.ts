@@ -843,6 +843,8 @@ export const zh: Record<MessageKey, string> = {
   "log.lookedAt": "{player}查看 {cards}。",
   "log.shuffled": "{player}洗切牌堆。",
   "log.die": "{player}掷出 {n}。",
+  "dice.who": "{player}掷骰子",
+  "dice.result": "骰子掷出了 {n}",
   "log.gameEnded": "对局结束：{result}。",
   "log.aCard": "一张卡",
   "log.cardsN": "{n} 张卡",

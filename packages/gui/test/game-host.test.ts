@@ -8,6 +8,7 @@ import type { FromWorker, GameOptions, GameUpdate, Replay, SeatController } from
 import { parseDeckFile, toDeckList } from "../src/decks/format";
 import { Catalog } from "../src/app/catalog";
 import { describeEntry } from "../src/game/log/format";
+import { diceLanded } from "../src/game/animation/plan";
 import { translate } from "../src/i18n";
 
 // The engine worker's logic, run in Node with a manual scheduler (bots answer when the test lets them).
@@ -515,6 +516,37 @@ function timedHost() {
 
 // A deck of 20 Ninja Masters (BP01-040: Fanfare, search a Ninja and reveal it, CR 5.21.1) and 20 Ninja Trainees.
 const ninjas = () => ({ ...deck("sd02"), main: [...Array<string>(20).fill("BP01-040"), ...Array<string>(20).fill("BP01-042")] });
+
+describe("dice rolled (CR 5.20): the table shows each die landing (game/board/DiceRoll.tsx)", () => {
+  // BP21-081: a 1-cost follower, Fanfare — roll a 6-sided die.
+  const dice = () => ({ ...deck("sd05"), main: Array<string>(40).fill("BP21-081") });
+  const botRolls = (revealPauseMs: number) => {
+    const h = timedHost();
+    h.host.handle({ kind: "settings", settings: { botDelayMs: 600, revealPauseMs } });
+    h.host.handle({ kind: "start", options: { seed: "dice", decks: [deck("sd01"), dice()], deckNames: ["SD01", "Dice"], controllers: ["human", "greedy"], deckRestrictions: false } });
+    const rng = seedRng("dice");
+    let rolled = false;
+    const waits: number[] = [];
+    for (let step = 0; step < 3000 && !h.host.session!.isOver && waits.length < 1; step++) {
+      const decision = h.host.session!.decision!;
+      if (decision.player === 0) h.host.handle({ kind: "answer", seat: 0, answer: randomAnswer(rng, decision) });
+      else {
+        const ms = h.step();
+        if (rolled) waits.push(ms);
+      }
+      rolled ||= h.updates().some((u) => u.log.some((e) => e.event.type === "dieRolled" && e.event.player === 1));
+    }
+    expect(h.errors()).toEqual([]);
+    expect(rolled, "the bot rolled in this game").toBe(true);
+    return waits[0];
+  };
+
+  it("hold the bot's next answer until the die has landed, not that and its pause; nothing with the reveal pause off", () => {
+    expect(botRolls(1330)).toBe(diceLanded(1));
+    expect([0, 600]).toContain(botRolls(0));
+    expect([diceLanded(0), diceLanded(1), diceLanded(3)]).toEqual([0, 900, 900 * 3 + 500 * 2]);
+  }, 60_000);
+});
 
 describe("cards put into a hand in public (GameUpdate.toHand)", () => {
   it("shows the bot's searched card once; the bot's next answer waits until it has been shown, not that and its pause", () => {

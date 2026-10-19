@@ -843,6 +843,8 @@ export const ja: Record<MessageKey, string> = {
   "log.lookedAt": "{player}が{cards}を見た。",
   "log.shuffled": "{player}がデッキをシャッフル。",
   "log.die": "{player}がサイコロをふった：{n}。",
+  "dice.who": "{player}がサイコロをふった",
+  "dice.result": "出た目は {n}",
   "log.gameEnded": "対戦終了：{result}。",
   "log.aCard": "カード1枚",
   "log.cardsN": "カード{n}枚",

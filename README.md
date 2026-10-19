@@ -195,7 +195,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 | `audio/cards/<主战者编号>-start` | 这位主战者的玩家的回合开始时（有它就不放 `turn`） |
 | `audio/cards/<主战者编号>-greet`、`-thank`、`-apologize`、`-applaud`、`-shock`、`-confuse`、`-taunt` | 这位主战者的玩家发快捷聊天时，依次是"你好。""谢谢你。""对不起……""真棒！""怎么回事？""令人困惑……""我必将胜利！" |
 
-通用音效（28 个）：
+通用音效（29 个）：
 
 | 名字 | 什么时候响 |
 |---|---|
@@ -217,6 +217,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 | `bounce` | 回到手牌 |
 | `counter` | 放置或取除指示物 |
 | `shuffle` | 洗切牌堆 |
+| `dice` | 掷骰子（牌桌中间的骰子窗口里，骰子转动时） |
 | `turn` | 回合开始 |
 | `quick` | 快速提示弹出 |
 | `game-start` | 对局开始 |
@@ -597,7 +598,7 @@ Icon names: `fanfare`, `lastwords`, `act`, `evolve`, `engage`, `quick`, `q`, `ub
 | `audio/cards/<leader number>-start` | When this leader's player's turn starts (instead of `turn`) |
 | `audio/cards/<leader number>-greet`, `-thank`, `-apologize`, `-applaud`, `-shock`, `-confuse`, `-taunt` | When this leader's player sends a quick chat line: "Hello.", "Thank you.", "Sorry...", "Awesome!", "What's going on?", "How puzzling...", "Victory will be mine!" in that order |
 
-Sound effects (28):
+Sound effects (29):
 
 | Name | When it plays |
 |---|---|
@@ -619,6 +620,7 @@ Sound effects (28):
 | `bounce` | Returning to the hand |
 | `counter` | Putting or removing counters |
 | `shuffle` | Shuffling the deck |
+| `dice` | Rolling a die (as the die tumbles in its window in the middle of the table) |
 | `turn` | A turn starts |
 | `quick` | The Quick announcement appears |
 | `game-start` | The game starts |

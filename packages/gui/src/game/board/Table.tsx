@@ -21,6 +21,7 @@ import { playerLabel } from "../labels";
 import { AttackArrow } from "./AttackArrow";
 import { CardMenu } from "./CardMenu";
 import { CenterLine } from "./CenterLine";
+import { DiceRoll } from "./DiceRoll";
 import { DragLayer } from "./DragLayer";
 import { PIECES, pieceStyle, pileRect, rectStyle, rowRect, slotRect, type PileZone, type SlotZone, type TableLayout } from "./layout";
 import { pressCard } from "./pointer";
@@ -428,6 +429,7 @@ export function Table({ update, onNewGame, onMenu, onReplays }: { update: GameUp
       <QuickAnnouncement update={update} />
       <LookedCards update={update} />
       <TurnOrderNotice update={update} />
+      <DiceRoll update={update} />
       <ResultOverlay update={update} onNewGame={onNewGame} onMenu={onMenu} onReplays={onReplays} />
     </div>
   );

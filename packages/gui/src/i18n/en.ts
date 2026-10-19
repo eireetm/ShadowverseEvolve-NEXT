@@ -839,6 +839,8 @@ export const en = {
   "log.lookedAt": "{player} looks at {cards}.",
   "log.shuffled": "{player} shuffles the deck.",
   "log.die": "{player} rolls {n}.",
+  "dice.who": "{player} rolls a die",
+  "dice.result": "The die shows {n}",
   "log.gameEnded": "Game over: {result}.",
   "log.aCard": "a card",
   "log.cardsN": "{n} cards",

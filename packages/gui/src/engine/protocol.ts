@@ -189,7 +189,8 @@ export interface HostSettings {
   /**
    * A card that went into a hand in public (GameUpdate.toHand) while the person at the screen can't see it there (the other
    * player's hand): the bots' or the other program's next answer waits this long after it has landed (its flight may wait for
-   * an arrow pointing at it first: game/animation/plan.ts flightDelay), while the table shows it (0: no wait).
+   * an arrow pointing at it first: game/animation/plan.ts flightDelay), while the table shows it (0: no wait). When it is on,
+   * dice rolled hold the next answers too, until the table's last die has landed (plan.ts diceLanded).
    */
   revealPauseMs: number;
 }

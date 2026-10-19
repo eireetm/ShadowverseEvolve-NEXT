@@ -61,6 +61,8 @@ export const SFX = {
   counter: [],
   /** A deck is shuffled. */
   shuffle: [],
+  /** A die is rolled: played as its window's die tumbles (game/board/DiceRoll.tsx). */
+  dice: [],
   /** A turn begins. */
   turn: [],
   /** A Quick card or ability resolved: its announcement opens. */

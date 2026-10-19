@@ -51,7 +51,7 @@ import type {
 import { knownController } from "./protocol";
 import { abilityOf, normalPlayCost, PSEUDO_DEF } from "./core-internals";
 import { ProcessingTracker } from "./processing";
-import { flightDelay, planFlights, planTimeline } from "../game/animation/plan";
+import { diceLanded, flightDelay, planFlights, planTimeline } from "../game/animation/plan";
 import { revealedToHand, type Revealing } from "./reveals";
 import { TurnClock } from "./turn-clock";
 import { findCard, forEachCard, withoutMemory } from "./view-utils";
@@ -1421,10 +1421,18 @@ export class GameHost {
     const toHand = this.toHand.filter((c) => view.players[c.player].hand.some((h) => h.id === c.id));
     this.toHand = [];
     const hidden = new Set(toHand.filter((c) => view.players[c.player].hand.some((h) => h.id === c.id && h.hidden)).map((c) => c.id));
+    const holds: number[] = [];
     if (hidden.size > 0 && this.settings.revealPauseMs > 0) {
       const plan = planTimeline(this.log, this.announcement?.source ?? null);
       const waits = planFlights(this.log).flatMap((f) => (f.card !== null && hidden.has(f.card) ? [flightDelay(f, plan)] : []));
-      this.revealFor = this.settings.revealPauseMs + Math.max(0, ...waits);
+      holds.push(this.settings.revealPauseMs + Math.max(0, ...waits));
+    }
+    // Dice rolled (CR 5.20): the table shows each die tumbling onto its number, one after another (board/DiceRoll.tsx); the
+    // next answers wait until the last has landed. Not for a table shown anew, which shows none.
+    const dice = this.log.filter((e) => e.event.type === "dieRolled").length;
+    if (dice > 0 && this.settings.revealPauseMs > 0 && !this.logReset) holds.push(diceLanded(dice));
+    if (holds.length > 0) {
+      this.revealFor = Math.max(...holds);
       this.revealUntil = this.now() + this.revealFor;
     }
     const update: GameUpdate = {
