@@ -1,5 +1,5 @@
 // CP03-114 White Hare of Inaba — Havencraft follower, 1, 1/1. ヴァンガード・オラクルシンクタンク.
-// {[ride]} {[cost01]}: Give this follower Drive. (CR 14.4.9: a Drive Point is linked; once per card per game.)
+// {[ride]} {[cost01]}: Give this follower Drive. (CR 14.4.9: a Drive Point is linked; once per card per game — one that moved zones is a new card, 4.1.4.)
 // On Drive - Give this follower {[attack]}+1/{[defense]}+1. Give your leader {[defense]}+1.
 // {[fanfare]} Select up to 1 card in your cemetery and put it into your deck 3rd from the top.
 import { defineCard, fanfare, onDrive, rideAbility } from "../helpers";

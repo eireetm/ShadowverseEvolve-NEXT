@@ -1,5 +1,5 @@
 // CP03-116 Dark Cat — Havencraft follower, 2, 2/2. ヴァンガード・オラクルシンクタンク.
-// {[ride]} {[cost01]}: Give this follower Drive. (CR 14.4.9: a Drive Point is linked; once per card per game.)
+// {[ride]} {[cost01]}: Give this follower Drive. (CR 14.4.9: a Drive Point is linked; once per card per game — one that moved zones is a new card, 4.1.4.)
 // On Drive - Give this follower {[attack]}+1/{[defense]}+1. Look at the top 3 cards of your deck. You may reveal an Oracle Think
 // Tank follower from among them and add it to your hand. Put any number of them on the top of your deck in any order. Put the rest
 // on the bottom in any order.

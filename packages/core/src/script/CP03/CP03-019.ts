@@ -1,5 +1,5 @@
 // CP03-019 Coral Assault — Forestcraft follower, 2, 2/2. ヴァンガード・アクアフォース.
-// {[ride]} {[cost01]}: Give this follower Drive. (CR 14.4.9: a Drive Point is linked; once per card per game.)
+// {[ride]} {[cost01]}: Give this follower Drive. (CR 14.4.9: a Drive Point is linked; once per card per game — one that moved zones is a new card, 4.1.4.)
 // On Drive - Select up to 1 enemy follower on the field. Deal it 2 damage and give this follower {[attack]}+1/{[defense]}+1.
 // Whenever an Aqua Force follower on your field attacks, select an enemy follower on the field and, if it's the 3rd time an Aqua
 // Force follower on your field has attacked this turn, deal 2 damage to the selected follower. (Exactly the 3rd — rulings.)

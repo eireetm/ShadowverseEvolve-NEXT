@@ -77,15 +77,15 @@ export function drivePointsToRide(env: Env, player: PlayerId): CardId[] {
 }
 
 /**
- * CR 14.4.9.2 — can this card pay the part every Ride cost has: its Ride hasn't been activated this game, and a Drive Point
- * can be put into the drive zone linked to it?
+ * CR 14.4.9.2 — can this card pay the part every Ride cost has: its Ride hasn't been activated this game (by this card: one
+ * that moved zones is a new card, CR 4.1.4), and a Drive Point can be put into the drive zone linked to it?
  */
 export function canRide(env: Env, card: CardId): boolean {
   const c = env.state.cards[card];
   return c !== undefined && c.zone === "field" && c.rideUsed !== true && drivePointsToRide(env, c.controller).length > 0;
 }
 
-/** Pay it: a Drive Point into the drive zone, linked to the card (14.4.9.2); the card remembers its Ride for the game. */
+/** Pay it: a Drive Point into the drive zone, linked to the card (14.4.9.2); the card remembers its Ride while it stays one card. */
 export function ride(g: G, card: CardId): boolean {
   if (!canRide(g, card)) return false;
   const c = g.state.cards[card]!;

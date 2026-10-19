@@ -1,5 +1,5 @@
 // CP03-008 Water General of Wave-like Spirals, Benedict — Forestcraft follower, 3, 3/3. ヴァンガード・アクアフォース.
-// {[ride]} {[cost01]}: Give this follower Drive. (CR 14.4.9: a Drive Point is linked; once per card per game.)
+// {[ride]} {[cost01]}: Give this follower Drive. (CR 14.4.9: a Drive Point is linked; once per card per game — one that moved zones is a new card, 4.1.4.)
 // On Drive - Give this follower {[attack]}+1/{[defense]}+1. Search your deck for up to two 1-cost Aqua Force followers with
 // different names, reveal them, add them to your hand, then shuffle. (元のコスト.)
 import { defineCard, onDrive, rideAbility } from "../helpers";

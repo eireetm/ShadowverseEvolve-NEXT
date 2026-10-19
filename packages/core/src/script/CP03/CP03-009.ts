@@ -1,5 +1,5 @@
 // CP03-009 Tear Knight, Valeria — Forestcraft follower, 1, 1/1. ヴァンガード・アクアフォース.
-// {[ride]} {[cost01]}: Give this follower Drive. (CR 14.4.9: a Drive Point is linked; once per card per game.)
+// {[ride]} {[cost01]}: Give this follower Drive. (CR 14.4.9: a Drive Point is linked; once per card per game — one that moved zones is a new card, 4.1.4.)
 // On Drive - Give this follower {[attack]}+1/{[defense]}+1, Storm, and "Strike - Select an enemy follower on the field and, if
 // it's the 3rd time an Aqua Force follower on your field has attacked this turn, deal 2 damage to the selected follower."
 // (The Strike is written as this card's own, existing once it was given Drive — which happens once per follower, CR

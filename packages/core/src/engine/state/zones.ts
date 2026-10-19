@@ -311,8 +311,10 @@ export function moveCards(g: G, allSpecs: readonly MoveSpec[], reason: MoveReaso
       card.counters = { ...card.counters, ...old.counters };
     }
     if (spec.linkTo !== undefined) card.linkedTo = spec.linkTo;
-    if (old.rideUsed) card.rideUsed = true; // CR 14.4.9.2 "this card this game"
+    // CR 4.1.4 — a card that moved zones is a new card: one that rode, went to the hand and came back may ride again
+    // (CR 14.4.9.2 "this card this game" — the official answer on CP03-009, 2026-10). Only a change of control keeps it.
     if (spec.keepState) {
+      if (old.rideUsed) card.rideUsed = true;
       // CR 14.2.1.3 / 14.4.9.4 / 14.5.2.4 — links are lost only when it leaves the field, not on a change of control.
       for (const p of [0, 1] as const) {
         for (const z of ["raceZone", "driveZone", "equipmentZone"] as const) {

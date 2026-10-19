@@ -109,7 +109,8 @@ export function serveCost(times: number): CustomCost {
 
 /**
  * CR 14.4.9.2 — the part every Ride cost has: a Drive Point from your evolve deck into your drive zone, linked to this card;
- * and it can be activated only if it hasn't been activated for this card this game.
+ * and it can be activated only if it hasn't been activated for this card this game (a card that moved zones is a new card,
+ * CR 4.1.4).
  */
 export const rideCost: CustomCost = {
   canPay: (g, _c, self) => g.canRide(self),

@@ -105,8 +105,9 @@ export interface CardInstance {
    */
   givenDrive?: boolean;
   /**
-   * CR 14.4.9.2 — this card's Ride ability has been activated this game: kept when the card changes zones, as the rule
-   * speaks of the card and the game.
+   * CR 14.4.9.2 — this card's Ride ability has been activated this game. A card that moves zones is a new card (CR 4.1.4)
+   * without it — the official answer: one that rode and came back from the hand may ride again; a change of control
+   * (CR 5.22) keeps it.
    */
   rideUsed?: boolean;
   /**

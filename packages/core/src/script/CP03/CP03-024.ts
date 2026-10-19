@@ -1,5 +1,5 @@
 // CP03-024 Star Call Trumpeter — Swordcraft follower, 4, 3/3. ヴァンガード・ロイヤルパラディン.
-// {[ride]} {[cost01]}: Give this follower Drive. (CR 14.4.9: a Drive Point is linked; once per card per game.)
+// {[ride]} {[cost01]}: Give this follower Drive. (CR 14.4.9: a Drive Point is linked; once per card per game — one that moved zones is a new card, 4.1.4.)
 // On Drive - Select up to 1 enemy follower on the field. Deal it 4 damage and give this follower {[attack]}+1/{[defense]}+1.
 // {[fanfare]} Search your deck for up to 2 cards with "Blaster" in their names, reveal them, add one to your hand, bury the
 // other, then shuffle. (Japanese: followers. One found goes to the hand — ruling.)

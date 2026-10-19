@@ -1,5 +1,5 @@
 // CP03-071 Bellicosity Dragon — Dragoncraft follower, 5, 4/4. ヴァンガード・かげろう.
-// {[ride]} {[cost01]}: Give this follower Drive. (CR 14.4.9: a Drive Point is linked; once per card per game.)
+// {[ride]} {[cost01]}: Give this follower Drive. (CR 14.4.9: a Drive Point is linked; once per card per game — one that moved zones is a new card, 4.1.4.)
 // On Drive - Select up to 2 enemy followers on the field. Deal 4 damage divided between them and give this follower
 // {[attack]}+1/{[defense]}+1.
 // {[fanfare]} Give your leader {[defense]}+2. Draw a card.

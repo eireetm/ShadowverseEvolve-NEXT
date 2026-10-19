@@ -1,5 +1,5 @@
 // CP03-060 Jumping Jill — Runecraft follower, 1, 2/2. ヴァンガード・ペイルムーン.
-// {[ride]} {[cost03]}: Give this follower Drive. (CR 14.4.9: a Drive Point is linked; once per card per game.)
+// {[ride]} {[cost03]}: Give this follower Drive. (CR 14.4.9: a Drive Point is linked; once per card per game — one that moved zones is a new card, 4.1.4.)
 // On Drive - Select up to 1 Pale Moon card in your banished zone. Add it to your hand and give this follower
 // {[attack]}+1/{[defense]}+1.
 // {[fanfare]} Banish the top 2 cards of your deck.

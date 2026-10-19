@@ -1,5 +1,5 @@
 // CP03-112 Battle Sister, Cocoa — Havencraft follower, 4, 3/3. ヴァンガード・オラクルシンクタンク.
-// {[ride]} {[cost01]}: Give this follower Drive. (CR 14.4.9: a Drive Point is linked; once per card per game.)
+// {[ride]} {[cost01]}: Give this follower Drive. (CR 14.4.9: a Drive Point is linked; once per card per game — one that moved zones is a new card, 4.1.4.)
 // On Drive - Give this follower {[attack]}+1/{[defense]}+1. Look at the top 5 cards of your deck. Put any number of them on the top
 // of your deck in any order. Put the rest on the bottom in any order.
 // Whenever you drive check a Trigger, select an enemy follower on the field. Deal it 4 damage and give your leader

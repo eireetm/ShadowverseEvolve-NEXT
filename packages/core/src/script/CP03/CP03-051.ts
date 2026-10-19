@@ -1,5 +1,5 @@
 // CP03-051 Turquoise Beast Tamer — Runecraft follower, 2, 2/2. ヴァンガード・ペイルムーン.
-// {[ride]} {[cost01]}: Give this follower Drive. (CR 14.4.9: a Drive Point is linked; once per card per game.)
+// {[ride]} {[cost01]}: Give this follower Drive. (CR 14.4.9: a Drive Point is linked; once per card per game — one that moved zones is a new card, 4.1.4.)
 // On Drive - Select up to 1 enemy follower on the field. Deal it 2 damage, give this follower {[attack]}+1/{[defense]}+1, and
 // banish the top card of your deck.
 import { defineCard, onDrive, rideAbility } from "../helpers";

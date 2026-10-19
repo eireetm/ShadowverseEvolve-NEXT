@@ -171,6 +171,28 @@ describe("CR 14.4 — Cardfight!! Vanguard: Triggers, drive checks, Ride and Dri
     expect(later.canActivate("CP03-114")).toBe(false);
   });
 
+  it("14.4.9.2 / 4.1.4 — one that rode, went back to the hand and came back is a new card: it may ride again (official answer)", () => {
+    // CP03-004 Storm Rider, Basil: Fanfare — return a 1-cost Aqua Force follower on your field to its owner's hand: you
+    // may summon an Aqua Force follower that costs 3 or less from your hand. CP03-009 Tear Knight, Valeria: Ride (1).
+    const t = d({ me: { ...VG, field: [{ card: "CP03-009", rode: true }], hand: ["CP03-004"], evolveDeck: [DRIVE_POINT], playPoints: 4 } });
+    expect(t.canActivate("CP03-009")).toBe(false);
+    t.play("CP03-004").yes().pick("CP03-009"); // pays the cost (the only one to return), then summons it from the hand
+    expect([t.field(), t.game.state.cards[t.id("CP03-009")]!.rideUsed ?? false, t.canActivate("CP03-009")]).toEqual([["CP03-004", "CP03-009"], false, true]);
+    t.activate("CP03-009");
+    expect(t.keywords("CP03-009")).toEqual(["drive", "singleDrive", "rush", "storm"]);
+  });
+
+  it("14.4.9.2 / 5.22 — a stolen follower is the same card: one that rode can't ride again, one that didn't may (BP13-043 ruling)", () => {
+    // BP03-109 Angel of Chaos: Activate, banish 3 Fallen Angel cards in your cemetery — steal an enemy follower.
+    const steal = (rode: boolean) =>
+      d({
+        me: { ...VG, field: ["BP03-109"], cemetery: ["BP03-109", "BP03-109", "BP03-109"], evolveDeck: [DRIVE_POINT], playPoints: 1 },
+        opp: { ...VG, field: [rode ? { card: "CP03-009", rode: true } : "CP03-009"] },
+      })
+        .activate("BP03-109"); // its only target
+    expect([steal(true).field(), steal(true).canActivate("CP03-009"), steal(false).canActivate("CP03-009")]).toEqual([["BP03-109", "CP03-009"], false, true]);
+  });
+
   it("14.4.9.2 / 14.4.9.5 — a Ride may use an evolution point for 1 play point and counts as the turn's evolve ability", () => {
     const t = d({ me: { ...VG, field: ["CP03-114", "CP03-086"], evolveDeck: [DRIVE_POINT, "CP03-087"], playPoints: 0, evolutionPoints: 1 } });
     t.activate("CP03-114", 0, { ep: true });

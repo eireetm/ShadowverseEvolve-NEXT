@@ -1,5 +1,5 @@
 // CP03-054 Midnight Bunny — Runecraft follower, 2, 2/2. ヴァンガード・ペイルムーン.
-// {[ride]} {[cost01]}: Give this follower Drive. (CR 14.4.9: a Drive Point is linked; once per card per game.)
+// {[ride]} {[cost01]}: Give this follower Drive. (CR 14.4.9: a Drive Point is linked; once per card per game — one that moved zones is a new card, 4.1.4.)
 // On Drive - Give this follower {[attack]}+1/{[defense]}+1. Look at the top 2 cards of your deck. Add one of them to your hand and
 // banish the other.
 import { defineCard, onDrive, rideAbility } from "../helpers";
