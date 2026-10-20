@@ -67,8 +67,9 @@ export function CardPanel({ focus, exact = false, art = true, onLink }: { focus:
         {now !== undefined && now !== null && printed !== null && now !== printed ? <small>{t("card.printed", { value: printed })}</small> : null}
       </div>
     );
-  // CR 10.4.4.1 — one of the viewer's cards in their hand or EX area that would cost another number of play points to play
-  // now (the engine worker asks the core, GameUpdate.playCosts): beside its cost, which doesn't change.
+  // CR 10.4.4.1 — a card the viewer sees where it may be played from (theirs, or the other player's in their EX area) that
+  // would cost another number of play points to play now (the engine worker asks the core, GameUpdate.playCosts): beside
+  // its cost, which doesn't change.
   const playCost = view ? playCosts?.[view.id] : undefined;
   const text = cardText(def, cardLang);
   // The physical card's printings (a back face has none: its front's).

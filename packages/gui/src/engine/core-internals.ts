@@ -7,6 +7,7 @@ import { GRANT_PREFIX } from "../../../core/src/engine/abilities/grants";
 import { KEYWORD_DEF_PREFIX } from "../../../core/src/engine/abilities/keyword-abilities";
 import { getAbility } from "../../../core/src/engine/abilities/play-ability";
 import { playCost } from "../../../core/src/engine/costs";
+import { cardsToPlayFrom } from "../../../core/src/engine/flow/play-card";
 import type { G } from "../../../core/src/engine/runtime/context";
 
 /**
@@ -15,6 +16,14 @@ import type { G } from "../../../core/src/engine/runtime/context";
  */
 export function normalPlayCost(engine: Engine, game: GameSession, card: CardId, player: PlayerId): number {
   return playCost({ state: game.state, db: engine.db, scripts: engine.scripts }, card, player);
+}
+
+/**
+ * CR 8.2.1 — the cards `player` may play from where they are: their hand and EX area, and the cemetery or banished cards an
+ * effect lets them play (the core's flow/play-card.ts).
+ */
+export function playableCards(engine: Engine, game: GameSession, player: PlayerId): CardId[] {
+  return cardsToPlayFrom({ state: game.state, db: engine.db, scripts: engine.scripts }, player);
 }
 
 /**

@@ -16,6 +16,7 @@ import {
   type AbilityDef,
   type Answer,
   type CardId,
+  type CardView,
   type Decision,
   type DefId,
   type Engine,
@@ -49,7 +50,7 @@ import type {
   WatchState,
 } from "./protocol";
 import { knownController } from "./protocol";
-import { abilityOf, normalPlayCost, PSEUDO_DEF } from "./core-internals";
+import { abilityOf, normalPlayCost, playableCards, PSEUDO_DEF } from "./core-internals";
 import { ProcessingTracker } from "./processing";
 import { diceLanded, flightDelay, planFlights, planTimeline } from "../game/animation/plan";
 import { revealedToHand, type Revealing } from "./reveals";
@@ -152,20 +153,30 @@ export function rankOf(abilities: readonly AbilityDef[], index: number): Pick<Ab
 }
 
 /**
- * CR 10.4.4.1 — what playing each of the viewer's own cards in their hand and EX area normally costs now, where that isn't the
- * card's cost (the core's own reckoning, core-internals.ts): the card panel shows it (GameUpdate.playCosts). Nobody else's: a
- * cost may depend on its owner's hand.
+ * CR 10.4.4.1 — what playing each card the viewer sees where it may be played from (CR 8.2.1: a hand and an EX area, and the
+ * cemetery or banished cards an effect allows; the core's list, core-internals.ts) normally costs its player now, where that
+ * isn't the card's cost (the core's own reckoning): the card panel shows it (GameUpdate.playCosts). The other player's too:
+ * their EX area is a public zone (CR 4.8.2), their hand isn't (4.7.2). That tells the viewer nothing they can't see: the
+ * cost changes of the cards read only public information (fields, cemeteries, EX areas, faceup evolve decks, how many
+ * cards a zone holds (4.1.2.1), what happened this turn in view), and the effects that change a card's cost are made on
+ * cards in public zones (checked on every card, 2026-10-19; and on random games, against copies whose hidden cards were
+ * dealt again from a player's view).
  */
 export function playCostsOf(engine: Engine, game: GameSession, viewer: PlayerId, view: PlayerView): Record<CardId, number> {
   const out: Record<CardId, number> = {};
-  const side = view.players[viewer];
-  for (const card of [...side.hand, ...side.ex]) {
-    if (card.hidden || card.cost === null) continue;
-    try {
-      const cost = normalPlayCost(engine, game, card.id, viewer);
-      if (cost !== card.cost) out[card.id] = cost;
-    } catch {
-      // Display only: a card the core can't price now just shows its cost.
+  for (const player of [viewer, opponentOf(viewer)]) {
+    const side = view.players[player];
+    const seen = new Map<CardId, CardView>();
+    for (const card of [...side.hand, ...side.ex, ...side.cemetery, ...side.banished]) if (!card.hidden) seen.set(card.id, card);
+    for (const id of playableCards(engine, game, player)) {
+      const card = seen.get(id);
+      if (!card || card.cost === null) continue;
+      try {
+        const cost = normalPlayCost(engine, game, id, player);
+        if (cost !== card.cost) out[id] = cost;
+      } catch {
+        // Display only: a card the core can't price now just shows its cost.
+      }
     }
   }
   return out;

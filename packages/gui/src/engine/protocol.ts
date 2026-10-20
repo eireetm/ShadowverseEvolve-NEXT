@@ -420,9 +420,10 @@ export interface GameUpdate {
   perspective: PlayerId;
   view: PlayerView;
   /**
-   * CR 10.4.4.1 — the viewer's own cards in their hand and EX area that would cost another number of play points to play
-   * normally now than their cost (reductions, increases in force): card → play points. Only theirs (a cost may depend on its
-   * owner's hand). Absent in older messages.
+   * CR 10.4.4.1 — the cards the viewer sees where they may be played from (the viewer's hand and EX area, the other player's
+   * EX area; cemetery or banished cards an effect allows) that would cost their player another number of play points to play
+   * normally now than their cost (reductions, increases in force): card → play points (game-host.ts playCostsOf). Absent in
+   * older messages.
    */
   playCosts?: Record<CardId, number>;
   decision: DecisionInfo | null;
