@@ -3,34 +3,34 @@ import { ALL_CARDS as CORE_CARDS, ALL_SCRIPTS } from "@sve/core/sets";
 import { describe, expect, it } from "vitest";
 import { Catalog, cardText } from "../src/app/catalog";
 import type { CardLang } from "../src/app/settings";
-import { tokenLinks } from "../src/game/card/token-links";
+import { cardLinks } from "../src/game/card/card-links";
 import { loadHant } from "../src/i18n/hant";
 import { hasDataTexts, withDataTexts } from "../../../tools/lib/card-texts";
 
 // The cards with this machine's texts (not in the repository; the core has none): the checks of texts need them.
 const ALL_CARDS = withDataTexts(CORE_CARDS);
 
-// The card panel's links to the tokens a card's text names (src/game/card/token-links.ts), checked on cards that show each
-// part of the rules, and on every card: the languages of a card link the same tokens (so a new card whose text names a token
+// The card panel's links to the cards a card's text names (src/game/card/card-links.ts), checked on cards that show each
+// part of the rules, and on every card: the languages of a card link the same cards (so a new card whose text names a card
 // otherwise is listed here: a VARIANTS entry, or a rule, for it).
 
 const engine = createEngine({ cards: ALL_CARDS, scripts: ALL_SCRIPTS });
 const catalog = new Catalog(engine.db.all().map((def) => ({ ...def, status: engine.implementationStatus(def.id) })));
 
-/** The links of a card's text in a card language: what they say, and the token each opens ("text → id"). */
+/** The links of a card's text in a card language: what they say, and the card each opens ("text → id"). */
 function links(id: string, lang: CardLang): string[] {
   const card = catalog.def(id)!;
   const text = cardText(card, lang);
-  const find = tokenLinks(card, text, lang, catalog);
+  const find = cardLinks(card, text, lang, catalog);
   return text.split("\n").flatMap((line, i) => find(i).map((l) => `${line.slice(l.start, l.end)} → ${l.def}`));
 }
 
-/** The tokens a card's text links in a data language (none without that text), its body and its reference block apart. */
+/** The cards a card's text links in a data language (none without that text), its body and its reference block apart. */
 function linked(id: string, lang: "en" | "ja" | "cn"): { body: Set<string>; all: Set<string> } | null {
   const card = catalog.def(id)!;
   const text = card.text[lang];
   if (!text || card.preview) return null;
-  const find = tokenLinks(card, text, lang, catalog);
+  const find = cardLinks(card, text, lang, catalog);
   const body = new Set<string>();
   const all = new Set<string>();
   let reference = false;
@@ -45,7 +45,7 @@ function linked(id: string, lang: "en" | "ja" | "cn"): { body: Set<string>; all:
 }
 
 // Card texts: this machine's files (tools/lib/card-texts.ts), not in the repository; skipped without them.
-describe.skipIf(!hasDataTexts())("links to the tokens a card's text names", () => {
+describe.skipIf(!hasDataTexts())("links to the cards a card's text names", () => {
   it("English: whole names, longest first, lists before 'token', and bare names where nothing else is meant", () => {
     // "Fairy Wisp" is one token, not "Fairy".
     expect(links("BP01-010", "en")).toEqual(["Fairy Wisp → BP01-T02"]);
@@ -53,10 +53,15 @@ describe.skipIf(!hasDataTexts())("links to the tokens a card's text names", () =
     expect(links("BP01-001", "en")).toEqual(["Thorn Burst → BP01-T01", "Thorn Burst → BP01-T01"]);
     // A list before one "token": every name in it. "Mimi" is also a card's name: only as a token.
     expect(links("BP01-101", "en")).toEqual(["Mimi → BP01-T12", "Coco → BP01-T13"]);
-    // A token name inside a longer card name is that card's ("Lævateinn Dragon"), and so is the end of a name the data
-    // doesn't know ("Iron Tail Dragon").
-    expect(links("BP03-058", "en")).toEqual([]);
-    expect(links("CP03-066", "en")).toEqual([]);
+    // A token name inside a longer card name is that card's ("Lævateinn Dragon", which its Japanese text names: a link to it),
+    // and so is the end of a name the data doesn't know ("Iron Tail Dragon", for Irontail Dragon: VARIANTS).
+    expect(links("BP03-058", "en")).toEqual(["Lævateinn Dragon → BP03-056"]);
+    expect(links("CP03-066", "en")).toEqual([
+      "Blazing Flare Dragon → CP03-067",
+      "Iron Tail Dragon → CP03-080",
+      "Gattling Claw Dragon → CP03-077",
+      "Blazing Flare Dragon → CP03-067",
+    ]);
     // 'with "Ghost" in its name' is a part of a name; the same card's Ghost token is a token.
     expect(links("BP10-091", "en")).toEqual([]);
     expect(links("BP10-088", "en")).toEqual(["Ghost → BP01-T14"]);
@@ -69,9 +74,9 @@ describe.skipIf(!hasDataTexts())("links to the tokens a card's text names", () =
   it("Japanese and Chinese: whole names in 『』, the reference block included; never a part of a name or unquoted", () => {
     expect(links("BP01-020", "ja")).toEqual(["フェアリー → BP01-T03", "フェアリー → BP01-T03", "フェアリー → BP01-T03"]);
     expect(links("BP01-001", "cn")).toEqual(["蔷薇的猛击 → BP01-T01", "蔷薇的猛击 → BP01-T01", "蔷薇的猛击 → BP01-T01"]);
-    // 『フェアリープリンセス・アリア』 is a card, not a Fairy; 妖精类型 is a trait.
-    expect(links("BP11-007", "ja")).toEqual([]);
-    expect(links("BP11-007", "cn")).toEqual([]);
+    // 『フェアリープリンセス・アリア』 is a card (a link to it), not a Fairy; 妖精类型 is a trait.
+    expect(links("BP11-007", "ja")).toEqual(["フェアリープリンセス・アリア → SD01-001"]);
+    expect(links("BP11-007", "cn").map((l) => l.split(" → ")[1])).toEqual(["SD01-001"]);
     // 「カード名に『ゴースト』を含む」 / 「卡片名包含『怨灵』」: a part of a name.
     expect(links("BP10-091", "ja")).toEqual([]);
     expect(links("BP10-091", "cn")).toEqual([]);
@@ -88,6 +93,23 @@ describe.skipIf(!hasDataTexts())("links to the tokens a card's text names", () =
     expect(hant.map((l) => l.split(" → ")[1])).toEqual(cn.map((l) => l.split(" → ")[1]));
     expect(hant[0]).toBe("妖精 → BP01-T03");
     expect(links("BP08-101", "zh-Hant")).toContain("神秘的創造物 → BP05-T05");
+    expect(links("BP16-022", "zh-Hant")).toEqual(["天下大盜賊·治右衛門 → BP14-022", "閃耀的金幣 → BP14-T02"]);
+  });
+
+  it("other cards: a whole name in 『』 (of the card that isn't evolved, else of the only one); in English the names it means", () => {
+    expect(links("BP16-022", "ja")).toEqual(["天下の大泥棒・ジエモン → BP14-022", "輝く金貨 → BP14-T02"]);
+    expect(links("BP16-022", "cn")).toEqual(["天下大盗贼·治右卫门 → BP14-022", "闪耀的金币 → BP14-T02"]);
+    expect(links("BP16-022", "en")).toEqual(["Jiemon, Thief Lord → BP14-022", "Glittering Gold → BP14-T02"]);
+    // An evolved card has its card's name: the name is that card's (BP13-071, the reference block's) ...
+    expect(links("BP13-072", "ja")).toContain("永劫の吸血鬼・アルザード → BP13-071");
+    // ... and a name only an evolved card has is its own: here both faces of a double-faced one.
+    expect(links("BP08-002", "en")).toEqual(["Orchis, Resolute Puppet → BP08-003", "Orchis, Vengeful Puppet → BP08-003_back"]);
+    // English names with their apostrophes and hyphens either way.
+    expect(links("BP07-053", "en")).toEqual(["Shadow’s Corrosion → BP07-058", "Shadow’s Corrosion → BP07-058"]);
+    expect(links("BP18-031", "en")).toContain("Shinra, All-Discerning → BP18-020");
+    // Names written otherwise than their cards (VARIANTS); an English name the data only has in Japanese (BP21-PR10).
+    expect(links("CP01-024", "cn")).toEqual(["东海帝王 → CP01-014"]);
+    expect(links("DSD01a-003", "en")).toEqual(["Grea's Ember → BP21-PR10", "Grea's Ember → BP21-PR10"]);
   });
 
   it("follows the text shown (another language's when the card has none in this one); a token doesn't link to itself", () => {
@@ -98,7 +120,7 @@ describe.skipIf(!hasDataTexts())("links to the tokens a card's text names", () =
     expect(links("BP14-T02", "ja")).toEqual([]);
   });
 
-  it("every card's languages link the same tokens (the reference blocks aside: only Japanese and Chinese have them)", () => {
+  it("every card's languages link the same cards (the reference blocks aside: only Japanese and Chinese have them)", () => {
     const problems: string[] = [];
     for (const card of catalog.cards) {
       const [en, ja, cn] = (["en", "ja", "cn"] as const).map((lang) => linked(card.id, lang));
@@ -106,7 +128,10 @@ describe.skipIf(!hasDataTexts())("links to the tokens a card's text names", () =
       const same = (a: Set<string>, b: Set<string>) => list(a) === list(b);
       if (en && ja && !same(en.all, ja.body) && ![...en.all].every((t) => ja.all.has(t))) problems.push(`${card.id} en ${list(en.all)} / ja ${list(ja.body)}`);
       if (en && ja && ![...ja.body].every((t) => en.all.has(t))) problems.push(`${card.id} ja body ${list(ja.body)} / en ${list(en.all)}`);
-      if (ja && cn && !same(ja.body, cn.body)) problems.push(`${card.id} ja body ${list(ja.body)} / cn body ${list(cn.body)}`);
+      // The Chinese text of a double-faced card names its other face too (※这张卡的另一面为『…』).
+      const face = card.backFace ?? card.frontFace;
+      const cnBody = cn ? new Set([...cn.body].filter((def) => def !== face)) : null;
+      if (ja && cnBody && !same(ja.body, cnBody)) problems.push(`${card.id} ja body ${list(ja.body)} / cn body ${list(cnBody)}`);
     }
     expect(problems).toEqual([]);
   });

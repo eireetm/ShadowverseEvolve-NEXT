@@ -15,18 +15,15 @@ import { CardArt } from "./CardArt";
 import { CardText, CardTextLine } from "./CardText";
 import { displayOf } from "./display";
 import { giftLines } from "./gifts";
-import { tokenLinks } from "./token-links";
+import { cardLinks } from "./card-links";
 
 const LANGS: readonly DataLang[] = ["en", "cn", "ja"];
 /** The card data's other languages (Traditional Chinese is the Chinese one: not again). */
 const otherLangs = (lang: CardLang): DataLang[] => LANGS.filter((l) => l !== dataLang(lang));
 
-/** The card panel of the left column (a game, the deck screens): a token named in its card's text opens there. */
-const openToken = (def: string): void => showCard({ def, printing: null });
-
 /**
  * The last card the pointer went over (CardPanel). A card of the game is followed while it stays in its zone (it evolves,
- * takes damage ...); once it moves it is a new card (CR 4.1.4) and the panel keeps what it was. A token its text names opens
+ * takes damage ...); once it moves it is a new card (CR 4.1.4) and the panel keeps what it was. A card its text names opens
  * here with a click.
  */
 export function CardDetails() {
@@ -36,15 +33,17 @@ export function CardDetails() {
   const t = useT();
   if (!shown || !catalog) return <p className="sve-hint">{t("card.hint")}</p>;
   const now = shown.id && update ? findCard(update.view, shown.id) : null;
-  return <CardPanel focus={now && update ? { ...displayOf(now, sideOf(update.view, now.id), catalog), view: now } : shown} onToken={openToken} />;
+  // A card its text names: its first printing (a back face with its back up, CR 2.14).
+  const openCard = (def: string): void => showCard({ def, printing: null, back: !!catalog.def(def)?.frontFace });
+  return <CardPanel focus={now && update ? { ...displayOf(now, sideOf(update.view, now.id), catalog), view: now } : shown} onLink={openCard} />;
 }
 
 /**
  * A card's panel: picture (click it for a large one), names, type, traits, stats, text, printings. `exact`: this printing as
  * it is, not a token's chosen art; without `art`, no picture (the token art window shows one printing large beside it).
- * With `onToken`, the tokens its text names are links to them (token-links.ts).
+ * With `onLink`, the cards its text names are links to them (card-links.ts).
  */
-export function CardPanel({ focus, exact = false, art = true, onToken }: { focus: FocusCard; exact?: boolean; art?: boolean; onToken?: (def: string) => void }) {
+export function CardPanel({ focus, exact = false, art = true, onLink }: { focus: FocusCard; exact?: boolean; art?: boolean; onLink?: (def: string) => void }) {
   const catalog = useApp((s) => s.catalog)!;
   const playCosts = useApp((s) => s.update?.playCosts);
   const { cardLang, uiLang, tokenArt } = useSettings();
@@ -75,7 +74,7 @@ export function CardPanel({ focus, exact = false, art = true, onToken }: { focus
   // The physical card's printings (a back face has none: its front's).
   const physical = def.frontFace ? catalog.def(def.frontFace) : def;
   const printings = physical?.printings ?? [];
-  // A token: the printing its picture shows (token-art.ts).
+  // Its own printing (a card opened by a link of a text has none: its first one), and a token's the picture shows (token-art.ts).
   const own = focus.printing ?? printings[0] ?? null;
   const printing = exact ? own : shownPrinting(catalog, tokenArt, def.id, own);
   const faces = (): ArtFace[] => {
@@ -87,7 +86,7 @@ export function CardPanel({ focus, exact = false, art = true, onToken }: { focus
     <div className="sve-details">
       {art ? (
         <button type="button" className="sve-details-art" onClick={() => setViewing(faces())} title={t("card.enlarge")} data-testid="details-art">
-          <CardArt printing={focus.printing} def={def.id} back={focus.back} name={name} subtitle={t(`type.${def.type}` as const)} exact={exact} />
+          <CardArt printing={own} def={def.id} back={focus.back} name={name} subtitle={t(`type.${def.type}` as const)} exact={exact} />
         </button>
       ) : null}
       <h3 className="sve-details-name" lang={htmlLang(cardLang)}>
@@ -168,7 +167,7 @@ export function CardPanel({ focus, exact = false, art = true, onToken }: { focus
         </div>
       ) : null}
       {text ? (
-        <CardText text={text} lang={cardLang} links={onToken ? { find: tokenLinks(def, text, cardLang, catalog), open: onToken } : undefined} />
+        <CardText text={text} lang={cardLang} links={onLink ? { find: cardLinks(def, text, cardLang, catalog), open: onLink } : undefined} />
       ) : (
         <p className="sve-hint">{t("card.noText")}</p>
       )}

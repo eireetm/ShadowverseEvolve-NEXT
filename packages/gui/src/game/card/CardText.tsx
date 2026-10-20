@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { CardLang } from "../../app/settings";
 import { htmlLang } from "../../i18n";
 import { iconUrl } from "../../resources/lookup";
-import type { TextLinks } from "./token-links";
+import type { TextLinks } from "./card-links";
 import { tokenLabel } from "./tokens";
 
 function Token({ name, lang }: { name: string; lang: CardLang }) {

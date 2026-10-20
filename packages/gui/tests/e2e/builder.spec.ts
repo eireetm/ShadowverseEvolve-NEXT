@@ -308,10 +308,30 @@ test("the card panel: a token a card's text names opens that token there (click 
   await link.click();
   await expect(page.locator(".sve-details-name")).toHaveText("Fairy");
   await expect(page.getByTestId("card-text-link")).toHaveCount(0);
+  // With its picture: the token's own first printing (no token art chosen).
+  await expect(page.getByTestId("details-art").locator("[data-printing]")).toHaveAttribute("data-printing", "BP01-T03");
   // From the keyboard too.
   await card.hover();
   await page.getByTestId("card-text-link").first().focus();
   await page.keyboard.press("Enter");
   await expect(page.locator(".sve-details-name")).toHaveText("Fairy");
+  expect(problems).toEqual([]);
+});
+
+test("the card panel: another card a card's text names by its whole name opens there, with its first printing", async ({ page }) => {
+  test.skip(!hasCardTexts, "no card text files on this machine (npm run build:cards writes them)");
+  const problems: string[] = [];
+  page.on("pageerror", (e) => problems.push(e.message));
+  await useSettings(page, { uiLang: "zh", cardLang: "cn", builderDeck: null });
+  await openBuilder(page);
+  // BP16-022: 「如果自己的场上有『天下大盗贼·治右卫门』的话」 (BP14-022).
+  await page.getByTestId("builder-search").fill("BP16-022");
+  await settled(page);
+  await page.locator(".sve-pool-tile").first().hover();
+  const link = page.getByTestId("card-text-link").filter({ hasText: "天下大盗贼·治右卫门" });
+  await expect(link).toHaveAttribute("data-def", "BP14-022");
+  await link.click();
+  await expect(page.locator(".sve-details-name")).toHaveText("天下大盗贼·治右卫门");
+  await expect(page.getByTestId("details-art").locator("[data-printing]")).toHaveAttribute("data-printing", "BP14-022");
   expect(problems).toEqual([]);
 });
