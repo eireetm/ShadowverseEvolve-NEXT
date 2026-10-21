@@ -903,6 +903,7 @@ export const en = {
   "debug.blockQuickChatWatching": "For you only: the players' quick chat lines aren't shown or heard any more (they can still use it).",
   "debug.pauseBots": "Pause bots",
   "debug.animations": "Animations",
+  "debug.diceRollsOff": "Turn off the dice animation",
   "debug.manualSlots": "Choose card spots by hand",
   "debug.manualSlotsHelp": "When you put a card on the field or into the EX area, click the mat slot it goes to. Only the look: the rules have no slots.",
   "debug.manual": "Manual debugging (outside the rules)",

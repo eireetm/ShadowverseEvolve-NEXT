@@ -907,6 +907,7 @@ export const zh: Record<MessageKey, string> = {
   "debug.blockQuickChatWatching": "只对你自己：不再显示、不再响玩家的快捷聊天（玩家照样能用）。",
   "debug.pauseBots": "暂停 Bot",
   "debug.animations": "动画",
+  "debug.diceRollsOff": "关闭骰子动画",
   "debug.manualSlots": "手动选择卡片位置",
   "debug.manualSlotsHelp": "把卡放到场上或EX区域时，点击它要放的格子。只是外观，规则里没有格子。",
   "debug.manual": "手动调试（规则外的操作）",

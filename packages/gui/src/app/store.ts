@@ -7,7 +7,7 @@ import { translate } from "../i18n";
 import { cardTextProblems, onCardTexts, withShownTexts } from "../resources/card-texts";
 import { playUpdateSounds } from "../resources/sound";
 import { Catalog } from "./catalog";
-import { getSettings } from "./settings";
+import { getSettings, subscribeSettings } from "./settings";
 
 export interface AppError {
   id: number;
@@ -40,6 +40,15 @@ function setState(change: Partial<AppState>): void {
 /** The engine worker (one for the whole app). */
 export const engine = new EngineClient();
 
+/** Whether the table shows dice rolled (Settings.diceRollsOff): the worker holds the next answers for them only then. */
+let diceRolls = !getSettings().diceRollsOff;
+const sendDiceRolls = (): void => engine.send({ kind: "settings", settings: { diceRolls } });
+subscribeSettings((settings) => {
+  if (!settings.diceRollsOff === diceRolls) return;
+  diceRolls = !settings.diceRollsOff;
+  sendDiceRolls();
+});
+
 let nextError = 1;
 
 /** The catalog as the worker published it: without card texts, which the page reads (resources/card-texts.ts). */
@@ -58,6 +67,7 @@ engine.subscribe((message) => {
     case "ready":
       dataCatalog = message.catalog;
       setState({ ready: true, catalog: new Catalog(withShownTexts(message.catalog)) });
+      sendDiceRolls();
       break;
     case "update": {
       const update = message.update;

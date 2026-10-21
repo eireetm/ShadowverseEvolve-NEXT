@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { answer, showSidebar, startGame, useSettings } from "./helpers";
+import { showSidebar, startGame, toMainPhase, useSettings } from "./helpers";
 
 // A die rolled (game/board/DiceRoll.tsx): a window over the table, the die tumbling onto the number the log says, "骰子掷出了
 // N" under it; it goes by itself, or at a click. A deck of BP21-081 (1-cost follower, Fanfare: roll a 6-sided die), served
@@ -12,16 +12,15 @@ async function center(locator: Locator): Promise<{ x: number; y: number }> {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
-/** Answer the game (the first one of each decision) until a card of the person's hand can be played. */
+/**
+ * Answer the game up to the person's first main phase (they go first): a card of their hand can then be played. (Answering
+ * as fast as the decision bar reads may read a decision just answered again: toMainPhase waits a moment after each.)
+ */
 async function toPlayable(page: Page): Promise<Locator> {
-  const bar = page.locator(".sve-decision");
-  const lit = page.locator(".sve-hand-own .sve-card-action");
-  for (let step = 0; step < 200 && (await lit.count()) === 0; step++) {
-    const kind = (await bar.getAttribute("data-decision"))!;
-    if (kind === "waiting" || (await bar.getAttribute("class"))!.includes("sve-busy")) await page.waitForTimeout(30);
-    else await answer(page, kind);
-  }
-  return lit.first();
+  await toMainPhase(page);
+  const lit = page.locator(".sve-hand-own .sve-card-action").first();
+  await expect(lit).toBeVisible();
+  return lit;
 }
 
 /** Drag a card of the hand onto the person's field. */
@@ -59,6 +58,34 @@ test("a die rolled shows in a window: it tumbles onto the number the log says, t
   await expect(page.locator(".sve-log-line").filter({ hasText: `掷出 ${n}。` })).toHaveCount(1);
   // It goes by itself (a moment after it has landed).
   await expect(dice).toHaveCount(0, { timeout: 5_000 });
+  expect(problems).toEqual([]);
+});
+
+test("the debug tab's option turns the dice window off (it is on at first): the roll is in the log only", async ({ page }) => {
+  const problems: string[] = [];
+  page.on("pageerror", (e) => problems.push(e.message));
+  await useSettings(page, {
+    uiLang: "zh",
+    botDelayMs: 0,
+    format: "unlimited",
+    setupDecks: ["dice.json", "samples/sd02.json"],
+    setupControllers: ["human", "greedy"],
+    setupTurnOrder: "player1",
+  });
+  await page.route("**/api/decks/dice.json", (route) => route.fulfill({ json: DICE_DECK }));
+  await startGame(page, "dice-off");
+  await showSidebar(page);
+  await page.getByTestId("tab-debug").click();
+  const off = page.getByTestId("debug-dice-off");
+  await expect(off.locator("..")).toHaveText("关闭骰子动画");
+  await expect(off).not.toBeChecked();
+  await off.check();
+  await page.getByTestId("sidebar-hide").click();
+  await play(page, await toPlayable(page));
+  await showSidebar(page);
+  await page.getByTestId("tab-log").click();
+  await expect(page.locator(".sve-log-line").filter({ hasText: /掷出 [1-6]。/ })).toHaveCount(1);
+  await expect(page.getByTestId("dice-roll")).toHaveCount(0);
   expect(problems).toEqual([]);
 });
 

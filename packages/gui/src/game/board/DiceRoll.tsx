@@ -4,10 +4,11 @@
 // together are shown one after another. The sound "dice" (public/audio/sfx/dice) plays as the die tumbles; without
 // animations the die shows its number at once. Only rolls that happen while the table is watched: not the ones of a
 // table shown anew (a replay's jump, a rewind), nor again when the game screen is shown again. The bots' or the other
-// program's next answer waits until the die has landed (the engine worker, diceLanded).
+// program's next answer waits until the die has landed (the engine worker, diceLanded). The debug tab turns it off
+// (Settings.diceRollsOff): no window, no sound, no wait; the rolls are in the log.
 import type { PlayerId } from "@sve/core";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { useSettings } from "../../app/settings";
+import { getSettings, useSettings } from "../../app/settings";
 import type { GameUpdate } from "../../engine/protocol";
 import { useT } from "../../i18n";
 import { playSfx } from "../../resources/sound";
@@ -39,12 +40,12 @@ const FACES: { n: number; place: string; front: [number, number]; pips: [number,
 
 export function DiceRoll({ update }: { update: GameUpdate }) {
   const t = useT();
-  const { animations } = useSettings();
+  const { animations, diceRollsOff } = useSettings();
   const [queue, setQueue] = useState<Roll[]>([]);
   const [landed, setLanded] = useState(false);
   const first = useRef(true);
   useEffect(() => {
-    // A table shown anew, or the update the screen opened with: nothing to roll.
+    // A table shown anew, or the update the screen opened with: nothing to roll; nor with the window off.
     const opening = first.current;
     first.current = false;
     if (update.logReset) {
@@ -53,10 +54,14 @@ export function DiceRoll({ update }: { update: GameUpdate }) {
     }
     if (taken.has(update)) return;
     taken.add(update);
-    if (opening) return;
+    if (opening || getSettings().diceRollsOff) return;
     const found = update.log.flatMap(({ event }) => (event.type === "dieRolled" ? [{ key: `die-${++rolls}`, player: event.player, result: event.result }] : []));
     if (found.length > 0) setQueue((q) => [...q, ...found]);
   }, [update]);
+  // Turned off while dice are shown: they go at once.
+  useEffect(() => {
+    if (diceRollsOff) setQueue([]);
+  }, [diceRollsOff]);
   const current = queue[0] ?? null;
   const waiting = queue.length > 1;
   const next = () => {

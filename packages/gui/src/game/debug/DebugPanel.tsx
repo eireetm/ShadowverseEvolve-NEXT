@@ -33,7 +33,7 @@ export function DebugPanel({ update }: { update: GameUpdate }) {
   const online = update.online !== null;
   // Online, the seed and the bug report file only once the game is over.
   const secret = online && !update.result;
-  const { animations, manualSlots, manualDebug, fakeQuick, skipQuick, blockQuickChat } = useSettings();
+  const { animations, diceRollsOff, manualSlots, manualDebug, fakeQuick, skipQuick, blockQuickChat } = useSettings();
   // A player at the screen (not a spectator, nor a replay or a game of bots being watched), or a spectator online.
   const player = update.controllers[update.perspective] === "human" && !update.watch;
   const spectator = update.online?.spectating === true;
@@ -152,6 +152,10 @@ export function DebugPanel({ update }: { update: GameUpdate }) {
       <label className="sve-check">
         <input type="checkbox" checked={animations} onChange={(e) => updateSettings({ animations: e.target.checked })} />
         {t("debug.animations")}
+      </label>
+      <label className="sve-check">
+        <input type="checkbox" checked={diceRollsOff} onChange={(e) => updateSettings({ diceRollsOff: e.target.checked })} data-testid="debug-dice-off" />
+        {t("debug.diceRollsOff")}
       </label>
       <label className="sve-check" title={t("debug.manualSlotsHelp")}>
         <input type="checkbox" checked={manualSlots} onChange={(e) => updateSettings({ manualSlots: e.target.checked })} data-testid="debug-manual-slots" />

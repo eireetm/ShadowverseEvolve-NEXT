@@ -217,7 +217,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 | `bounce` | 回到手牌 |
 | `counter` | 放置或取除指示物 |
 | `shuffle` | 洗切牌堆 |
-| `dice` | 掷骰子（牌桌中间的骰子窗口里，骰子转动时） |
+| `dice` | 掷骰子（牌桌中间的骰子窗口里，骰子转动时；侧边栏"调试"里勾了"关闭骰子动画"时没有窗口，也不播） |
 | `turn` | 回合开始 |
 | `quick` | 快速提示弹出 |
 | `game-start` | 对局开始 |
@@ -620,7 +620,7 @@ Sound effects (29):
 | `bounce` | Returning to the hand |
 | `counter` | Putting or removing counters |
 | `shuffle` | Shuffling the deck |
-| `dice` | Rolling a die (as the die tumbles in its window in the middle of the table) |
+| `dice` | Rolling a die (as the die tumbles in its window in the middle of the table; no window and no sound with "Turn off the dice animation" in the sidebar's Debug tab) |
 | `turn` | A turn starts |
 | `quick` | The Quick announcement appears |
 | `game-start` | The game starts |

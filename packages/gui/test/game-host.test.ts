@@ -520,9 +520,9 @@ const ninjas = () => ({ ...deck("sd02"), main: [...Array<string>(20).fill("BP01-
 describe("dice rolled (CR 5.20): the table shows each die landing (game/board/DiceRoll.tsx)", () => {
   // BP21-081: a 1-cost follower, Fanfare — roll a 6-sided die.
   const dice = () => ({ ...deck("sd05"), main: Array<string>(40).fill("BP21-081") });
-  const botRolls = (revealPauseMs: number) => {
+  const botRolls = (revealPauseMs: number, diceRolls = true) => {
     const h = timedHost();
-    h.host.handle({ kind: "settings", settings: { botDelayMs: 600, revealPauseMs } });
+    h.host.handle({ kind: "settings", settings: { botDelayMs: 600, revealPauseMs, diceRolls } });
     h.host.handle({ kind: "start", options: { seed: "dice", decks: [deck("sd01"), dice()], deckNames: ["SD01", "Dice"], controllers: ["human", "greedy"], deckRestrictions: false } });
     const rng = seedRng("dice");
     let rolled = false;
@@ -544,6 +544,8 @@ describe("dice rolled (CR 5.20): the table shows each die landing (game/board/Di
   it("hold the bot's next answer until the die has landed, not that and its pause; nothing with the reveal pause off", () => {
     expect(botRolls(1330)).toBe(diceLanded(1));
     expect([0, 600]).toContain(botRolls(0));
+    // The table shows no dice (Settings.diceRollsOff): its usual pause only.
+    expect([0, 600]).toContain(botRolls(1330, false));
     expect([diceLanded(0), diceLanded(1), diceLanded(3)]).toEqual([0, 900, 900 * 3 + 500 * 2]);
   }, 60_000);
 });

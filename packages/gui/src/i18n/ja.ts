@@ -907,6 +907,7 @@ export const ja: Record<MessageKey, string> = {
   "debug.blockQuickChatWatching": "あなただけに有効：プレイヤーのクイックチャットは表示されず、音も鳴りません（プレイヤーは使えます）。",
   "debug.pauseBots": "Bot を一時停止",
   "debug.animations": "アニメーション",
+  "debug.diceRollsOff": "サイコロの演出をオフにする",
   "debug.manualSlots": "カードの置き場所を手動で選ぶ",
   "debug.manualSlotsHelp": "カードを場や EXエリアに置くとき、置く枠をクリックして選びます。見た目だけで、ルールに枠はありません。",
   "debug.manual": "手動デバッグ（ルール外の操作）",

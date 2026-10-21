@@ -20,6 +20,8 @@ export interface Settings {
   bgmVolume: number;
   /** The table's animations (cards flying, numbers, ...). */
   animations: boolean;
+  /** The dice window is off (game/board/DiceRoll.tsx): dice rolled aren't shown, and no answer waits for them to land. */
+  diceRollsOff: boolean;
   /** The last game setup (deck files, who plays each seat). */
   setupDecks: [string, string];
   setupControllers: [SeatController, SeatController];
@@ -84,6 +86,7 @@ export const DEFAULT_SETTINGS: Settings = {
   volume: 0.6,
   bgmVolume: 0.4,
   animations: true,
+  diceRollsOff: false,
   setupDecks: ["samples/sd01.json", "samples/sd02.json"],
   setupControllers: ["human", "medium"],
   setupTurnOrder: "choose",

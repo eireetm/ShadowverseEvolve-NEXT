@@ -291,6 +291,7 @@ export class GameHost {
     fakeQuick: false,
     skipQuick: false,
     revealPauseMs: 0,
+    diceRolls: true,
   };
   private cancelTimer: (() => void) | null = null;
   /** Online play with a turn time limit (GameOptions.turnLimit): the players' time, the game it counts (its seed), its alarm. */
@@ -1439,9 +1440,9 @@ export class GameHost {
       holds.push(this.settings.revealPauseMs + Math.max(0, ...waits));
     }
     // Dice rolled (CR 5.20): the table shows each die tumbling onto its number, one after another (board/DiceRoll.tsx); the
-    // next answers wait until the last has landed. Not for a table shown anew, which shows none.
+    // next answers wait until the last has landed. Not for a table shown anew, which shows none, nor when it shows no dice.
     const dice = this.log.filter((e) => e.event.type === "dieRolled").length;
-    if (dice > 0 && this.settings.revealPauseMs > 0 && !this.logReset) holds.push(diceLanded(dice));
+    if (dice > 0 && this.settings.revealPauseMs > 0 && this.settings.diceRolls && !this.logReset) holds.push(diceLanded(dice));
     if (holds.length > 0) {
       this.revealFor = Math.max(...holds);
       this.revealUntil = this.now() + this.revealFor;
