@@ -167,7 +167,7 @@ export function canPlayActivated(
   // 10.3.6 — a crest's only in the EX area.
   if (!abilityZones(g, def, ability).includes(c.zone)) return false;
   if (timing === "quick" && !ability.quick) return false; // CR 12.3.3
-  if (ability.unionBurst && !unionBurstValid(g, card)) return false; // CR 14.5.1.2
+  if (ability.unionBurst && !unionBurstValid(g, player)) return false; // CR 14.5.1.2
   const perTurn = activationsPerTurn(ability);
   if (perTurn !== null && usesThisTurn(g.state, c, abilityKey(def, index)) >= perTurn) return false;
   if (activationBlocked(g.state, card, false)) return false; // BP03-039/040
@@ -304,7 +304,7 @@ export function* playActivatedAbility(g: G, player: PlayerId, card: CardId, inde
  */
 function freeUnionBursts(g: G, player: PlayerId, card: CardId): { def: DefId; index: number; ability: ActivatedAbility | AutomaticAbility }[] {
   const c = g.state.cards[card];
-  if (!c || c.zone !== "field" || !unionBurstValid(g, card)) return [];
+  if (!c || c.zone !== "field" || !unionBurstValid(g, player)) return [];
   const out: { def: DefId; index: number; ability: ActivatedAbility | AutomaticAbility }[] = [];
   for (const ref of characteristics(g, card).abilities) {
     const ability = ref.ability;

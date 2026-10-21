@@ -5,12 +5,14 @@ import type { Env } from "../state/access";
 import { thisTurn } from "../state/turn-counts";
 
 /**
- * CR 14.5.1.2 — the Union Burst abilities of a card are invalid at all times and in all zones unless the deck it belongs to
- * (its owner's; a token's is its creator's, 9.1.2.1) is based on Princess Connect! Re: Dive.
+ * CR 14.5.1.2 — Union Burst abilities are invalid at all times and in all zones in a deck based on a class or on another
+ * universe than Princess Connect! Re: Dive. The deck that counts is the one of the player who controls the card and plays the
+ * ability (CR 3.1.2), not its owner's: a follower given by a player whose deck is based on the universe has no Union Burst for
+ * a player whose deck is based on a class, and one given to a player whose deck is based on it has (BP13-043 rulings Q1, Q2);
+ * likewise a card played from an opponent's cemetery (BP05-018).
  */
-export function unionBurstValid(env: Env, card: CardId): boolean {
-  const c = env.state.cards[card];
-  return c !== undefined && env.state.players[c.owner].universe === "princessConnect";
+export function unionBurstValid(env: Env, player: PlayerId): boolean {
+  return env.state.players[player].universe === "princessConnect";
 }
 
 /**

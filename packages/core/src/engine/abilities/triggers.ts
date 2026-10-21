@@ -147,7 +147,7 @@ export function collectTriggers(g: G, event: GameEvent): void {
     scripts[c.abilityDef]?.abilities?.forEach((ability, index) => {
       if (ability.kind !== "automatic" || ability.delayed) return;
       if (!abilityZones(g, c.abilityDef, ability).includes(c.subject.zone)) return; // CR 10.3.5 / 10.3.6
-      if (ability.unionBurst && !unionBurstValid(g, c.source)) return; // CR 14.5.1.2
+      if (ability.unionBurst && !unionBurstValid(g, c.subject.controller)) return; // CR 14.5.1.2
       for (const data of matches(ability, event, c.subject, reader, blocked)) {
         // "During your turn, whenever ..." (triggerIf); an "if" in the effect (condition) is only
         // checked when the ability is played (play-ability.ts, BP10-109 ruling).
@@ -211,7 +211,7 @@ export function collectTriggers(g: G, event: GameEvent): void {
       const def = `${EQUIP_PREFIX}${t.def}`;
       abilities.forEach((ability, index) => {
         if (ability.kind !== "automatic") return;
-        if (ability.unionBurst && !unionBurstValid(g, follower)) return; // CR 14.5.1.2
+        if (ability.unionBurst && !unionBurstValid(g, controller)) return; // CR 14.5.1.2
         for (const data of matches(ability, event, subject, reader, blocked)) {
           if (ability.triggerIf && !ability.triggerIf(reader, controller, follower)) continue;
           for (let k = instances(g, event, controller); k > 0; k--) {

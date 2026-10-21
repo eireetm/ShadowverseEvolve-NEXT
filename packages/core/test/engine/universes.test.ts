@@ -264,6 +264,22 @@ describe("CR 14.5 — Princess Connect! Re: Dive: Union Burst and equipment", ()
     expect(d({ me: { ...PC, field: ["CP04-015"] }, opp: { field: ["V5"] } }).canActivate("CP04-015")).toBe(true);
   });
 
+  it("14.5.1.2 — the deck of the player who controls the card and plays the ability counts, not its owner's (BP13-043 rulings)", () => {
+    // BP05-018 Octrice (Activate (8): play a card in an opponent's cemetery for 0) plays the opponent's Kokkoro: its UB Fanfare.
+    const octrice = (me: object, opp: object) =>
+      d({ me: { field: ["BP05-018"], playPoints: 8, ...me }, opp: { cemetery: ["CP04-001"], ...opp } })
+        .activate("BP05-018") // its only target
+        .flush()
+        .leader();
+    expect([octrice({}, PC), octrice(PC, {})]).toEqual([20, 21]);
+    // BP03-109 Angel of Chaos steals Io: its UB Activate (1) only for a player whose deck is based on the universe (Q1, Q2).
+    const angel = (me: object, opp: object) =>
+      d({ me: { field: ["BP03-109"], cemetery: ["BP03-109", "BP03-109", "BP03-109"], playPoints: 1, ...me }, opp: { field: ["CP04-088"], ...opp } })
+        .activate("BP03-109") // its only target
+        .canActivate("CP04-088");
+    expect([angel({}, PC), angel(PC, {})]).toEqual([false, true]);
+  });
+
   it("14.5.1.3 — executed once played and resolved: counted for the turn, and other followers' abilities see it", () => {
     const t = d({ me: { ...PC, field: ["CP04-097"], hand: ["CP04-001"], playPoints: 1 } }).play("CP04-001").flush();
     expect([ubs(t), t.leader(), t.leader("opp")]).toEqual([1, 21, 19]);
