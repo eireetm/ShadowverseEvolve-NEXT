@@ -8,6 +8,7 @@ import {
   type CardId,
   type Decision,
   type Engine,
+  type GameEvent,
   type GameSession,
   type PlayerId,
   type PlayerView,
@@ -15,12 +16,15 @@ import {
 } from "./core";
 import { planBranches } from "./branches";
 import { candidateAnswers } from "./candidates";
-import { DEFAULT_WEIGHTS, exactResults, weightsEvaluator, type EvalWeights, type Evaluator } from "./evaluate";
+import { COND_DEFAULTS, ConditionalCharges, type CondGates, type CondMark, type CondScope, type ConditionalStats, type Expansion } from "./conditional";
+import { DEFAULT_WEIGHTS, evaluate, exactResults, weightsEvaluator, type EvalWeights, type Evaluator } from "./evaluate";
 import { GreedyBot, type BotStats } from "./greedy";
 import { positionKey } from "./keys";
 import { adaptStep, lethalFirstModel, lethalWithinReach, lineWinsAgainstAll, replayLine, searchSureLethal, stepOf, type Adversary, type LethalStep, type Model, type Responder } from "./lethal";
 import { redrawByExpectation, redrawKnowingDeck } from "./mulligan";
+import { SIM_DEFAULTS, simIdentity, simMulligan, simProblems, type MulliganDecision, type MulliganStats, type MulliganWorld, type SimParams } from "./mulligan-sim";
 import { fastAnswer, lookupFromReader } from "./policy";
+import { setupWorld } from "./setup-sample";
 
 export interface PlannerBotOptions {
   seed?: string | number;
@@ -42,9 +46,29 @@ export interface PlannerBotOptions {
   replyEvaluator?: Evaluator;
   /**
    * The evaluation of the models of a player: the opponent in our plans and in their simulated turn, and us in that turn.
-   * Default: the hand-written one with the default weights. (The bot's own decisions outside its main phase use `evaluator`.)
+   * Default: the hand-written one with the default weights. (The bot's own decisions outside its main phase use
+   * `greedyEvaluator`.)
    */
   modelEvaluator?: Evaluator;
+  /**
+   * The evaluation of the bot's own decisions outside its main phase (its own greedy bot: quick windows in the opponent's
+   * turn, its start and end phases, the mulligan by the greedy rule). Those are scored at the next main phase decision
+   * (greedy.ts simulate): the start of a main phase or the middle of the opponent's, never the end of a turn, which is how
+   * the beam reads every plan (`evaluator`); an evaluation whose reading depends on that (pp1, danger: mainAsEnd) gets its
+   * start form here. Default: `evaluator`.
+   */
+  greedyEvaluator?: Evaluator;
+  /**
+   * Its own greedy bot at the opponent's end-phase Quick window (CR 7.4.5, the last before our refill, CR 7.2.2): each
+   * answer's score plus this per play point it uses there (quick-window.ts; pp1's ppWaste). The models are not changed.
+   * Default: none.
+   */
+  quickEndBonus?: number;
+  /**
+   * A card a plan plays whose Fanfares did nothing (CR 12.4.3, 10.7.3.2, 10.3.3) is charged in the bot's own search of this
+   * turn and in the comparison of its plans (conditional.ts). Default: none.
+   */
+  conditional?: ConditionalOptions;
   /** Plans kept at each step of the search. */
   beamWidth?: number;
   /** Answers tried at each decision of a plan. */
@@ -78,8 +102,15 @@ export interface PlannerBotOptions {
    * plans that win in its sample count as won only if they do too (0: no checks). A cheating bot checks in the real game.
    */
   lethalChecks?: number;
-  /** "curve": keep or redraw by the curve of the first turns (mulligan.ts); "greedy" (default): the greedy bot's rule. */
-  mulligan?: "greedy" | "curve";
+  /**
+   * "curve": keep or redraw by the curve of the first turns (mulligan.ts); "sim": by playing the first turns of samples both
+   * ways (mulligan-sim.ts; a cheating bot plays them in copies of the real game); "greedy" (default): the greedy bot's rule.
+   */
+  mulligan?: "greedy" | "curve" | "sim";
+  /** "sim"'s parameters (SIM_DEFAULTS for those left out). */
+  mulliganSim?: Partial<SimParams>;
+  /** Where "sim" samples a fair bot's openings (default: setup-sample.ts, the public sampler at the setup). */
+  mulliganWorld?: MulliganWorld;
   /**
    * How far a turn's plans are compared (2026-10-03: the owner wants two turns): 1 — each after the opponent's simulated
    * reply (a model's one line); 2 — a search over whole turns, our plans, then the opponent's plans of their next turn (the
@@ -107,6 +138,16 @@ export interface PlannerBotOptions {
   explore?: { rate: number; temperature: number };
 }
 
+/** The conditional-Fanfare charge's options (conditional.ts). */
+export interface ConditionalOptions {
+  /** Which Fanfares are judged: "declared" conditions, also "unplayed" ones, also the effects' "gates" (the card table's). */
+  scope: CondScope;
+  /** The charge per card play whose Fanfares did nothing (default: a card in hand's worth, DEFAULT_WEIGHTS.hand). */
+  penalty?: number;
+  /** The gates scope's reader of the card feature table (conditional-gates.ts tableGates; a function: called once, when the bot is built). */
+  gates?: CondGates | (() => CondGates);
+}
+
 /** A point of a plan: a copy of the game at one of our decisions in our main phase, or where the plan ends. */
 interface Node {
   session: GameSession;
@@ -122,6 +163,8 @@ interface Node {
   unsure?: true;
   /** The position however it was reached (positionKey): one position, one plan. */
   key: string;
+  /** The conditional charges of the plan up to here (conditional.ts), when the bot has them. */
+  cond?: CondMark;
 }
 
 type Stop = "decide" | "turnOver" | "gameOver";
@@ -131,7 +174,8 @@ type Stop = "decide" | "turnOver" | "gameOver";
  * (plays, evolves, abilities, attacks, and the choices they ask for) with a beam search, scoring every plan at the same
  * point — its turn ended there — then plays the opponent's next turn after the best few plans and keeps the one that holds
  * up best. It plays the first answer of that plan and plans again at its next decision. Decisions outside its main phase
- * (quick windows in the opponent's turn, the end phase, mulligan) are the greedy bot's.
+ * (quick windows in the opponent's turn, the end phase, mulligan) are the greedy bot's, but for the mulligan by another
+ * rule (`mulligan`) and the Ward choices.
  */
 export class PlannerBot {
   readonly stats: BotStats = { decisions: 0, simulations: 0, simulationFailures: 0, simulationErrors: {}, fallbacks: 0, lastError: null };
@@ -143,6 +187,8 @@ export class PlannerBot {
   readonly lethalStats = { searches: 0, skipped: 0, played: 0, dropped: 0, rejected: 0, unsurePlans: 0, capped: 0 };
   /** The turns where it drew a plan instead of taking the best (`explore`). */
   readonly explored: number[] = [];
+  /** The mulligan by simulation at work (null: another mulligan rule). */
+  readonly mulliganStats: MulliganStats | null;
   private readonly evaluator: Evaluator;
   private readonly replyEvaluator: Evaluator;
   private readonly modelEvaluator: Evaluator | undefined;
@@ -161,7 +207,15 @@ export class PlannerBot {
   private readonly lethalSearch: number;
   private readonly lethalChecks: number;
   private readonly replyLethal: number;
-  private readonly mulliganMode: "greedy" | "curve";
+  private readonly mulliganMode: "greedy" | "curve" | "sim";
+  /** "sim"'s parameters and where it samples (mulligan-sim.ts). */
+  private readonly simParams: SimParams | null;
+  private readonly mulliganWorld: MulliganWorld;
+  /** Its own greedy bot's evaluation as that bot scores (the mulligan by simulation's self-model outside our main phase). */
+  private readonly greedyScore: Evaluator;
+  /** The conditional charges (null: none), and the expansion they follow while it runs (expandWatched). */
+  private readonly cond: ConditionalCharges | null;
+  private watching: Expansion<Node> | null = null;
   private readonly lookahead: 1 | 2;
   private readonly innerPlans: [number, number];
   private readonly innerSimulations: number;
@@ -222,8 +276,35 @@ export class PlannerBot {
     this.exploreRate = options.explore?.rate ?? 0;
     this.exploreTemperature = Math.max(0.01, options.explore?.temperature ?? 2);
     this.exploreRng = seedRng(`explore:${this.seed}`);
-    // Its own decisions outside its main phase (quick windows, end phase, targets) are scored with its own evaluation.
-    this.greedy = new GreedyBot(engine, { seed: `${this.seed}:greedy`, evaluator: this.evaluator });
+    // Its own decisions outside its main phase (quick windows, end phase, targets) are scored with its own evaluation, in
+    // the form that scores where those decisions are scored (greedyEvaluator), with the end-phase window's bonus if given.
+    const greedyEvaluator = options.greedyEvaluator ?? this.evaluator;
+    this.greedy = new GreedyBot(engine, {
+      seed: `${this.seed}:greedy`,
+      evaluator: greedyEvaluator,
+      ...(options.quickEndBonus !== undefined ? { endPhaseQuickBonus: options.quickEndBonus } : {}),
+    });
+    this.greedyScore = exactResults(greedyEvaluator);
+    const cond = options.conditional;
+    const gates = typeof cond?.gates === "function" ? cond.gates() : (cond?.gates ?? null);
+    this.cond = cond ? new ConditionalCharges(engine.scripts, { scope: cond.scope, penalty: cond.penalty ?? COND_DEFAULTS.penalty }, gates) : null;
+    const sim = this.mulliganMode === "sim" ? { ...SIM_DEFAULTS, ...options.mulliganSim } : null;
+    const problems = sim ? simProblems(sim) : [];
+    if (problems.length) throw new Error(`mulligan sim: ${problems.join("; ")}`);
+    this.simParams = sim;
+    // A cheating bot plays its openings in copies of the real game, as it plans every turn there (mulligan-sim.ts).
+    this.mulliganWorld = this.cheat ? (session) => session.clone() : (options.mulliganWorld ?? setupWorld(engine));
+    this.mulliganStats = sim ? { identity: simIdentity(sim), mulligans: 0, redraws: 0, fallbacks: 0, failures: 0, simulations: 0, inputs: 0, last: null } : null;
+  }
+
+  /** The conditional charges at work (null: the bot has none). */
+  get condStats(): ConditionalStats | null {
+    return this.cond?.stats ?? null;
+  }
+
+  /** The end-phase window's bonus at work on its own greedy bot (null: none). */
+  get quickStats() {
+    return this.greedy.quickStats;
   }
 
   decide(session: GameSession): Answer {
@@ -247,6 +328,7 @@ export class PlannerBot {
   }
 
   private choose(session: GameSession, d: Decision): Answer {
+    if (d.type === "mulligan" && this.mulliganMode === "sim") return this.simulatedMulligan(session, d);
     const me = d.player;
     const state = session.state;
     if (d.type === "mulligan" && this.mulliganMode === "curve") return this.mulligan(session, d);
@@ -393,6 +475,8 @@ export class PlannerBot {
    * stopped, the opponent wins in their turn): when every other plan loses too, it is the one that can still win.
    */
   private unsureFloor(candidates: Node[], values: number[]): number[] {
+    // The values the plans are compared by, each less its plan's conditional charges (conditional.ts).
+    if (this.cond !== null) values = this.cond.chargedValues(candidates, values);
     const floor = -DEFAULT_WEIGHTS.win / 2 + 1;
     return values.map((v, i) => (candidates[i]!.unsure ? Math.max(v, floor) : v));
   }
@@ -521,6 +605,8 @@ export class PlannerBot {
    * that explores and draws by these values: no cuts).
    */
   private lookAhead(candidates: Node[], game: GameSession, me: PlayerId, turn: number, seed: string, world: () => GameSession, exact = false): number[] {
+    // Candidates charged differently are compared without cuts: a cut is a bound on the raw value, not on the charged one.
+    if (this.cond !== null && !exact && this.cond.differ(candidates)) exact = true;
     const worlds = this.cheat ? 1 : Math.max(1, this.samples);
     let bestTotal = -Infinity;
     const totals: number[] = [];
@@ -819,6 +905,39 @@ export class PlannerBot {
     return redraw ? { type: "mulligan", redraw: true, bottomOrder: [...d.hand] } : { type: "mulligan", redraw: false };
   }
 
+  /**
+   * CR 6.2.1.8 by playing the first turns of samples both ways (mulligan-sim.ts): our decisions there scored with the bot's
+   * own evaluations (its main phases with `evaluator`, its other decisions with its own greedy's, the leaves with
+   * `replyEvaluator`), the opponent's with its models'. The samples are seeded from the bot's seed and the mulligan's number.
+   * When every sample fails, its own greedy bot's rule answers.
+   */
+  private simulatedMulligan(game: GameSession, d: MulliganDecision): Answer {
+    const stats = this.mulliganStats!;
+    stats.mulligans += 1;
+    const outcome = simMulligan(game, d, {
+      engine: this.engine,
+      world: this.mulliganWorld,
+      seed: `${this.seed}:mull:${stats.mulligans}`,
+      params: this.simParams!,
+      evaluator: this.evaluator,
+      greedyEvaluator: this.greedyScore,
+      leafEvaluator: this.replyEvaluator,
+      // As the models score (the hand-written evaluation when the bot was given none).
+      modelEvaluator: this.modelEvaluator ?? ((view, me) => evaluate(view, me)),
+    });
+    stats.last = outcome;
+    stats.failures += outcome.failures;
+    stats.simulations += outcome.simulations;
+    stats.inputs += outcome.inputs;
+    let answer: Answer;
+    if (outcome.keep.length === 0) {
+      stats.fallbacks += 1;
+      answer = this.greedy.decide(game);
+    } else answer = outcome.redraw ? { type: "mulligan", redraw: true, bottomOrder: [...d.hand] } : { type: "mulligan", redraw: false };
+    if (answer.type === "mulligan" && answer.redraw) stats.redraws += 1;
+    return answer;
+  }
+
   /** The answers worth trying at a decision of a plan (branches.ts). */
   private branches(d: Decision, lookup: ReturnType<typeof lookupFromReader>): Answer[] {
     return planBranches(d, lookup, this.rng, this.maxBranches);
@@ -826,6 +945,8 @@ export class PlannerBot {
 
   /** Give `answer` in a copy of `node` and play on to our next decision (the opponent passes in their quick windows). */
   private expand(node: Node, answer: Answer, me: PlayerId, turn: number, world: () => GameSession, score: Evaluator = this.evaluator, inner = false): Node | null {
+    // The conditional charges follow this turn's own search only (not the later turns of a two-turn search).
+    if (this.cond !== null && !inner && this.watching === null) return this.expandWatched(node, answer, me, turn, world, score);
     this.stats.simulations += 1;
     try {
       const session = this.copy(node, world);
@@ -833,12 +954,38 @@ export class PlannerBot {
       const stop = this.advance(session, me, turn, inner);
       return this.node(session, node, answer, me, turn, stop, score);
     } catch (e) {
-      this.stats.simulationFailures += 1;
-      const message = `${e instanceof Error ? e.name : "Error"}: ${e instanceof Error ? e.message : String(e)}`.slice(0, 300);
-      const errors = this.stats.simulationErrors;
-      if (message in errors || Object.keys(errors).length < 20) errors[message] = (errors[message] ?? 0) + 1;
-      return null;
+      return this.expansionFailed(e);
     }
+  }
+
+  /**
+   * expand, with the conditional charges following it (conditional.ts): the events of the answer and of the opponent's
+   * answers after it (the copy's inputs, not those that rebuilt the copy), and the plan's state and charge on the node.
+   */
+  private expandWatched(node: Node, answer: Answer, me: PlayerId, turn: number, world: () => GameSession, score: Evaluator): Node | null {
+    const events: GameEvent[] = [];
+    const x: Expansion<Node> = { parent: node, answer, decision: node.session.decision, events };
+    this.watching = x;
+    this.stats.simulations += 1;
+    try {
+      const session = this.copy(node, world);
+      events.push(...session.act(answer));
+      const stop = this.advance(session, me, turn, false, events);
+      return this.cond!.expanded(this.node(session, node, answer, me, turn, stop, score), x, session, me, stop);
+    } catch (e) {
+      return this.expansionFailed(e);
+    } finally {
+      this.watching = null;
+    }
+  }
+
+  /** A simulation of a plan's step that threw: counted with its message (at most 20 different ones); no node. */
+  private expansionFailed(e: unknown): null {
+    this.stats.simulationFailures += 1;
+    const message = `${e instanceof Error ? e.name : "Error"}: ${e instanceof Error ? e.message : String(e)}`.slice(0, 300);
+    const errors = this.stats.simulationErrors;
+    if (message in errors || Object.keys(errors).length < 20) errors[message] = (errors[message] ?? 0) + 1;
+    return null;
   }
 
   /**
@@ -861,9 +1008,9 @@ export class PlannerBot {
   /**
    * Answer the decisions that aren't ours to plan (the opponent's, during our turn) until we decide again: a greedy model
    * (`opponentQuick`), or the fast answers. In the later turns of a two-turn search (`inner`) a cheaper model, at quick windows
-   * with something to play only.
+   * with something to play only. `events` collects the events of the answers given (the conditional charges read them).
    */
-  private advance(session: GameSession, me: PlayerId, turn: number, inner = false): Stop {
+  private advance(session: GameSession, me: PlayerId, turn: number, inner = false, events?: GameEvent[]): Stop {
     for (let steps = 0; steps < 300; steps++) {
       const d = session.decision;
       if (!d) return "gameOver";
@@ -871,14 +1018,15 @@ export class PlannerBot {
       if (d.player === me) return "decide";
       // A quick window where passing is all they can do needs no model.
       const real = this.opponentQuick && !(d.type === "quick" && d.actions.length === 1) && (!inner || d.type === "quick");
-      session.act(real ? this.model("greedy", undefined, inner ? 4 : 12).decide(session) : fastAnswer(d, lookupFromReader(session.reader())));
+      const given = session.act(real ? this.model("greedy", undefined, inner ? 4 : 12).decide(session) : fastAnswer(d, lookupFromReader(session.reader())));
+      if (events) events.push(...given);
     }
     return "turnOver";
   }
 
   private node(session: GameSession, parent: Node | null, answer: Answer | null, me: PlayerId, turn: number, stop: Stop, score: Evaluator = this.evaluator): Node {
     const view = session.view(me);
-    return {
+    const made: Node = {
       session,
       parent,
       answer,
@@ -887,6 +1035,9 @@ export class PlannerBot {
       done: stop !== "decide",
       key: positionKey(view),
     };
+    // A plan's node made again from its parent and answer outside the search (a plan replaced where it was stopped,
+    // unsureWinsStopped) keeps the conditional charges its expansion found.
+    return this.cond !== null && this.watching === null && parent !== null && answer !== null ? this.cond.remade(made, parent, answer) : made;
   }
 
   /**
@@ -917,6 +1068,9 @@ export class PlannerBot {
 
   /** A plan's position scored as plans are finally compared (where the game or our turn already ended, or a reply failed). */
   private finalValue(node: Node, me: PlayerId): number {
+    // Without the node's conditional charge: the comparison takes a plan's charges off once (unsureFloor).
+    const applied = node.cond?.applied ?? 0;
+    if (applied !== 0) node = { ...node, value: node.value + applied };
     return this.replyEvaluator === this.evaluator ? node.value : this.replyEvaluator(node.session.view(me), me);
   }
 

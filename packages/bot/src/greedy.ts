@@ -13,6 +13,7 @@ import {
 import { candidateAnswers } from "./candidates";
 import { DEFAULT_WEIGHTS, exactResults, weightsEvaluator, type EvalWeights, type Evaluator } from "./evaluate";
 import { fastAnswer, lookupFromReader, lookupFromView } from "./policy";
+import { PpLine, endWindowPoints, quickBonusProblem, type QuickWindowStats } from "./quick-window";
 
 export interface GreedyBotOptions {
   /** Seeds the bot's own randomness (how hidden cards are sampled, which answers are sampled). */
@@ -37,6 +38,12 @@ export interface GreedyBotOptions {
   goFirst?: boolean;
   /** Keep the opening hand if it has at least this many cards that cost 3 or less (CR 6.2.1.8). */
   mulliganKeepCheap?: number;
+  /**
+   * At the opponent's end-phase Quick window (CR 7.4.5, the last before its refill, CR 7.2.2), each answer's score plus this
+   * per play point the answer uses there (quick-window.ts): pp1's ppWaste, its own term for the points the refill takes.
+   * Default: none (every window scored alike).
+   */
+  endPhaseQuickBonus?: number;
 }
 
 export interface BotStats {
@@ -67,7 +74,10 @@ const EPSILON = 1e-9;
  */
 export class GreedyBot {
   readonly stats: BotStats = { decisions: 0, simulations: 0, simulationFailures: 0, simulationErrors: {}, fallbacks: 0, lastError: null };
+  /** The end-phase window's bonus at work (null: no endPhaseQuickBonus). */
+  readonly quickStats: QuickWindowStats | null;
   private readonly evaluator: Evaluator;
+  private readonly endPhaseQuickBonus: number | null;
   private readonly seed: string;
   private readonly maxCandidates: number;
   private readonly attacksFirst: boolean;
@@ -97,6 +107,11 @@ export class GreedyBot {
     this.goFirst = options.goFirst ?? true;
     this.mulliganKeepCheap = options.mulliganKeepCheap ?? 2;
     this.rng = seedRng(`bot:${this.seed}`);
+    const bonus = options.endPhaseQuickBonus;
+    const problem = bonus === undefined ? null : quickBonusProblem(bonus);
+    if (problem) throw new Error(problem);
+    this.endPhaseQuickBonus = bonus ?? null;
+    this.quickStats = bonus === undefined ? null : { windows: 0, scored: 0, bonused: 0 };
   }
 
   /** Answer the decision `session` is waiting for (for whichever player it asks). */
@@ -124,6 +139,10 @@ export class GreedyBot {
   private choose(session: GameSession, d: Decision): Answer {
     const me = d.player;
     const view = session.view(me);
+    // The opponent's end-phase window (CR 7.4.5) with points left: they are lost at our refill (CR 7.2.2), so an answer that
+    // uses them gets the bonus per point (quick-window.ts); every other decision is scored as it always is.
+    const window = this.endPhaseQuickBonus === null ? null : endWindowPoints(d, view);
+    if (window !== null) this.quickStats!.windows += 1;
     if (view.turn !== this.turn) {
       this.turn = view.turn;
       this.actionsThisTurn = 0;
@@ -149,8 +168,33 @@ export class GreedyBot {
     const seed = `${this.seed}:${this.simulatedDecisions++}`;
     let best: Answer = baseline ?? candidates[0]!;
     let bestValue = baseline ? this.evaluator(view, me) + EPSILON : -Infinity;
+    if (window !== null) return this.bestAtEndWindow(session, me, candidates, seed, window, best, bestValue);
     for (const candidate of candidates) {
       const value = this.simulate(session, me, candidate, seed);
+      if (value !== null && value > bestValue) {
+        best = candidate;
+        bestValue = value;
+      }
+    }
+    return best;
+  }
+
+  /**
+   * The opponent's end-phase window (CR 7.4.5, quick-window.ts): every candidate scored as simulate scores it (the same
+   * sample, the same seed), plus the bonus per play point its line uses before our refill (CR 7.2.2); the best wins, ties
+   * the first listed, as at any other decision.
+   */
+  private bestAtEndWindow(session: GameSession, me: PlayerId, candidates: readonly Answer[], seed: string, start: number, best: Answer, bestValue: number): Answer {
+    const stats = this.quickStats!;
+    for (const candidate of candidates) {
+      const line = new PpLine(me, start);
+      let value = this.simulateLine(session, me, candidate, seed, line);
+      stats.scored += 1;
+      if (value !== null) {
+        const spent = line.spent();
+        if (spent > 0) stats.bonused += 1;
+        value += this.endPhaseQuickBonus! * spent;
+      }
       if (value !== null && value > bestValue) {
         best = candidate;
         bestValue = value;
@@ -175,12 +219,33 @@ export class GreedyBot {
       }
       return this.evaluator(sim.view(me), me);
     } catch (e) {
-      this.stats.simulationFailures += 1;
-      const message = `${e instanceof Error ? e.name : "Error"}: ${e instanceof Error ? e.message : String(e)}`.slice(0, 300);
-      const errors = this.stats.simulationErrors;
-      if (message in errors || Object.keys(errors).length < 20) errors[message] = (errors[message] ?? 0) + 1;
-      return null;
+      return this.failed(e);
     }
+  }
+
+  /** simulate, with `line` following the play points of every input given in the sample (the end-phase window's bonus). */
+  private simulateLine(session: GameSession, me: PlayerId, answer: Answer, seed: string, line: PpLine): number | null {
+    this.stats.simulations += 1;
+    try {
+      const sim = session.determinized(me, seed, { checkpoints: false });
+      line.see(sim.act(answer));
+      const reader = sim.reader();
+      for (let steps = 0; sim.decision && sim.decision.type !== "mainPhase" && steps < this.maxSimulationSteps; steps++) {
+        line.see(sim.act(fastAnswer(sim.decision, lookupFromReader(reader))));
+      }
+      return this.evaluator(sim.view(me), me);
+    } catch (e) {
+      return this.failed(e);
+    }
+  }
+
+  /** A simulation that threw: counted with its message (at most 20 different ones), scored as nothing (null). */
+  private failed(e: unknown): null {
+    this.stats.simulationFailures += 1;
+    const message = `${e instanceof Error ? e.name : "Error"}: ${e instanceof Error ? e.message : String(e)}`.slice(0, 300);
+    const errors = this.stats.simulationErrors;
+    if (message in errors || Object.keys(errors).length < 20) errors[message] = (errors[message] ?? 0) + 1;
+    return null;
   }
 
   /** CR 6.2.1.8 — keep a hand that can be played early, redraw otherwise. */
