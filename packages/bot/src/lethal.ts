@@ -1,6 +1,7 @@
 import { opponentOf, seedRng, validateAnswer, type Answer, type CardId, type Decision, type DefId, type GameSession, type PlayerId, type PlayerView } from "./core";
 import { planBranches } from "./branches";
 import { candidateAnswers } from "./candidates";
+import { answerSigner } from "./distinct-answers";
 import { evaluate } from "./evaluate";
 import { positionKey } from "./keys";
 import { fastAnswer, lookupFromReader } from "./policy";
@@ -48,6 +49,8 @@ export interface LethalSearchOptions {
   seed: string;
   /** The key positions are told apart by (default positionKey; a throwaway search can use a cheaper exact one). */
   key?: (view: PlayerView) => string;
+  /** Our answers told apart by what they choose (distinct-answers.ts: the cards as we see them in the world searched). */
+  dedupe?: boolean;
 }
 
 export interface LethalResult {
@@ -198,6 +201,8 @@ export interface Adversary {
   /** Answers tried at each decision of theirs (candidates.ts: every play of a quick window and passing, the targets...). */
   maxAnswers: number;
   seed: string;
+  /** Their answers told apart by what they choose (distinct-answers.ts: the cards as they see them there): fewer to try. */
+  dedupe?: boolean;
 }
 
 /** A line checked against every answer: won, or the opponent's answers that stop it (each one's index among its candidates). */
@@ -228,7 +233,9 @@ export function replayLine(s: GameSession, line: readonly LethalStep[], me: Play
         continue;
       }
       const j = counts.length;
-      const answers = candidateAnswers(d, lookupFromReader(s.reader()), seedRng(`${o.seed}:${j}`), o.maxAnswers);
+      // (Only selections and choices read the signatures: a quick window's answers are its plays and passing.)
+      const same = o.dedupe && (d.type === "selectCards" || d.type === "choose") ? answerSigner(s.view(d.player), d) : undefined;
+      const answers = candidateAnswers(d, lookupFromReader(s.reader()), seedRng(`${o.seed}:${j}`), o.maxAnswers, false, same);
       counts.push(answers.length);
       s.act(answers[Math.min(script[j] ?? 0, answers.length - 1)] ?? fastAnswer(d, lookupFromReader(s.reader())));
     }
@@ -323,7 +330,9 @@ export function searchSureLethal(me: PlayerId, o: LethalSearchOptions): LethalRe
   for (let depth = 0; depth < 24 && frontier.length > 0 && simulations < o.budget && lines < o.maxLines; depth++) {
     const children: Node[] = [];
     for (const n of frontier) {
-      for (const answer of planBranches(n.session.decision!, lookupFromReader(n.session.reader()), rng, o.maxBranches)) {
+      const d = n.session.decision!;
+      const same = o.dedupe ? answerSigner(n.session.view(me), d) : undefined;
+      for (const answer of planBranches(d, lookupFromReader(n.session.reader()), rng, o.maxBranches, same)) {
         if (simulations >= o.budget || lines >= o.maxLines) break;
         simulations += 1;
         const step = stepOf(n.session, answer);

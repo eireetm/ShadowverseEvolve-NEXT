@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { createEngine, defaultAnswer, type Answer, type DefId, type GameSession, type ManualOp, type PlayerId, type ScriptRegistry } from "../src/core";
+import { createEngine, defaultAnswer, type Answer, type DefId, type GameEvent, type GameSession, type ManualOp, type PlayerId, type ScriptRegistry } from "../src/core";
 import { ALL_CARDS, ALL_SCRIPTS } from "../../core/src/sets";
-import { COND_DEFAULTS, PlannerBot, answeredInWatch, bundledCardTable, bundledGates, condIdentity, condProblems, coveredFanfares, feedWatch, judgeWatch, openWatch, type CondScope, type PlayJudgment } from "../src";
+import { COND_DEFAULTS, PlannerBot, answeredInWatch, bundledCardTable, bundledGates, condIdentity, condProblems, coveredFanfares, evolveAbilitiesOf, feedWatch, judgeWatch, openEvolveWatch, openWatch, type CondScope, type PlayJudgment } from "../src";
 import { ARENA_CONFIG, DECK_SETS, sampleDeck } from "./samples";
 
 // The conditional-Fanfare charge (conditional.ts): the planner charges a plan for a card it plays whose Fanfare (CR 12.4.3)
@@ -178,5 +178,78 @@ describe("cond: the planner with it", () => {
     expect(mine).toBeGreaterThan(5);
     expect(watched.condStats!.windows).toBeGreaterThan(0);
     expect(watched.condStats!.adjusted + watched.condStats!.exact).toBe(0);
+  });
+});
+
+describe("cond: evolutions whose On Evolve did nothing (CondParams.evolve)", () => {
+  /** A follower of `def` put on our field by hand (from the hand: a new card there, CR 4.1.4); its id. */
+  function onField(g: GameSession, p: PlayerId, def: DefId): string {
+    manual(g, { kind: "move", card: inHand(g, p, def), to: "field" });
+    const id = g.reader().cards(p, "field").find((c) => g.reader().card(c)!.def === def);
+    if (!id) throw new Error(`no ${def} on the field`);
+    return id;
+  }
+  /** Evolve the follower `card` (its evolve answer, not super) in a copy, our further decisions their defaults, and judge. */
+  function evolveAndJudge(g: GameSession, card: string, scope: CondScope): PlayJudgment & { events: GameEvent[] } {
+    const s = g.clone();
+    const d = s.decision!;
+    if (d.type !== "mainPhase") throw new Error(`not a main phase decision: ${d.type}`);
+    const action = d.actions.find((a) => a.type === "evolve" && a.card === card && !a.superEvolve);
+    if (!action) throw new Error(`no evolve of ${card}`);
+    const events: GameEvent[] = [...s.act({ type: "mainPhase", action })];
+    let w = feedWatch(openEvolveWatch(card), events);
+    for (let i = 0; i < 50 && s.decision && !(s.decision.type === "mainPhase" && s.decision.player === d.player); i++) {
+      const dd = s.decision;
+      const a = defaultAnswer(dd);
+      const more = s.act(a);
+      events.push(...more);
+      w = feedWatch(answeredInWatch(w, dd, a), more);
+    }
+    return { ...judgeWatch(w, s, d.player, scope, scripts, gates), events };
+  }
+  /** sd06 against sd06 at the first main phase, 10 play points and 2 evolution points, `def` on our field. */
+  function evolveTurn(def: DefId, seed: string): { g: GameSession; p: PlayerId; card: string } {
+    const g = handGame("sd06", "sd06", seed);
+    const p = me(g);
+    manual(g, { kind: "points", player: p, playPoints: 10, maxPlayPoints: 10, evolutionPoints: 2 });
+    return { g, p, card: onField(g, p, def) };
+  }
+
+  it("reads the On Evolve abilities of the evolved card's definition (On Super-Evolve only when it super-evolved)", () => {
+    expect(evolveAbilitiesOf(scripts, "SD06-004", false).map((f) => [f.index, f.unplayable])).toEqual([[0, ["targets"]]]);
+    expect(evolveAbilitiesOf(scripts, "SD06-010", false)).toEqual([]);
+    expect(condIdentity({ scope: "gates", penalty: 1.5, evolve: true }, gates)).toBe(`cond=gates:penalty=1.5:table=${bundledCardTable().file.hash}:evolve=1`);
+    expect(condIdentity({ scope: "gates", penalty: 1.5 }, gates)).toBe(`cond=gates:penalty=1.5:table=${bundledCardTable().file.hash}`);
+    expect(condProblems({ scope: "gates", penalty: 1.5, evolve: "yes" as never })).toEqual(["evolve=yes: true or false"]);
+  });
+
+  it("Priest of the Cudgel evolved with no enemy follower to banish: triggered, never played (unplayed, CR 10.7.3.2)", () => {
+    const { g, card } = evolveTurn("SD06-003", "cond-evolve-none");
+    const j = evolveAndJudge(g, card, "unplayed");
+    // The On Evolve ability triggers from the follower (its id unchanged, CR 5.16.2) with the evolved card's definition.
+    expect(j.events.filter((e) => e.type === "abilityTriggered").map((e) => (e.type === "abilityTriggered" ? [e.source, e.sourceDef, e.ability] : null))).toEqual([[card, "SD06-004", 0]]);
+    expect(j).toMatchObject({ def: "SD06-004", charged: "unplayed", fanfares: [{ index: 0, outcome: "wasted", why: "unplayed" }] });
+    expect(evolveAndJudge(g, card, "declared").charged).toBeNull();
+  });
+
+  it("with an enemy follower of 3 defense or less: played, effective, not charged; an evolved card without On Evolve: nothing to judge", () => {
+    const { g, p, card } = evolveTurn("SD06-003", "cond-evolve-target");
+    onField(g, p === 0 ? 1 : 0, "SD06-003");
+    expect(evolveAndJudge(g, card, "gates")).toMatchObject({ def: "SD06-004", charged: null, fanfares: [{ index: 0, outcome: "effective" }] });
+    const nun = evolveTurn("SD06-009", "cond-evolve-nun");
+    expect(evolveAndJudge(nun.g, nun.card, "gates")).toMatchObject({ def: "SD06-010", charged: null, fanfares: [] });
+  });
+
+  it("the planner opens an evolution's window only with evolve on; off, the same answers as before", () => {
+    const { g } = evolveTurn("SD06-003", "cond-evolve-plan");
+    const options = { beamWidth: 4, maxSimulations: 200, replyPlans: 2, seed: "cond-evolve" };
+    const off = new PlannerBot(engine, { ...options, conditional: { scope: "unplayed" } });
+    const on = new PlannerBot(engine, { ...options, conditional: { scope: "unplayed", evolve: true } });
+    off.decide(g.clone());
+    on.decide(g.clone());
+    expect(off.condStats!.evolve).toBeUndefined();
+    expect(on.condStats!.evolve!.windows).toBeGreaterThan(0);
+    expect(on.condStats!.evolve!.charged).toBeGreaterThan(0);
+    expect(on.condStats!.byCard["SD06-004"]).toBeGreaterThan(0);
   });
 });

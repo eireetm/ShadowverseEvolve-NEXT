@@ -16,15 +16,20 @@ import {
 } from "./core";
 import { planBranches } from "./branches";
 import { candidateAnswers } from "./candidates";
+import { closeProblems, isClose, mean, type CloseSampleOptions } from "./close-samples";
 import { COND_DEFAULTS, ConditionalCharges, type CondGates, type CondMark, type CondScope, type ConditionalStats, type Expansion } from "./conditional";
+import { answerSigner, type SameCard } from "./distinct-answers";
 import { DEFAULT_WEIGHTS, evaluate, exactResults, weightsEvaluator, type EvalWeights, type Evaluator } from "./evaluate";
 import { GreedyBot, type BotStats } from "./greedy";
 import { positionKey } from "./keys";
 import { adaptStep, lethalFirstModel, lethalWithinReach, lineWinsAgainstAll, replayLine, searchSureLethal, stepOf, type Adversary, type LethalStep, type Model, type Responder } from "./lethal";
+import { keptCompletions, macroProblems, type MacroOptions } from "./macro-steps";
 import { redrawByExpectation, redrawKnowingDeck } from "./mulligan";
 import { SIM_DEFAULTS, simIdentity, simMulligan, simProblems, type MulliganDecision, type MulliganStats, type MulliganWorld, type SimParams } from "./mulligan-sim";
 import { fastAnswer, lookupFromReader } from "./policy";
+import { actionSegments, drawToFront, drewCards, handAt, keepsMoreCards, lineSlots, type LineSlotOptions } from "./plan-lines";
 import { setupWorld } from "./setup-sample";
+import { ownDeckList, turnOrderFor, turnOrderProblems, type TurnOrderChoice, type TurnOrderTable } from "./turn-order";
 
 export interface PlannerBotOptions {
   seed?: string | number;
@@ -136,6 +141,66 @@ export interface PlannerBotOptions {
    * turns are listed in `explored` (the samples of those turns are marked). Default: never.
    */
   explore?: { rate: number; temperature: number };
+  /**
+   * Selections and choices told apart by what they choose (distinct-answers.ts): the answers tried at a decision of a plan
+   * (the root's search and the two-turn search's inner ones), the Ward engaging at the end phase, the sure-lethal searches
+   * (ours, and the opponent's and ours two turns ahead) and the opponent's answers a lethal is checked against. A search of 15
+   * cards of 6 kinds tries its 6 different answers (and none), not 15; the same action on either of two identical cards is
+   * tried once. Default: off (the answers as they are).
+   */
+  choiceDedupe?: boolean;
+  /**
+   * Two turns: every plan compared with the same random numbers in each sample (common random numbers): the later turns'
+   * models and the samples drawn among many answers come from the plan's seed, the sample and where they are, not from the
+   * plan's place in the list or from the planner's counts, so two plans' values differ by what the plans do. Default: off.
+   */
+  commonRandom?: boolean;
+  /**
+   * The plans compared at the end by distinct lines (plan-lines.ts): the best of each of the best lines (plans that differ
+   * only in the own cards picked or the order are one line), a slot for a line attacking less within `margin` points, then
+   * the next lines; as many plans as without it (replyPlans). Takes the place of planKinds. Default: off.
+   */
+  lineSlots?: LineSlotOptions;
+  /**
+   * The comparison's tie-break: among the plans whose values are within this many points of the best, the one keeping the
+   * most cards in hand (then the higher value, then the first). Exploring is unchanged. Default: 0, off.
+   */
+  tieKeepHand?: number;
+  /**
+   * Information first (plan-lines.ts): before a plan is carried out, an action of it that draws cards (CR 5.10) is moved to
+   * its front when the plan, played again so in its own sample, makes the same decisions and ends in the same position with
+   * the same value; then the drawn cards are seen before the rest is played (the plan is made again where they differ from
+   * the sample's). At most the first two drawing actions are tried; a plan won or ended is left as it is. Default: off.
+   */
+  drawFirst?: boolean;
+  /**
+   * The turn order (CR 6.2.1.6) by a table of decks (turn-order.ts): the answer of the entry closest to the bot's own deck
+   * list, the table's default otherwise. Default: none (its greedy bot's: go first).
+   */
+  turnOrder?: TurnOrderTable;
+  /**
+   * The root search by actions (macro-steps.ts): a main phase answer with every decision inside its action is one step of
+   * the beam, the plans at a step have taken as many actions, a plan is at most `actions` actions long (and `dec` decisions;
+   * `maxDepth` is then the two-turn search's inner searches' only). The decisions inside an action are searched whole while
+   * they fit a `share` of the budget left, else by a beam at least `sub` wide, and finished by the fast answers where that
+   * runs out; the best `keep` completions of each action go on. Its budget is `maxSimulations`, every expansion counted.
+   * Default: none (the beam by decisions).
+   */
+  macro?: MacroOptions;
+  /**
+   * Two turns: the opponent's lethal search in their simulated turn tries at most this many answers (it searches when one is
+   * within reach), in place of `replyLethal` there; ours in our turn after and the one-turn reply keep `replyLethal`. With
+   * `replyLethalKey` "position" that search tells positions apart as the beam does (positionKey: the same position reached
+   * by attacks in another order is searched once) instead of by the exact view. Default: 0, `replyLethal` everywhere.
+   */
+  replyLethalOpp?: number;
+  replyLethalKey?: "view" | "position";
+  /**
+   * Two turns, a fair bot: a plan close to the best in the comparison (close-samples.ts: its gap, sample by sample, less
+   * than `z` standard errors) is played in more samples, up to `max` in all, with the best, and they are compared by the
+   * longer average. Default: none.
+   */
+  closeSamples?: CloseSampleOptions;
 }
 
 /** The conditional-Fanfare charge's options (conditional.ts). */
@@ -146,6 +211,8 @@ export interface ConditionalOptions {
   penalty?: number;
   /** The gates scope's reader of the card feature table (conditional-gates.ts tableGates; a function: called once, when the bot is built). */
   gates?: CondGates | (() => CondGates);
+  /** Also an evolution whose On Evolve / On Super-Evolve abilities did nothing (CR 12.6, 12.17; conditional.ts). Default: off. */
+  evolve?: boolean;
 }
 
 /** A point of a plan: a copy of the game at one of our decisions in our main phase, or where the plan ends. */
@@ -189,6 +256,22 @@ export class PlannerBot {
   readonly explored: number[] = [];
   /** The mulligan by simulation at work (null: another mulligan rule). */
   readonly mulliganStats: MulliganStats | null;
+  /**
+   * drawFirst: plans carried out with it on; those with a drawing action after their first; moves tried and made; plans
+   * whose own sample, played again as planned, didn't reach their end (an opponent model answered otherwise), and replays
+   * that threw (both left as they are).
+   */
+  readonly drawFirstStats = { plans: 0, drawPlans: 0, tried: 0, moved: 0, mismatch: 0, failed: 0 };
+  /** turnOrder: the choices made by the table, how many went second, and the last one. */
+  readonly turnOrderStats: { choices: number; second: number; last: TurnOrderChoice | null } = { choices: 0, second: 0, last: null };
+  /**
+   * macro: root searches by actions; their steps; actions expanded (a main phase answer and its decisions); expansions
+   * inside actions; actions finished by the fast answers (their allowance or the decision cap ran out); searches whose plans
+   * were still going when the action limit, the budget or the decision cap stopped them.
+   */
+  readonly macroStats = { searches: 0, layers: 0, actions: 0, subExpansions: 0, finishedFast: 0, actionCut: 0, budgetOut: 0, decisionCut: 0 };
+  /** closeSamples: comparisons looked at, those made longer, samples added, cut samples played again exactly, choices changed. */
+  readonly closeStats = { comparisons: 0, refined: 0, extraSamples: 0, recomputed: 0, changed: 0 };
   private readonly evaluator: Evaluator;
   private readonly replyEvaluator: Evaluator;
   private readonly modelEvaluator: Evaluator | undefined;
@@ -225,6 +308,25 @@ export class PlannerBot {
   private readonly exploreRate: number;
   private readonly exploreTemperature: number;
   private readonly exploreRng: RngState;
+  /** choiceDedupe, commonRandom, lineSlots, tieKeepHand (the options; off: false, false, null, 0). */
+  private readonly choiceDedupe: boolean;
+  private readonly commonRandom: boolean;
+  private readonly lineSlotOptions: LineSlotOptions | null;
+  private readonly tieKeepHand: number;
+  /** drawFirst, turnOrder (off: false, null). */
+  private readonly drawFirst: boolean;
+  private readonly turnOrder: TurnOrderTable | null;
+  /** macro, replyLethalOpp, replyLethalKey, closeSamples (off: null, 0, "view", null). */
+  private readonly macro: MacroOptions | null;
+  private readonly replyLethalOpp: number;
+  private readonly replyLethalKey: "view" | "position";
+  private readonly closeSamples: CloseSampleOptions | null;
+  /** closeSamples: the latest comparison's values per plan and sample (raw: before charges) and where it was made. */
+  private look: Look | null = null;
+  /** The node whose decision the beam is asking branches() for (choiceDedupe, commonRandom: its view and key). */
+  private at: Node | null = null;
+  /** commonRandom: the stream of the (plan, sample) of the two-turn comparison being played, and its models so far. */
+  private stream: { base: string; models: number } | null = null;
   /** This turn may still explore (decided once per turn). */
   private exploreTurn: { turn: number; open: boolean } = { turn: -1, open: false };
   private readonly greedy: GreedyBot;
@@ -276,6 +378,25 @@ export class PlannerBot {
     this.exploreRate = options.explore?.rate ?? 0;
     this.exploreTemperature = Math.max(0.01, options.explore?.temperature ?? 2);
     this.exploreRng = seedRng(`explore:${this.seed}`);
+    this.choiceDedupe = options.choiceDedupe ?? false;
+    this.commonRandom = options.commonRandom ?? false;
+    this.lineSlotOptions = options.lineSlots ? { ...options.lineSlots } : null;
+    this.tieKeepHand = options.tieKeepHand ?? 0;
+    this.drawFirst = options.drawFirst ?? false;
+    const order = options.turnOrder ?? null;
+    const orderProblems = order ? turnOrderProblems(order) : [];
+    if (orderProblems.length) throw new Error(`turn order table: ${orderProblems.join("; ")}`);
+    this.turnOrder = order;
+    const macro = options.macro ? { ...options.macro } : null;
+    const macroIssues = macro ? macroProblems(macro) : [];
+    if (macroIssues.length) throw new Error(`macro: ${macroIssues.join("; ")}`);
+    this.macro = macro;
+    this.replyLethalOpp = options.replyLethalOpp ?? 0;
+    this.replyLethalKey = options.replyLethalKey ?? "view";
+    const close = options.closeSamples ? { ...options.closeSamples } : null;
+    const closeIssues = close ? closeProblems(close) : [];
+    if (closeIssues.length) throw new Error(`closeSamples: ${closeIssues.join("; ")}`);
+    this.closeSamples = close;
     // Its own decisions outside its main phase (quick windows, end phase, targets) are scored with its own evaluation, in
     // the form that scores where those decisions are scored (greedyEvaluator), with the end-phase window's bonus if given.
     const greedyEvaluator = options.greedyEvaluator ?? this.evaluator;
@@ -287,7 +408,7 @@ export class PlannerBot {
     this.greedyScore = exactResults(greedyEvaluator);
     const cond = options.conditional;
     const gates = typeof cond?.gates === "function" ? cond.gates() : (cond?.gates ?? null);
-    this.cond = cond ? new ConditionalCharges(engine.scripts, { scope: cond.scope, penalty: cond.penalty ?? COND_DEFAULTS.penalty }, gates) : null;
+    this.cond = cond ? new ConditionalCharges(engine.scripts, { scope: cond.scope, penalty: cond.penalty ?? COND_DEFAULTS.penalty, ...(cond.evolve ? { evolve: true } : {}) }, gates) : null;
     const sim = this.mulliganMode === "sim" ? { ...SIM_DEFAULTS, ...options.mulliganSim } : null;
     const problems = sim ? simProblems(sim) : [];
     if (problems.length) throw new Error(`mulligan sim: ${problems.join("; ")}`);
@@ -332,6 +453,7 @@ export class PlannerBot {
     const me = d.player;
     const state = session.state;
     if (d.type === "mulligan" && this.mulliganMode === "curve") return this.mulligan(session, d);
+    if (d.type === "chooseTurnOrder" && this.turnOrder !== null) return this.orderByTable(session, me, this.turnOrder);
     if (d.type === "selectCards" && d.reason === "wardEngage" && this.replyPlans > 0) return this.wardAtEnd(session, d, me);
     if (d.type === "selectCards" && d.reason === "wardEnterEngaged" && this.replyPlans > 0) return this.wardOnEntry(session, d, me);
     if (state.activePlayer !== me || state.phase !== "main" || d.type === "chooseTurnOrder" || d.type === "mulligan") return this.greedy.decide(session);
@@ -388,6 +510,7 @@ export class PlannerBot {
       adversary: this.adversary(`${seed}:check`),
       maxLines: 6,
       seed,
+      ...(this.choiceDedupe ? { dedupe: true } : {}),
     });
     this.stats.simulations += found.simulations;
     this.lethalStats.rejected += found.rejected;
@@ -421,7 +544,7 @@ export class PlannerBot {
 
   /** The opponent of a lethal check: every answer of theirs tried (lethal.ts). */
   private adversary(seed: string): Adversary {
-    return { cap: 200, maxAnswers: 8, seed };
+    return { cap: 200, maxAnswers: 8, seed, ...(this.choiceDedupe ? { dedupe: true } : {}) };
   }
 
   /** The opponent in a simulation of our turn: a fresh greedy model (`model` false: they pass). */
@@ -495,6 +618,10 @@ export class PlannerBot {
   private pick(candidates: Node[], values: number[], turn: number): Node {
     let best = 0;
     for (let i = 1; i < values.length; i++) if (values[i]! > values[best]!) best = i;
+    // closeSamples: the plans close to the best played in more samples (refine; a new array: the callers' stays as it was).
+    if (this.closeSamples !== null) ({ values, best } = this.refine(candidates, values, best));
+    // Values equal within tieKeepHand: the plan keeping more cards in hand (plan-lines.ts keepsMoreCards).
+    if (this.tieKeepHand > 0) best = this.keepsMore(candidates, values, best);
     // A plan already won is never given up to explore.
     if (!this.explores(turn) || values[best]! >= DEFAULT_WEIGHTS.win / 2) return candidates[best]!;
     const open = values.map((v, i) => ({ v, i })).filter(({ v }) => Number.isFinite(v) && Math.abs(v) < DEFAULT_WEIGHTS.win / 2);
@@ -519,6 +646,8 @@ export class PlannerBot {
    * its turn would end there. Returns the finished plans, best first, one per position.
    */
   private beam(root: Node, actor: PlayerId, turn: number, world: () => GameSession, budget: number, width: number, score: Evaluator = this.evaluator, inner = false): Node[] {
+    // macro: this turn's own search by actions (the two-turn search's inner ones stay by decisions).
+    if (this.macro !== null && !inner) return this.macroBeam(root, actor, turn, world, budget, width, score, this.macro);
     const finished: Node[] = [];
     const seen = new Set<string>([root.key]);
     let frontier = [root];
@@ -527,6 +656,7 @@ export class PlannerBot {
       for (const node of frontier) {
         const d = node.session.decision!;
         if (canEnd(d)) finished.push(node);
+        if (this.choiceDedupe || this.commonRandom) this.at = node;
         for (const answer of this.branches(d, lookupFromReader(node.session.reader()))) {
           if (budget-- <= 0) break;
           const child = this.expand(node, answer, actor, turn, world, score, inner);
@@ -549,6 +679,143 @@ export class PlannerBot {
   }
 
   /**
+   * beam() by actions (macro, macro-steps.ts): each step takes one more action on every plan kept — a main phase answer
+   * (CR 7.3.3) and the decisions inside its action up to our next main phase decision (completeAction) — and keeps the best
+   * `width` positions, so the plans ranked against each other have taken as many actions and none is half-paid. At most
+   * `o.actions` steps, and no action from a plan of `o.dec` decisions. Every expansion counts against `budget`. A root inside
+   * an action (a plan made again in the middle of one) finishes that action as its first step. Returns the finished plans,
+   * best first, one per position (as beam()).
+   */
+  private macroBeam(root: Node, actor: PlayerId, turn: number, world: () => GameSession, budget: number, width: number, score: Evaluator, o: MacroOptions): Node[] {
+    const stats = this.macroStats;
+    stats.searches += 1;
+    const finished: Node[] = [];
+    const seen = new Set<string>([root.key]);
+    const left = { budget };
+    let frontier = [root];
+    let step = 0;
+    for (; step < o.actions && frontier.length > 0 && left.budget > 0; step++) {
+      stats.layers += 1;
+      const children: Node[] = [];
+      const add = (nodes: Node[]) => {
+        for (const c of nodes) {
+          if (c.done) finished.push(c);
+          else if (!seen.has(c.key)) {
+            seen.add(c.key);
+            children.push(c);
+          }
+        }
+      };
+      for (const node of frontier) {
+        const d = node.session.decision!;
+        if (d.type !== "mainPhase") {
+          // The root in the middle of an action: that action is this step.
+          add(this.completeAction(node, actor, turn, world, score, left, o));
+          continue;
+        }
+        if (canEnd(d)) finished.push(node);
+        if (node.depth >= o.dec) continue;
+        if (this.choiceDedupe || this.commonRandom) this.at = node;
+        for (const answer of this.branches(d, lookupFromReader(node.session.reader()))) {
+          if (left.budget <= 0) break;
+          left.budget -= 1;
+          const child = this.expand(node, answer, actor, turn, world, score);
+          if (!child) continue;
+          stats.actions += 1;
+          add(child.done || child.session.decision?.type === "mainPhase" ? [child] : this.completeAction(child, actor, turn, world, score, left, o));
+        }
+      }
+      children.sort((a, b) => b.value - a.value);
+      frontier = children.slice(0, width);
+    }
+    if (frontier.length > 0) {
+      if (step >= o.actions) stats.actionCut += 1;
+      else if (left.budget <= 0) stats.budgetOut += 1;
+      else stats.decisionCut += 1;
+    }
+    for (const node of frontier) if (canEnd(node.session.decision!)) finished.push(node);
+    finished.sort((a, b) => b.value - a.value);
+    const one = new Map<string, Node>();
+    for (const node of finished) if (!one.has(node.key)) one.set(node.key, node);
+    return [...one.values()];
+  }
+
+  /**
+   * The decisions inside one action, from `start` (a decision of ours inside it) to its completions: our next main phase
+   * decision, or the end of the turn or the game. Searched level by level, each answer by expand (so the conditional
+   * charges follow it as in beam()); a level keeps every position while the allowance can give each the answers of one
+   * more decision (at this action's average), else the best `o.sub` or more by value (all inside the same action). The
+   * allowance is a share of the budget left (`o.share`, at least one decision's answers). The best position left
+   * unexpanded where the allowance or the decision cap (`o.dec`) ran out is finished by the fast answers (policy.ts), so an
+   * action is never dropped and a long one still reaches its end. Returns the completions kept (macro-steps.ts
+   * keptCompletions: the better of two that differ only in which pending ability went first, then the best `o.keep`, one
+   * per position), with every completion that ended the turn or the game.
+   */
+  private completeAction(start: Node, actor: PlayerId, turn: number, world: () => GameSession, score: Evaluator, left: { budget: number }, o: MacroOptions): Node[] {
+    const stats = this.macroStats;
+    let allowance = Math.min(left.budget, Math.max(this.maxBranches, Math.floor(left.budget * o.share)));
+    const completions: Node[] = [];
+    const open: Node[] = [];
+    const inside = new Set<string>([start.key]);
+    let level = [start];
+    let tried = 0;
+    let expanded = 0;
+    while (level.length > 0) {
+      const next: Node[] = [];
+      for (const node of level) {
+        if (allowance <= 0 || node.depth >= o.dec) {
+          open.push(node);
+          continue;
+        }
+        if (this.choiceDedupe || this.commonRandom) this.at = node;
+        const answers = this.branches(node.session.decision!, lookupFromReader(node.session.reader()));
+        expanded += 1;
+        tried += answers.length;
+        for (const answer of answers) {
+          if (allowance <= 0) break;
+          allowance -= 1;
+          left.budget -= 1;
+          stats.subExpansions += 1;
+          const child = this.expand(node, answer, actor, turn, world, score);
+          if (!child) continue;
+          if (child.done || child.session.decision?.type === "mainPhase") completions.push(child);
+          else if (!inside.has(child.key)) {
+            inside.add(child.key);
+            next.push(child);
+          }
+        }
+      }
+      next.sort((a, b) => b.value - a.value);
+      const fit = Math.floor(allowance / Math.max(1, tried / Math.max(1, expanded)));
+      level = next.slice(0, Math.max(o.sub, fit));
+    }
+    let best: Node | undefined;
+    for (const n of open) if (best === undefined || n.value > best.value) best = n;
+    if (best !== undefined) {
+      const done = this.finishFast(best, actor, turn, world, score, left, o);
+      if (done !== null) {
+        stats.finishedFast += 1;
+        completions.push(done);
+      }
+    }
+    const ended = completions.filter((c) => c.done);
+    return [...ended, ...keptCompletions(completions.filter((c) => !c.done), start, o.keep)];
+  }
+
+  /** A position inside an action played on by the fast answers (policy.ts) to the action's end (null: a step failed or too many). */
+  private finishFast(node: Node, actor: PlayerId, turn: number, world: () => GameSession, score: Evaluator, left: { budget: number }, o: MacroOptions): Node | null {
+    let at = node;
+    for (let i = 0; i <= o.dec && !at.done && at.session.decision?.type !== "mainPhase"; i++) {
+      const d = at.session.decision!;
+      left.budget -= 1;
+      const next = this.expand(at, fastAnswer(d, lookupFromReader(at.session.reader())), actor, turn, world, score);
+      if (next === null) return null;
+      at = next;
+    }
+    return at.done || at.session.decision?.type === "mainPhase" ? at : null;
+  }
+
+  /**
    * At most `k` of the finished plans (best first), of different kinds (`planKinds`): the best two, and among the plans within
    * `planKinds` points of the best, the one keeping the most cards in hand, the most play points, attacking least, spending
    * evolution points, dealing the most damage to the opponent's leader; the rest by the position. A turn's best plan by the
@@ -556,6 +823,8 @@ export class PlannerBot {
    * or not attacking into a trade never reached the comparison after the opponent's reply.
    */
   private kinds(finished: Node[], root: Node, actor: PlayerId, k: number, pad = true): Node[] {
+    // By distinct lines (lineSlots): the root's comparison only (the two-turn search's inner levels pass pad false).
+    if (this.lineSlotOptions !== null && pad) return lineSlots(finished, k, this.lineSlotOptions);
     if (this.planKinds <= 0 || (pad && finished.length <= k)) return finished.slice(0, k);
     const start = root.session.view(actor);
     const trait = new Map<Node, { kept: number; pp: number; attacks: number; ep: number; face: number }>();
@@ -608,28 +877,146 @@ export class PlannerBot {
     // Candidates charged differently are compared without cuts: a cut is a bound on the raw value, not on the charged one.
     if (this.cond !== null && !exact && this.cond.differ(candidates)) exact = true;
     const worlds = this.cheat ? 1 : Math.max(1, this.samples);
+    // closeSamples: each plan's value in each sample kept for pick (refine), with where the comparison was made.
+    const look = this.closeSamples !== null && !this.cheat ? this.lookAt(game, me, turn, seed, world, worlds) : null;
     let bestTotal = -Infinity;
     const totals: number[] = [];
     for (const [i, plan] of candidates.entries()) {
       let total = 0;
       for (let w = 0; w < worlds; w++) {
         let value: number;
+        let bound = false;
+        // commonRandom: this sample's random numbers are the same for every plan (the stream: the plan's seed and the sample).
+        if (this.commonRandom) this.stream = { base: `${seed}:w${w}`, models: 0 };
         try {
           const session = w === 0 ? this.copy(plan, world) : this.replayPlan(plan, this.cheat ? game.clone() : game.determinized(me, `${seed}:w${w}`), me, turn);
           // The last world may stop as soon as the plan can't reach the best total any more (a cut returns a bound at most that).
           const alpha = w === worlds - 1 && !exact ? bestTotal - total : -Infinity;
-          value = this.turnValue(session, me, opponentOf(me), turn, 1, alpha, Infinity, null, `${seed}:w${w}:p${i}`);
+          value = this.turnValue(session, me, opponentOf(me), turn, 1, alpha, Infinity, null, this.commonRandom ? `${seed}:w${w}` : `${seed}:w${w}:p${i}`);
+          // A value at or below a finite alpha may be a bound (the search was cut there), not the plan's value.
+          bound = alpha !== -Infinity && value <= alpha;
         } catch (e) {
           this.stats.simulationFailures += 1;
           this.stats.lastError = e instanceof Error ? e.message : String(e);
           value = this.finalValue(plan, me) - 1_000;
+        } finally {
+          this.stream = null;
         }
         total += value;
+        if (look !== null) lookRow(look, plan, i).values[w] = { value, bound };
       }
       totals.push(total / worlds);
       bestTotal = Math.max(bestTotal, total);
     }
     return totals;
+  }
+
+  /**
+   * closeSamples: where this comparison's samples are kept (lookAhead fills it plan by plan; a second lookAhead of the same
+   * plan() — explore2's variants — adds its plans to the same one).
+   */
+  private lookAt(game: GameSession, me: PlayerId, turn: number, seed: string, world: () => GameSession, worlds: number): Look {
+    if (this.look !== null && this.look.seed === seed && this.look.game === game) return this.look;
+    this.look = { seed, game, me, turn, world, worlds, rows: new Map(), memo: new WeakMap() };
+    return this.look;
+  }
+
+  /**
+   * closeSamples (close-samples.ts) at pick: when plans are close to the best (by the latest comparison's samples, a cut
+   * sample played again exactly first), the best and the closest (at most `most` in all) are played in the samples after
+   * those (the same seeds as lookAhead's, so with commonRandom the same random numbers) up to `max`, and each one's value
+   * moves by the change of its raw average (its charges, if any, stay as they were). Plans won or lost, held at the floor
+   * of a plan that can still win, or with a sample that failed, are left as they are. Returns new values and the best
+   * (the first of the highest); the same arrays when nothing is close. Memoized per values array (a caller asking twice).
+   */
+  private refine(candidates: Node[], values: number[], best: number): { values: number[]; best: number } {
+    const o = this.closeSamples!;
+    const look = this.look;
+    if (look === null || look.worlds >= o.max) return { values, best };
+    const known = look.memo.get(values);
+    if (known) return known;
+    const half = DEFAULT_WEIGHTS.win / 2;
+    const floor = -half + 1;
+    const rows = candidates.map((c) => look.rows.get(c) ?? null);
+    const open = (i: number) => {
+      const v = values[i]!;
+      const r = rows[i];
+      return r !== null && r !== undefined && r.values.length === look.worlds && Number.isFinite(v) && Math.abs(v) < half && !(candidates[i]!.unsure && v <= floor);
+    };
+    const unchanged = { values, best };
+    if (!open(best)) return unchanged;
+    this.closeStats.comparisons += 1;
+    // Each open plan's samples (copied: the comparison's own stay as lookAhead left them), its raw average before any change.
+    const samples = rows.map((r) => (r ? r.values.map((x) => ({ ...x })) : []));
+    const base = samples.map((s) => (s.length ? mean(s.map((x) => x.value)) : 0));
+    const raw = (i: number) => samples[i]!.map((x) => x.value);
+    /** The plans whose samples changed (a cut sample played again exactly, more samples): their values move. */
+    const changed = new Set<number>();
+    const exactly = (i: number) => {
+      for (const [w, x] of samples[i]!.entries()) {
+        if (!x.bound) continue;
+        samples[i]![w] = { value: this.sampleValue(candidates[i]!, rows[i]!.index, w, look), bound: false };
+        this.closeStats.recomputed += 1;
+        changed.add(i);
+      }
+    };
+    const now = (i: number) => values[i]! + mean(raw(i)) - base[i]!;
+    exactly(best);
+    const close: { i: number; lead: number }[] = [];
+    for (let i = 0; i < candidates.length; i++) {
+      if (i === best || !open(i)) continue;
+      // A cut sample is a bound above the plan's value: not close even so, it isn't; close so, it is played again exactly.
+      if (!isClose(raw(best), raw(i), now(best) - now(i), o)) continue;
+      if (samples[i]!.some((x) => x.bound)) {
+        exactly(i);
+        if (!isClose(raw(best), raw(i), now(best) - now(i), o)) continue;
+      }
+      close.push({ i, lead: now(best) - now(i) });
+    }
+    if (close.length === 0) {
+      const out = changed.size > 0 ? this.reranked(values, [...changed], now) : unchanged;
+      look.memo.set(values, out);
+      return out;
+    }
+    close.sort((a, b) => a.lead - b.lead);
+    const more = [best, ...close.slice(0, o.most - 1).map((c) => c.i)];
+    for (const k of more) {
+      for (let w = look.worlds; w < o.max; w++) {
+        samples[k]!.push({ value: this.sampleValue(candidates[k]!, rows[k]!.index, w, look), bound: false });
+        this.closeStats.extraSamples += 1;
+      }
+      changed.add(k);
+    }
+    this.closeStats.refined += 1;
+    const out = this.reranked(values, [...changed], now);
+    if (out.best !== best) this.closeStats.changed += 1;
+    look.memo.set(values, out);
+    return out;
+  }
+
+  /** The values with those of `changed` replaced (now), and the first of the highest. */
+  private reranked(values: number[], changed: number[], now: (i: number) => number): { values: number[]; best: number } {
+    const out = [...values];
+    for (const i of changed) out[i] = now(i);
+    let best = 0;
+    for (let i = 1; i < out.length; i++) if (out[i]! > out[best]!) best = i;
+    return { values: out, best };
+  }
+
+  /** closeSamples: one plan's value in sample `w` of a comparison, as lookAhead scores it (no cut). */
+  private sampleValue(plan: Node, index: number, w: number, look: Look): number {
+    const { game, me, turn, seed, world } = look;
+    if (this.commonRandom) this.stream = { base: `${seed}:w${w}`, models: 0 };
+    try {
+      const session = w === 0 ? this.copy(plan, world) : this.replayPlan(plan, game.determinized(me, `${seed}:w${w}`), me, turn);
+      return this.turnValue(session, me, opponentOf(me), turn, 1, -Infinity, Infinity, null, this.commonRandom ? `${seed}:w${w}` : `${seed}:w${w}:p${index}`);
+    } catch (e) {
+      this.stats.simulationFailures += 1;
+      this.stats.lastError = e instanceof Error ? e.message : String(e);
+      return this.finalValue(plan, me) - 1_000;
+    } finally {
+      this.stream = null;
+    }
   }
 
   /**
@@ -683,9 +1070,12 @@ export class PlannerBot {
     if (actor !== me && before === null) before = this.replyEvaluator(start.view(me), me);
     // Their lethal (or ours) first: found and still winning with the other player answering (a Quick card) and in a sample of
     // what the attacker can't see, the turn's value is the game's.
-    if (this.replyLethal > 0 && lethalWithinReach(start.view(actor), d, actor, 3, 0)) {
+    // replyLethalOpp: the opponent's search with its own budget (and, by "position", positions told apart as the beam does).
+    const opp = actor !== me && this.replyLethalOpp > 0;
+    const lethalBudget = opp ? this.replyLethalOpp : this.replyLethal;
+    if (lethalBudget > 0 && lethalWithinReach(start.view(actor), d, actor, 3, 0)) {
       const found = searchSureLethal(actor, {
-        budget: this.replyLethal,
+        budget: lethalBudget,
         beam: 12,
         maxBranches: this.maxBranches,
         world: (i) => (i === 0 ? start.clone() : start.determinized(actor, `${seed}:lethal-check`)),
@@ -694,7 +1084,8 @@ export class PlannerBot {
         checkResponder: () => this.responder(true),
         maxLines: 2,
         seed: `${seed}:lethal`,
-        key: (view) => JSON.stringify(view),
+        key: opp && this.replyLethalKey === "position" ? positionKey : (view) => JSON.stringify(view),
+        ...(this.choiceDedupe ? { dedupe: true } : {}),
       });
       this.stats.simulations += found.simulations;
       if (found.line) {
@@ -747,12 +1138,106 @@ export class PlannerBot {
 
   /** Take the plan that ends at `choice` as the current one: its first answer now, the next ones while the game goes as planned. */
   private carryOut(choice: Node, turn: number, me: PlayerId): Answer {
+    // drawFirst: the same plan with an action that draws moved to its front, when it still ends where it did (infoFirst).
+    if (this.drawFirst) choice = this.infoFirst(choice, turn, me) ?? choice;
     const path: Node[] = [];
     for (let n: Node | null = choice; n && n.parent; n = n.parent) path.unshift(n);
     // The views exactly, ids too: following the plan in the real game needs the same cards under the same ids.
     const exact = path.map((n) => JSON.stringify(n.session.view(me)));
     this.current = { path, exact, given: path.length > 0 ? 1 : 0, turn };
     return path[0]?.answer ?? endMainPhase();
+  }
+
+  /**
+   * drawFirst (plan-lines.ts "Information first"): the plan ending at `choice` with its first action that draws (or, if that
+   * one can't move, its second) moved to the front, as nodes of the same sample; null: carry it out as it is. The plan is
+   * first played again as it is in a copy of its own sample, to find the actions whose events draw cards for us (CR 5.10);
+   * if that copy doesn't reach the plan's positions (an opponent model answered otherwise), nothing moves. The moved order is
+   * played by expand (the conditional charges follow it as they follow the search), each answer matched to the cards by
+   * definition (lethal.ts adaptStep), and taken only if every answer has its decision (a main phase decision where an action
+   * begins, decisions inside it after that: none more, none fewer) and it ends in the plan's position with the plan's value.
+   * Its opponent models are seeded in a stream of its own (as commonRandom's), so neither the planner's model count nor its
+   * rng moves: a plan left as it is changes nothing after it. A plan won or ended (done) is left as it is.
+   */
+  private infoFirst(choice: Node, turn: number, me: PlayerId): Node | null {
+    this.drawFirstStats.plans += 1;
+    if (choice.done || choice.unsure) return null;
+    const path: Node[] = [];
+    for (let n: Node | null = choice; n && n.parent; n = n.parent) path.unshift(n);
+    const root = path[0]?.parent ?? null;
+    const actions = actionSegments(path.map((n) => n.parent!.session.decision?.type === "mainPhase"));
+    if (root === null || actions === null || actions.length < 2) return null;
+    const saved = this.stream;
+    this.stream = { base: `${this.seed}:draw:${this.plans}`, models: 0 };
+    try {
+      // The root's game is the sample itself (the search copies it, never plays it).
+      const world = () => root.session.clone();
+      const session = world();
+      const drawing: number[] = [];
+      for (const [a, steps] of actions.entries()) {
+        const events: GameEvent[] = [];
+        for (const i of steps) {
+          events.push(...session.act(path[i]!.answer!));
+          this.advance(session, me, turn, false, events);
+          if (positionKey(session.view(me)) !== path[i]!.key) {
+            this.drawFirstStats.mismatch += 1;
+            return null;
+          }
+        }
+        if (drewCards(events, me)) drawing.push(a);
+      }
+      const movable = drawing.filter((a) => a > 0).slice(0, 2);
+      if (movable.length === 0) return null;
+      this.drawFirstStats.drawPlans += 1;
+      for (const a of movable) {
+        this.drawFirstStats.tried += 1;
+        const moved = this.replayActions(root, path, actions, drawToFront(actions.length, a), me, turn, world);
+        if (moved !== null && !moved.done && moved.session.decision?.type === "mainPhase" && moved.key === choice.key && Math.abs(moved.value - choice.value) < 1e-9) {
+          this.drawFirstStats.moved += 1;
+          return moved;
+        }
+      }
+      return null;
+    } catch {
+      this.drawFirstStats.failed += 1;
+      return null;
+    } finally {
+      this.stream = saved;
+    }
+  }
+
+  /**
+   * The plan's actions (`actions`: its steps' indexes per action) played in `order` from its root by expand, each answer
+   * matched to the cards there (adaptStep); null where a step has no decision of its kind (a main phase decision at an
+   * action's first step, another decision at the others) or no matching answer, or a step fails.
+   */
+  private replayActions(root: Node, path: Node[], actions: number[][], order: number[], me: PlayerId, turn: number, world: () => GameSession): Node | null {
+    let at: Node = root;
+    for (const a of order) {
+      for (const [j, i] of actions[a]!.entries()) {
+        const d = at.session.decision;
+        if (at.done || !d || (d.type === "mainPhase") !== (j === 0)) return null;
+        const step = path[i]!;
+        const answer = adaptStep(at.session, stepOf(step.parent!.session, step.answer!));
+        if (answer === null) return null;
+        const next = this.expand(at, answer, me, turn, world);
+        if (next === null) return null;
+        at = next;
+      }
+    }
+    return at;
+  }
+
+  /**
+   * CR 6.2.1.6 by the table (turnOrder, turn-order.ts): the answer of the entry closest to our own deck list (the definitions
+   * of our cards in hand, deck and evolve deck: the list a player knows, never their order), or the table's default.
+   */
+  private orderByTable(game: GameSession, me: PlayerId, table: TurnOrderTable): Answer {
+    const choice = turnOrderFor(table, ownDeckList(game, me));
+    this.turnOrderStats.choices += 1;
+    if (!choice.goFirst) this.turnOrderStats.second += 1;
+    this.turnOrderStats.last = choice;
+    return { type: "chooseTurnOrder", goFirst: choice.goFirst };
   }
 
   /**
@@ -812,7 +1297,9 @@ export class PlannerBot {
    * opponent played by the same model, and scored at our next main phase. Ties keep the fast answer (all of them).
    */
   private wardAtEnd(game: GameSession, d: Extract<Decision, { type: "selectCards" }>, me: PlayerId): Answer {
-    const answers = candidateAnswers(d, lookupFromReader(game.reader()), this.rng, Math.max(2, this.replyPlans));
+    // choiceDedupe: told apart by the cards as our player sees them in the real game (its view and the decision only).
+    const same = this.choiceDedupe ? answerSigner(game.view(me), d) : undefined;
+    const answers = candidateAnswers(d, lookupFromReader(game.reader()), this.rng, Math.max(2, this.replyPlans), false, same);
     if (answers.length <= 1) return answers[0] ?? fastAnswer(d, lookupFromReader(game.reader()));
     const seed = `${this.seed}:ward:${this.plans++}`;
     const turn = game.state.turn;
@@ -940,7 +1427,29 @@ export class PlannerBot {
 
   /** The answers worth trying at a decision of a plan (branches.ts). */
   private branches(d: Decision, lookup: ReturnType<typeof lookupFromReader>): Answer[] {
+    // Told apart by what they choose (choiceDedupe), or sampled in a two-turn sample's own stream (commonRandom).
+    if (this.choiceDedupe || this.stream !== null) return this.distinctBranches(d, lookup);
     return planBranches(d, lookup, this.rng, this.maxBranches);
+  }
+
+  /**
+   * branches() with choiceDedupe or commonRandom. The node asked about is the beam's (`at`, when its decision is `d`): its
+   * view, as the deciding player sees it in the sample, tells the answers apart (distinct-answers.ts); in a two-turn sample's
+   * stream, the answers sampled among many come from the stream and the position (its key), not from the planner's rng.
+   * Without the node (a caller other than the beam), no signatures, and the stream with the decision itself.
+   */
+  private distinctBranches(d: Decision, lookup: ReturnType<typeof lookupFromReader>): Answer[] {
+    const at = this.at !== null && this.at.session.decision === d ? this.at : null;
+    let same: SameCard | undefined;
+    if (this.choiceDedupe && at !== null) {
+      // Built when first asked (a main phase decision with nothing to tell apart never builds the view).
+      let signer: SameCard | null = null;
+      same = (id) => (signer ??= answerSigner(at.session.view(d.player), d))(id);
+    }
+    const stream = this.stream;
+    const sampled = stream !== null && (d.type === "selectCards" || d.type === "choose");
+    const rng = sampled ? seedRng(`${stream.base}:b:${textHash(at?.key ?? JSON.stringify(d))}`) : this.rng;
+    return planBranches(d, lookup, rng, this.maxBranches, same);
   }
 
   /** Give `answer` in a copy of `node` and play on to our next decision (the opponent passes in their quick windows). */
@@ -1044,7 +1553,7 @@ export class PlannerBot {
    * A fresh model of a player (a fair one: it plans with what that player can see): the opponent in our simulations, or us in
    * the opponent's simulated turn. Attacks come first among the greedy model's candidates, so none is left out.
    */
-  private model(kind: "greedy" | "planner", seed = `${this.seed}:model:${this.models++}`, maxCandidates = 12): Model {
+  private model(kind: "greedy" | "planner", seed = this.modelSeed(), maxCandidates = 12): Model {
     const evaluator = this.modelEvaluator;
     const bot =
       kind === "planner"
@@ -1059,6 +1568,23 @@ export class PlannerBot {
         return answer;
       },
     };
+  }
+
+  /**
+   * A fresh model's seed: the planner's count of models, or in a two-turn sample's stream (commonRandom) the stream's own
+   * count, so the models of one plan's sample don't depend on how many the plans before it made.
+   */
+  private modelSeed(): string {
+    return this.stream !== null ? `${this.stream.base}:q:${this.stream.models++}` : `${this.seed}:model:${this.models++}`;
+  }
+
+  /** tieKeepHand's tie-break (plan-lines.ts keepsMoreCards): our cards in hand where each plan ends. */
+  private keepsMore(candidates: Node[], values: number[], best: number): number {
+    let me: PlayerId | undefined;
+    for (let n: Node | null = candidates[best] ?? null; n; n = n.parent) if (n.parent === null) me = n.session.decision?.player;
+    if (me === undefined) return best;
+    const player = me;
+    return keepsMoreCards(values, best, this.tieKeepHand, (i) => handAt(candidates[i]!.session, player));
   }
 
   /** How the models score a position (the opponent's plans in a two-turn search are ranked as their model would). */
@@ -1124,6 +1650,32 @@ interface Stopped {
   adversary: Adversary;
 }
 
+/** closeSamples: one two-turn comparison (lookAhead's arguments) and each plan's value in each of its samples. */
+interface Look {
+  seed: string;
+  game: GameSession;
+  me: PlayerId;
+  turn: number;
+  world: () => GameSession;
+  worlds: number;
+  rows: Map<Node, LookRow>;
+  /** refine's results by the values array it was given. */
+  memo: WeakMap<number[], { values: number[]; best: number }>;
+}
+
+/** A plan's place in lookAhead's list (its seeds without commonRandom) and its values by sample (bound: maybe a cut's bound). */
+interface LookRow {
+  index: number;
+  values: { value: number; bound: boolean }[];
+}
+
+/** The row of a plan in a comparison, made when first written. */
+function lookRow(look: Look, plan: Node, index: number): LookRow {
+  let row = look.rows.get(plan);
+  if (!row) look.rows.set(plan, (row = { index, values: [] }));
+  return row;
+}
+
 /** The Ward followers entering to engage: every subset of up to three, else none or all of them. */
 function wardSelections(d: Extract<Decision, { type: "selectCards" }>): Answer[] {
   const n = d.candidates.length;
@@ -1131,6 +1683,16 @@ function wardSelections(d: Extract<Decision, { type: "selectCards" }>): Answer[]
   const out: Answer[] = [];
   for (let mask = 0; mask < 1 << n; mask++) out.push({ type: "selectCards", cards: d.candidates.filter((_, i) => mask & (1 << i)) });
   return out;
+}
+
+/** A 32-bit FNV-1a hash of a text, in hex (a stream's seed from a position's key). */
+function textHash(text: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16);
 }
 
 function canEnd(d: Decision): boolean {

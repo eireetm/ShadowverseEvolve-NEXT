@@ -195,9 +195,14 @@ function presetAt(preset: BotPreset, effort: number): PlannerBotOptions {
   return { ...options, ...leaves, ...sim };
 }
 
-/** The mulligan by simulation's samples scaled by `effort` below 1 (at least 2, so its estimate keeps a spread). */
+/**
+ * The mulligan by simulation's samples scaled by `effort` below 1 (at least 2, so its estimate keeps a spread); adaptive
+ * samples' most (kmax, when a preset gives it: none does) scaled the same way, never below the scaled k.
+ */
 function scaledSim(sim: SimParams, effort: number): SimParams {
-  return effort >= 1 ? sim : { ...sim, k: Math.max(2, Math.min(sim.k, Math.round(sim.k * effort))) };
+  if (effort >= 1) return sim;
+  const k = Math.max(2, Math.min(sim.k, Math.round(sim.k * effort)));
+  return sim.kmax === undefined ? { ...sim, k } : { ...sim, k, kmax: Math.max(k, Math.min(sim.kmax, Math.round(sim.kmax * effort))) };
 }
 
 /**

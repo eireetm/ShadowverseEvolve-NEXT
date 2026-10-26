@@ -135,3 +135,76 @@ describe("exploring (training data)", () => {
     for (const s of seeds.slice(0, 6)) expect(explored({ ...MEDIUM_OPTIONS, lethalSearch: 0, lookahead: 2, samples: 2, explore: { rate: 1, temperature: 1e6 } }, s).field).toBe("");
   }, 60_000);
 });
+
+// Common random numbers (PlannerBotOptions.commonRandom): every plan of a two-turn comparison played with the same random
+// numbers in each sample, so a plan's value doesn't depend on where it is in the list or on what was simulated before it.
+describe("common random numbers", () => {
+  // The opponent's ZAP selects up to 3 of our followers (2 damage each): among five different ones, more selections than the
+  // planner lists (26), so the opponent's plans sample some, with the planner's rng unless the option is on.
+  const zapCards = createEngine({
+    cards: [
+      ...[1, 2, 3, 4, 5].map((n) => testFollower(`G${n}`, n, n, n + 1)),
+      testFollower("FILLER", 1, 1, 1),
+      testFollower("BODY", 2, 2, 2),
+      testFollower("PIECE", 1, 1, 1),
+      testSpell("ZAP", 1, { text: "Select up to 3 enemy followers. Deal 2 damage to each." }),
+    ],
+    scripts: {
+      ZAP: defineCard({
+        abilities: [
+          spell({
+            *resolve(fx) {
+              const chosen = yield* fx.selectCards(fx.game.followers(fx.game.opponent(fx.controller)), 0, 3);
+              for (const id of chosen) yield* fx.dealDamage(id, 2);
+            },
+          }),
+        ],
+      }),
+    },
+  });
+  interface Internals {
+    models: number;
+    rng: unknown;
+    node(session: unknown, parent: null, answer: null, me: number, turn: number, stop: "decide"): unknown;
+    beam(root: unknown, actor: number, turn: number, world: () => unknown, budget: number, width: number): unknown[];
+    kinds(finished: unknown[], root: unknown, actor: number, k: number): unknown[];
+    lookAhead(candidates: unknown[], game: unknown, me: number, turn: number, seed: string, world: () => unknown, exact?: boolean): number[];
+  }
+  /** The root's plans of this position as plan() compares them, and the bot. */
+  function comparison(options: PlannerBotOptions) {
+    const t = drive(zapCards, {
+      me: { hand: ["BODY", "PIECE"], field: ["G1", "G2", "G3", "G4"], deck: many(10, "FILLER"), playPoints: 2, maxPlayPoints: 2 },
+      opp: { hand: ["ZAP", "ZAP", "BODY"], deck: many(10, "ZAP"), maxPlayPoints: 3 },
+      config: { autoResolve: ["quick", "selectPending", "orderCards"] },
+    });
+    const bot = new PlannerBot(zapCards, { ...MEDIUM_OPTIONS, lethalSearch: 0, lookahead: 2, samples: 3, seed: "crn", ...options }) as unknown as Internals;
+    const game = t.game;
+    const turn = game.state.turn;
+    const seed = "crn:0";
+    const world = () => game.determinized(0, seed);
+    const root = bot.node(world(), null, null, 0, turn, "decide");
+    const candidates = bot.kinds(bot.beam(root, 0, turn, world, 600, 6), root, 0, 4);
+    return { bot, look: (c: unknown[]) => bot.lookAhead(c, game, 0, turn, seed, world, true), candidates };
+  }
+
+  it("a plan's value is the same wherever it is in the list, and the planner's own counts are left as they were", () => {
+    const { bot, look, candidates } = comparison({ commonRandom: true });
+    expect(candidates.length).toBeGreaterThan(2);
+    const models = bot.models;
+    const rng = JSON.stringify(bot.rng);
+    const forward = look(candidates);
+    const backward = look([...candidates].reverse());
+    expect([...backward].reverse()).toEqual(forward);
+    expect(bot.models).toBe(models);
+    expect(JSON.stringify(bot.rng)).toBe(rng);
+  }, 60_000);
+
+  it("without it a plan's value depends on its place (the control: what the option takes out)", () => {
+    const { bot, look, candidates } = comparison({});
+    const rng = JSON.stringify(bot.rng);
+    const forward = look(candidates);
+    const backward = look([...candidates].reverse());
+    expect([...backward].reverse()).not.toEqual(forward);
+    expect(JSON.stringify(bot.rng)).not.toBe(rng);
+  }, 60_000);
+});

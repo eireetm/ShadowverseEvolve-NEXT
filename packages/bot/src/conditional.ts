@@ -41,7 +41,11 @@
  * plans) and closes at our next main phase decision (the play, its triggers and every choice they ask for are resolved:
  * CR 10.7.3, Confirmation Timing) or where the turn or the game ends. The card is followed by its ids (CR 4.1.4: a new card
  * in each zone): its hand id, the id the resolution zone gives it, the id it gets on the field. A card that doesn't enter
- * the field (a spell, a play option like Accelerate) has no Fanfare to judge.
+ * the field (a spell, a play option like Accelerate) has no Fanfare to judge. With `evolve` (CondParams, off by default) an
+ * evolve answer of ours in our main phase (CR 8.3, 12.2) opens a window the same way, for the follower evolved (the same id on
+ * the field, CR 5.16.2) and the evolved card's On Evolve abilities (CR 12.6; On Super-Evolve, 12.17, when it super-evolved),
+ * judged as Fanfares are but for the gates (the card table's gates are a Fanfare's; no evolve card of the decks measured has a
+ * declared condition or a gate, only required targets).
  *
  * Fairness: everything is read in the planner's own simulated copies (a sample of what the bot knows, determinize; a
  * cheating planner: the real game), the gates in the bot's view of that copy. Deterministic: no randomness, no clocks.
@@ -58,6 +62,12 @@ export interface CondParams {
   scope: CondScope;
   /** Charged once per card play whose Fanfares did nothing (points of the planner's evaluation). */
   penalty: number;
+  /**
+   * Also an evolution (CR 8.3, 12.2) whose On Evolve abilities (CR 12.6; On Super-Evolve, 12.17, when it super-evolved) did
+   * nothing, judged as a play's Fanfares are (the trigger restriction, the condition, unplayed; not the gates: the card
+   * table's gates are a Fanfare's). Default: off.
+   */
+  evolve?: boolean;
 }
 
 /** The narrowest scope and a card in hand's worth (DEFAULT_WEIGHTS.hand). */
@@ -68,6 +78,7 @@ export function condProblems(p: CondParams): string[] {
   const out: string[] = [];
   if (!(COND_SCOPES as readonly string[]).includes(p.scope)) out.push(`scope=${String(p.scope)}: ${COND_SCOPES.join(", ")}`);
   if (typeof p.penalty !== "number" || !Number.isFinite(p.penalty) || p.penalty < 0 || p.penalty > 10) out.push(`penalty=${String(p.penalty)}: a number from 0 to 10`);
+  if (p.evolve !== undefined && typeof p.evolve !== "boolean") out.push(`evolve=${String(p.evolve)}: true or false`);
   return out;
 }
 
@@ -85,11 +96,12 @@ export interface CondGates<G = unknown> {
 
 /**
  * The change's identity in the records: "cond=<scope>:penalty=<n>", and with the gates scope the card feature table's
- * hash (its references decide what is judged): "cond=gates:penalty=<n>:table=<hash>".
+ * hash (its references decide what is judged): "cond=gates:penalty=<n>:table=<hash>"; ":evolve=1" after it when
+ * evolutions are judged too (only then: the identities without it are as they were).
  */
 export function condIdentity(p: CondParams, gates?: Pick<CondGates, "hash"> | null): string {
   const base = `cond=${p.scope}:penalty=${String(p.penalty)}`;
-  return p.scope === "gates" && gates ? `${base}:table=${gates.hash}` : base;
+  return `${p.scope === "gates" && gates ? `${base}:table=${gates.hash}` : base}${p.evolve ? ":evolve=1" : ""}`;
 }
 
 const scopeAtLeast = (scope: CondScope, least: CondScope): boolean => COND_SCOPES.indexOf(scope) >= COND_SCOPES.indexOf(least);
@@ -134,6 +146,32 @@ export function fanfaresOf(scripts: ScriptRegistry, def: DefId): FanfareInfo[] {
   return out;
 }
 
+const EVOLVES = new WeakMap<ScriptRegistry, Map<string, FanfareInfo[]>>();
+
+/**
+ * The On Evolve abilities of an evolved card's definition (CR 12.6), and its On Super-Evolve ones (CR 12.17) when it
+ * super-evolved, in its order, read as fanfaresOf reads Fanfares (once per registry, definition and kind of evolution).
+ */
+export function evolveAbilitiesOf(scripts: ScriptRegistry, def: DefId, superEvolved: boolean): FanfareInfo[] {
+  let byDef = EVOLVES.get(scripts);
+  if (!byDef) EVOLVES.set(scripts, (byDef = new Map()));
+  const key = `${def}|${superEvolved ? 1 : 0}`;
+  const known = byDef.get(key);
+  if (known) return known;
+  const out: FanfareInfo[] = [];
+  byDef.set(key, out);
+  (scripts[def]?.abilities ?? []).forEach((a, index) => {
+    if (a.kind !== "automatic" || a.delayed || !(a.timing === "onEvolve" || (superEvolved && a.timing === "onSuperEvolve"))) return;
+    const unplayable: string[] = [];
+    if ((a.targets ?? []).some((t) => !t.upTo && t.count > 0)) unplayable.push("targets");
+    if (a.cost) unplayable.push("cost");
+    if (a.earthRite?.mode === "required") unplayable.push("earthRite");
+    if (a.modes) unplayable.push("modes");
+    out.push({ index, ability: a, triggerIf: a.triggerIf !== undefined, condition: a.condition !== undefined, unplayable, declinable: a.cost !== undefined || a.earthRite !== undefined });
+  });
+  return out;
+}
+
 // ---- A play's window ----
 
 /** One card play followed from the answer until our next main phase decision. */
@@ -152,13 +190,24 @@ export interface Watch {
    * tests; the judgment doesn't depend on it (a Fanfare with such a cost is never judged unplayed).
    */
   declined: boolean;
+  /**
+   * An evolution's window (CondParams.evolve), not a play's: `hand` is the follower evolved (it stays on the field under the
+   * same id, CR 5.16.2), `field` that id once it evolved, `def` the evolved card's definition (the follower's information
+   * from then on); its On Evolve abilities (and On Super-Evolve ones when it super-evolved) are judged. `cards`: the cards put
+   * into the evolve zone until then (CR 5.16.1) and their definitions.
+   */
+  evolve?: { superEvolved: boolean; cards: readonly (readonly [CardId, DefId])[] };
 }
 
 /** The window of a play of the card `hand` (from the hand or the EX area), opened at the answer. */
 export const openWatch = (hand: CardId): Watch => ({ hand, def: null, resolution: null, field: null, triggered: [], played: [], declined: false });
 
+/** The window of an evolution of the follower `card` (an evolve answer in our main phase, CR 8.3). */
+export const openEvolveWatch = (card: CardId): Watch => ({ hand: card, def: null, resolution: null, field: null, triggered: [], played: [], declined: false, evolve: { superEvolved: false, cards: [] } });
+
 /** The watch after some events: the card's moves to the resolution zone and the field, its abilities' triggers and plays. */
 export function feedWatch(w: Watch, events: readonly GameEvent[]): Watch {
+  if (w.evolve) return feedEvolveWatch(w, events);
   let out = w;
   for (const e of events) {
     if (e.type === "cardsMoved") {
@@ -168,6 +217,29 @@ export function feedWatch(w: Watch, events: readonly GameEvent[]): Watch {
       }
     } else if ((e.type === "abilityTriggered" || e.type === "abilityPlayed") && out.field !== null && e.source === out.field && e.sourceDef === out.def) {
       // Only the card's own abilities (a keyword's or a given ability's events name another sourceDef).
+      out = e.type === "abilityTriggered" ? { ...out, triggered: [...out.triggered, e.ability] } : { ...out, played: [...out.played, e.ability] };
+    }
+  }
+  return out;
+}
+
+/**
+ * An evolution's watch after some events: the evolve card put into the evolve zone (its definition, CR 5.16.1), the
+ * follower evolved (the `evolved` event, CR 12.2), the evolved card's own abilities' triggers and plays from then on.
+ */
+function feedEvolveWatch(w: Watch, events: readonly GameEvent[]): Watch {
+  let out = w;
+  for (const e of events) {
+    if (e.type === "cardsMoved" && out.field === null) {
+      const moved = e.moves.flatMap((m) => {
+        const id = m.newCard ?? m.card;
+        return m.to.zone === "evolveZone" && id !== null ? [[id, m.def] as const] : [];
+      });
+      if (moved.length) out = { ...out, evolve: { ...out.evolve!, cards: [...out.evolve!.cards, ...moved] } };
+    } else if (e.type === "evolved" && out.field === null && e.card === out.hand) {
+      const def = out.evolve!.cards.find(([id]) => id === e.evolveCard)?.[1] ?? null;
+      out = { ...out, field: e.card, def, evolve: { superEvolved: e.superEvolved, cards: [] } };
+    } else if ((e.type === "abilityTriggered" || e.type === "abilityPlayed") && out.field !== null && e.source === out.field && e.sourceDef === out.def) {
       out = e.type === "abilityTriggered" ? { ...out, triggered: [...out.triggered, e.ability] } : { ...out, played: [...out.played, e.ability] };
     }
   }
@@ -211,7 +283,9 @@ export function judgeWatch(w: Watch, session: GameSession, me: PlayerId, scope: 
   let reader: GameReader | null = null;
   const read = () => (reader ??= session.reader());
   let view: PlayerView | null = null;
-  for (const f of fanfaresOf(scripts, w.def)) {
+  // An evolution's window: the evolved card's On Evolve abilities (CR 12.6, 12.17), judged as Fanfares are but for the gates.
+  const abilities = w.evolve ? evolveAbilitiesOf(scripts, w.def, w.evolve.superEvolved) : fanfaresOf(scripts, w.def);
+  for (const f of abilities) {
     const triggered = w.triggered.includes(f.index);
     const played = w.played.includes(f.index);
     let outcome: FanfareOutcome = { index: f.index, outcome: "unknown", why: null };
@@ -225,7 +299,7 @@ export function judgeWatch(w: Watch, session: GameSession, me: PlayerId, scope: 
       else if (scopeAtLeast(scope, "unplayed") && !f.declinable) outcome = { index: f.index, outcome: "wasted", why: "unplayed" };
     } else {
       outcome = { index: f.index, outcome: "effective", why: null };
-      if (scopeAtLeast(scope, "gates") && gates) {
+      if (!w.evolve && scopeAtLeast(scope, "gates") && gates) {
         const refs = gates.gatesOf(w.def, f.index);
         if (refs.length > 0) {
           view ??= session.view(me);
@@ -290,6 +364,8 @@ export interface ConditionalStats {
   comparisons: number;
   adjusted: number;
   exact: number;
+  /** With CondParams.evolve only: evolution windows opened, and evolutions charged (also counted above by kind and card). */
+  evolve?: { windows: number; charged: number };
 }
 
 /**
@@ -312,6 +388,7 @@ export class ConditionalCharges {
     const problems = condProblems(params);
     if (problems.length) throw new Error(`cond: ${problems.join("; ")}`);
     if (params.scope === "gates" && gates === null) throw new Error("cond=gates needs the gates reader of the card feature table (conditional-gates.ts tableGates)");
+    if (params.evolve) this.stats.evolve = { windows: 0, charged: 0 };
   }
 
   /** The node `made` by an expansion (the position where it stopped: `session`, `stop`), with its plan's state and charge. */
@@ -366,6 +443,10 @@ export class ConditionalCharges {
     if (x.decision?.type === "mainPhase" && a.type === "mainPhase" && a.action.type === "play") {
       watch = openWatch(a.action.card);
       this.stats.windows += 1;
+    } else if (this.params.evolve && x.decision?.type === "mainPhase" && a.type === "mainPhase" && a.action.type === "evolve") {
+      // CR 8.3, 12.2: an evolve answer of ours opens an evolution's window (its On Evolve abilities, CR 12.6, 12.17).
+      watch = openEvolveWatch(a.action.card);
+      this.stats.evolve!.windows += 1;
     } else if (watch) watch = answeredInWatch(watch, x.decision, a);
     if (watch) watch = feedWatch(watch, x.events);
     if (watch === null) return parent;
@@ -373,6 +454,7 @@ export class ConditionalCharges {
     this.stats.judged += 1;
     const j = judgeWatch(watch, session, me, this.params.scope, this.scripts, this.gates);
     if (j.charged === null) return { ...parent, watch: null };
+    if (watch.evolve) this.stats.evolve!.charged += 1;
     this.stats.charged[j.charged] += 1;
     this.stats.byCard[j.def!] = (this.stats.byCard[j.def!] ?? 0) + 1;
     return { watch: null, penalty: parent.penalty + this.params.penalty, charged: parent.charged + 1 };

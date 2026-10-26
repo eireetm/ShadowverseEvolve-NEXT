@@ -1,4 +1,5 @@
 import { defaultAnswer, enumerateAnswers, randomAnswer, type Answer, type Decision, type RngState } from "./core";
+import { choiceKey, distinctSelections, selectionKey, type SameCard } from "./distinct-answers";
 import { fastAnswer, type CardLookup } from "./policy";
 
 /**
@@ -8,9 +9,12 @@ import { fastAnswer, type CardLookup } from "./policy";
  * answer when there are few, otherwise the fast answer, the smallest ones and random samples,
  * because "any number of cards" can have millions. A Ward follower entering gets the fast answer only (policy.ts; the
  * planner compares both itself outside its own main phase, planner.ts wardOnEntry). Which Ward followers to engage at the end
- * phase is compared like any selection. Ordering cards gets the fast answer only.
+ * phase is compared like any selection. Ordering cards gets the fast answer only. With `same` (distinct-answers.ts), the
+ * selections and choices are told apart by what they choose: the different ones enumerated (a selection by the multiset of
+ * its cards' signatures, a choice as a set), and the samples that repeat one left out; without it, the answers as they are.
  */
-export function candidateAnswers(d: Decision, lookup: CardLookup, rng: RngState, max: number, attacksFirst = false): Answer[] {
+export function candidateAnswers(d: Decision, lookup: CardLookup, rng: RngState, max: number, attacksFirst = false, same?: SameCard): Answer[] {
+  if (same && (d.type === "selectCards" || d.type === "choose")) return distinctCandidates(d, lookup, rng, max, same);
   const out: Answer[] = [];
   const seen = new Set<string>();
   const add = (a: Answer, key = JSON.stringify(a)) => {
@@ -64,6 +68,32 @@ export function candidateAnswers(d: Decision, lookup: CardLookup, rng: RngState,
       add(fastAnswer(d, lookup));
       break;
   }
+  return out;
+}
+
+/**
+ * candidateAnswers of a selection or a choice with `same`: the fast answer, the different answers the smallest first (at most
+ * `max` − 6 listed before sampling, as enumerateAnswers is asked), and when those aren't all, 12 samples, each listed only if
+ * it chooses something not listed yet.
+ */
+function distinctCandidates(d: Extract<Decision, { type: "selectCards" | "choose" }>, lookup: CardLookup, rng: RngState, max: number, same: SameCard): Answer[] {
+  const out: Answer[] = [];
+  const seen = new Set<string>();
+  const keyOf = (a: Answer) => (a.type === "selectCards" ? selectionKey(a.cards, same) : a.type === "choose" ? choiceKey(a.ids) : JSON.stringify(a));
+  const add = (a: Answer) => {
+    const key = keyOf(a);
+    if (out.length < max && !seen.has(key)) {
+      seen.add(key);
+      out.push(a);
+    }
+  };
+  add(fastAnswer(d, lookup));
+  if (d.type === "selectCards" && d.reason === "wardEnterEngaged") return out;
+  const limit = Math.max(1, max - 6);
+  const all = d.type === "selectCards" ? distinctSelections(d, same, limit) : enumerateAnswers(d, limit);
+  add(defaultAnswer(d));
+  for (const a of all.answers) add(a);
+  if (!all.complete) for (let i = 0; i < 12; i++) add(randomAnswer(rng, d));
   return out;
 }
 

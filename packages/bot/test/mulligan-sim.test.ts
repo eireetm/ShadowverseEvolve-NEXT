@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createEngine, randomInt, seedRng, type Answer, type GameSession, type PlayerId, type RngState } from "../src/core";
 import { ALL_CARDS, ALL_SCRIPTS } from "../../core/src/sets";
-import { GreedyBot, PlannerBot, SIM_DEFAULTS, evaluate, hiddenPools, playOpening, plansItself, pp1Evaluator, setupSample, setupWorld, simIdentity, simMulligan, simProblems, stepBack, type MulliganDecision, type SimParams } from "../src";
+import { GreedyBot, PlannerBot, SIM_DEFAULTS, evaluate, hiddenPools, playOpening, plansItself, pp1Evaluator, setupSample, setupWorld, simHorizon, simIdentity, simMulligan, simProblems, simSampleLimit, simStopsBefore, stepBack, type MulliganDecision, type SimParams } from "../src";
 import { dealt } from "../src/setup-sample";
 import { ARENA_CONFIG, sampleDeck } from "./samples";
 
@@ -218,5 +218,88 @@ describe("mulligan sim: the first turns played from samples, keeping and redrawi
     expect(bot.mulliganStats).toMatchObject({ mulligans: 1, fallbacks: 0, failures: 0 });
     // The real game: both samples start from the same deal, so keeping scores alike in both but for the models' seeds.
     expect(bot.mulliganStats!.last!.keep).toHaveLength(2);
+  });
+});
+
+describe("mulligan sim: adaptive samples and the horizon going first (off unless given)", () => {
+  it("writes them in the identity only when they change something, and refuses bad ones", () => {
+    expect(simIdentity({ ...SIM_DEFAULTS, kmax: 8 })).toBe("mull=sim:k=8,t=3,margin=0,opp=greedy,cand=32");
+    expect(simIdentity({ ...SIM_DEFAULTS, t: 4, tfirst: 4 })).toBe("mull=sim:k=8,t=4,margin=0,opp=greedy,cand=32");
+    expect(simIdentity({ ...SIM_DEFAULTS, t: 4, kmax: 32 })).toBe("mull=sim:k=8,t=4,margin=0,opp=greedy,cand=32,kmax=32,z=2,step=8");
+    expect(simIdentity({ ...SIM_DEFAULTS, t: 4, tfirst: 3, kmax: 32, z: 1.5, step: 4 })).toBe("mull=sim:k=8,t=4,margin=0,opp=greedy,cand=32,tfirst=3,kmax=32,z=1.5,step=4");
+    expect(simProblems({ ...SIM_DEFAULTS, kmax: 4, tfirst: 0, z: 0, step: 0 })).toEqual([
+      "tfirst=0: a whole number from 1 to 10",
+      "kmax=4: a whole number from 8 to 64",
+      "step=0: a whole number from 1 to 64",
+      "z=0: a number above 0, at most 10",
+    ]);
+    expect(simProblems({ ...SIM_DEFAULTS, z: 2 })).toEqual(["z and step are the adaptive samples' (kmax=): not without kmax"]);
+    expect(simSampleLimit({ k: 8 })).toBe(8);
+    expect(simSampleLimit({ k: 8, kmax: 8 })).toBe(8);
+    expect(simSampleLimit({ k: 8, kmax: 32 })).toBe(32);
+    expect(simHorizon({ t: 4, tfirst: 3 }, true)).toBe(3);
+    expect(simHorizon({ t: 4, tfirst: 3 }, false)).toBe(4);
+    expect(simHorizon({ t: 4 }, true)).toBe(4);
+  });
+
+  it("stops at k when the estimate is clear, adds batches while it is close, up to kmax; looks only at a batch's end", () => {
+    const p = { k: 8, kmax: 32, z: 2, step: 8 };
+    // Stub samples: (redraw − keep) per sample.
+    const run = (diff: (i: number) => number) => {
+      const keep: number[] = [];
+      const redrawn: number[] = [];
+      let i = 0;
+      for (; !simStopsBefore(i, p, keep, redrawn); i++) {
+        keep.push(0);
+        redrawn.push(diff(i));
+      }
+      return i;
+    };
+    expect(run((i) => 5 + (i % 2))).toBe(8);
+    expect(run((i) => (i % 2 === 0 ? 1 : -1))).toBe(32);
+    // Clear after the second batch (close at 8: the first 8 alternate; the next 8 are all +3).
+    expect(run((i) => (i < 8 ? (i % 2 === 0 ? 1 : -1) : 3))).toBe(16);
+    // Never before k, and not in the middle of a batch.
+    expect(simStopsBefore(3, p, [0, 0, 0], [9, 9, 9])).toBe(false);
+    expect(simStopsBefore(10, p, Array(10).fill(0), Array(10).fill(9))).toBe(false);
+    // Off (no kmax): k samples, whatever they say.
+    expect(simStopsBefore(8, { k: 8 }, Array(8).fill(0), [1, -1, 1, -1, 1, -1, 1, -1])).toBe(true);
+    // Every pair failed (no sample): clear, so it stops (the planner then answers by its greedy rule).
+    expect(simStopsBefore(8, p, [], [])).toBe(true);
+  });
+
+  it("on a real opening: its first k samples are the rule's without it, then more; the horizon going first only when first", () => {
+    const g = opening("mull-test:adaptive");
+    const d = g.decision as MulliganDecision;
+    const ctx = (params: SimParams) => ({ engine, world, seed: "adaptive", params, evaluator: pp1, modelEvaluator: evaluate });
+    const base = simMulligan(g, d, ctx({ ...SIM_DEFAULTS, k: 2, t: 1 }));
+    // The same samples numbered on: each stop or go as simStopsBefore reads the samples so far (k 4 plays them all).
+    const four = simMulligan(g, d, ctx({ ...SIM_DEFAULTS, k: 4, t: 1 }));
+    expect(four.keep.slice(0, 2)).toEqual(base.keep);
+    const adaptive = { k: 2, kmax: 4, z: 1, step: 1 };
+    const more = simMulligan(g, d, ctx({ ...SIM_DEFAULTS, t: 1, ...adaptive }));
+    const n = more.keep.length;
+    expect(more.failures).toBe(0);
+    expect(more.keep).toEqual(four.keep.slice(0, n));
+    expect(more.redrawn).toEqual(four.redrawn.slice(0, n));
+    for (let i = 2; i < n; i++) expect(simStopsBefore(i, adaptive, four.keep.slice(0, i), four.redrawn.slice(0, i))).toBe(false);
+    expect(n === 4 || simStopsBefore(n, adaptive, four.keep.slice(0, n), four.redrawn.slice(0, n))).toBe(true);
+    // Player 0 goes first here: tfirst 1 with t 2 plays as t 1.
+    expect(simMulligan(g, d, ctx({ ...SIM_DEFAULTS, k: 2, t: 2, tfirst: 1 }))).toEqual(base);
+    // The second player's mulligan: tfirst changes nothing.
+    g.act({ type: "mulligan", redraw: false });
+    const d2 = g.decision as MulliganDecision;
+    expect(d2.player).toBe(1);
+    expect(simMulligan(g, d2, ctx({ ...SIM_DEFAULTS, k: 2, t: 1, tfirst: 2 }))).toEqual(simMulligan(g, d2, ctx({ ...SIM_DEFAULTS, k: 2, t: 1 })));
+  });
+
+  it("on the planner: the identity and the samples it played", () => {
+    const g = opening("mull-test:adaptive-bot");
+    const bot = new PlannerBot(engine, { beamWidth: 2, maxSimulations: 40, replyPlans: 2, evaluator: pp1, seed: "bot", mulligan: "sim", mulliganSim: { k: 2, t: 1, kmax: 4, z: 10, step: 2 } });
+    expect(bot.decide(g.clone()).type).toBe("mulligan");
+    expect(bot.mulliganStats).toMatchObject({ identity: "mull=sim:k=2,t=1,margin=0,opp=greedy,cand=32,kmax=4,z=10,step=2", mulligans: 1, failures: 0 });
+    expect(bot.mulliganStats!.last!.keep.length).toBeGreaterThanOrEqual(2);
+    expect(bot.mulliganStats!.last!.keep.length).toBeLessThanOrEqual(4);
+    expect(() => new PlannerBot(engine, { mulligan: "sim", mulliganSim: { k: 8, kmax: 4 } })).toThrow(/kmax=4/);
   });
 });

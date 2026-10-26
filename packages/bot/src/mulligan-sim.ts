@@ -47,6 +47,16 @@
  * towards that centre never changes its sign — redraw when the redraw is expected better; near-ties cost little either
  * way (measured on the training decks with an independent 32-sample judge: the gain is flat for margins −0.5 … 0.5 and
  * falls beyond; k 16 adds about a tenth of what k 8 gains, for twice the time).
+ *
+ * Two parameters off unless given (none of the presets gives them). kmax: adaptive samples — after the first k, while the
+ * mean difference is within z standard errors of 0 (|mean| < z·se: the samples can't tell the sign apart from the noise),
+ * `step` more are played, numbered on from k (the first k are the same samples), up to kmax in all; the rule looks only at
+ * the end of each batch, a few looks rather than one per sample. A close hand is where k samples decide by noise (the
+ * estimate's se is of the size of the differences that matter); a clear one stops at k, so the time goes to the close ones.
+ * tfirst: the horizon when the bot goes first (CR 6.2.1.6 is decided before the mulligan, 6.2.1.8), t otherwise — a longer
+ * horizon sees a card whose turn comes after t (a ramp's payoff), at more noise per sample; on human openings 4 turns agreed
+ * less than 3 with the players' own mulligans going first and not going second, so a longer one can be kept to the second
+ * player.
  */
 import type { Answer, Decision, Engine, GameEvent, GameSession, PlayerId } from "./core";
 import type { Evaluator } from "./evaluate";
@@ -74,11 +84,23 @@ export interface SimParams {
   opp: "passive" | "greedy";
   /** The most candidates the models compare per decision (GreedyBot maxCandidates; its default is 32). */
   cand: number;
+  /** The horizon when the bot goes first (the header; not given: t). */
+  tfirst?: number;
+  /** Adaptive samples, up to this many in all (the header; not given, or at most k: off — k samples). */
+  kmax?: number;
+  /** Adaptive samples: more while |mean| < z standard errors (default SIM_ADAPTIVE.z). */
+  z?: number;
+  /** Adaptive samples: this many more at a time (default SIM_ADAPTIVE.step). */
+  step?: number;
 }
 
 export const SIM_DEFAULTS: Readonly<SimParams> = { k: 8, t: 3, margin: 0, opp: "greedy", cand: 32 };
 /** The parameters in their order (the identity's order), with the values each is taken in. */
 export const SIM_KEYS: readonly (keyof SimParams)[] = ["k", "t", "margin", "opp", "cand"];
+/** The parameters off unless given (the header), in the identity's order after SIM_KEYS. */
+export const SIM_EXTRA_KEYS = ["tfirst", "kmax", "z", "step"] as const;
+/** The adaptive samples' z and step when kmax is given without them: two standard errors, batches of 8 (k's default). */
+export const SIM_ADAPTIVE: Readonly<{ z: number; step: number }> = { z: 2, step: 8 };
 const SIM_RANGES = { k: [1, 64], t: [1, 10], margin: [-20, 20], cand: [1, 64] } as const;
 const OPPONENTS: readonly SimParams["opp"][] = ["passive", "greedy"];
 
@@ -96,15 +118,77 @@ export function simProblems(p: SimParams): string[] {
   }
   if (typeof p.margin !== "number" || !Number.isFinite(p.margin) || p.margin < SIM_RANGES.margin[0] || p.margin > SIM_RANGES.margin[1]) problems.push(`margin=${String(p.margin)}: a number from ${SIM_RANGES.margin[0]} to ${SIM_RANGES.margin[1]}`);
   if (!OPPONENTS.includes(p.opp)) problems.push(`opp=${String(p.opp)}: ${OPPONENTS.join(" or ")}`);
+  problems.push(...simExtraProblems(p));
   return problems;
+}
+
+/** What is wrong with the parameters off unless given (SIM_EXTRA_KEYS). */
+export function simExtraProblems(p: Pick<SimParams, "k" | "tfirst" | "kmax" | "z" | "step">): string[] {
+  const problems: string[] = [];
+  const whole = (key: string, v: number | undefined, least: number, most: number) => {
+    if (v !== undefined && (!Number.isInteger(v) || v < least || v > most)) problems.push(`${key}=${String(v)}: a whole number from ${least} to ${most}`);
+  };
+  whole("tfirst", p.tfirst, SIM_RANGES.t[0], SIM_RANGES.t[1]);
+  // kmax at most k plays k samples (off); below k it would read as fewer samples, which k says.
+  whole("kmax", p.kmax, Number.isInteger(p.k) ? p.k : SIM_RANGES.k[0], SIM_RANGES.k[1]);
+  whole("step", p.step, 1, SIM_RANGES.k[1]);
+  if (p.z !== undefined && (typeof p.z !== "number" || !Number.isFinite(p.z) || p.z <= 0 || p.z > 10)) problems.push(`z=${String(p.z)}: a number above 0, at most 10`);
+  if (p.kmax === undefined && (p.z !== undefined || p.step !== undefined)) problems.push("z and step are the adaptive samples' (kmax=): not without kmax");
+  return problems;
+}
+
+/** Whether the samples are adaptive (kmax above k), and how many at most (k when not). */
+export function simSampleLimit(p: Pick<SimParams, "k" | "kmax">): number {
+  return p.kmax !== undefined && p.kmax > p.k ? p.kmax : p.k;
+}
+
+/**
+ * The mean of (redrawn − keep) over the samples played both ways, and its standard error (0 with fewer than two samples):
+ * the rule's estimate.
+ */
+export function simEstimate(keep: readonly number[], redrawn: readonly number[]): { diff: number; se: number } {
+  const diffs = keep.map((v, i) => redrawn[i]! - v);
+  const n = diffs.length;
+  if (n === 0) return { diff: 0, se: 0 };
+  const diff = diffs.reduce((s, x) => s + x, 0) / n;
+  return { diff, se: n > 1 ? Math.sqrt(diffs.reduce((s, x) => s + (x - diff) ** 2, 0) / (n - 1) / n) : 0 };
+}
+
+/**
+ * Adaptive samples (the header): before sample `i` (0-based), whether to stop — at the end of each batch past the first k,
+ * once the estimate is clear (|mean| ≥ z·se; with fewer than two samples se is 0: clear) or kmax is reached. Never before k.
+ */
+export function simStopsBefore(i: number, p: Pick<SimParams, "k" | "kmax" | "z" | "step">, keep: readonly number[], redrawn: readonly number[]): boolean {
+  const limit = simSampleLimit(p);
+  if (i >= limit) return true;
+  if (i < p.k || (i - p.k) % (p.step ?? SIM_ADAPTIVE.step) !== 0) return false;
+  const { diff, se } = simEstimate(keep, redrawn);
+  return !(Math.abs(diff) < (p.z ?? SIM_ADAPTIVE.z) * se);
+}
+
+/** The bot's own turns played before scoring: tfirst when given and the bot goes first, t otherwise. */
+export function simHorizon(p: Pick<SimParams, "t" | "tfirst">, goesFirst: boolean): number {
+  return goesFirst && p.tfirst !== undefined ? p.tfirst : p.t;
 }
 
 /**
  * The rule's identity, every parameter written: "mull=sim:k=8,t=3,margin=0,opp=greedy,cand=32". The evaluations it scores
  * and plays with are the bot's own (its evaluator, greedyEvaluator, replyEvaluator, modelEvaluator), recorded with them.
+ * The parameters off unless given are written only when they change something (simExtraIdentity), so the identity of a
+ * rule without them is what it always was.
  */
 export function simIdentity(p: SimParams): string {
-  return `mull=sim:${SIM_KEYS.map((k) => `${k}=${String(p[k])}`).join(",")}`;
+  return `mull=sim:${SIM_KEYS.map((k) => `${k}=${String(p[k])}`).join(",")}${simExtraIdentity(p)}`;
+}
+
+/**
+ * The identity's tail for the parameters off unless given: ",tfirst=<n>" when it differs from t, ",kmax=<n>,z=<z>,step=<n>"
+ * when the samples are adaptive (kmax above k); "" otherwise.
+ */
+export function simExtraIdentity(p: Pick<SimParams, "k" | "t" | "tfirst" | "kmax" | "z" | "step">): string {
+  const tfirst = p.tfirst !== undefined && p.tfirst !== p.t ? `,tfirst=${p.tfirst}` : "";
+  const adaptive = simSampleLimit(p) > p.k ? `,kmax=${String(p.kmax)},z=${String(p.z ?? SIM_ADAPTIVE.z)},step=${String(p.step ?? SIM_ADAPTIVE.step)}` : "";
+  return `${tfirst}${adaptive}`;
 }
 
 /** One opening played from a sample: the value where it was scored, the inputs, how it ended. */
@@ -204,12 +288,15 @@ export interface SimContext {
 /** "sim" at a mulligan decision of `game` (header): the samples, both ways, and the answer. */
 export function simMulligan(game: GameSession, d: MulliganDecision, ctx: SimContext): SimOutcome {
   const me = d.player;
-  const { k, t, margin, opp, cand } = ctx.params;
+  const { margin, opp, cand } = ctx.params;
+  // The horizon (tfirst when given and we go first: CR 6.2.1.6 was decided before this, 6.2.1.8).
+  const t = simHorizon(ctx.params, game.state.firstPlayer === me);
   const keepAnswer: Answer = { type: "mulligan", redraw: false };
   // CR 6.2.1.8: any order at the bottom; it matters only once the deck is drawn down to them.
   const redrawAnswer: Answer = { type: "mulligan", redraw: true, bottomOrder: [...d.hand] };
   const out: SimOutcome = { redraw: false, keep: [], redrawn: [], diff: 0, se: 0, failures: 0, simulations: 0, inputs: 0, over: 0, cut: 0, own: { main: 0, other: 0 } };
-  for (let i = 0; i < k; i++) {
+  // k samples; with kmax (adaptive), more in batches while the estimate is close (simStopsBefore: never before k).
+  for (let i = 0; !simStopsBefore(i, ctx.params, out.keep, out.redrawn); i++) {
     const seed = `${ctx.seed}:${i}`;
     // The same sample and the same model seeds both ways (common random numbers): the sample is built once (a world is
     // determined by the game, the viewer and the seed), keeping plays in a copy of it, redrawing in the sample itself.
@@ -250,13 +337,10 @@ export function simMulligan(game: GameSession, d: MulliganDecision, ctx: SimCont
     out.keep.push(kept.played.value);
     out.redrawn.push(redrawn.played.value);
   }
-  const diffs = out.keep.map((v, i) => out.redrawn[i]! - v);
-  const n = diffs.length;
-  if (n > 0) {
-    out.diff = diffs.reduce((s, x) => s + x, 0) / n;
-    out.se = n > 1 ? Math.sqrt(diffs.reduce((s, x) => s + (x - out.diff) ** 2, 0) / (n - 1) / n) : 0;
-  }
-  out.redraw = n > 0 && out.diff > margin;
+  const { diff, se } = simEstimate(out.keep, out.redrawn);
+  out.diff = diff;
+  out.se = se;
+  out.redraw = out.keep.length > 0 && out.diff > margin;
   return out;
 }
 

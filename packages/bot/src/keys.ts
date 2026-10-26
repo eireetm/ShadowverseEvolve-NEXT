@@ -64,3 +64,62 @@ export function positionKey(view: PlayerView): string {
   };
   return serialize(view, signature);
 }
+
+/** The zones a side of a view lists card by card (the deck is a count, CR 4.1.2.1). */
+const LISTED_ZONES = ["hand", "field", "ex", "cemetery", "banished", "evolveDeck", "evolveZone", "raceZone", "driveZone", "triggerZone", "equipmentZone"] as const;
+
+/**
+ * What a card is as `view`'s player sees it, by id (undefined: not listed in the view): where it is (the side and the zone)
+ * and everything the view shows of it as positionKey reads a card — the cards it refers to (an evolved follower's evolve
+ * card, a linked card, a given ability's source) by definition — except its printing, which no rule reads; a hidden card is
+ * where it is and "?" (or the card its player remembers, CardInstance.knownBy). Two cards with one signature are the same
+ * card for every choice their player can make: picking either leaves positions positionKey can't tell apart but by the
+ * printing. positionKey itself is left as it is (the beam's and the plans' keys).
+ */
+export function cardSignatures(view: PlayerView): (id: string) => { signature: string; hidden: boolean } | undefined {
+  const cards = new Map<string, { card: Record<string, unknown>; where: string }>();
+  const list = (side: number, zone: string, xs: readonly unknown[]) => {
+    for (const x of xs) {
+      const c = x as Record<string, unknown>;
+      if (typeof c.id === "string") cards.set(c.id, { card: c, where: `${side}|${zone}` });
+    }
+  };
+  for (const [side, p] of view.players.entries()) {
+    if (p.leader) list(side, "leader", [p.leader]);
+    for (const zone of LISTED_ZONES) list(side, zone, p[zone]);
+  }
+  list(-1, "resolution", view.resolution);
+  const defOf = (id: string) => {
+    const c = cards.get(id)?.card;
+    return !c || c.hidden === true || typeof c.def !== "string" ? "?" : c.def;
+  };
+  const serialize = (value: unknown, key = ""): string => {
+    if (typeof value === "string") return JSON.stringify(isCardId(value) ? `#${defOf(value)}` : value);
+    if (Array.isArray(value)) {
+      const items = value.map((x) => serialize(x));
+      return `[${(UNORDERED.has(key) ? items.sort() : items).join(",")}]`;
+    }
+    if (value && typeof value === "object") {
+      const parts: string[] = [];
+      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+        if (v === undefined || k === "printing" || (k === "id" && typeof v === "string" && isCardId(v))) continue;
+        parts.push(`${JSON.stringify(k)}:${serialize(v, k)}`);
+      }
+      return `{${parts.join(",")}}`;
+    }
+    return JSON.stringify(value) ?? "null";
+  };
+  const memo = new Map<string, { signature: string; hidden: boolean }>();
+  return (id) => {
+    const got = memo.get(id);
+    if (got !== undefined) return got;
+    const at = cards.get(id);
+    if (!at) return undefined;
+    const c = at.card;
+    const known = c.known as { def?: unknown } | undefined;
+    const hidden = c.hidden === true;
+    const s = { signature: hidden ? `${at.where}|?${known && typeof known.def === "string" ? `:${known.def}` : ""}` : `${at.where}|${serialize(c)}`, hidden };
+    memo.set(id, s);
+    return s;
+  };
+}

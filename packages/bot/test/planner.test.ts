@@ -128,6 +128,18 @@ describe("PlannerBot in whole games", () => {
     }
   }, 600_000);
 
+  it("with the search fixes (choiceDedupe, commonRandom, lineSlots, tieKeepHand) too: legal, clean, the same game again", () => {
+    const fixes: PlannerBotOptions = { choiceDedupe: true, commonRandom: true, lineSlots: { lines: 3, margin: 3, key: "set" }, tieKeepHand: 0.01 };
+    const small: PlannerBotOptions = { ...MEDIUM, lookahead: 2, samples: 2, beamWidth: 4, maxSimulations: 200, innerSimulations: 100, ...fixes };
+    const run = () => {
+      const bot = new PlannerBot(engine, { seed: "fixes", ...small });
+      const answers = playGame(newGame("planner-fixes"), [botPlayer(bot), botPlayer(new GreedyBot(engine, { seed: "g" }))]);
+      expect(clean(bot)).toEqual([0, 0, null]);
+      return answers;
+    };
+    expect(run()).toEqual(run());
+  }, 600_000);
+
   it("is reproducible: same seeds, same game", () => {
     const run = () => playGame(newGame("planner-repro"), [botPlayer(new PlannerBot(engine, { seed: "x" })), botPlayer(new PlannerBot(engine, { seed: "y", ...HARD }))]);
     expect(run()).toEqual(run());
