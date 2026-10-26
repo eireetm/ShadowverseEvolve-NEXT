@@ -1,7 +1,8 @@
 /**
  * Bots against each other: npm run bot:arena -- [games] [a] [b] [options]
  *
- * A bot is a level (easy | medium | hard | medium-beta), one of sve-server's AIs imitated (sve-fool, sve-good,
+ * A bot is a level (easy | medium | hard | medium-beta), a preset (medium-next | medium-v2 | hard-next: the GUI's Bot-Medium,
+ * Bot-Medium v2 and Bot-Hard, packages/bot levels.ts createPresetBot), one of sve-server's AIs imitated (sve-fool, sve-good,
  * sve-planner; tools/sve-server-ais), or easy / medium / hard with its evaluation swapped, to check the evaluation interface:
  * "medium:identity" plays with the hand-written evaluation passed in from outside (exactly as medium does), and
  * "medium:negated" scores its own positions the other way round (it plays to lose). "medium2" is Medium searching two turns
@@ -25,9 +26,10 @@
  *                      report.json (the results; the same games give the same file) and timing.json
  *   --replays N        with --out: the first N games also as replays the GUI opens (replays/)
  * Prints A's score with a 95% interval (by pairs, which takes the luck of the deal out), A's score going first and second,
- * the first player's win rate, the game length, A's score per deck, and how long each bot thinks. A game that throws (an
- * engine error) is kept as unfinished with its error; games missing at the end (a process that died) are listed, and the
- * command then exits with 1.
+ * the first player's win rate, the game length, A's score per deck, and how long each bot thinks (per decision, and per turn
+ * of its own: the setup's decisions, CR 6.2, belong to no turn, though the engine's active player is seat 0 then). A game
+ * that throws (an engine error) is kept as unfinished with its error; games missing at the end (a process that died) are
+ * listed, and the command then exits with 1.
  */
 import { execSync, fork } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -36,7 +38,22 @@ import { constants, gunzipSync, gzipSync } from "node:zlib";
 import { createEngine, type Answer, type Decision, type DeckList, type PlayerId } from "../packages/core/src";
 import { ALL_CARDS, ALL_SCRIPTS } from "../packages/core/src/sets";
 import { withDataTexts } from "./lib/card-texts";
-import { BOT_LEVELS, MEDIUM_OPTIONS, PlannerBot, createBot, evaluate, weightsEvaluator, type Bot, type BotEvaluation, type BotLevel, type BotStats, type EvalWeights } from "../packages/bot/src";
+import {
+  BOT_LEVELS,
+  BOT_PRESETS,
+  MEDIUM_OPTIONS,
+  PlannerBot,
+  createBot,
+  createPresetBot,
+  evaluate,
+  weightsEvaluator,
+  type Bot,
+  type BotEvaluation,
+  type BotLevel,
+  type BotPreset,
+  type BotStats,
+  type EvalWeights,
+} from "../packages/bot/src";
 import { engineFingerprint } from "../packages/gui/fingerprint";
 import { DECK_SETS, ROOT, allSampleDecks, deckSet, orderedMatchups, sampleDeck, seriesGame, type NamedDeck } from "./rl/series";
 import { SVE_SERVER_AIS, createSveServerBot, type SveServerAI } from "./sve-server-ais";
@@ -72,7 +89,7 @@ function specProblem(spec: string): string | null {
   const m = SPEC.exec(spec);
   if (!m) return `not a bot: ${spec}`;
   const [, level, variant] = m;
-  if (![...BOT_LEVELS, ...SVE_SERVER_AIS, "medium2"].includes(level as never)) return `no such level: ${level}`;
+  if (![...BOT_LEVELS, ...BOT_PRESETS, ...SVE_SERVER_AIS, "medium2"].includes(level as never)) return `no such level: ${level}`;
   if (variant?.startsWith("leaf=")) {
     if (level !== "medium2") return "leaf=<weights.json> works with medium2 only";
     const file = variant.slice(5);
@@ -100,16 +117,22 @@ function variantEvaluation(variant: string | undefined): BotEvaluation {
 function makeBot(engine: Engine, spec: string, seed: string): Bot {
   const [, level, variant] = SPEC.exec(spec)!;
   if ((SVE_SERVER_AIS as readonly string[]).includes(level!)) return createSveServerBot(engine, level as SveServerAI);
+  if ((BOT_PRESETS as readonly string[]).includes(level!)) return createPresetBot(engine, level as BotPreset, seed);
   if (level === "medium2") {
     const leaf = variant?.startsWith("leaf=") ? { replyEvaluator: weightsEvaluator(leafWeights(variant.slice(5))) } : {};
     return new PlannerBot(engine, { ...MEDIUM2, ...leaf, seed });
   }
   return createBot(engine, level as BotLevel, seed, 1, variantEvaluation(variant));
 }
-/** The GUI's controller for a replay's seat (only shown while watching). */
+/**
+ * The GUI's controller for a replay's seat (only shown while watching): a preset as the level that plays it there. Only a
+ * label: createBot's medium, medium-beta and hard are labelled Bot-Medium and Bot-Hard too, though the GUI's levels now
+ * play the presets (the replay gives the recorded answers, whoever gave them).
+ */
 const controllerOf = (spec: string) => {
   const level = SPEC.exec(spec)![1]!;
-  return level === "easy" || level.startsWith("sve-") ? "greedy" : level === "hard" ? level : "medium";
+  if (level === "medium-v2") return level;
+  return level === "easy" || level.startsWith("sve-") ? "greedy" : level === "hard" || level === "hard-next" ? "hard" : "medium";
 };
 
 // ---- Decks and the series ----
@@ -217,7 +240,8 @@ function playGame(engine: Engine, index: number): GameRecord {
       const ms = performance.now() - t0;
       think[who].ms += ms;
       think[who].decisions += 1;
-      if (game.state.activePlayer === player) {
+      // A turn of its own: the setup (the turn order, the mulligans: CR 6.2) is no one's turn.
+      if (game.state.phase !== "setup" && game.state.activePlayer === player) {
         if (turn.number !== game.state.turn) {
           if (turn.number >= 0) think[turn.who].turns.push(turn.ms);
           turn = { number: game.state.turn, ms: 0, who };
@@ -270,7 +294,7 @@ if (flag("--worker")) {
 
 // ---- The main process: check, play, report ----
 
-const LEVELS = [...BOT_LEVELS, ...SVE_SERVER_AIS].join("|");
+const LEVELS = [...BOT_LEVELS, ...BOT_PRESETS, ...SVE_SERVER_AIS].join("|");
 const fail = (message: string) => {
   console.error(message);
   console.error(

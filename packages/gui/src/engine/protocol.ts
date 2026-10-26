@@ -24,10 +24,13 @@ export type { TurnClockView } from "./turn-clock";
 /**
  * Who plays a seat: a person at this screen, a bot run by the worker, or a person at another program (online play:
  * their answers come as "remoteInput"). The bots: "greedy" is Bot-Easy (the name it had
- * before the levels, kept for saved settings and replays), "medium" plans its turn fairly, "hard" plans reading every
- * hidden card, "random" answers at random (testing). Which bots read hidden cards is said in the README only, not in the GUI.
+ * before the levels, kept for saved settings and replays), "medium" plans its turn fairly, "medium-v2" (Bot-Medium v2)
+ * plans fairly two turns ahead, "hard" plans reading every hidden card, "random" answers at random (testing). The planning
+ * levels play @sve/bot's presets (game-host.ts CONTROLLER_PRESETS): a saved "medium" or "hard" plays its level's current
+ * preset, whatever played it when the file was saved.
+ * Which bots read hidden cards is said in the README only, not in the GUI.
  */
-export type SeatController = "human" | "greedy" | "medium" | "hard" | "random" | "remote";
+export type SeatController = "human" | "greedy" | "medium" | "medium-v2" | "hard" | "random" | "remote";
 
 /**
  * A seat's controller as an older version's file may name it (saved settings, a replay, a bug report file): Bot-Hard beta

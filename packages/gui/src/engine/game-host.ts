@@ -1,7 +1,7 @@
 // The game host: runs one game at a time in the engine worker — the core session, the bots, the list of inputs (for undo
 // and replays), and what the GUI is shown: views, the pending decision and the log. No worker or DOM API here, so tests
 // run it in Node. Nothing in it decides rules: legal answers come from the core's decisions.
-import { createBot } from "@sve/bot";
+import { createBot, createPresetBot, type BotPreset } from "@sve/bot";
 import {
   ALL_AUTO_RESOLVABLE,
   defaultAnswer,
@@ -83,17 +83,42 @@ interface Bot {
 }
 
 /**
- * A bot for a seat, seeded from the game (the same game and inputs give the same bot answers). `effort` scales how much the
- * planning bots search (GameHostOptions.botEffort).
+ * The preset each planning level plays (@sve/bot createPresetBot; since 2026-10-26, when they beat the levels they replace
+ * in paired games): Bot-Medium the one-turn Medium with the expert fixes (medium-next), Bot-Medium v2 the two-turn fair bot
+ * with a wider search and every fix (medium-v2), Bot-Hard the two-turn Hard with the fixes and a wider root search
+ * (hard-next). createBot's own "medium" and "hard" stay as they were: other tools compare against them.
  */
-function makeBot(engine: Engine, controller: SeatController, seed: string, seat: PlayerId, effort: number): Bot | null {
-  if (controller === "greedy") return createBot(engine, "easy", `${seed}:greedy:${seat}`);
-  if (controller === "medium" || controller === "hard") return createBot(engine, controller, `${seed}:${controller}:${seat}`, effort);
-  if (controller === "random") {
-    const rng = seedRng(`${seed}:random:${seat}`);
-    return { decide: (game) => randomAnswer(rng, game.decision!) };
+export const CONTROLLER_PRESETS = { medium: "medium-next", "medium-v2": "medium-v2", hard: "hard-next" } as const satisfies Partial<Record<SeatController, BotPreset>>;
+
+/** What a seat's bot is made of (makeBot): Bot-Easy, a preset at an effort, the random bot, or none (a person). */
+export type BotRecipe =
+  | { kind: "easy"; seed: string }
+  | { kind: "preset"; preset: BotPreset; seed: string; effort: number }
+  | { kind: "random"; seed: string }
+  | null;
+
+/**
+ * The bot for a seat's controller, seeded from the game and the seat (the same game and inputs give the same bot answers;
+ * a level's seed is `${seed}:${controller}:${seat}`, as before the presets). `effort` scales how much the presets search
+ * (GameHostOptions.botEffort: below 1 the two-turn ones look one turn ahead); Bot-Easy has no search to scale.
+ */
+export function botRecipe(controller: SeatController, seed: string, seat: PlayerId, effort: number): BotRecipe {
+  if (controller === "greedy") return { kind: "easy", seed: `${seed}:greedy:${seat}` };
+  if (controller === "medium" || controller === "medium-v2" || controller === "hard") {
+    return { kind: "preset", preset: CONTROLLER_PRESETS[controller], seed: `${seed}:${controller}:${seat}`, effort };
   }
+  if (controller === "random") return { kind: "random", seed: `${seed}:random:${seat}` };
   return null;
+}
+
+/** A bot for a seat (botRecipe). */
+function makeBot(engine: Engine, controller: SeatController, seed: string, seat: PlayerId, effort: number): Bot | null {
+  const recipe = botRecipe(controller, seed, seat, effort);
+  if (recipe === null) return null;
+  if (recipe.kind === "easy") return createBot(engine, "easy", recipe.seed);
+  if (recipe.kind === "preset") return createPresetBot(engine, recipe.preset, recipe.seed, recipe.effort);
+  const rng = seedRng(recipe.seed);
+  return { decide: (game) => randomAnswer(rng, game.decision!) };
 }
 
 /** How an ability reads on a button (the GUI words it). `engine` tells an advanced ability's icon from its card's text. */
@@ -197,7 +222,7 @@ export function firstPlayerOf(options: Pick<GameOptions, "seed" | "turnOrder">):
 }
 
 /** The engine's configuration for a game's options (pacing and testing choices; the rules are the same). */
-function configOf(options: GameOptions) {
+export function configOf(options: GameOptions) {
   const autoResolve = ALL_AUTO_RESOLVABLE.filter(
     (type) => !(type === "mainPhase" && options.showEveryMainPhase) && !(type === "quick" && options.askEveryQuickWindow),
   );

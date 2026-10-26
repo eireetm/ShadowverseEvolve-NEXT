@@ -46,6 +46,13 @@ test("a phone: the menus fit, a game is played by tapping, the card panel is a d
   const hint = (await page.getByTestId("setup-controller-hint").boundingBox())!;
   expect(hint.x + hint.width).toBeLessThanOrEqual(915);
   expect(await page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")).toBe(true);
+  // Bot-Medium v2's is the longest; then back to the level this game is played against.
+  const opponent = page.getByTestId("setup-controller-1");
+  await opponent.selectOption("medium-v2");
+  const longest = (await page.getByTestId("setup-controller-hint").boundingBox())!;
+  expect(longest.x + longest.width).toBeLessThanOrEqual(915);
+  expect(await page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")).toBe(true);
+  await opponent.selectOption("medium");
   await page.getByTestId("start-game").tap();
   await expect(page.locator(".sve-table[data-compact]")).toBeVisible();
   // No left column: the table has the whole width; the drawer opens from its button and hides again.
