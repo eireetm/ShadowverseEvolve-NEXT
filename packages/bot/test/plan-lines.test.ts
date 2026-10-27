@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createEngine, script, type Answer, type GameSession } from "../src/core";
-import { PlannerBot } from "../src";
+import { MEDIUM_OPTIONS, PlannerBot } from "../src";
 import { attacksOf, keepsMoreCards, lineKey, lineSlots, LINE_SLOT_DEFAULTS, type LineNode } from "../src/plan-lines";
 import { drive, testFollower, testSpell } from "../../core/src/testing";
 
@@ -161,5 +161,57 @@ describe("plan lines", () => {
       const b = (new PlannerBot(cards, { ...explore, tieKeepHand: 0.01 }) as unknown as Pick).pick([playedHere, kept], [5, 5], turn);
       expect(b).toBe(a);
     }
+  });
+
+  it("a cut's bound is no tie: a tied plan's cut sample is played exactly before the hands are compared", () => {
+    // The planner's own lookAhead and pick; only turnValue is a stand-in keeping its level-1 loop (the worst for us of the
+    // opponent's replies, cut once alpha ≥ beta). A: A played (no card kept), a sure win in all 3 samples. B: A kept (one
+    // card), the same in samples 0 and 1; in sample 2 the opponent's second reply stops it (-50). B's sample 2 is cut at
+    // the first reply (alpha = the best's total − B's so far = 1e6): its bound ties with A's 1e6 without being B's value.
+    const t = drive(cards, { me: { hand: ["A"], deck: many(10, "FILLER"), playPoints: 1, maxPlayPoints: 1 }, opp: { deck: many(10, "FILLER") } });
+    const game = t.game;
+    const turn = game.state.turn;
+    const W = 1_000_000;
+    type N = { session: GameSession };
+    interface I {
+      node(session: GameSession, parent: null, answer: null, me: number, turn: number, stop: "decide"): N;
+      expand(node: N, answer: Answer, me: number, turn: number, world: () => GameSession): N;
+      lookAhead(c: N[], game: GameSession, me: number, turn: number, seed: string, world: () => GameSession, exact?: boolean): number[];
+      pick(c: N[], values: number[], turn: number): N;
+      turnValue: (session: unknown, me: unknown, next: unknown, turn: unknown, level: unknown, alpha: number, beta: number, before: unknown, seed: string) => number;
+    }
+    const run = (o: { tieKeepHand?: number; exact?: boolean; stopped?: boolean }) => {
+      const planner = new PlannerBot(cards, { ...MEDIUM_OPTIONS, lethalSearch: 0, lookahead: 2, samples: 3, seed: "tb", commonRandom: true, ...(o.tieKeepHand ? { tieKeepHand: o.tieKeepHand } : {}) });
+      const bot = planner as unknown as I;
+      const seed = "tb:0";
+      const world = () => game.determinized(0, seed);
+      const root = bot.node(world(), null, null, 0, turn, "decide");
+      const d = root.session.decision!;
+      const action = d.type === "mainPhase" ? d.actions.find((a) => a.type === "play")! : null;
+      const playA = bot.expand(root, { type: "mainPhase", action: action! }, 0, turn, world);
+      const hand = (s: GameSession) => s.reader().cards(0, "hand").length;
+      bot.turnValue = function (session: unknown, _me: unknown, _next: unknown, _turn: unknown, _level: unknown, alpha: number, beta: number, _before: unknown, s: string) {
+        const replies = hand(session as GameSession) === 1 && s.endsWith(":w2") && o.stopped !== false ? [W, -50] : [W, W];
+        let value = Infinity;
+        for (const v of replies) {
+          value = Math.min(value, v);
+          beta = Math.min(beta, v);
+          if (alpha >= beta) break;
+        }
+        return value;
+      };
+      const candidates = [playA, root];
+      const values = bot.lookAhead(candidates, game, 0, turn, seed, world, o.exact ?? false);
+      const chosen = bot.pick(candidates, values, turn);
+      return { values, chosen: chosen === playA ? "A" : "B", stats: { ...planner.tieStats } };
+    };
+    // Without the tie-break: the first of the best (A). Without cuts: B's value is its own (two wins and -50).
+    expect(run({})).toMatchObject({ values: [W, W], chosen: "A" });
+    expect(run({ tieKeepHand: 0.01, exact: true })).toMatchObject({ chosen: "A" });
+    expect(run({ tieKeepHand: 0.01, exact: true }).values[1]).toBeCloseTo((2 * W - 50) / 3);
+    // With it: B's bound ties with A, so its cut sample is played exactly first (666,650): A, as without cuts.
+    expect(run({ tieKeepHand: 0.01 })).toEqual({ values: [W, W], chosen: "A", stats: { comparisons: 1, tied: 0, recomputed: 1, changed: 0 } });
+    // A cut sample whose exact value is the bound: a real tie, which goes to the plan keeping the card.
+    expect(run({ tieKeepHand: 0.01, stopped: false })).toEqual({ values: [W, W], chosen: "B", stats: { comparisons: 1, tied: 1, recomputed: 1, changed: 1 } });
   });
 });

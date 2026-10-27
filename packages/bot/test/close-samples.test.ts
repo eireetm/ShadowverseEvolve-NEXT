@@ -28,7 +28,7 @@ function rigged(o: Partial<CloseSampleOptions>, raw: Record<string, number[]>, m
   const b = bot as unknown as Internals;
   const plans: Plan[] = Object.keys(raw).map((id) => ({ id }));
   const rows = new Map(plans.map((p, index) => [p, { index, values: raw[p.id]!.map((value, w) => ({ value, bound: bound[p.id] === w })) }]));
-  b.look = { seed: "s", game: null, me: 0, turn: 3, world: null, worlds: 3, rows, memo: new WeakMap() };
+  b.look = { seed: "s", game: null, me: 0, turn: 3, world: null, worlds: 3, rows, memo: new WeakMap(), refined: new WeakMap(), ties: new WeakMap() };
   const calls: string[] = [];
   b.sampleValue = (plan, _index, w) => {
     calls.push(`${plan.id}:${w}`);

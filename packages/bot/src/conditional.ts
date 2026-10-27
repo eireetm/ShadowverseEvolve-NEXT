@@ -44,8 +44,10 @@
  * the field (a spell, a play option like Accelerate) has no Fanfare to judge. With `evolve` (CondParams, off by default) an
  * evolve answer of ours in our main phase (CR 8.3, 12.2) opens a window the same way, for the follower evolved (the same id on
  * the field, CR 5.16.2) and the evolved card's On Evolve abilities (CR 12.6; On Super-Evolve, 12.17, when it super-evolved),
- * judged as Fanfares are but for the gates (the card table's gates are a Fanfare's; no evolve card of the decks measured has a
- * declared condition or a gate, only required targets).
+ * judged as Fanfares are but for the gates: the evolve window doesn't read the card table's gates. Of the 200 On Evolve and
+ * On Super-Evolve abilities of the 57 decks measured, none has a trigger restriction or a declared condition (68 have
+ * required targets), and one has a gate in its effect (BP22-006: only its bonus is under it, the token it puts always
+ * comes, so the window couldn't call it wasted); a deck with such gates would need them read here.
  *
  * Fairness: everything is read in the planner's own simulated copies (a sample of what the bot knows, determinize; a
  * cheating planner: the real game), the gates in the bot's view of that copy. Deterministic: no randomness, no clocks.

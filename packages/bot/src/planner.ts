@@ -163,7 +163,8 @@ export interface PlannerBotOptions {
   lineSlots?: LineSlotOptions;
   /**
    * The comparison's tie-break: among the plans whose values are within this many points of the best, the one keeping the
-   * most cards in hand (then the higher value, then the first). Exploring is unchanged. Default: 0, off.
+   * most cards in hand (then the higher value, then the first). A tied plan whose two-turn value has a sample cut by
+   * alpha-beta (a bound, not its value) is played there exactly first. Exploring is unchanged. Default: 0, off.
    */
   tieKeepHand?: number;
   /**
@@ -272,6 +273,11 @@ export class PlannerBot {
   readonly macroStats = { searches: 0, layers: 0, actions: 0, subExpansions: 0, finishedFast: 0, actionCut: 0, budgetOut: 0, decisionCut: 0 };
   /** closeSamples: comparisons looked at, those made longer, samples added, cut samples played again exactly, choices changed. */
   readonly closeStats = { comparisons: 0, refined: 0, extraSamples: 0, recomputed: 0, changed: 0 };
+  /**
+   * tieKeepHand: comparisons it broke ties in, those with another plan within the tie, cut samples of tied plans played
+   * again exactly (exactTies), and choices it changed (another plan than the first of the best it was given).
+   */
+  readonly tieStats = { comparisons: 0, tied: 0, recomputed: 0, changed: 0 };
   private readonly evaluator: Evaluator;
   private readonly replyEvaluator: Evaluator;
   private readonly modelEvaluator: Evaluator | undefined;
@@ -321,7 +327,10 @@ export class PlannerBot {
   private readonly replyLethalOpp: number;
   private readonly replyLethalKey: "view" | "position";
   private readonly closeSamples: CloseSampleOptions | null;
-  /** closeSamples: the latest comparison's values per plan and sample (raw: before charges) and where it was made. */
+  /**
+   * closeSamples, tieKeepHand: the latest comparison's values per plan and sample (raw: before charges) and where it was
+   * made; dropped when a plan is carried out (it holds the comparison's games).
+   */
   private look: Look | null = null;
   /** The node whose decision the beam is asking branches() for (choiceDedupe, commonRandom: its view and key). */
   private at: Node | null = null;
@@ -877,8 +886,9 @@ export class PlannerBot {
     // Candidates charged differently are compared without cuts: a cut is a bound on the raw value, not on the charged one.
     if (this.cond !== null && !exact && this.cond.differ(candidates)) exact = true;
     const worlds = this.cheat ? 1 : Math.max(1, this.samples);
-    // closeSamples: each plan's value in each sample kept for pick (refine), with where the comparison was made.
-    const look = this.closeSamples !== null && !this.cheat ? this.lookAt(game, me, turn, seed, world, worlds) : null;
+    // closeSamples, tieKeepHand: each plan's value in each sample kept for pick (refine; a tie's cut samples played again
+    // exactly, exactTies), with where the comparison was made.
+    const look = (this.closeSamples !== null && !this.cheat) || this.tieKeepHand > 0 ? this.lookAt(game, me, turn, seed, world, worlds) : null;
     let bestTotal = -Infinity;
     const totals: number[] = [];
     for (const [i, plan] of candidates.entries()) {
@@ -917,7 +927,7 @@ export class PlannerBot {
    */
   private lookAt(game: GameSession, me: PlayerId, turn: number, seed: string, world: () => GameSession, worlds: number): Look {
     if (this.look !== null && this.look.seed === seed && this.look.game === game) return this.look;
-    this.look = { seed, game, me, turn, world, worlds, rows: new Map(), memo: new WeakMap() };
+    this.look = { seed, game, me, turn, world, worlds, rows: new Map(), memo: new WeakMap(), refined: new WeakMap(), ties: new WeakMap() };
     return this.look;
   }
 
@@ -932,7 +942,8 @@ export class PlannerBot {
   private refine(candidates: Node[], values: number[], best: number): { values: number[]; best: number } {
     const o = this.closeSamples!;
     const look = this.look;
-    if (look === null || look.worlds >= o.max) return { values, best };
+    // A cheating planner has one sample, the real game: none to add (its comparison is kept for tieKeepHand only).
+    if (look === null || this.cheat || look.worlds >= o.max) return { values, best };
     const known = look.memo.get(values);
     if (known) return known;
     const half = DEFAULT_WEIGHTS.win / 2;
@@ -975,6 +986,7 @@ export class PlannerBot {
     }
     if (close.length === 0) {
       const out = changed.size > 0 ? this.reranked(values, [...changed], now) : unchanged;
+      if (changed.size > 0) look.refined.set(out.values, changed);
       look.memo.set(values, out);
       return out;
     }
@@ -990,6 +1002,7 @@ export class PlannerBot {
     this.closeStats.refined += 1;
     const out = this.reranked(values, [...changed], now);
     if (out.best !== best) this.closeStats.changed += 1;
+    look.refined.set(out.values, changed);
     look.memo.set(values, out);
     return out;
   }
@@ -1003,12 +1016,12 @@ export class PlannerBot {
     return { values: out, best };
   }
 
-  /** closeSamples: one plan's value in sample `w` of a comparison, as lookAhead scores it (no cut). */
+  /** closeSamples, tieKeepHand: one plan's value in sample `w` of a comparison, as lookAhead scores it (no cut). */
   private sampleValue(plan: Node, index: number, w: number, look: Look): number {
     const { game, me, turn, seed, world } = look;
     if (this.commonRandom) this.stream = { base: `${seed}:w${w}`, models: 0 };
     try {
-      const session = w === 0 ? this.copy(plan, world) : this.replayPlan(plan, game.determinized(me, `${seed}:w${w}`), me, turn);
+      const session = w === 0 ? this.copy(plan, world) : this.replayPlan(plan, this.cheat ? game.clone() : game.determinized(me, `${seed}:w${w}`), me, turn);
       return this.turnValue(session, me, opponentOf(me), turn, 1, -Infinity, Infinity, null, this.commonRandom ? `${seed}:w${w}` : `${seed}:w${w}:p${index}`);
     } catch (e) {
       this.stats.simulationFailures += 1;
@@ -1138,6 +1151,9 @@ export class PlannerBot {
 
   /** Take the plan that ends at `choice` as the current one: its first answer now, the next ones while the game goes as planned. */
   private carryOut(choice: Node, turn: number, me: PlayerId): Answer {
+    // The search is over: what it kept of its games (the comparison's samples, the beam's node) isn't kept to the next one.
+    this.look = null;
+    this.at = null;
     // drawFirst: the same plan with an action that draws moved to its front, when it still ends where it did (infoFirst).
     if (this.drawFirst) choice = this.infoFirst(choice, turn, me) ?? choice;
     const path: Node[] = [];
@@ -1578,13 +1594,69 @@ export class PlannerBot {
     return this.stream !== null ? `${this.stream.base}:q:${this.stream.models++}` : `${this.seed}:model:${this.models++}`;
   }
 
-  /** tieKeepHand's tie-break (plan-lines.ts keepsMoreCards): our cards in hand where each plan ends. */
+  /**
+   * tieKeepHand's tie-break (plan-lines.ts keepsMoreCards): our cards in hand where each plan ends, compared on values, not
+   * bounds (exactTies first: a cut's bound can tie with the best's value without being the plan's).
+   */
   private keepsMore(candidates: Node[], values: number[], best: number): number {
     let me: PlayerId | undefined;
     for (let n: Node | null = candidates[best] ?? null; n; n = n.parent) if (n.parent === null) me = n.session.decision?.player;
     if (me === undefined) return best;
     const player = me;
-    return keepsMoreCards(values, best, this.tieKeepHand, (i) => handAt(candidates[i]!.session, player));
+    const exact = this.exactTies(candidates, values, best);
+    const pick = keepsMoreCards(exact.values, exact.best, this.tieKeepHand, (i) => handAt(candidates[i]!.session, player));
+    const top = exact.values[exact.best]!;
+    this.tieStats.comparisons += 1;
+    if (exact.values.some((v, i) => i !== exact.best && v >= top - this.tieKeepHand)) this.tieStats.tied += 1;
+    if (pick !== best) this.tieStats.changed += 1;
+    return pick;
+  }
+
+  /**
+   * tieKeepHand at pick: a plan within the tie of the best whose value has a cut sample — lookAhead's alpha-beta returns a
+   * bound there (the true value is at or below it, and the bound at most the best's total: a plan cut so often ties with
+   * the best exactly, a sure win of 1e6 in every sample but a cut one included) — is played there exactly first
+   * (sampleValue: the comparison's own seeds, with commonRandom the same random numbers), its value moving by its raw
+   * average's change (its charges, and the floor of a plan that can still win, stay as they were); again with the new best
+   * until no plan within the tie of it has a cut sample. The plans refine changed have none. Returns the values and the
+   * best (the first of the highest); the same arrays when no tied plan had a cut sample. Memoized per values array.
+   */
+  private exactTies(candidates: Node[], values: number[], best: number): { values: number[]; best: number } {
+    const look = this.look;
+    if (look === null) return { values, best };
+    const known = look.ties.get(values);
+    if (known) return known;
+    const floor = -DEFAULT_WEIGHTS.win / 2 + 1;
+    const exact = new Set<number>(look.refined.get(values));
+    let out = values;
+    for (;;) {
+      const top = out[best]!;
+      if (!Number.isFinite(top)) break;
+      const todo: number[] = [];
+      for (let i = 0; i < out.length; i++) {
+        if (exact.has(i) || !(out[i]! >= top - this.tieKeepHand)) continue;
+        const row = look.rows.get(candidates[i]!);
+        if (row !== undefined && row.values.length === look.worlds && row.values.some((x) => x.bound)) todo.push(i);
+      }
+      if (todo.length === 0) break;
+      if (out === values) out = [...values];
+      for (const i of todo) {
+        exact.add(i);
+        const row = look.rows.get(candidates[i]!)!;
+        const raw = row.values.map((x, w) => {
+          if (!x.bound) return x.value;
+          this.tieStats.recomputed += 1;
+          return this.sampleValue(candidates[i]!, row.index, w, look);
+        });
+        const moved = out[i]! + mean(raw) - mean(row.values.map((x) => x.value));
+        out[i] = candidates[i]!.unsure ? Math.max(moved, floor) : moved;
+      }
+      best = 0;
+      for (let i = 1; i < out.length; i++) if (out[i]! > out[best]!) best = i;
+    }
+    const result = { values: out, best };
+    look.ties.set(values, result);
+    return result;
   }
 
   /** How the models score a position (the opponent's plans in a two-turn search are ranked as their model would). */
@@ -1661,6 +1733,10 @@ interface Look {
   rows: Map<Node, LookRow>;
   /** refine's results by the values array it was given. */
   memo: WeakMap<number[], { values: number[]; best: number }>;
+  /** refine's output arrays: the plans whose values it changed (each cut sample of theirs played again exactly). */
+  refined: WeakMap<number[], ReadonlySet<number>>;
+  /** exactTies' results by the values array it was given. */
+  ties: WeakMap<number[], { values: number[]; best: number }>;
 }
 
 /** A plan's place in lookAhead's list (its seeds without commonRandom) and its values by sample (bound: maybe a cut's bound). */
