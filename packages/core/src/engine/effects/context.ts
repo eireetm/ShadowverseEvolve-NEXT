@@ -442,6 +442,11 @@ export interface EffectInit {
   lookBackNoDamage?: boolean;
   /** The ability works on the field (CR 10.3.5): the damage it deals is dealt from the field (DamageSource.onField). */
   fieldAbility?: boolean;
+  /**
+   * A play option's process paid where only an amulet its Earth Rite empties makes room for the card on the field
+   * (CR 13.3.3.2, 10.6.2.6; flow/play-card.ts): payEarthRite takes only such an amulet.
+   */
+  earthRiteMustEmpty?: boolean;
 }
 
 export function makeEffectContext(g: G, init: EffectInit): EffectContext {
@@ -919,7 +924,7 @@ export function makeEffectContext(g: G, init: EffectInit): EffectContext {
       });
     },
     *payEarthRite(count) {
-      yield* payEarthRite(g, ctrl, count, selfIfPresent());
+      yield* payEarthRite(g, ctrl, count, selfIfPresent(), { emptying: init.earthRiteMustEmpty === true });
     },
     *dealDividedDamage(targets, total) {
       const present = targets.filter((id) => {

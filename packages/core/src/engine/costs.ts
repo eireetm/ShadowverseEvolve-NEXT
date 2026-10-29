@@ -8,7 +8,7 @@ import type { Proc } from "./runtime/proc";
 import { getCard, type Env } from "./state/access";
 import { activeScript, characteristics, passiveSources } from "./state/characteristics";
 import { effectInForce } from "./state/effects";
-import { moveCards } from "./state/zones";
+import { moveCards, withCardInResolution } from "./state/zones";
 import { restrictionCount } from "./state/restrictions";
 import { thisTurn } from "./state/turn-counts";
 import { makeReader } from "./query";
@@ -49,6 +49,15 @@ export function playCost(g: Env, card: CardId, player: PlayerId, option: PlayOpt
   return Math.max(0, cost);
 }
 
+/**
+ * CR 10.6.2.1 / 10.6.2.5 — the play points playing `card` now takes: its playCost once it is in the resolution zone, where
+ * the cost is determined (flow/play-card.ts checks the play there too). A card counting the cards of the zone it is played
+ * from doesn't count itself (BP18-046 ruling), so this may differ from playCost of the card where it is.
+ */
+export function playCostAsPlayed(g: Env, card: CardId, player: PlayerId, option: PlayOption | null = null, setTo?: number): number {
+  return withCardInResolution(g, card, player, (at) => playCost(at, card, player, option, setTo));
+}
+
 /** The "next card you play this turn" modifiers of `player` that apply to `card`. */
 export function nextPlayModifiersFor(g: Env, card: CardId, player: PlayerId): NextPlayModifier[] {
   if (g.state.nextPlay.length === 0) return [];
@@ -61,20 +70,26 @@ export function nextPlayModifiersFor(g: Env, card: CardId, player: PlayerId): Ne
   });
 }
 
-/** CR 13.3.3.2 — amulets with Stack on the field that have at least `count` Stack counters. */
-export function earthRiteSources(g: Env, player: PlayerId, count = 1): CardId[] {
+/**
+ * CR 13.3.3.2 — amulets with Stack on the field that have at least `count` Stack counters. `emptying`: only those paying it
+ * empties (exactly `count`), which go to the cemetery as the cost is paid and so free their field slot (10.6.2.6).
+ */
+export function earthRiteSources(g: Env, player: PlayerId, count = 1, opts: { emptying?: boolean } = {}): CardId[] {
   return makeReader(g)
     .stackCards(player)
-    .filter((id) => (getCard(g.state, id).counters.stack ?? 0) >= count);
+    .filter((id) => {
+      const stack = getCard(g.state, id).counters.stack ?? 0;
+      return opts.emptying ? stack === count : stack >= count;
+    });
 }
 
 /**
  * CR 13.3.3.2 — pay Earth Rite: remove `count` Stack counters from one amulet with Stack on
  * the player's field (the player picks which); if its last counter was removed, it is put
- * into its owner's cemetery.
+ * into its owner's cemetery. `emptying`: only from an amulet it empties (earthRiteSources).
  */
-export function* payEarthRite(g: G, player: PlayerId, count: number, source: CardId | null): Proc<void> {
-  const sources = earthRiteSources(g, player, count);
+export function* payEarthRite(g: G, player: PlayerId, count: number, source: CardId | null, opts: { emptying?: boolean } = {}): Proc<void> {
+  const sources = earthRiteSources(g, player, count, opts);
   if (sources.length === 0) throw new EngineError("Earth Rite cannot be paid");
   const [amulet] = yield* selectCards(g, player, "cost", sources, 1, 1, source);
   const c = getCard(g.state, amulet!);

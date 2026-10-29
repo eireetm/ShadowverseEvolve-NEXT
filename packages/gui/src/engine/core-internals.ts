@@ -6,16 +6,17 @@ import { EQUIP_PREFIX } from "../../../core/src/engine/abilities/equipment";
 import { GRANT_PREFIX } from "../../../core/src/engine/abilities/grants";
 import { KEYWORD_DEF_PREFIX } from "../../../core/src/engine/abilities/keyword-abilities";
 import { getAbility } from "../../../core/src/engine/abilities/play-ability";
-import { playCost } from "../../../core/src/engine/costs";
+import { playCostAsPlayed } from "../../../core/src/engine/costs";
 import { cardsToPlayFrom } from "../../../core/src/engine/flow/play-card";
 import type { G } from "../../../core/src/engine/runtime/context";
 
 /**
  * CR 10.4.4.1 — the play points `player` would pay to play `card` normally now: its cost with the increases and decreases in
- * force, not a play option's (the core's engine/costs.ts). The card's cost itself doesn't change.
+ * force, not a play option's, reckoned with the card in the resolution zone as the core does when it plays it (CR 10.6.2.1,
+ * 10.6.2.5; the core's engine/costs.ts). The card's cost itself doesn't change.
  */
 export function normalPlayCost(engine: Engine, game: GameSession, card: CardId, player: PlayerId): number {
-  return playCost({ state: game.state, db: engine.db, scripts: engine.scripts }, card, player);
+  return playCostAsPlayed({ state: game.state, db: engine.db, scripts: engine.scripts }, card, player);
 }
 
 /**

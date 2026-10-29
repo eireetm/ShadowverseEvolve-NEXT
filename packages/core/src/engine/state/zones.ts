@@ -6,7 +6,7 @@ import type { CardInstance, GameState, PlayerZone, ZoneName } from "../../model/
 import type { CardMove, MoveCause, MoveReason } from "../../events/types";
 import { EngineError } from "../errors";
 import type { G } from "../runtime/context";
-import { getCard, nextSeq } from "./access";
+import { getCard, nextSeq, type Env } from "./access";
 import { activeScript, characteristics, grantedAbilitiesOf, passiveSources } from "./characteristics";
 import { effectInForce } from "./effects";
 import { forgetZone, seenBy } from "./knowledge";
@@ -230,6 +230,44 @@ function banishInsteadOfCemetery(g: G, spec: MoveSpec): MoveSpec {
     (id) => activeScript(g, id)?.field?.banishesEnemyFollowersInsteadOfCemetery === true,
   );
   return replacing ? { ...spec, to: "banished", reason: "banish" } : spec;
+}
+
+/**
+ * CR 10.6.2.1 — runs `check` on the game as it is once `card` has been revealed and moved to the resolution zone to be
+ * played by `player`. What playing it decides after that move (10.6.2.2 choices, 10.6.2.3 targets, 10.6.2.5 the cost,
+ * 10.6.2.6 the field) is checked on the same game, so only plays that can be carried out are offered (10.6.2.1.2). A card
+ * being played isn't in the zone it is played from (BP01-053, BP18-046 rulings: it doesn't count for that zone; DSD01a-014
+ * Q2: it can't pay its own additional cost).
+ * The move is moveCards' "play" move, made in place for the time of the check and undone afterwards, also when `check`
+ * throws: the card leaves its zone and waits in the resolution zone as the new card it becomes (4.1.4: no counters, ability
+ * uses or effects but those it had in the EX area, 10.6.2.1.3; controlled by the player playing it; it remembers where it
+ * is played from, 5.5.3). It keeps its id meanwhile: nothing outside it refers to the new card yet. `check` only reads
+ * (plain code: nothing else runs during it). A card already in the resolution zone is checked where it is.
+ */
+export function withCardInResolution<T>(g: Env, card: CardId, player: PlayerId, check: (g: Env) => T): T {
+  const { state } = g;
+  const old = state.cards[card];
+  if (!old || old.zone === "resolution") return check(g);
+  const list = zoneList(state, old.controller, old.zone);
+  const at = list.indexOf(card);
+  if (at < 0) throw new EngineError(`card ${card} is not in its zone ${old.zone}`);
+  const { seq, effects } = state;
+  const fromEx = old.zone === "ex";
+  const played: CardInstance = { ...freshInstance(state, old.printing, old.def, old.owner, player, "resolution", {}), id: card, playedFrom: old.zone };
+  if (fromEx && Object.keys(old.counters).length > 0) played.counters = { ...old.counters };
+  list.splice(at, 1);
+  state.resolution.push(card);
+  state.cards[card] = played;
+  if (!fromEx && effects.some((e) => e.target === card)) state.effects = effects.filter((e) => e.target !== card);
+  try {
+    return check(g);
+  } finally {
+    state.seq = seq;
+    state.effects = effects;
+    state.cards[card] = old;
+    state.resolution.splice(state.resolution.lastIndexOf(card), 1);
+    list.splice(at, 0, card);
+  }
 }
 
 /**

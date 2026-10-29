@@ -35,6 +35,8 @@ export interface CardScript {
   /**
    * Passive change of this card's own play cost (e.g. "Spellchain (5): This card costs 3 less
    * to play"). Valid in the zone it is played from (CR 10.3.4). Negative = cheaper.
+   * Asked with the card in the resolution zone, where its cost is determined (CR 10.6.2.1, 10.6.2.5):
+   * the zone it is played from doesn't hold it then (BP18-046 ruling); `playZone` tells which it was.
    */
   playCost?(game: GameReader, self: CardId, controller: PlayerId): number;
   /** CR 10.4.7.3 "When playing this card, [process]: [effect]" — optional ways to play it. */
@@ -84,7 +86,8 @@ export interface CardScript {
   /**
    * A condition the card itself puts on playing it, e.g. BP06-059 "This card can only be played
    * from hand", BP06-105 "This card can't be played during your turn". Checked like every other
-   * requirement for playing it (CR 8.1.2), also when an effect plays it.
+   * requirement for playing it (CR 8.1.2), also when an effect plays it: on specifying the card,
+   * where it is (CR 10.6.2.1; BP17-044 ruling: it counts itself in the EX area).
    */
   playableIf?(game: GameReader, self: CardId, player: PlayerId): boolean;
   /**
@@ -322,8 +325,9 @@ export interface PlayContext {
 export interface TargetSpec {
   /**
    * Legal targets for the given controller. `self` is the card with the ability.
-   * Must return the candidates as they will be when the selection is made (e.g. a spell is
-   * already in the resolution zone then), because playability is decided from it.
+   * Must return the candidates as they will be when the selection is made, because playability is
+   * decided from it. A card being played is in the resolution zone then (CR 10.6.2.1, 10.6.2.3), and
+   * the engine checks its play with it there (flow/play-card.ts).
    */
   candidates(game: GameReader, controller: PlayerId, self: CardId, play?: PlayContext): CardId[];
   /** Number of targets. */
@@ -378,9 +382,16 @@ export interface Mode {
 export interface PlayOption {
   id: string;
   label: string;
+  /**
+   * Asked with the card in the resolution zone, where the cost is paid (CR 10.6.2.1, 10.6.2.5): it
+   * can't pay with itself (DSD01a-014 Q2, BP01-057 Q3).
+   */
   canPay(game: GameReader, controller: PlayerId, self: CardId): boolean;
   pay(fx: EffectContext): Proc<void>;
-  /** Cards paying moves off the controller's field (for the field-limit check, CR 10.6.2.6). */
+  /**
+   * Cards paying moves off the controller's field (for the field-limit check, CR 10.6.2.6). An
+   * amulet an Earth Rite option empties is the engine's to count (flow/play-card.ts fieldHasRoom).
+   */
   freesFieldSlots?: number;
   /** "This card costs N to play" — applied before other cost changes (CR 10.10.2.4). */
   setCost?: number;
