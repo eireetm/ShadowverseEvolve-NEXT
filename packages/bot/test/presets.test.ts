@@ -1,6 +1,28 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createEngine, script } from "../src/core";
-import { BOT_PRESETS, bundledCardTable, createPresetBot, FIX_DEFAULTS, fixIdentities, fixOptions, HARD_NEXT, HARD_OPTIONS, MEDIUM_NEXT, MEDIUM_OPTIONS, MEDIUM_V2, presetIdentities, type BotPreset, type PlannerBotOptions } from "../src";
+import {
+  BOT_PRESETS,
+  bundledCardTable,
+  createPresetBot,
+  FIX_DEFAULTS,
+  fixIdentities,
+  fixOptions,
+  HARD_NEXT,
+  HARD_NEXT_MACRO,
+  HARD_OPTIONS,
+  MACRO_DEFAULTS,
+  macroProblems,
+  MEDIUM_NEXT,
+  MEDIUM_NEXT_MACRO,
+  MEDIUM_OPTIONS,
+  MEDIUM_V2,
+  presetIdentities,
+  presetSearchIdentity,
+  type BotPreset,
+  type PlannerBotOptions,
+} from "../src";
 import { ALL_CARDS, ALL_SCRIPTS } from "../../core/src/sets";
 import { drive, scenario, testFollower } from "../../core/src/testing";
 
@@ -25,6 +47,42 @@ describe("presets", () => {
     expect(fixOptions(FIX_DEFAULTS).conditional?.gates).toBeTypeOf("function");
   });
 
+  // Two candidates, not in the GUI: Hard's and Medium's presets with their own turn searched by actions (macro-steps.ts) and
+  // the choices told apart, everything else their bases'. The two search options are recorded on their own.
+  it("add two candidates: hard-next and medium-next with exactly the root search by actions and the choices told apart", () => {
+    const withoutSearch = (o: PlannerBotOptions) => {
+      const { choiceDedupe: _d, macro: _m, ...rest } = o;
+      return rest;
+    };
+    const candidates = [
+      [HARD_NEXT_MACRO, HARD_NEXT],
+      [MEDIUM_NEXT_MACRO, MEDIUM_NEXT],
+    ] as const;
+    for (const [candidate, base] of candidates) {
+      // toStrictEqual compares functions by reference: the same evaluations, the same reader of the charge's table.
+      expect(withoutSearch(candidate)).toStrictEqual(base);
+      for (const key of ["evaluator", "replyEvaluator", "greedyEvaluator"] as const) expect(candidate[key]).toBe(base[key]);
+      expect([base.choiceDedupe, base.macro]).toEqual([undefined, undefined]);
+      expect(candidate.choiceDedupe).toBe(true);
+      // Written out in levels.ts; today's defaults with 12 actions.
+      expect(candidate.macro).toEqual({ ...MACRO_DEFAULTS, actions: 12 });
+      expect(macroProblems(candidate.macro!)).toEqual([]);
+    }
+    expect(HARD_NEXT_MACRO.macro).not.toBe(MEDIUM_NEXT_MACRO.macro);
+    expect(HARD_NEXT_MACRO.cheat).toBe(true);
+    expect(MEDIUM_NEXT_MACRO.cheat).toBeUndefined();
+    expect(BOT_PRESETS).toEqual(["medium-next", "hard-next", "medium-v2", "hard-next-macro", "medium-next-macro"]);
+    const search = "dedupe=1+macro=12:keep=2,sub=4,dec=40,share=0.25";
+    expect(BOT_PRESETS.map((p) => presetSearchIdentity(p))).toEqual([null, null, null, search, search]);
+  });
+
+  // The GUI's levels still play the three presets (game-host.ts CONTROLLER_PRESETS in packages/gui, read as text: the bot
+  // package doesn't import the GUI). Moving a candidate into the GUI changes this test with it.
+  it("leave the GUI's levels on the three presets: the candidates are not in it", () => {
+    const host = readFileSync(join(__dirname, "..", "..", "gui", "src", "engine", "game-host.ts"), "utf8");
+    expect(/export const CONTROLLER_PRESETS = (\{[^}]*\})/.exec(host)?.[1]).toBe('{ medium: "medium-next", "medium-v2": "medium-v2", hard: "hard-next" }');
+  });
+
   it("record every evaluation's parameters, the charge's table and the mulligan's parameters", () => {
     const pp1 = "pp1:mppBase=0.2,mppSlope=0.3,ppReserve=0.2,ppWaste=0.25,ppSpendable=0.05,handCapOther=9";
     const danger = "danger:weight=30,offset=1,scale=1.5,floor=0.001,delayed=0";
@@ -41,6 +99,9 @@ describe("presets", () => {
     expect(presetIdentities("medium-v2")).toEqual(twoTurns);
     expect(presetIdentities("hard-next")).toEqual(twoTurns);
     expect(presetIdentities("medium-next")).toEqual(oneTurn);
+    // The candidates record their bases' (their own search options apart: presetSearchIdentity).
+    expect(presetIdentities("hard-next-macro")).toEqual(twoTurns);
+    expect(presetIdentities("medium-next-macro")).toEqual(oneTurn);
     // On a slower device: one turn ahead, the mulligan's samples scaled (at least 2).
     const half = { ...oneTurn, mull: "mull=sim:k=4,t=3,margin=0,opp=greedy,cand=32" };
     for (const preset of BOT_PRESETS) expect(presetIdentities(preset, 0.5), preset).toEqual(half);
@@ -90,19 +151,36 @@ describe("presets", () => {
     },
   });
   const many = (n: number, id: string) => Array<string>(n).fill(id);
-  const fieldAfter = (preset: BotPreset, effort: number) => {
+  const playTurn = (preset: BotPreset, effort: number) => {
     const t = drive(cards, { me: { hand: ["PIECE", "PAYOFF"], deck: many(10, "BIG"), playPoints: 1, maxPlayPoints: 3 }, opp: { deck: many(10, "FILLER"), leaderDefense: 8 } });
     const bot = createPresetBot(cards, preset, "p", effort);
     const turn = t.game.state.turn;
     for (let i = 0; i < 20 && t.game.decision?.player === 0 && t.game.state.turn === turn && t.game.state.phase === "main"; i++) t.game.act(bot.decide(t.game));
     expect(bot.stats.fallbacks).toBe(0);
-    return t.zone("me", "field");
+    return { field: t.zone("me", "field"), bot };
   };
+  const fieldAfter = (preset: BotPreset, effort: number) => playTurn(preset, effort).field;
 
   it("look two turns ahead (Hard, the two-turn Medium) or one (Medium; any of them on a slower device, effort below 1)", () => {
     expect(fieldAfter("medium-v2", 1)).toEqual([]);
     expect(fieldAfter("hard-next", 1)).toEqual([]);
     expect(fieldAfter("medium-v2", 0.5)).toEqual(["PIECE"]);
     expect(fieldAfter("medium-next", 1)).toEqual(["PIECE"]);
+  }, 60_000);
+
+  // The candidates build and play as their bases look ahead; each searched its own turn by actions, on a slower device too
+  // (presetAt keeps the two search options there, and the counts are scaled as the base's).
+  it("build the candidates, which search their own turn by actions at every effort", () => {
+    const cases = [
+      ["hard-next-macro", 1, []],
+      ["medium-next-macro", 1, ["PIECE"]],
+      ["hard-next-macro", 0.5, ["PIECE"]],
+      ["medium-next-macro", 0.5, ["PIECE"]],
+    ] as const;
+    for (const [preset, effort, field] of cases) {
+      const played = playTurn(preset, effort);
+      expect(played.field, `${preset} at ${effort}`).toEqual(field);
+      expect(played.bot.macroStats.searches, `${preset} at ${effort}`).toBeGreaterThan(0);
+    }
   }, 60_000);
 });

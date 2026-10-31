@@ -5,6 +5,7 @@ import { DANGER_DEFAULTS, danger, dangerIdentity, dangerStartParams, type Danger
 import { PP1_DEFAULTS, pp1Evaluator, pp1GreedyParams, pp1Identity, type Pp1Params } from "./eval-pp";
 import type { LeaderCurve } from "./evaluate";
 import { GreedyBot } from "./greedy";
+import { macroIdentity } from "./macro-steps";
 import { SIM_DEFAULTS, simIdentity, type SimParams } from "./mulligan-sim";
 import { PlannerBot, type PlannerBotOptions } from "./planner";
 import { quickIdentity } from "./quick-window";
@@ -165,6 +166,20 @@ export const HARD_NEXT: PlannerBotOptions = /* @__PURE__ */ withFixes(HARD_OPTIO
  */
 export const MEDIUM_V2: PlannerBotOptions = /* @__PURE__ */ withFixes(MEDIUM_OPTIONS, { lookahead: 2, samples: 3, beamWidth: 12, maxSimulations: 1200 });
 
+/**
+ * The root search by actions (macro-steps.ts: a main phase answer with every decision inside its action is one step of the
+ * beam; a plan at most 12 actions and 40 decisions long) with the selections and choices told apart (choiceDedupe): the two
+ * search options as they were measured together. Written out rather than taken from MACRO_DEFAULTS, so that a later change
+ * of the defaults doesn't change a preset (a test pins them to today's defaults).
+ */
+const MACRO_STEPS = { choiceDedupe: true, macro: { actions: 12, keep: 2, sub: 4, dec: 40, share: 0.25 } } satisfies PlannerBotOptions;
+
+/** Hard with the fixes and the wider root search (HARD_NEXT), its own turn searched by actions: a candidate, not in the GUI. */
+export const HARD_NEXT_MACRO: PlannerBotOptions = { ...HARD_NEXT, ...MACRO_STEPS, macro: { ...MACRO_STEPS.macro } };
+
+/** Medium with the fixes (MEDIUM_NEXT, one turn), its turn searched by actions: a candidate, not in the GUI. */
+export const MEDIUM_NEXT_MACRO: PlannerBotOptions = { ...MEDIUM_NEXT, ...MACRO_STEPS, macro: { ...MACRO_STEPS.macro } };
+
 /** A preset: a level's options, some of them set otherwise, and the fixes for its lookahead. */
 function withFixes(level: PlannerBotOptions, changes: PlannerBotOptions): PlannerBotOptions {
   const options = { ...level, ...changes };
@@ -177,9 +192,15 @@ function lookaheadOf(options: PlannerBotOptions, effort: number): 1 | 2 {
 }
 
 /** The presets by name (not levels of createBot yet). */
-export type BotPreset = "medium-next" | "hard-next" | "medium-v2";
-export const BOT_PRESETS: readonly BotPreset[] = ["medium-next", "hard-next", "medium-v2"];
-const PRESET_OPTIONS: Record<BotPreset, PlannerBotOptions> = { "medium-next": MEDIUM_NEXT, "hard-next": HARD_NEXT, "medium-v2": MEDIUM_V2 };
+export type BotPreset = "medium-next" | "hard-next" | "medium-v2" | "hard-next-macro" | "medium-next-macro";
+export const BOT_PRESETS: readonly BotPreset[] = ["medium-next", "hard-next", "medium-v2", "hard-next-macro", "medium-next-macro"];
+const PRESET_OPTIONS: Record<BotPreset, PlannerBotOptions> = {
+  "medium-next": MEDIUM_NEXT,
+  "hard-next": HARD_NEXT,
+  "medium-v2": MEDIUM_V2,
+  "hard-next-macro": HARD_NEXT_MACRO,
+  "medium-next-macro": MEDIUM_NEXT_MACRO,
+};
 
 /**
  * A preset's options at an effort, before scaledPlanner scales its counts. At 1 the preset as it is. Below 1 (a slower
@@ -224,4 +245,16 @@ export function presetIdentities(preset: BotPreset, effort = 1): ReturnType<type
   const options = presetAt(preset, effort);
   const ids = fixIdentities(FIX_DEFAULTS, lookaheadOf(options, effort));
   return { ...ids, mull: simIdentity({ ...SIM_DEFAULTS, ...options.mulliganSim }) };
+}
+
+/**
+ * The search options a preset sets on top of its level's searches, as the game records write them ("dedupe=1" for
+ * choiceDedupe, then macro's identity: macro-steps.ts macroIdentity), or null for a preset without them. Not part of
+ * presetIdentities (the evaluations), which a preset searching by actions shares with its base. The same at every effort
+ * (presetAt leaves them).
+ */
+export function presetSearchIdentity(preset: BotPreset): string | null {
+  const options = PRESET_OPTIONS[preset];
+  const parts = [...(options.choiceDedupe ? ["dedupe=1"] : []), ...(options.macro ? [macroIdentity(options.macro)] : [])];
+  return parts.length > 0 ? parts.join("+") : null;
 }
