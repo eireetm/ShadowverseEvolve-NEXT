@@ -1,7 +1,7 @@
 {
   "format": "standard",
   "region": "asia",
-  "updated": "2026-10-02",
+  "updated": "2026-10-08",
   "source": "https://shadowverse-evolve.com/news/post-554",
   "banned": [
     { "card": "BP05-018", "name": "簒奪の絶傑・オクトリス", "since": "2026-10-02", "note": "The evolved Octrice (BP05-019) is not banned: up to 3 in the evolve deck (news 2026-09-24)." },
@@ -12,6 +12,7 @@
     { "card": "CSD03b-016", "name": "リザードランナー アンドゥー", "since": "2024-12-13" }
   ],
   "limited": [
+    { "card": "BP11-092", "name": "清浄の領域", "since": "2026-10-08", "note": "News post-561 (2026-10-07): three of them and BP22-102 raised the leader's defense without limit." },
     { "card": "BP15-066", "name": "烈絶の崇拝者", "since": "2026-10-02", "note": "The evolved one (BP15-067) is not limited: up to 3 in the evolve deck (news 2026-09-24)." },
     { "card": "BP02-062", "name": "竜巫女の儀式", "since": "2026-01-30" }
   ]

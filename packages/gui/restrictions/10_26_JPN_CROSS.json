@@ -1,7 +1,7 @@
 {
   "format": "crossCraft",
   "region": "asia",
-  "updated": "2026-10-02",
+  "updated": "2026-10-08",
   "source": "https://shadowverse-evolve.com/rules/crossover/",
   "banned": [
     {
@@ -21,6 +21,12 @@
     }
   ],
   "limited": [
+    {
+      "card": "BP11-092",
+      "name": "清浄の領域",
+      "since": "2026-10-08",
+      "note": "News post-561 (2026-10-07), Standard and Crossover."
+    },
     {
       "card": "BP14-022",
       "name": "天下の大泥棒・ジエモン",

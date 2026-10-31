@@ -1,7 +1,7 @@
 {
   "format": "crossCraft",
   "region": "en",
-  "updated": "2026-11-02",
+  "updated": "2026-11-16",
   "source": "https://en.shadowverse-evolve.com/news/post-167",
   "rules": "https://en.shadowverse-evolve.com/rules/cross-craft/",
   "minimumPerLeaderClass": 9,
@@ -12,6 +12,7 @@
     { "card": "BP04-037", "name": "Armor of the Stars", "since": "2026-05-22" }
   ],
   "limited": [
+    { "card": "BP11-092", "name": "Holy Sanctuary", "since": "2026-11-16", "note": "News post-169 (2026-10-16), Standard and Cross Craft." },
     { "card": "BP14-022", "name": "Jiemon, Thief Lord", "since": "2026-11-02" }
   ]
 }
