@@ -41,7 +41,14 @@ import { withDataTexts } from "./lib/card-texts";
 import {
   BOT_LEVELS,
   BOT_PRESETS,
+  HARD_NEXT,
+  HARD_NEXT_MACRO,
+  HARD_OPTIONS,
+  MEDIUM_BETA_OPTIONS,
+  MEDIUM_NEXT,
+  MEDIUM_NEXT_MACRO,
   MEDIUM_OPTIONS,
+  MEDIUM_V2,
   PlannerBot,
   createBot,
   createPresetBot,
@@ -53,6 +60,7 @@ import {
   type BotPreset,
   type BotStats,
   type EvalWeights,
+  type PlannerBotOptions,
 } from "../packages/bot/src";
 import { engineFingerprint } from "../packages/gui/fingerprint";
 import { DECK_SETS, ROOT, allSampleDecks, deckSet, orderedMatchups, sampleDeck, seriesGame, type NamedDeck } from "./rl/series";
@@ -125,14 +133,31 @@ function makeBot(engine: Engine, spec: string, seed: string): Bot {
   return createBot(engine, level as BotLevel, seed, 1, variantEvaluation(variant));
 }
 /**
- * The GUI's controller for a replay's seat (only shown while watching): a preset as the level that plays it there. Only a
- * label: createBot's medium, medium-beta and hard are labelled Bot-Medium and Bot-Hard too, though the GUI's levels now
- * play the presets (the replay gives the recorded answers, whoever gave them).
+ * The options of every bot that plans (createBot's levels, the presets, medium2), which the replays' labels read. Every
+ * name must be here (satisfies): a preset added without its options fails the type check.
+ */
+const PLANNER_OPTIONS: Partial<Record<string, PlannerBotOptions>> = {
+  medium: MEDIUM_OPTIONS,
+  hard: HARD_OPTIONS,
+  "medium-beta": MEDIUM_BETA_OPTIONS,
+  "medium-next": MEDIUM_NEXT,
+  "hard-next": HARD_NEXT,
+  "medium-v2": MEDIUM_V2,
+  "hard-next-macro": HARD_NEXT_MACRO,
+  "medium-next-macro": MEDIUM_NEXT_MACRO,
+  medium2: MEDIUM2,
+} satisfies Record<Exclude<BotLevel, "easy"> | BotPreset | "medium2", PlannerBotOptions>;
+/**
+ * The GUI's controller for a replay's seat (only shown while watching): a bot that cheats (its options' `cheat`: Hard and
+ * the presets built on it) as Bot-Hard, Medium v2 as itself, the greedy bots as Bot-Easy, the rest as Bot-Medium. Only
+ * a label: createBot's levels and the presets the GUI doesn't offer are labelled so too, though the GUI's levels play other
+ * presets (the replay gives the recorded answers, whoever gave them).
  */
 const controllerOf = (spec: string) => {
   const level = SPEC.exec(spec)![1]!;
+  if (level === "easy" || level.startsWith("sve-")) return "greedy";
   if (level === "medium-v2") return level;
-  return level === "easy" || level.startsWith("sve-") ? "greedy" : level === "hard" || level === "hard-next" ? "hard" : "medium";
+  return PLANNER_OPTIONS[level]?.cheat ? "hard" : "medium";
 };
 
 // ---- Decks and the series ----
