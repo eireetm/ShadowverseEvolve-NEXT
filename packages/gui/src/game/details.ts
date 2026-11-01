@@ -1,5 +1,5 @@
-// On a small screen (app/compact.ts) the card panel on the left of a game is a drawer, shown on request: its button, or a
-// long press on a card (long-press.ts), which shows that card.
+// On a small screen (app/compact.ts) the deck builder's card panel is a drawer, shown on request: its button, or a long
+// press on a card (long-press.ts), which shows that card. (A phone's game keeps its card panel on screen: game/phone/.)
 import { useSyncExternalStore } from "react";
 
 let open = false;

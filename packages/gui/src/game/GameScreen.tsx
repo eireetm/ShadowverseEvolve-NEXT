@@ -1,24 +1,26 @@
 import { useEffect, useRef, useState } from "react";
 import { useBack } from "../app/back";
-import { useCompact, useTouch } from "../app/compact";
+import { useCompact, usePortrait, useTouch } from "../app/compact";
 import { engine, useApp } from "../app/store";
-import type { GameUpdate } from "../engine/protocol";
 import { hostApi } from "../host/api";
 import { useT } from "../i18n";
-import { useOnline } from "../net/state";
 import { Chat } from "../online/Chat";
 import { AnimationLayer } from "./animation/AnimationLayer";
 import { Table } from "./board/Table";
 import { ZoneBrowser } from "./board/ZoneBrowser";
 import { CardDetails } from "./card/CardDetails";
-import { setDetailsOpen, useDetailsOpen } from "./details";
 import { installLongPress } from "./long-press";
 import { DebugPanel } from "./debug/DebugPanel";
 import { LogPanel } from "./log/LogPanel";
+import { OnlineStatus } from "./OnlineStatus";
+import { handOpen, setHandOpen, useHandOpen } from "./phone/hand";
+import { LandscapeLeft, LandscapeRight, LandscapeTools } from "./phone/LandscapeChrome";
+import type { PhoneTab } from "./phone/PhoneParts";
+import { PortraitBottom, PortraitTop } from "./phone/PortraitChrome";
 import { QuickChat } from "./QuickChat";
 import { WatchBar } from "./watch/WatchBar";
 
-type Tab = "log" | "debug" | "chat";
+type Tab = PhoneTab;
 
 interface Props {
   onMenu: () => void;
@@ -34,31 +36,57 @@ interface Props {
  * sidebar, hidden unless shown: it then covers the right of the table, which keeps its size. A replay being watched has its
  * playback bar under the card on the left (nobody answers anything). Online, the connection's state is under the menu
  * button, and the chat is a tab of the sidebar. A player at the screen has the quick chat's button at the top right, left of
- * the sidebar's (of the sidebar when it is shown). On a small screen (a phone) the left column is a drawer
- * like the sidebar: its button, or a long press on a card, opens it; the table takes the whole width.
+ * the sidebar's (of the sidebar when it is shown).
+ *
+ * On a small screen (a phone, app/compact.ts) held sideways, the table takes the whole screen and columns lie over its sides
+ * (game/phone/LandscapeChrome.tsx): the card panel on the left (the log in its place on request), the players, the buttons
+ * and what the game waits for on the right, and your hand folded in the bottom right corner, spread by a tap. Held upright
+ * (game/phone/PortraitChrome.tsx), the table takes the width between a top bar, the card panel and the players above it,
+ * and the buttons (or a replay's playback bar) under it.
  */
 export function GameScreen({ onMenu, onNewGame, onReplays, onOnline }: Props) {
   const update = useApp((s) => s.update);
   const t = useT();
   const [tab, setTab] = useState<Tab>("log");
   const [sidebar, setSidebar] = useState(false);
+  // A phone's card panel shows the log in its place.
+  const [phoneLog, setPhoneLog] = useState(false);
   const compact = useCompact();
-  // Fingers (a phone, or a tablet with the wide layout): a long press reads a card (on a phone, in the drawer).
+  const upright = usePortrait();
+  const phone = !compact ? null : upright ? "portrait" : "landscape";
+  // Fingers (a phone, or a tablet with the wide layout): a long press reads a card (on a phone, in the card panel, over the
+  // log if it shows).
   const touch = useTouch();
-  const detailsOpen = useDetailsOpen();
-  const drawer = compact && detailsOpen;
+  const spread = useHandOpen();
   const gameRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const root = gameRef.current;
-    return touch && root ? installLongPress(root) : undefined;
-  }, [touch, update === null]);
-  // Leaving the game closes the drawer (it is closed when a game is shown again).
-  useEffect(() => () => setDetailsOpen(false), []);
+    if (!touch || !root) return;
+    return installLongPress(root, { drawer: false, onLongPress: phone !== null ? () => setPhoneLog(false) : undefined });
+  }, [touch, update === null, phone]);
+  // A phone's hand folds again after any answer, when a decision comes or goes (its window comes over the table), when a
+  // Quick card is announced, and when the phone's table goes.
+  useEffect(() => setHandOpen(false), [update?.inputCount, update?.decision != null, update?.announcement?.seq, phone]);
+  useEffect(() => () => setHandOpen(false), []);
+  // A tap anywhere but on the spread hand's cards or a card's menu folds the hand.
+  useEffect(() => {
+    if (phone !== "landscape") return;
+    const down = (event: PointerEvent) => {
+      if (!handOpen()) return;
+      const target = event.target;
+      if (target instanceof Element && (target.closest(".sve-hand-own .sve-hand-card") || target.closest(".sve-card-menu"))) return;
+      setHandOpen(false);
+    };
+    document.addEventListener("pointerdown", down, true);
+    return () => document.removeEventListener("pointerdown", down, true);
+  }, [phone]);
   useBack(sidebar, () => setSidebar(false));
-  useBack(drawer, () => setDetailsOpen(false));
+  useBack(phone !== null && phoneLog, () => setPhoneLog(false));
+  useBack(phone === "landscape" && spread, () => setHandOpen(false));
   const online = update?.online ?? null;
   const openChat = () => {
-    setSidebar(true);
+    if (phone !== null) setPhoneLog(true);
+    else setSidebar(true);
     setTab("chat");
   };
   if (!update) {
@@ -76,49 +104,84 @@ export function GameScreen({ onMenu, onNewGame, onReplays, onOnline }: Props) {
   const concede = () => {
     if (seat !== null && window.confirm(t("game.concedeConfirm"))) engine.send({ kind: "concede", seat });
   };
+  // A spectator chooses which player is at the bottom (both are shown as the other player sees them).
+  const swapSides = () => engine.send({ kind: "spectatorSide", perspective: update.perspective === 0 ? 1 : 0 });
   const tabs: Tab[] = online ? ["log", "chat", "debug"] : ["log", "debug"];
   const shown = tabs.includes(tab) ? tab : "log";
-  return (
-    <div className={`sve-game${compact ? " sve-game-compact" : ""}`} ref={gameRef}>
-      {compact && !drawer ? (
-        <button type="button" className="sve-details-show" onClick={() => setDetailsOpen(true)} data-testid="details-show">
-          ☰ {t("game.showDetails")}
-        </button>
-      ) : null}
-      {!compact || drawer ? (
-        <aside className={`sve-game-left${drawer ? " sve-drawer" : ""}`} data-testid="game-left">
-          <div className="sve-game-left-top">
-            <button type="button" onClick={onMenu} data-testid="game-menu">
-              {t("game.menu")}
-            </button>
-            {seat !== null && !update.result ? (
-              <button type="button" className="sve-concede" onClick={concede} data-testid="game-concede">
-                {t("game.concede")}
-              </button>
-            ) : null}
-            {spectating ? (
-              // A spectator chooses which player is at the bottom (both are shown as the other player sees them).
-              <button
-                type="button"
-                onClick={() => engine.send({ kind: "spectatorSide", perspective: update.perspective === 0 ? 1 : 0 })}
-                data-testid="game-swap-sides"
-              >
-                {t("game.swapSides")}
-              </button>
-            ) : null}
-            {drawer ? (
-              <button type="button" className="sve-drawer-hide" onClick={() => setDetailsOpen(false)} data-testid="details-hide">
-                {t("game.hideSidebar")}
-              </button>
-            ) : null}
-          </div>
-          {online ? <OnlineStatus update={update} chatOpen={sidebar && shown === "chat"} onChat={openChat} onOnline={onOnline} /> : null}
-          <section className="sve-sidebar-card">
-            <CardDetails />
-          </section>
+  if (phone === "portrait") {
+    return (
+      <div className="sve-game sve-game-compact sve-game-phone" ref={gameRef} data-phone="portrait">
+        <PortraitTop
+          update={update}
+          seat={seat}
+          logOpen={phoneLog}
+          tabs={tabs}
+          tab={shown}
+          onTab={setTab}
+          onCloseLog={() => setPhoneLog(false)}
+          onMenu={onMenu}
+          onConcede={concede}
+          onChat={openChat}
+          onOnline={onOnline}
+          onSwapSides={spectating ? swapSides : null}
+        />
+        <Table update={update} onNewGame={online ? onOnline : onNewGame} onMenu={onMenu} onReplays={onReplays} phone="portrait" />
+        <PortraitBottom update={update} seat={seat} logOpen={phoneLog} onLog={() => setPhoneLog(!phoneLog)} onReplays={onReplays} />
+        {online?.desync ? <Desync at={online.desync} /> : null}
+        <ZoneBrowser update={update} />
+        <AnimationLayer update={update} />
+      </div>
+    );
+  }
+  if (phone === "landscape") {
+    return (
+      <div className="sve-game sve-game-compact sve-game-phone" ref={gameRef} data-phone="landscape">
+        <Table update={update} onNewGame={online ? onOnline : onNewGame} onMenu={onMenu} onReplays={onReplays} phone="landscape" />
+        <LandscapeTools
+          update={update}
+          seat={seat}
+          logOpen={phoneLog}
+          onMenu={onMenu}
+          onLog={() => setPhoneLog(!phoneLog)}
+          onConcede={concede}
+          onChat={openChat}
+          onOnline={onOnline}
+          onSwapSides={spectating ? swapSides : null}
+        />
+        <LandscapeLeft update={update} logOpen={phoneLog} tabs={tabs} tab={shown} onTab={setTab} onCloseLog={() => setPhoneLog(false)}>
           {update.watch ? <WatchBar update={update} onExit={onReplays} /> : null}
-        </aside>
-      ) : null}
+        </LandscapeLeft>
+        <LandscapeRight update={update} />
+        {online?.desync ? <Desync at={online.desync} /> : null}
+        <ZoneBrowser update={update} />
+        <AnimationLayer update={update} />
+      </div>
+    );
+  }
+  return (
+    <div className="sve-game" ref={gameRef}>
+      <aside className="sve-game-left" data-testid="game-left">
+        <div className="sve-game-left-top">
+          <button type="button" onClick={onMenu} data-testid="game-menu">
+            {t("game.menu")}
+          </button>
+          {seat !== null && !update.result ? (
+            <button type="button" className="sve-concede" onClick={concede} data-testid="game-concede">
+              {t("game.concede")}
+            </button>
+          ) : null}
+          {spectating ? (
+            <button type="button" onClick={swapSides} data-testid="game-swap-sides">
+              {t("game.swapSides")}
+            </button>
+          ) : null}
+        </div>
+        {online ? <OnlineStatus update={update} chatOpen={sidebar && shown === "chat"} onChat={openChat} onOnline={onOnline} /> : null}
+        <section className="sve-sidebar-card">
+          <CardDetails />
+        </section>
+        {update.watch ? <WatchBar update={update} onExit={onReplays} /> : null}
+      </aside>
       <Table update={update} onNewGame={online ? onOnline : onNewGame} onMenu={onMenu} onReplays={onReplays} />
       {sidebar ? (
         <aside className="sve-game-right" data-testid="game-sidebar">
@@ -150,43 +213,6 @@ export function GameScreen({ onMenu, onNewGame, onReplays, onOnline }: Props) {
       {online?.desync ? <Desync at={online.desync} /> : null}
       <ZoneBrowser update={update} />
       <AnimationLayer update={update} />
-    </div>
-  );
-}
-
-/**
- * Online: connected (and the round trip) or not (the game waits; the online screen connects again), and the other player's
- * messages not yet seen. A spectator: watching, or connecting again by itself.
- */
-function OnlineStatus({ update, chatOpen, onChat, onOnline }: { update: GameUpdate; chatOpen: boolean; onChat: () => void; onOnline: () => void }) {
-  const t = useT();
-  const { phase, chat } = useOnline();
-  const spectating = update.online?.spectating === true;
-  const [seen, setSeen] = useState(chat.length);
-  useEffect(() => {
-    if (chatOpen) setSeen(chat.length);
-  }, [chatOpen, chat.length]);
-  const unread = chat.slice(seen).filter((line) => line.from !== "me").length;
-  const connected = phase.kind === "connected";
-  const rtt = connected && phase.rtt !== null ? `${phase.rtt} ms` : "…";
-  const status = spectating
-    ? t(connected ? "game.online.watching" : "game.online.watchLost", { rtt })
-    : connected
-      ? t("game.online.connected", { rtt })
-      : t("game.online.lost");
-  return (
-    <div className={`sve-game-online${connected ? "" : " sve-game-online-lost"}`} data-testid="game-online" data-connected={connected ? "yes" : "no"}>
-      <span>{status}</span>
-      {!connected && !update.result && !spectating ? (
-        <button type="button" onClick={onOnline} data-testid="game-reconnect">
-          {t("game.online.reconnect")}
-        </button>
-      ) : null}
-      {unread > 0 ? (
-        <button type="button" className="sve-primary" onClick={onChat} data-testid="game-unread">
-          {t("game.online.unread", { n: unread })}
-        </button>
-      ) : null}
     </div>
   );
 }

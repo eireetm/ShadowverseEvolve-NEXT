@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { LogEntry } from "../src/engine/protocol";
 import { actionsFor, answerFor, attackTargets, dragKind, inDialog } from "../src/game/actions";
 import { attacksIn, planFlights, playedCards, selectionsIn } from "../src/game/animation/plan";
-import { computeLayout, ENGAGED_WIDTH, MAT_BOX_HEIGHT, PIECES, SLOT_COUNT, SLOT_PITCH, WIDE_WIDTH, pileRect, slotRect, type PileZone, type Rect } from "../src/game/board/layout";
+import { computeLayout, ENGAGED_WIDTH, MAT_BOX_HEIGHT, PHONE_MIN_SIDE, PIECES, SLOT_COUNT, SLOT_PITCH, WIDE_WIDTH, pileRect, slotRect, spareRect, type PileZone, type Rect } from "../src/game/board/layout";
 import { NO_SLOTS, placeWaiting, reconcileSlots } from "../src/game/board/slots";
 
 // The table's pure parts: the layout of the mats, the options of a card, and the flights of the animations.
@@ -22,6 +22,67 @@ describe("table layout", () => {
       expect(l.matWidth + 2 * Math.min(l.sideWidth, 120)).toBeLessThanOrEqual(width);
       // Your hand's cards fit in their strip.
       expect(l.handCardWidth * (88 / 63)).toBeLessThan(l.handHeight);
+    }
+  });
+
+  it("lays a phone held sideways out with the mats as tall as the screen and a column on each side", () => {
+    for (const [width, height] of [
+      [844, 390],
+      [915, 412],
+      [667, 375],
+      [740, 360],
+      [1000, 450],
+    ] as const) {
+      const l = computeLayout(width, height, "landscape");
+      expect(l.compact).toBe(true);
+      expect(l.matWidth / l.matHeight).toBeCloseTo(WIDE_WIDTH / MAT_BOX_HEIGHT, 5);
+      // The two mats fill the height (or the width between the columns, on a narrow screen).
+      expect(2 * l.matHeight).toBeLessThanOrEqual(height + 0.01);
+      expect(l.sideWidth).toBeGreaterThanOrEqual(PHONE_MIN_SIDE);
+      expect(l.matWidth + 2 * l.sideWidth).toBeLessThanOrEqual(width + 0.01);
+      expect(Math.max(2 * l.matHeight - height, l.matWidth + 2 * l.sideWidth - width)).toBeCloseTo(0, 5);
+      // Your folded hand fits its corner of the right column; spread, its cards are larger.
+      expect(l.handCardWidth * (88 / 63)).toBeLessThan(l.handHeight);
+      expect(l.handWidth).toBeLessThan(l.sideWidth);
+      expect(l.handOpenCardWidth).toBeGreaterThan(l.handCardWidth);
+    }
+    // A table less tall than a phone's screen is a phone's, whatever was asked.
+    expect(computeLayout(844, 390).compact).toBe(true);
+    expect(computeLayout(1240, 1080, "wide").compact).toBe(false);
+  });
+
+  it("lays a phone held upright out with the mats as wide as the screen, the hands above and under them", () => {
+    for (const [width, height] of [
+      [390, 461],
+      [360, 351],
+      [412, 532],
+      [600, 700],
+    ] as const) {
+      const l = computeLayout(width, height, "portrait");
+      expect(l.matWidth / l.matHeight).toBeCloseTo(WIDE_WIDTH / MAT_BOX_HEIGHT, 5);
+      expect(l.matWidth).toBeLessThanOrEqual(width + 0.01);
+      expect(l.sideWidth).toBe(0);
+      // The opponent's hand, the two mats and your hand fill the table's height.
+      expect(l.opponentHandHeight + 2 * l.matHeight + l.handHeight).toBeCloseTo(height, 5);
+      // Your hand's cards fit their row, a little larger than the mat's.
+      expect(l.handCardWidth * (88 / 63)).toBeLessThan(l.handHeight);
+      expect(l.handCardWidth).toBeGreaterThan(l.cardWidth);
+    }
+    // A tall screen: the width is what limits the mats.
+    const tall = computeLayout(390, 600, "portrait");
+    expect(tall.matWidth).toBeCloseTo(390, 5);
+  });
+
+  it("finds the mat's spare spot (a phone's trigger zone) on the mat, clear of the piles", () => {
+    const overlaps = (a: Rect, b: Rect) => a.left < b.left + b.width && b.left < a.left + a.width && a.top < b.top + b.height && b.top < a.top + a.height;
+    for (const opponent of [false, true]) {
+      const spare = spareRect(opponent);
+      expect(spare.left).toBeGreaterThanOrEqual(0);
+      expect(spare.top).toBeGreaterThanOrEqual(0);
+      expect(spare.left + spare.width).toBeLessThanOrEqual(100.01);
+      expect(spare.top + spare.height).toBeLessThanOrEqual(100.01);
+      for (const zone of ["leader", "deck", "cemetery", "evolveDeck", "banished"] as const) expect(overlaps(spare, pileRect(zone, opponent))).toBe(false);
+      for (const zone of ["field", "ex"] as const) for (let i = 0; i < SLOT_COUNT; i++) expect(overlaps(spare, slotRect(zone, i, opponent))).toBe(false);
     }
   });
 

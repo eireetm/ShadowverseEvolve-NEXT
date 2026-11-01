@@ -3,7 +3,8 @@ import { hostApi, type ImportResult } from "../host/api";
 import { useT } from "../i18n";
 import { engine } from "./store";
 import { applyUiTransparency, currentUiTransparency, loadResources } from "../resources/resources";
-import { updateSettings, useSettings, type CardLang, type Settings, type UiLang } from "./settings";
+import { isPhoneScreen } from "./compact";
+import { updateSettings, useSettings, type CardLang, type ScreenMode, type Settings, type UiLang } from "./settings";
 import { loadHant, usesHant } from "../i18n/hant";
 import { settingsFilePath } from "./settings-file";
 import { useApp } from "./store";
@@ -176,6 +177,20 @@ export function SettingsScreen({ onBack }: { onBack: () => void }) {
           </p>
           {tokenArt && catalog ? <TokenArtWindow onClose={() => setTokenArt(false)} /> : null}
         </section>
+        {hostApi.platform !== "web" && isPhoneScreen() ? (
+          <section className="sve-settings-group" data-testid="settings-screen">
+            <h3>{t("settings.screen")}</h3>
+            <label className="sve-settings-row">
+              <span>{t("settings.screenMode")}</span>
+              <select value={settings.screenMode} onChange={(e) => updateSettings({ screenMode: e.target.value as ScreenMode })} data-testid="settings-screen-mode">
+                <option value="auto">{t("settings.screenAuto")}</option>
+                <option value="landscape">{t("settings.screenLandscape")}</option>
+                <option value="portrait">{t("settings.screenPortrait")}</option>
+              </select>
+            </label>
+            <p className="sve-hint">{t("settings.screenHelp")}</p>
+          </section>
+        ) : null}
         {hostApi.platform !== "web" ? <ResourcesSection /> : null}
         <section className="sve-settings-group">
           <h3>{t("settings.sound")}</h3>

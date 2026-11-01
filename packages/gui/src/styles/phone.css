@@ -1,0 +1,843 @@
+/* ---------------------------------------------------------------------------------------------------------------------
+   A phone's game (game/phone/, app/compact.ts: a small screen), held sideways or upright (the portrait part is at the end).
+   Held sideways, the table takes the whole screen, its two mats as tall as the screen (board/layout.ts), and two columns
+   lie over its sides, --side-width each (set by board/useTableLayout.ts):
+   - on the left, a row of buttons over the card panel (the card last read, or the log in its place);
+   - on the right, the opponent's hand at the top, the two players, the buttons that answer the decision and what the
+     game waits for; your hand folded in the bottom corner, spread along the bottom of the screen by a tap.
+   Like every panel they are a little see-through (--sve-ui-alpha). Loaded after app.css, before public/theme.css.
+   --------------------------------------------------------------------------------------------------------------------- */
+:root {
+  /* The columns' background, their lines, and the height of the row of buttons at the top. */
+  --sve-phone-column: rgb(14 21 31 / var(--sve-ui-alpha));
+  --sve-phone-line: rgb(120 160 210 / 0.22);
+  --sve-phone-tools-height: 32px;
+  /* A player's leader picture in the right column. */
+  --sve-phone-face-width: 30px;
+}
+
+.sve-game.sve-game-phone[data-phone="landscape"] {
+  display: block;
+  overflow: hidden;
+}
+
+.sve-game-phone[data-phone="landscape"] .sve-table {
+  position: absolute;
+  inset: 0;
+}
+
+/* ---------- The row of buttons over the left column, and the top right (the connection, conceding) ---------- */
+.sve-phone-tools,
+.sve-phone-topright {
+  position: absolute;
+  top: 0;
+  z-index: 36;
+  box-sizing: border-box;
+  width: var(--side-width);
+  height: var(--sve-phone-tools-height);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+}
+
+.sve-phone-tools {
+  left: 0;
+  background: var(--sve-phone-column);
+  border-right: 1px solid var(--sve-phone-line);
+  border-bottom: 1px solid var(--sve-phone-line);
+}
+
+.sve-phone-topright {
+  right: 0;
+  justify-content: flex-end;
+}
+
+.sve-phone-tools button,
+.sve-phone-topright button,
+.sve-phone-tools .sve-quick-chat-button {
+  height: 26px;
+  padding: 0 8px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.sve-phone-tools .sve-quick-chat-menu {
+  left: 0;
+  right: auto;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.sve-phone-topright .sve-game-online,
+.sve-portrait-topright .sve-game-online {
+  min-width: 0;
+  flex-wrap: nowrap;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  font-size: 11px;
+}
+
+.sve-phone-topright .sve-game-online > span,
+.sve-portrait-topright .sve-game-online > span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sve-phone-topright .sve-game-online button,
+.sve-portrait-topright .sve-game-online button {
+  height: 24px;
+  padding: 0 6px;
+  font-size: 11px;
+}
+
+/* ---------- The left column: the card panel, or the log in its place; a replay's playback bar under it ---------- */
+.sve-phone-left {
+  position: absolute;
+  left: 0;
+  top: var(--sve-phone-tools-height);
+  bottom: 0;
+  z-index: 33;
+  box-sizing: border-box;
+  width: var(--side-width);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--sve-phone-column);
+  border-right: 1px solid var(--sve-phone-line);
+}
+
+.sve-phone-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sve-phone-card {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 6px 6px;
+}
+
+/* The card: its picture at the top left, its name, kind and numbers beside it, its text under both. */
+.sve-phone-card .sve-details {
+  display: block;
+}
+
+.sve-phone-card .sve-details-art {
+  --w: 84px;
+  float: left;
+  /* Smaller in a narrow column, so its text keeps room beside it. */
+  width: min(84px, 42%);
+  margin: 0 8px 4px 0;
+}
+
+.sve-phone-card .sve-details > * + * {
+  margin-top: 2px;
+}
+
+.sve-phone-card .sve-details-name {
+  margin: 0;
+  font-size: 13px;
+  line-height: 16px;
+}
+
+.sve-phone-card .sve-details-names,
+.sve-phone-card .sve-details-type,
+.sve-phone-card .sve-details-traits {
+  font-size: 10px;
+  line-height: 13px;
+}
+
+.sve-phone-card .sve-details-stats {
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  font-size: 11px;
+}
+
+.sve-phone-card .sve-details-state,
+.sve-phone-card .sve-details-flags,
+.sve-phone-card .sve-card-text,
+.sve-phone-card .sve-details-gifts,
+.sve-phone-card .sve-details-meta,
+.sve-phone-card .sve-details-printings,
+.sve-phone-card .sve-hint {
+  clear: both;
+}
+
+.sve-phone-card .sve-card-text {
+  font-size: 11px;
+  line-height: 15px;
+}
+
+.sve-phone-card .sve-details-meta,
+.sve-phone-card .sve-details-printings {
+  font-size: 10px;
+}
+
+.sve-phone-panel-log {
+  gap: 4px;
+  padding: 4px 6px;
+}
+
+.sve-phone-log-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sve-phone-tabs {
+  display: flex;
+  gap: 3px;
+  margin-right: auto;
+}
+
+.sve-phone-log-head button {
+  height: 26px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.sve-phone-log-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  font-size: 12px;
+}
+
+.sve-phone-left .sve-watch {
+  flex: none;
+  max-height: 55%;
+  overflow-y: auto;
+  border-top: 1px solid var(--sve-phone-line);
+  font-size: 12px;
+}
+
+/* ---------- The right column: the players, the buttons that answer the decision, what the game waits for ---------- */
+.sve-phone-right {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 33;
+  box-sizing: border-box;
+  width: var(--side-width);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  /* Room above for the top row and the opponent's hand, below for your folded hand (both are the table's). */
+  padding: calc(var(--sve-phone-tools-height) + var(--opponent-hand-height) + 4px) 6px calc(var(--hand-height) + 4px);
+  background: var(--sve-phone-column);
+  border-left: 1px solid var(--sve-phone-line);
+}
+
+/* Side by side, one above the other in a narrow column. */
+.sve-phone-players {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.sve-phone-player {
+  flex: 1 1 80px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--sve-phone-line);
+  border-radius: 6px;
+  background: var(--sve-panel);
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.sve-phone-player.sve-active {
+  border-color: var(--sve-accent);
+  box-shadow: 0 0 8px rgb(240 180 41 / 0.3);
+}
+
+.sve-phone-player.sve-deciding .sve-phone-player-name::after {
+  content: " ●";
+  color: var(--sve-accent);
+}
+
+.sve-phone-player.sve-manual-target {
+  cursor: pointer;
+}
+
+.sve-phone-face {
+  position: relative;
+  flex: none;
+  width: var(--sve-phone-face-width);
+  height: calc(var(--sve-phone-face-width) * 88 / 63);
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--sve-input);
+}
+
+.sve-phone-face .sve-card-art,
+.sve-phone-face .sve-card-placeholder {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 10%;
+}
+
+.sve-phone-order {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 0 3px;
+  border-bottom-right-radius: 3px;
+  font-size: 9px;
+  line-height: 12px;
+  font-weight: 700;
+}
+
+.sve-phone-order-first {
+  background: var(--sve-accent);
+  color: #1d1606;
+}
+
+.sve-phone-order-second {
+  background: var(--sve-action);
+  color: #06111f;
+}
+
+.sve-phone-player-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sve-phone-player-name,
+.sve-phone-player-basis {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sve-phone-player-name {
+  font-weight: 700;
+}
+
+.sve-phone-player-basis {
+  color: var(--sve-accent);
+}
+
+.sve-phone-player-pp,
+.sve-phone-player-ep {
+  color: var(--sve-muted);
+  white-space: nowrap;
+}
+
+.sve-phone-player-pp strong {
+  color: var(--sve-action);
+  font-size: 12px;
+}
+
+.sve-phone-player-ep strong {
+  color: var(--sve-text);
+}
+
+.sve-phone-actions {
+  flex: none;
+  display: flex;
+  gap: 4px;
+}
+
+.sve-phone-actions button {
+  flex: 1 1 0;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sve-phone-actions .sve-primary {
+  background: linear-gradient(rgb(47 122 82 / var(--sve-ui-alpha)), rgb(31 90 59 / var(--sve-ui-alpha)));
+}
+
+.sve-phone-prompt {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 6px;
+  border: 1px solid var(--sve-phone-line);
+  border-radius: 6px;
+  background: var(--sve-panel);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.sve-phone-turn {
+  font-size: 12px;
+}
+
+.sve-phone-active {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 6px;
+  color: var(--sve-muted);
+  font-size: 10px;
+}
+
+.sve-phone-clock {
+  color: var(--sve-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.sve-phone-clock-low {
+  color: var(--sve-bad);
+  font-weight: 700;
+}
+
+.sve-phone-prompt-text {
+  color: var(--sve-muted);
+  font-size: 10.5px;
+}
+
+.sve-phone-prompt-text.sve-your-move {
+  color: var(--sve-text);
+}
+
+.sve-phone-prompt .sve-processing-compact {
+  font-size: 10px;
+}
+
+/* ---------- The hands: the opponent's at the top of the right column, yours folded in its bottom corner ---------- */
+.sve-table[data-phone="landscape"] .sve-hand-opponent {
+  position: absolute;
+  top: var(--sve-phone-tools-height);
+  right: 0;
+  z-index: 34;
+  width: var(--side-width);
+  height: var(--opponent-hand-height);
+}
+
+.sve-table[data-phone="landscape"] .sve-hand-own {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 34;
+  box-sizing: border-box;
+  width: var(--side-width);
+  height: var(--hand-height);
+  padding: 0 6px;
+  border-top: 1px solid var(--sve-phone-line);
+}
+
+/* Folded, the hand is one button: a tap spreads it; its cards can't be played or read until then. */
+.sve-hand-spread {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+}
+
+.sve-hand-spread::after {
+  content: "▲";
+  position: absolute;
+  right: 6px;
+  top: 2px;
+  font-size: 11px;
+  color: var(--sve-accent);
+  text-shadow: 0 1px 3px #000;
+}
+
+/* Spread: a row of large cards along the bottom of the screen, over everything but a card's menu; as many as there are fit
+   the screen's width (board/Table.tsx sizes them). A finger on a card drags it as anywhere on the table (no scrolling). A
+   tap anywhere else folds it (game/GameScreen.tsx). */
+.sve-table[data-phone="landscape"][data-hand-spread] .sve-hand-own {
+  left: 0;
+  width: auto;
+  height: auto;
+  z-index: 70;
+  padding: 0 8px calc(6px + env(safe-area-inset-bottom));
+  border-top: none;
+  align-items: flex-end;
+  pointer-events: none;
+}
+
+.sve-table[data-phone="landscape"][data-hand-spread] .sve-hand-own .sve-hand-cards {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  max-width: 100%;
+  height: auto;
+  pointer-events: auto;
+  filter: drop-shadow(0 4px 14px #000c);
+}
+
+.sve-table[data-phone="landscape"][data-hand-spread] .sve-hand-own .sve-hand-card {
+  --sve-card-width: var(--hand-spread-card-width, var(--hand-open-card-width));
+  position: relative;
+  bottom: auto;
+  flex: none;
+  transform: none;
+}
+
+/* ---------- The trigger zone, on the mat's spare spot (there are no player panels beside the mats) ---------- */
+.sve-mat-trigger {
+  gap: 2px;
+  border: 1px dashed var(--sve-accent);
+  border-radius: 6px;
+  background: rgb(14 24 38 / var(--sve-ui-alpha));
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------
+   A phone held upright (game/phone/PortraitChrome.tsx): from the top, a bar (32 pixels), the card panel (198, down to 104 on
+   a short screen), the players with the turn between them (100), the table (the rest: the mats take the width, the
+   opponent's hand a thin strip above them, yours a row under them) and the bar of buttons (53) — watching a replay, its
+   playback bar instead.
+   --------------------------------------------------------------------------------------------------------------------- */
+.sve-game.sve-game-phone[data-phone="portrait"] {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* The table keeps at least the screen less the bars (the card panel gives way first). */
+.sve-game-phone[data-phone="portrait"] .sve-table {
+  flex: 1 1 0;
+  min-height: min(448px, max(0px, calc(100vh - 289px - env(safe-area-inset-top) - env(safe-area-inset-bottom))));
+  min-height: min(448px, max(0px, calc(100dvh - 289px - env(safe-area-inset-top) - env(safe-area-inset-bottom))));
+}
+
+.sve-portrait-bar {
+  flex: none;
+  box-sizing: border-box;
+  height: var(--sve-phone-tools-height);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  background: var(--sve-phone-column);
+  border-bottom: 1px solid var(--sve-phone-line);
+}
+
+.sve-portrait-bar button {
+  height: 26px;
+  padding: 0 10px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.sve-portrait-topright {
+  min-width: 0;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* The card panel: the card's picture on the left, as tall as the panel (up to its own size), its name and text beside it. */
+.sve-portrait-panel {
+  position: relative;
+  flex: 0 1 198px;
+  min-height: 104px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--sve-phone-column);
+  border-bottom: 1px solid var(--sve-phone-line);
+}
+
+/* --sve-portrait-art-height: the panel's height less a margin, up to the picture's own (game/phone/PortraitChrome.tsx). */
+.sve-portrait-panel .sve-phone-card {
+  padding: 4px 8px 6px calc(var(--sve-portrait-art-height, 186px) * 63 / 88 + 14px);
+}
+
+.sve-portrait-panel .sve-phone-card .sve-details-art {
+  --w: calc(var(--sve-portrait-art-height, 186px) * 63 / 88);
+  position: absolute;
+  left: 6px;
+  top: 4px;
+  float: none;
+  width: calc(var(--sve-portrait-art-height, 186px) * 63 / 88);
+  height: var(--sve-portrait-art-height, 186px);
+  margin: 0;
+}
+
+.sve-portrait-panel .sve-phone-card .sve-details-name {
+  font-size: 14px;
+  line-height: 18px;
+}
+
+/* The two players, the turn and the prompt between them. */
+.sve-portrait-players {
+  position: relative;
+  flex: none;
+  height: 100px;
+  display: flex;
+  align-items: stretch;
+  background: var(--sve-phone-column);
+  border-bottom: 1px solid var(--sve-phone-line);
+}
+
+.sve-phone-player.sve-phone-player-upright {
+  flex: 0 0 122px;
+  justify-content: center;
+  gap: 5px;
+  padding: 3px 4px;
+  border: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  font-size: 10.5px;
+}
+
+/* The player on the right (you): the picture at the screen's edge, the points toward the middle. */
+.sve-phone-player-upright.sve-phone-player-mirrored {
+  flex-direction: row-reverse;
+}
+
+.sve-phone-face-column {
+  flex: 0 0 58px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.sve-phone-player-upright .sve-phone-face {
+  width: 48px;
+  height: 48px;
+  border: 2px solid var(--sve-phone-line);
+}
+
+.sve-phone-player-upright.sve-active .sve-phone-face {
+  border-color: var(--sve-accent);
+  box-shadow: 0 0 7px rgb(240 180 41 / 0.45);
+}
+
+.sve-phone-player-upright .sve-phone-player-name {
+  width: 100%;
+  text-align: center;
+  font-size: 11px;
+}
+
+.sve-phone-player-upright .sve-phone-player-info {
+  justify-content: center;
+}
+
+.sve-portrait-players .sve-phone-prompt {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  overflow: hidden;
+  padding: 3px 6px;
+  border: none;
+  border-left: 1px solid var(--sve-phone-line);
+  border-right: 1px solid var(--sve-phone-line);
+  border-radius: 0;
+}
+
+.sve-portrait-players .sve-phone-turn,
+.sve-portrait-players .sve-phone-active {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sve-portrait-players .sve-phone-active {
+  display: block;
+  font-size: 9.5px;
+}
+
+.sve-portrait-players .sve-phone-active > span + span {
+  margin-left: 6px;
+}
+
+.sve-portrait-players .sve-phone-prompt-text {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  font-size: 10px;
+  line-height: 11.5px;
+}
+
+/* What the decision is part of: a line; opened, its text comes up over the card panel (the players' row stays short). */
+.sve-portrait-players .sve-processing-compact summary {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 9.5px;
+}
+
+.sve-portrait-players .sve-processing-compact .sve-processing-body {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: calc(100% + 4px);
+  z-index: 40;
+  max-height: 38vh;
+  padding: 8px 10px;
+  border: 1px solid var(--sve-phone-line);
+  border-radius: 8px;
+  background: var(--sve-panel);
+  box-shadow: 0 10px 30px #000c;
+  font-size: 11px;
+}
+
+/* The bar of buttons: the quick chat, the log, the buttons that answer the decision. */
+.sve-portrait-bottom {
+  flex: none;
+  box-sizing: border-box;
+  height: 53px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: var(--sve-phone-column);
+  border-top: 1px solid var(--sve-phone-line);
+}
+
+.sve-portrait-bottom .sve-quick-chat {
+  flex: 0 0 78px;
+  height: 45px;
+}
+
+.sve-portrait-bottom .sve-quick-chat-button {
+  width: 100%;
+  height: 45px;
+  justify-content: center;
+  font-size: 13px;
+}
+
+.sve-portrait-bottom .sve-quick-chat-menu {
+  top: auto;
+  bottom: calc(100% + 4px);
+  left: 0;
+  right: auto;
+  max-height: min(60vh, 360px);
+  overflow-y: auto;
+}
+
+.sve-portrait-log {
+  flex: 0 0 62px;
+  height: 45px;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.sve-portrait-bottom .sve-phone-actions {
+  flex: 1;
+  min-width: 0;
+}
+
+.sve-portrait-bottom .sve-phone-actions button {
+  min-height: 45px;
+  font-size: 14px;
+}
+
+/* Watching a replay: its playback bar under the table, and the log's button beside it. */
+.sve-portrait-watch {
+  flex: none;
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  padding: 4px 6px;
+  background: var(--sve-phone-column);
+  border-top: 1px solid var(--sve-phone-line);
+}
+
+.sve-portrait-watch .sve-watch {
+  flex: 1;
+  min-width: 0;
+  gap: 4px;
+  padding: 2px;
+  border: none;
+  background: none;
+  font-size: 12px;
+}
+
+.sve-portrait-watch > button {
+  height: 34px;
+}
+
+/* The table: the hands in the column, above and under the mats (not in a corner as held sideways). */
+.sve-table[data-phone="portrait"] .sve-hand-own {
+  position: relative;
+  right: auto;
+  bottom: auto;
+  z-index: auto;
+  width: 100%;
+}
+
+/* Windows over the table: narrower, never taller than the table. */
+.sve-game-phone[data-phone="portrait"] .sve-decision-dialog {
+  --sve-card-width: 60px;
+  width: calc(100% - 16px);
+  max-height: calc(100% - 12px);
+  padding: 8px 10px;
+  gap: 6px;
+}
+
+.sve-game-phone[data-phone="portrait"] .sve-result-panel {
+  max-height: calc(100% - 12px);
+  overflow-y: auto;
+}
+
+/* A Quick card's announcement: there is no room beside the mats, so it is a small window in the table's middle. */
+.sve-game-phone[data-phone="portrait"] .sve-announce {
+  top: 50%;
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  width: min(340px, calc(100% - 16px));
+  max-height: calc(100% - 16px);
+  overflow-y: auto;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+}
+
+.sve-game-phone[data-phone="portrait"] .sve-announce-card {
+  flex: none;
+  --sve-card-width: 96px;
+}
+
+.sve-game-phone[data-phone="portrait"] .sve-announce-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.sve-game-phone[data-phone="portrait"] .sve-looked {
+  max-height: calc(100% - 16px);
+  overflow-y: auto;
+  padding: 8px 10px;
+}
+
+/* Fingers: a card on the field or in the EX area, and an empty slot to pick, answer a touch over at least 44 x 44 pixels
+   (the card keeps its size; the area is the card's own, so taps, long presses and drags are the card's). */
+.sve-game-phone[data-phone="portrait"] .sve-field-slot .sve-card::after,
+.sve-game-phone[data-phone="portrait"] .sve-ex-slot .sve-card::after,
+.sve-game-phone[data-phone="portrait"] .sve-slot-pick::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+}

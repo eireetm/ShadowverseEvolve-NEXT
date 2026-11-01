@@ -73,7 +73,7 @@ describe("the back button", () => {
 });
 
 describe("the table on a phone held sideways", () => {
-  it("gives the mats the height, and puts your hand beside your mat", () => {
+  it("gives the two mats the whole height, the hands going into the column on the right", () => {
     for (const [width, height] of [
       [915, 412],
       [800, 360],
@@ -83,14 +83,13 @@ describe("the table on a phone held sideways", () => {
       const l = computeLayout(width, height);
       expect(l.compact).toBe(true);
       expect(l.matWidth / l.matHeight).toBeCloseTo(WIDE_WIDTH / MAT_BOX_HEIGHT, 5);
-      // The opponent's hand strip and the two mats fill the height; your hand is not under them.
-      expect(l.opponentHandHeight + 2 * l.matHeight).toBeLessThanOrEqual(height);
-      expect(l.opponentHandHeight + 2 * l.matHeight).toBeGreaterThan(height * 0.9);
-      // The mats and the room on both sides fit the width; your hand fits its side, its cards larger than the mat's.
-      expect(l.matWidth + 2 * l.sideWidth).toBeLessThanOrEqual(width);
+      // The two mats fill the height (the opponent's hand is at the top of the right column, yours at its bottom).
+      expect(2 * l.matHeight).toBeLessThanOrEqual(height + 0.01);
+      expect(2 * l.matHeight).toBeGreaterThan(height * 0.9);
+      // The mats and the columns on both sides fit the width; both hands fit the right column, one above the other.
+      expect(l.matWidth + 2 * l.sideWidth).toBeLessThanOrEqual(width + 0.01);
       expect(l.handCardWidth).toBeLessThanOrEqual(l.handWidth);
-      expect(l.handCardWidth).toBeGreaterThanOrEqual(l.cardWidth);
-      expect(l.handHeight).toBeLessThan(height / 2);
+      expect(l.opponentHandHeight + l.handHeight).toBeLessThan(height / 2);
     }
     // A tablet or a computer keeps the usual layout.
     expect(computeLayout(1280, 800).compact).toBe(false);

@@ -31,7 +31,7 @@
   - 联机：P2P（不需要服务器），或者经过自己架的联机服务器（`@sve/server`）；
   - 界面和卡牌文本都可以切换中文、英文、日文和 Traditional Chinese（由中文转换，用 OpenCC 的词典）；
   - 外观、声音、字体都可以换成自己的文件（见"自定义资源"）；衍生物在对局里显示哪个印刷版本的卡图，可以在设置页的"衍生物卡图"里选。
-- **安卓版**：同一个界面装进安卓 WebView（Capacitor），手机横屏使用。
+- **安卓版**：同一个界面装进安卓 WebView（Capacitor），手机横屏、竖屏都能玩（设置页的"屏幕设置"：自动 / 横屏 / 竖屏）。
 
 ### 声明
 
@@ -374,8 +374,10 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
   - `exports/`：导出的文件，导出后会弹出分享菜单。
 - **要求**：安卓 7 以上，系统 WebView 103 以上；更旧时显示一个说明页。
 - **小屏排版**：
-  - 左栏变成抽屉，用按钮或长按卡牌打开；
-  - 组卡分成"卡组"和"卡池"两页；
+  - 横着拿：牌桌占满屏幕，左栏是卡牌详情（点"日志"换成日志），右栏是双方玩家、按钮和提示；自己的手牌收在右下角，点一下展开成底部一排大卡再出牌，点别处收回；
+  - 竖着拿：从上到下是菜单栏、卡牌详情、双方玩家和回合提示、牌桌（场地占满宽度，手牌在下面）、按钮栏；
+  - 设置页的"屏幕设置"：自动（跟着手机转，手机锁定了方向时不转）、横屏、竖屏；平板始终横屏；
+  - 长按卡牌看详情；组卡的左栏是抽屉，用按钮或长按卡牌打开，分成"卡组"和"卡池"两页；
   - 返回键先关掉打开的东西。
 - **平板**：屏幕够大时用电脑版的排版，按手指操作：点一下卡组里的卡移除一张，长按卡牌看详情，用手指把卡拖到场上使用。
 
@@ -386,7 +388,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
   - 没有 Mac 时可采用 GitHub 的工作流：仓库页面 › Actions › "iOS IPA" › Run workflow，跑完后在这次运行的 Artifacts 里下载 `SVEN-ios`（里面就是 IPA）。
 - **安装**：IPA 没有签名，用自己的 Apple ID 签名安装（例如 AltStore、Sideloadly）。
 - **设备上的文件**：在"文件"App 的"我的 iPhone（iPad）› SVE NEXT"里：`public/`（资源：用"文件"App 拷进去，或者在设置页导入 zip）、`decks/`、`replays/`、`exports/`。
-- **要求**：iOS / iPadOS 16.4 以上。横屏全屏，屏幕常亮；iPad 用宽屏排版、手指操作（见"安卓版"的平板）。
+- **要求**：iOS / iPadOS 16.4 以上。全屏，屏幕常亮；iPhone 横屏、竖屏都能玩（设置页的"屏幕设置"，见"安卓版"）；iPad 横屏，用宽屏排版、手指操作（见"安卓版"的平板）。
 - 和同一版本的电脑版、安卓版可以互相联机。
 - 联机服务器的配置不在 IPA 里：在设置 → 联机 →"修改服务器配置"里粘贴。
 
@@ -436,7 +438,7 @@ An unofficial rules engine, AI and client for the *Shadowverse: Evolve* trading 
   - Online play: peer to peer (no server needed), or through an online server of your own (`@sve/server`).
   - The interface and the card text can each be English, Chinese, Japanese or Traditional Chinese (converted from the Chinese with OpenCC's dictionaries).
   - Pictures, sounds and fonts can be replaced with your own files (see "Custom resources"); which printing a token shows in games is chosen in the settings ("Token art").
-- **Android app**: the same interface in the Android WebView (Capacitor), played with the phone held sideways.
+- **Android app**: the same interface in the Android WebView (Capacitor), played with the phone held sideways or upright (the settings' "Screen": Auto / Landscape / Portrait).
 
 ### Disclaimer
 
@@ -779,8 +781,10 @@ Come in two kinds: for PCs and for Android.
   - `exports/`: exported files, handed to the share menu.
 - **Requirements**: Android 7 or later, with a system WebView of version 103 or later. An older WebView shows a page that says so.
 - **Small screens**:
-  - The left column becomes a drawer, opened by its button or a long press on a card.
-  - The deck builder has a "Deck" tab and a "Card pool" tab.
+  - Held sideways: the table takes the whole screen, the card panel on the left ("Log" puts the log in its place), the players, the buttons and the prompt on the right; your hand is folded in the bottom right corner, and a tap spreads it into a row of large cards along the bottom to play from (a tap elsewhere folds it).
+  - Held upright: from the top, a bar with the menu, the card panel, the players with the turn between them, the table (its mats as wide as the screen, your hand under them) and a bar of buttons.
+  - The settings' "Screen": Auto (turns with the phone, unless its rotation is locked), Landscape or Portrait. A tablet stays sideways.
+  - Hold a card to read it. The deck builder's left column is a drawer, opened by its button or a long press on a card, and it has a "Deck" tab and a "Card pool" tab.
   - The back button first closes whatever is open.
 - **Tablets**: a big enough screen keeps the PC layout, used with fingers: tap a deck's card to take it out, hold a card to read it, drag a card onto the field with a finger.
 
@@ -791,7 +795,7 @@ Come in two kinds: for PCs and for Android.
   - Without a Mac, one can use the GitHub workflow: the repository's Actions > "iOS IPA" > Run workflow, then download the artifact `SVEN-ios` (the IPA) from the run.
 - **Install**: the IPA isn't signed; sign and install it with your own Apple ID (e.g. AltStore, Sideloadly).
 - **Files on the device**: in the Files app, On My iPhone (iPad) > SVE NEXT: `public/` (resources: copied with the Files app, or a zip imported in the settings), `decks/`, `replays/`, `exports/`.
-- **Requirements**: iOS / iPadOS 16.4 or later. Played sideways on the whole screen, which stays on; an iPad has the wide layout used with fingers (see the tablets under "Android app").
+- **Requirements**: iOS / iPadOS 16.4 or later. Played on the whole screen, which stays on; an iPhone is held sideways or upright (the settings' "Screen", see "Android app"); an iPad is held sideways, with the wide layout used with fingers (see the tablets under "Android app").
 - It plays online with the PC program and the Android app of the same version.
 - The online server's configuration isn't in the IPA: paste it in Settings > Online > "Edit the server configuration".
 

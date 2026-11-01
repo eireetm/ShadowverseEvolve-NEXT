@@ -1,9 +1,10 @@
-import { expect, test, type Page } from "@playwright/test";
-import { pressAnnouncementOk, showSidebar, startGame, tokenByHand, toMainPhase, useSettings } from "./helpers";
+import { expect, test, type CDPSession, type Page } from "@playwright/test";
+import { pressAnnouncementOk, startGame, tokenByHand, toMainPhase, useSettings } from "./helpers";
 
-// A phone held sideways (the Android app is this web app in the phone's WebView): the menus fit, the
-// table packs tighter with your hand beside your mat, the card panel is a drawer (its button or a long press opens it),
-// cards are played by tapping; the deck builder has a deck tab and a pool tab, a tap adds or removes, a long press reads.
+// A phone held sideways (the Android app is this web app in the phone's WebView): the menus fit; in a game the mats take
+// the screen's height between two columns (the card panel on the left; the players, the buttons and your folded hand on
+// the right), a tap spreads the hand, cards are played by tapping; the deck builder has a deck tab and a pool tab, a tap
+// adds or removes, a long press reads.
 test.use({ viewport: { width: 915, height: 412 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
 
 /** A long press of a finger on a card (the pointer events of a touch, held longer than long-press.ts waits): its name. */
@@ -23,13 +24,24 @@ async function longPress(page: Page, selector: string): Promise<string> {
   return name;
 }
 
+/** A finger moved from one point to another, with the touch events a phone sends (a drag). */
+async function fingerDrag(page: Page, cdp: CDPSession, from: { x: number; y: number }, to: { x: number; y: number }): Promise<void> {
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [from] });
+  for (let i = 1; i <= 20; i++) {
+    const point = { x: from.x + ((to.x - from.x) * i) / 20, y: from.y + ((to.y - from.y) * i) / 20 };
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [point] });
+    await page.waitForTimeout(16);
+  }
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+}
+
 /** Tap a card of the hand where it shows (the cards overlap: its left part). */
 async function tapCard(page: Page, selector: string): Promise<void> {
   const box = (await page.locator(selector).first().boundingBox())!;
   await page.touchscreen.tap(box.x + 8, box.y + box.height / 2);
 }
 
-test("a phone: the menus fit, a game is played by tapping, the card panel is a drawer", async ({ page }) => {
+test("a phone held sideways: the menus fit, the mats take the height between two columns, the hand spreads on a tap", async ({ page }) => {
   const problems: string[] = [];
   page.on("pageerror", (e) => problems.push(e.message));
   await useSettings(page, { uiLang: "en", botDelayMs: 0, setupDecks: ["samples/sd01.json", "samples/sd02.json"] });
@@ -54,14 +66,18 @@ test("a phone: the menus fit, a game is played by tapping, the card panel is a d
   expect(await page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")).toBe(true);
   await opponent.selectOption("medium");
   await page.getByTestId("start-game").tap();
-  await expect(page.locator(".sve-table[data-compact]")).toBeVisible();
-  // No left column: the table has the whole width; the drawer opens from its button and hides again.
-  await expect(page.getByTestId("game-left")).toHaveCount(0);
-  await page.getByTestId("details-show").tap();
-  await expect(page.getByTestId("game-left")).toBeVisible();
-  await expect(page.getByTestId("game-menu")).toBeVisible();
-  await page.getByTestId("details-hide").tap();
-  await expect(page.getByTestId("game-left")).toHaveCount(0);
+  const table = page.locator(".sve-table[data-phone]");
+  await expect(table).toBeVisible();
+  // The mats are as tall as the screen; the card panel is the left column, the players are in the right one.
+  const mats = (await page.locator(".sve-mats").boundingBox())!;
+  const left = (await page.getByTestId("game-left").boundingBox())!;
+  const right = (await page.getByTestId("phone-right").boundingBox())!;
+  expect(mats.height).toBeGreaterThan(412 - 4);
+  expect(left.x + left.width).toBeLessThanOrEqual(mats.x + 1);
+  expect(right.x).toBeGreaterThanOrEqual(mats.x + mats.width - 1);
+  await expect(page.getByTestId("phone-panel")).toHaveAttribute("data-panel", "card");
+  await expect(page.getByTestId("player-panel-0")).toBeVisible();
+  await expect(page.getByTestId("player-panel-1")).toBeVisible();
 
   // Keep the hand, go first when asked, until your main phase.
   const bar = page.locator(".sve-decision");
@@ -75,28 +91,48 @@ test("a phone: the menus fit, a game is played by tapping, the card panel is a d
     await page.waitForTimeout(150);
   }
   await expect(bar).toHaveAttribute("data-decision", "mainPhase");
-  // Your hand is beside your mat, at the bottom right.
-  const hand = (await page.locator(".sve-hand-own").boundingBox())!;
-  const mats = (await page.locator(".sve-mats").boundingBox())!;
-  expect(hand.x).toBeGreaterThanOrEqual(mats.x + mats.width - 1);
-
-  // Tap a card the main phase lets you play: its menu; tap "Play".
-  const lit = ".sve-hand-own .sve-card-action";
-  if ((await page.locator(lit).count()) > 0) {
-    const before = Number(await bar.getAttribute("data-inputs"));
-    await tapCard(page, lit);
-    const item = page.getByTestId("card-menu").getByRole("menuitem").first();
-    await expect(item).toBeVisible();
-    await item.tap();
-    await expect.poll(async () => Number(await bar.getAttribute("data-inputs"))).toBeGreaterThan(before);
-  }
-
-  // A long press on a card opens the drawer with that card.
+  // Who goes first and who second, on the players.
+  expect([await page.getByTestId("player-order-0").innerText(), await page.getByTestId("player-order-1").innerText()].sort()).toEqual(["1st", "2nd"]);
+  // The log takes the card panel's place; a long press on a card brings the card back, showing that card (while nothing
+  // moves on the table: a long press waits half a second).
+  await page.getByTestId("phone-log").tap();
+  await expect(page.getByTestId("phone-panel")).toHaveAttribute("data-panel", "log");
   const held = await longPress(page, ".sve-mat-opponent [data-card]");
   expect(held).not.toBe("");
-  await expect(page.getByTestId("game-left")).toBeVisible();
-  await expect(page.locator(".sve-drawer .sve-sidebar-card")).toContainText(held);
-  await page.getByTestId("details-hide").tap();
+  await expect(page.getByTestId("phone-panel")).toHaveAttribute("data-panel", "card");
+  await expect(page.getByTestId("phone-panel")).toContainText(held);
+  // Your hand is folded in the right column's bottom corner; a tap spreads it along the bottom of the screen, a tap
+  // elsewhere folds it again.
+  const folded = (await page.locator(".sve-hand-own").boundingBox())!;
+  expect(folded.x).toBeGreaterThanOrEqual(mats.x + mats.width - 1);
+  expect(folded.y + folded.height).toBeLessThanOrEqual(412 + 1);
+  await page.getByTestId("hand-spread").tap();
+  await expect(table).toHaveAttribute("data-hand-spread", "");
+  const spread = (await page.locator(".sve-hand-own .sve-hand-cards").boundingBox())!;
+  expect(spread.width).toBeGreaterThan(folded.width);
+  await page.touchscreen.tap(mats.x + mats.width / 2, mats.y + mats.height / 2);
+  await expect(table).not.toHaveAttribute("data-hand-spread", "");
+
+  // Spread, a tap on a card the main phase lets you play opens its menu (a tap elsewhere closes it and folds the hand);
+  // spread again, a finger drags the card onto your field: it is played, and the hand folds again.
+  const lit = page.locator(".sve-hand-own .sve-card-action");
+  if ((await lit.count()) > 0) {
+    await page.getByTestId("hand-spread").tap();
+    await tapCard(page, ".sve-hand-own .sve-card-action");
+    await expect(page.getByTestId("card-menu").getByRole("menuitem").first()).toBeVisible();
+    await page.touchscreen.tap(mats.x + mats.width / 2, mats.y + 20);
+    await expect(page.getByTestId("card-menu")).toHaveCount(0);
+    await expect(table).not.toHaveAttribute("data-hand-spread", "");
+    await page.getByTestId("hand-spread").tap();
+    const hand = await page.locator(".sve-hand-own [data-card]").count();
+    const card = (await lit.first().boundingBox())!;
+    const slot = (await page.locator(".sve-mat-own .sve-field-slot").nth(2).boundingBox())!;
+    const cdp = await page.context().newCDPSession(page);
+    await fingerDrag(page, cdp, { x: card.x + card.width / 2, y: card.y + card.height / 3 }, { x: slot.x + slot.width / 2, y: slot.y + slot.height / 2 });
+    await expect(page.locator(".sve-hand-own [data-card]")).toHaveCount(hand - 1);
+    await expect(table).not.toHaveAttribute("data-hand-spread", "");
+  }
+
   expect(problems).toEqual([]);
 });
 
@@ -138,10 +174,11 @@ test("a phone: a card's menu longer than the room beside the card scrolls, by fi
   }
   await expect(mine).toContainText("Assail");
   await page.keyboard.press("Escape");
-  await showSidebar(page);
-  await page.getByRole("button", { name: /^Debug$/ }).click();
+  // The debug tab is in the card panel's place, as the log is.
+  await page.getByTestId("phone-log").tap();
+  await page.getByTestId("tab-debug").tap();
   await page.getByTestId("debug-manual").uncheck();
-  await page.getByTestId("sidebar-hide").click();
+  await page.getByTestId("phone-log-close").tap();
 
   // Its menu stays on the screen; the items don't all fit: the list scrolls, its lower edge fades.
   await mine.tap();
@@ -161,7 +198,7 @@ test("a phone: a card's menu longer than the room beside the card scrolls, by fi
   const leader = items.getByRole("menuitem", { name: /leader$/ });
   const last = (await leader.boundingBox())!;
   expect(last.y + last.height).toBeLessThanOrEqual(list.y + list.height + 1);
-  const defense = page.getByTestId("player-panel-1").locator(".sve-player-defense");
+  const defense = page.getByTestId("leader-1").locator(".sve-leader-defense");
   const before = Number(await defense.innerText());
   await leader.tap();
   await expect(defense).toHaveText(String(before - 1));

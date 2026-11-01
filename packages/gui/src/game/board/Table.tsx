@@ -7,9 +7,9 @@ import { cardName } from "../../app/catalog";
 import { useSettings } from "../../app/settings";
 import { useApp } from "../../app/store";
 import { findCard } from "../../engine/view-utils";
-import { useMemo, useRef, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from "react";
 import type { GameUpdate } from "../../engine/protocol";
-import { useT, type MessageKey } from "../../i18n";
+import { useT } from "../../i18n";
 import { useShownCards } from "../animation/reveal";
 import { CardTile, type CardMark } from "../card/CardTile";
 import { DecisionDialog } from "../decisions/DecisionDialog";
@@ -17,13 +17,15 @@ import { actionsFor, answerFor, attackTargets, dragKind, openManual, openMenu, s
 import { ManualDialog } from "../manual/ManualDialog";
 import { LookedCards } from "./LookedCards";
 import { QuickAnnouncement } from "./QuickAnnouncement";
-import { playerLabel } from "../labels";
+import { deckBasis, playerLabel } from "../labels";
+import { setHandOpen, useHandOpen } from "../phone/hand";
 import { AttackArrow } from "./AttackArrow";
 import { CardMenu } from "./CardMenu";
+import { setPlacingName } from "./center-state";
 import { CenterLine } from "./CenterLine";
 import { DiceRoll } from "./DiceRoll";
 import { DragLayer } from "./DragLayer";
-import { PIECES, pieceStyle, pileRect, rectStyle, rowRect, slotRect, type PileZone, type SlotZone, type TableLayout } from "./layout";
+import { PIECES, pieceStyle, pileRect, rectStyle, rowRect, slotRect, spareRect, type PileZone, type SlotZone, type TableLayout, type TableMode } from "./layout";
 import { pressCard } from "./pointer";
 import { ResultOverlay } from "./ResultOverlay";
 import { TurnOrderNotice } from "./TurnOrderNotice";
@@ -172,9 +174,9 @@ const PILE_LABELS = { deck: "game.deck", cemetery: "game.cemetery", banished: "g
 
 /**
  * One player's playmat: the picture's pieces (layout.ts), the leader and the piles at their spots, the field's slots above
- * the line and the EX area's below.
+ * the line and the EX area's below. On a phone (no player panels beside the mats) the trigger zone is on the mat's spare spot.
  */
-function Mat({ update, side, opponent, marks, slots }: { update: GameUpdate; side: PlayerSideView; opponent: boolean; marks: Map<CardId, CardMark>; slots: Slots }) {
+function Mat({ update, side, opponent, marks, slots, phone }: { update: GameUpdate; side: PlayerSideView; opponent: boolean; marks: Map<CardId, CardMark>; slots: Slots; phone: boolean }) {
   const t = useT();
   const catalog = useApp((s) => s.catalog);
   // Cross Craft: the second leader, shown behind the one the engine plays with (GameOptions.secondLeaders).
@@ -279,12 +281,40 @@ function Mat({ update, side, opponent, marks, slots }: { update: GameUpdate; sid
       )}
       {row("field", fieldCard)}
       {row("ex", exCard)}
+      {phone && side.triggerZone.length > 0 ? (
+        <div className="sve-mat-zone sve-mat-trigger" style={rectStyle(spareRect(opponent))} data-zone={`${side.id}:triggerZone`} title={t("game.trigger")}>
+          {side.triggerZone.map((c) => (
+            <TableCard key={c.id} update={update} card={c} side={side} marks={marks} className="sve-slot-card" />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
 
-/** A hand outside the mat: yours fanned (a card rises under the pointer), the opponent's backs turned around. */
-function HandStrip({ update, side, opponent, marks, layout }: { update: GameUpdate; side: PlayerSideView; opponent: boolean; marks: Map<CardId, CardMark>; layout: TableLayout }) {
+/**
+ * A hand outside the mat: yours fanned (a card rises under the pointer), the opponent's backs turned around. On a phone held
+ * sideways (`folding`) your hand is folded small in a corner, its cards covered by a button that spreads it (phone/hand.ts);
+ * spread, its large cards stand in a row along the bottom of the screen (styles/phone.css) and are played as anywhere else.
+ */
+function HandStrip({
+  update,
+  side,
+  opponent,
+  marks,
+  layout,
+  folding = false,
+  spread = false,
+}: {
+  update: GameUpdate;
+  side: PlayerSideView;
+  opponent: boolean;
+  marks: Map<CardId, CardMark>;
+  layout: TableLayout;
+  folding?: boolean;
+  spread?: boolean;
+}) {
+  const t = useT();
   const cards = side.hand;
   const n = cards.length;
   const cardWidth = opponent ? layout.opponentHandCardWidth : layout.handCardWidth;
@@ -292,16 +322,25 @@ function HandStrip({ update, side, opponent, marks, layout }: { update: GameUpda
   const natural = n * cardWidth + Math.max(0, n - 1) * gap;
   const step = n > 1 && natural > layout.handWidth ? (layout.handWidth - cardWidth) / (n - 1) : cardWidth + gap;
   const mid = (n - 1) / 2;
+  // A phone's hands lie flat: no fan. Spread, all the cards fit the screen's width (6 pixels apart, 8 at each end).
+  const flat = opponent || layout.compact;
+  const screen = layout.matWidth + 2 * layout.sideWidth;
+  const spreadWidth = Math.max(40, Math.min(layout.handOpenCardWidth, (screen - 16 - 6 * Math.max(0, n - 1)) / Math.max(1, n)));
   // Cards put into a hand in public, being shown (animation/reveal.ts): one hidden here is drawn face up meanwhile.
   const shown = useShownCards();
   return (
-    <div className={`sve-hand-strip ${opponent ? "sve-hand-opponent" : "sve-hand-own"}`} data-zone={`${side.id}:hand`}>
-      <div className="sve-hand-cards" style={{ width: n > 0 ? step * (n - 1) + cardWidth : 0 }}>
+    <div
+      className={`sve-hand-strip ${opponent ? "sve-hand-opponent" : "sve-hand-own"}`}
+      data-zone={`${side.id}:hand`}
+      data-spread={spread ? "" : undefined}
+      style={spread ? ({ "--hand-spread-card-width": `${spreadWidth}px` } as CSSProperties) : undefined}
+    >
+      <div className="sve-hand-cards" style={spread ? undefined : { width: n > 0 ? step * (n - 1) + cardWidth : 0 }}>
         {cards.map((card, i) => {
-          const tilt = opponent ? 0 : (i - mid) * Math.min(2.5, 20 / Math.max(n, 1));
-          const sink = opponent ? 0 : (i - mid) ** 2 * Math.min(1.2, 10 / Math.max(n, 1));
+          const tilt = flat ? 0 : (i - mid) * Math.min(2.5, 20 / Math.max(n, 1));
+          const sink = flat ? 0 : (i - mid) ** 2 * Math.min(1.2, 10 / Math.max(n, 1));
           const className = opponent ? "sve-hand-card sve-card-opponent" : "sve-hand-card";
-          const style = { left: i * step, zIndex: i + 1, "--fan-tilt": `${tilt}deg`, "--fan-sink": `${sink}px` } as CSSProperties;
+          const style = { ...(spread ? {} : { left: i * step }), zIndex: i + 1, "--fan-tilt": `${tilt}deg`, "--fan-sink": `${sink}px` } as CSSProperties;
           const s = shown.get(card.id);
           if (s && card.hidden && s.phase !== "down") {
             return <CardTile key={card.id} info={s.card} cardId={card.id} className={`${className} sve-card-revealed sve-reveal-${s.phase}`} style={style} />;
@@ -310,6 +349,9 @@ function HandStrip({ update, side, opponent, marks, layout }: { update: GameUpda
           return <TableCard key={card.id} update={update} card={card} side={side} marks={marks} className={className + showing} style={style} />;
         })}
       </div>
+      {folding && !spread && n > 0 ? (
+        <button type="button" className="sve-hand-spread" onClick={() => setHandOpen(true)} title={t("game.handSpread")} aria-label={t("game.handSpread")} data-testid="hand-spread" />
+      ) : null}
     </div>
   );
 }
@@ -320,15 +362,7 @@ function PlayerPanel({ update, side, opponent, marks }: { update: GameUpdate; si
   const catalog = useApp((s) => s.catalog);
   const active = update.view.activePlayer === side.id && update.view.phase !== "over";
   // What the deck is built on: its universe (CR 6.1.1.5.2), else, in a format, its leaders' classes (Cross Craft: two).
-  const secondPrinting = update.secondLeaders[side.id];
-  const classes = [side.leader?.def, secondPrinting ? catalog?.printing(secondPrinting)?.id : undefined]
-    .map((def) => (def ? catalog?.def(def)?.class : undefined))
-    .filter((c) => c !== undefined);
-  const basis = side.universe
-    ? t(`universe.${side.universe}` as const)
-    : update.format !== "unlimited" && classes.length > 0
-      ? classes.map((c) => t(`class.${c}` as MessageKey)).join(" / ")
-      : null;
+  const basis = deckBasis(update, side, catalog ?? null, t);
   const deciding = update.waitingFor === side.id;
   const you = side.id === update.perspective && update.controllers[side.id] === "human";
   // Manual debugging: the panel opens the player's points and tokens.
@@ -379,9 +413,29 @@ function PlayerPanel({ update, side, opponent, marks }: { update: GameUpdate; si
   );
 }
 
-export function Table({ update, onNewGame, onMenu, onReplays }: { update: GameUpdate; onNewGame: () => void; onMenu: () => void; onReplays: () => void }) {
+/**
+ * `phone`: a phone's table, whose players and center (the status and the buttons) are the game screen's (game/phone/).
+ * Held sideways ("landscape", LandscapeChrome.tsx lays its columns over the table): the mats take the whole height, and your
+ * hand folds in a corner (phone/hand.ts). Held upright ("portrait", PortraitChrome.tsx puts bars above and below): the mats
+ * take the width, your hand a row under them.
+ */
+export function Table({
+  update,
+  onNewGame,
+  onMenu,
+  onReplays,
+  phone = null,
+}: {
+  update: GameUpdate;
+  onNewGame: () => void;
+  onMenu: () => void;
+  onReplays: () => void;
+  phone?: Exclude<TableMode, "wide"> | null;
+}) {
   const ref = useRef<HTMLDivElement>(null);
-  const layout = useTableLayout(ref);
+  const layout = useTableLayout(ref, phone ?? "wide");
+  const folding = phone === "landscape";
+  const spread = useHandOpen() && folding;
   const marks = useMarks(update);
   const slots = useSlots(update);
   const catalog = useApp((s) => s.catalog);
@@ -393,6 +447,8 @@ export function Table({ update, onNewGame, onMenu, onReplays }: { update: GameUp
   // The card waiting for its slot (choose card spots by hand).
   const waiting = slots.waiting[0] !== undefined ? findCard(view, slots.waiting[0]) : null;
   const placing = waiting ? cardName(catalog?.def(waiting.def), cardLang, waiting.name) : null;
+  // A phone shows the center's prompt outside the table (its columns or bars).
+  useEffect(() => setPlacingName(phone !== null ? placing : null), [phone, placing]);
   const vars = {
     "--mat-width": `${layout.matWidth}px`,
     "--mat-height": `${layout.matHeight}px`,
@@ -402,16 +458,28 @@ export function Table({ update, onNewGame, onMenu, onReplays }: { update: GameUp
     "--hand-card-width": `${layout.handCardWidth}px`,
     "--opponent-hand-card-width": `${layout.opponentHandCardWidth}px`,
     "--side-width": `${layout.sideWidth}px`,
+    "--hand-open-card-width": `${layout.handOpenCardWidth}px`,
   } as CSSProperties;
   return (
-    <div className="sve-table" ref={ref} style={vars} data-compact={layout.compact ? "" : undefined}>
+    <div
+      className="sve-table"
+      ref={ref}
+      style={vars}
+      data-compact={layout.compact ? "" : undefined}
+      data-phone={phone ?? undefined}
+      data-hand-spread={spread ? "" : undefined}
+    >
       <HandStrip update={update} side={view.players[opponent]} opponent marks={marks} layout={layout} />
       <div className="sve-mats">
-        <Mat update={update} side={view.players[opponent]} opponent marks={marks} slots={slots} />
-        <Mat update={update} side={view.players[me]} opponent={false} marks={marks} slots={slots} />
-        <PlayerPanel update={update} side={view.players[opponent]} opponent marks={marks} />
-        <PlayerPanel update={update} side={view.players[me]} opponent={false} marks={marks} />
-        <CenterLine update={update} placing={placing} />
+        <Mat update={update} side={view.players[opponent]} opponent marks={marks} slots={slots} phone={phone !== null} />
+        <Mat update={update} side={view.players[me]} opponent={false} marks={marks} slots={slots} phone={phone !== null} />
+        {phone !== null ? null : (
+          <>
+            <PlayerPanel update={update} side={view.players[opponent]} opponent marks={marks} />
+            <PlayerPanel update={update} side={view.players[me]} opponent={false} marks={marks} />
+            <CenterLine update={update} placing={placing} />
+          </>
+        )}
         {view.resolution.length > 0 ? (
           <div className="sve-resolution-zone" data-zone="resolution" title={t("game.resolution")}>
             {view.resolution.map((c) => (
@@ -420,7 +488,7 @@ export function Table({ update, onNewGame, onMenu, onReplays }: { update: GameUp
           </div>
         ) : null}
       </div>
-      <HandStrip update={update} side={view.players[me]} opponent={false} marks={marks} layout={layout} />
+      <HandStrip update={update} side={view.players[me]} opponent={false} marks={marks} layout={layout} folding={folding} spread={spread} />
       <AttackArrow update={update} />
       <DragLayer update={update} />
       <CardMenu update={update} />

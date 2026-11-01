@@ -8,6 +8,8 @@ import type { TurnServer } from "../net/relays";
 /** "zh-Hant": Traditional Chinese, the Simplified Chinese converted (i18n/hant.ts). */
 export type UiLang = "en" | "zh" | "zh-Hant" | "ja";
 export type CardLang = "en" | "cn" | "zh-Hant" | "ja";
+/** How a phone app's screen turns: with the phone, or held sideways or upright whatever the phone does (host/native.ts). */
+export type ScreenMode = "auto" | "landscape" | "portrait";
 
 export interface Settings {
   uiLang: UiLang;
@@ -20,6 +22,8 @@ export interface Settings {
   bgmVolume: number;
   /** The table's animations (cards flying, numbers, ...). */
   animations: boolean;
+  /** The Android and iOS apps on a phone: the screen turns with the phone, or stays sideways or upright (a tablet stays sideways). */
+  screenMode: ScreenMode;
   /** The dice window is off (game/board/DiceRoll.tsx): dice rolled aren't shown, and no answer waits for them to land. */
   diceRollsOff: boolean;
   /** The last game setup (deck files, who plays each seat). */
@@ -86,6 +90,7 @@ export const DEFAULT_SETTINGS: Settings = {
   volume: 0.6,
   bgmVolume: 0.4,
   animations: true,
+  screenMode: "auto",
   diceRollsOff: false,
   setupDecks: ["samples/sd01.json", "samples/sd02.json"],
   setupControllers: ["human", "medium"],

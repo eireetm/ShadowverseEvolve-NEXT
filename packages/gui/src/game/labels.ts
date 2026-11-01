@@ -1,5 +1,5 @@
 // Names for players, cards and abilities in buttons and the log.
-import type { CardId, MainAction, PlayerId, QuickAction } from "@sve/core";
+import type { CardId, MainAction, PlayerId, PlayerSideView, QuickAction } from "@sve/core";
 import { cardName, type Catalog } from "../app/catalog";
 import type { CardLang } from "../app/settings";
 import type { AbilitySummary, DecisionInfo, GameUpdate } from "../engine/protocol";
@@ -113,4 +113,18 @@ export function abilityLabel(summary: AbilitySummary | undefined, t: Translate):
     summary.custom && !summary.advancedIcon ? t("ability.custom") : null,
   ];
   return parts.filter((p): p is string => p !== null).join(" ") + granted;
+}
+
+/**
+ * What a player's deck is built on, as their panel says it: its universe (CR 6.1.1.5.2), else, in a format, its leaders'
+ * classes (Cross Craft: two); null in unlimited play without a universe.
+ */
+export function deckBasis(update: GameUpdate, side: PlayerSideView, catalog: Catalog | null, t: Translate): string | null {
+  if (side.universe) return t(`universe.${side.universe}` as const);
+  if (update.format === "unlimited") return null;
+  const secondPrinting = update.secondLeaders[side.id];
+  const classes = [side.leader?.def, secondPrinting ? catalog?.printing(secondPrinting)?.id : undefined]
+    .map((def) => (def ? catalog?.def(def)?.class : undefined))
+    .filter((c) => c !== undefined);
+  return classes.length > 0 ? classes.map((c) => t(`class.${c}` as MessageKey)).join(" / ") : null;
 }

@@ -94,6 +94,16 @@ export function pileRect(zone: PileZone, opponent: boolean): Rect {
   return turned(kept(PILES[zone]), opponent);
 }
 
+/**
+ * The mat's one empty spot of a pile's size: above the evolve deck, across from the leader. A phone's table (which has no
+ * player panels beside the mats) shows the trigger zone there.
+ */
+const SPARE = { x: 22, y: 62, w: 191, h: 255 } satisfies PictureRect;
+
+export function spareRect(opponent: boolean): Rect {
+  return turned(kept(SPARE), opponent);
+}
+
 /** Where slot `index` of the field or the EX area is (0 is the player's own leftmost). */
 export function slotRect(zone: SlotZone, index: number, opponent: boolean): Rect {
   return turned(kept({ x: SLOT_XS[index]!, y: SLOT_Y[zone], w: SLOT_W, h: SLOT_H }), opponent);
@@ -170,11 +180,16 @@ export interface TableLayout {
   /** The room beside each mat (panels, status, buttons). */
   sideWidth: number;
   /**
-   * A small screen (a phone held sideways): the mats take the whole height, your hand is beside your mat
-   * (bottom right), the panels and the status are on the left, the buttons on the right.
+   * A small screen (a phone held sideways): the mats take the whole height; the columns beside them (game/phone/) hold the
+   * card panel on the left, and on the right the opponent's hand, the players, the buttons and your hand, folded.
    */
   compact: boolean;
+  /** Your hand's cards once a tap spreads it along the bottom of a phone's screen (game/phone/hand.ts). */
+  handOpenCardWidth: number;
 }
+
+/** Which table: the wide one, or a phone's (held sideways, or upright). */
+export type TableMode = "wide" | "landscape" | "portrait";
 
 const clamp = (x: number, min: number, max: number): number => Math.max(min, Math.min(max, x));
 
@@ -187,10 +202,12 @@ export const COMPACT_HEIGHT = 560;
 
 /**
  * Sizes for a table area of `width` x `height` pixels: the two mats as large as fit between the opponent's hand strip
- * and yours (just tall enough for your cards), leaving room beside the mats for the panels and buttons.
+ * and yours (just tall enough for your cards), leaving room beside the mats for the panels and buttons. A phone's table
+ * (or any table less tall than COMPACT_HEIGHT) is laid out as a phone held sideways.
  */
-export function computeLayout(width: number, height: number): TableLayout {
-  if (height < COMPACT_HEIGHT) return computeCompactLayout(width, height);
+export function computeLayout(width: number, height: number, mode: TableMode = "wide"): TableLayout {
+  if (mode === "portrait") return computePortraitLayout(width, height);
+  if (mode === "landscape" || height < COMPACT_HEIGHT) return computeLandscapeLayout(width, height);
   const opponentHandHeight = clamp(height * 0.06, 36, 72);
   const side = clamp(width * 0.13, 110, 220);
   // height = opponent hand + 2 mats + your hand (card height + margin), cards sized from the mat's height.
@@ -213,35 +230,74 @@ export function computeLayout(width: number, height: number): TableLayout {
     opponentHandCardWidth: (opponentHandHeight - 6) / CARD_RATIO,
     sideWidth: Math.max(90, (width - matWidth) / 2 - 20),
     compact: false,
+    handOpenCardWidth: handCardWidth,
+  };
+}
+
+/** The narrowest a phone's side column gets (the card panel, the players and the buttons need this much). */
+export const PHONE_MIN_SIDE = 150;
+
+/**
+ * A phone held sideways: the height is what limits the mats, so the two take all of it (the opponent's hand moves to the
+ * right column), and the columns beside them get the rest of the width. A narrow screen keeps PHONE_MIN_SIDE for each
+ * column and makes the mats smaller. Your hand is folded small in the right column's bottom corner (cards of about a
+ * quarter of the column) and spread along the bottom of the screen on a tap.
+ */
+function computeLandscapeLayout(width: number, height: number): TableLayout {
+  const cardPerMat = CARD_WIDTH / MAT_BOX_HEIGHT;
+  let matHeight = Math.max(100, height / 2);
+  let matWidth = (matHeight * WIDE_WIDTH) / MAT_BOX_HEIGHT;
+  let sideWidth = (width - matWidth) / 2;
+  if (sideWidth < PHONE_MIN_SIDE) {
+    sideWidth = PHONE_MIN_SIDE;
+    matWidth = Math.max(200, width - 2 * PHONE_MIN_SIDE);
+    matHeight = (matWidth * MAT_BOX_HEIGHT) / WIDE_WIDTH;
+  }
+  const handCardWidth = clamp(sideWidth * 0.24, 36, 56);
+  const opponentHandCardWidth = clamp(sideWidth * 0.19, 24, 48);
+  return {
+    matWidth,
+    matHeight,
+    cardWidth: matHeight * cardPerMat,
+    handHeight: handCardWidth * CARD_RATIO + 10,
+    // The opponent's hand is a row of card backs at the top of the right column.
+    opponentHandHeight: opponentHandCardWidth * CARD_RATIO + 6,
+    handWidth: sideWidth - 12,
+    handCardWidth,
+    opponentHandCardWidth,
+    sideWidth,
+    compact: true,
+    handOpenCardWidth: clamp(height * 0.21, 60, 96),
   };
 }
 
 /**
- * A small screen: the height is what limits the mats, so they take all of it but a thin strip for the opponent's hand; your
- * hand goes beside your mat, fanned in the room on the right (its cards larger than the mat's, as they are read).
+ * A phone held upright: the two mats take the width, one above the other, between the opponent's hand (a thin strip of
+ * backs above) and yours (a row below, its cards a little larger than the mat's, as they are read). The bars above and
+ * below the table are the game screen's (game/phone/PortraitChrome.tsx). On a short screen the mats give way, so that the
+ * hands keep a usable size.
  */
-function computeCompactLayout(width: number, height: number): TableLayout {
-  const opponentHandHeight = clamp(height * 0.06, 20, 30);
-  const side = clamp(width * 0.2, 150, 280);
-  const cardPerMat = CARD_WIDTH / MAT_BOX_HEIGHT;
-  const byHeight = (height - opponentHandHeight - 6) / 2;
-  const byWidth = ((width - 2 * side) * MAT_BOX_HEIGHT) / WIDE_WIDTH;
-  const matHeight = Math.max(100, Math.min(byHeight, byWidth));
+function computePortraitLayout(width: number, height: number): TableLayout {
+  const opponentHandHeight = clamp(height * 0.045, 10, 22);
+  // The room your hand would like: a little more than the mats' cards.
+  const handWanted = clamp(height * 0.16, 52, 80);
+  const byWidth = (width * MAT_BOX_HEIGHT) / WIDE_WIDTH;
+  const matHeight = Math.max(40, Math.min(byWidth, (height - opponentHandHeight - handWanted) / 2));
   const matWidth = (matHeight * WIDE_WIDTH) / MAT_BOX_HEIGHT;
-  const cardWidth = matHeight * cardPerMat;
-  const sideWidth = Math.max(120, (width - matWidth) / 2 - 12);
-  const handWidth = sideWidth - 8;
-  const handCardWidth = clamp(Math.min((height * 0.42) / CARD_RATIO, handWidth * 0.34), cardWidth, cardWidth * 2);
+  const cardWidth = matHeight * (CARD_WIDTH / MAT_BOX_HEIGHT);
+  const handHeight = Math.max(44, height - opponentHandHeight - 2 * matHeight);
+  const handCardWidth = clamp((handHeight - 6) / CARD_RATIO, 26, Math.max(26, cardWidth * 1.6));
   return {
     matWidth,
     matHeight,
     cardWidth,
-    handHeight: handCardWidth * CARD_RATIO + 10,
+    handHeight,
     opponentHandHeight,
-    handWidth,
+    handWidth: width - 8,
     handCardWidth,
-    opponentHandCardWidth: (opponentHandHeight - 4) / CARD_RATIO,
-    sideWidth,
+    opponentHandCardWidth: Math.max(7, (opponentHandHeight - 4) / CARD_RATIO),
+    sideWidth: 0,
     compact: true,
+    handOpenCardWidth: handCardWidth,
   };
 }

@@ -10,10 +10,11 @@
 // host/bundled.ts). Loaded by main.tsx in the apps' builds only (vite --mode android / ios).
 import { App } from "@capacitor/app";
 import { Clipboard } from "@capacitor/clipboard";
-import { Capacitor } from "@capacitor/core";
+import { Capacitor, registerPlugin } from "@capacitor/core";
 import { Directory, Encoding, Filesystem } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
 import { goBack } from "../app/back";
+import { getSettings, subscribeSettings, type ScreenMode } from "../app/settings";
 import { parseDeckFile } from "../decks/format";
 import type { SeatController } from "../engine/protocol";
 import { parseReplay } from "../replays/replay-format";
@@ -281,8 +282,28 @@ export async function createNativeHost(platform: AppPlatform): Promise<Host> {
  */
 export async function installNativeShell(platform: AppPlatform): Promise<void> {
   await App.addListener("appStateChange", ({ isActive }) => setInBackground(!isActive));
+  // The screen turns as the settings say, now and whenever they change.
+  let mode = getSettings().screenMode;
+  holdScreen(mode);
+  subscribeSettings((settings) => {
+    if (settings.screenMode === mode) return;
+    mode = settings.screenMode;
+    holdScreen(mode);
+  });
   if (platform !== "android") return;
   await App.addListener("backButton", () => {
     if (!goBack()) void App.minimizeApp();
   });
+}
+
+/**
+ * The app's own native part that turns its screen (android/.../ScreenLockPlugin.java, ios/App/App/SceneDelegate.swift): with
+ * the phone ("auto", as the system's rotation lock allows), or held sideways or upright. It keeps the choice for the next start,
+ * and keeps a tablet sideways whatever is chosen (its layout is the wide one).
+ */
+const ScreenLock = registerPlugin<{ setOrientation(options: { mode: ScreenMode }): Promise<void> }>("ScreenLock");
+
+function holdScreen(mode: ScreenMode): void {
+  // An app built before the plugin keeps its screen as it was built.
+  ScreenLock.setOrientation({ mode }).catch(() => undefined);
 }

@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles/app.css";
+import "./styles/phone.css";
 import { App } from "./app/App";
 import { showCrash } from "./app/crash";
 import { getSettings } from "./app/settings";

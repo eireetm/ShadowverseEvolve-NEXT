@@ -152,6 +152,8 @@ option {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  /* A phone's browser: the screen less its toolbars (100vh counts them hidden, pushing a phone's bars off the screen). */
+  height: 100dvh;
 }
 
 .sve-tab-active {
@@ -3965,42 +3967,11 @@ button.sve-online-thanks-sponsor:hover {
   }
 }
 
-/* The game on a small screen: the table takes the whole width; the card panel is a drawer over its left side. */
-.sve-game.sve-game-compact {
-  grid-template-columns: minmax(0, 1fr);
-}
+/* The game on a small screen is a phone's (styles/phone.css): the table takes the whole screen, columns over its sides. */
 
-.sve-game-compact .sve-game-left.sve-drawer {
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  z-index: 60;
-  width: min(340px, 44vw);
-  /* Nearly opaque: the table's panels would show through the card text. */
-  background: rgb(16 22 32 / 0.96);
-  border-right: 1px solid var(--sve-border);
-  box-shadow: 12px 0 30px #0008;
-}
-
+/* The deck builder's card drawer (on a small screen): its button to hide it. */
 .sve-drawer-hide {
   margin-left: auto;
-}
-
-.sve-details-show {
-  position: absolute;
-  top: 6px;
-  left: 8px;
-  z-index: 50;
-}
-
-.sve-game-compact .sve-game-corner {
-  top: 6px;
-  right: 8px;
-}
-
-.sve-game-compact .sve-game-corner-sidebar {
-  right: calc(var(--sve-sidebar-width, clamp(280px, 24vw, 400px)) + 8px);
 }
 
 /* A finger on the table (a phone, a tablet): no scrolling, zooming or long-press menu of the browser (dragging a card is
@@ -4010,8 +3981,9 @@ button.sve-online-thanks-sponsor:hover {
   -webkit-touch-callout: none;
 }
 
-/* The compact table (board/layout.ts): the mats take the height; on the left the opponent's panel (top), the status
-   (middle) and yours (bottom); on the right the buttons (top) and your hand (bottom). */
+/* A compact table (board/layout.ts) without a phone's columns (a table less tall than a phone's screen in a window that
+   isn't one): the mats take the height; on the left the opponent's panel (top), the status (middle) and yours (bottom); on
+   the right the buttons (top) and your hand (bottom). */
 .sve-table[data-compact] .sve-player-panel {
   width: min(170px, var(--side-width));
   padding: 4px 8px;
