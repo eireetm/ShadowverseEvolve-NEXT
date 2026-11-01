@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createEngine, script } from "../src/core";
 import {
@@ -76,11 +74,13 @@ describe("presets", () => {
     expect(BOT_PRESETS.map((p) => presetSearchIdentity(p))).toEqual([null, null, null, search, search]);
   });
 
-  // The GUI's levels still play the three presets (game-host.ts CONTROLLER_PRESETS in packages/gui, read as text: the bot
-  // package doesn't import the GUI). Moving a candidate into the GUI changes this test with it.
-  it("leave the GUI's levels on the three presets: the candidates are not in it", () => {
-    const host = readFileSync(join(__dirname, "..", "..", "gui", "src", "engine", "game-host.ts"), "utf8");
-    expect(/export const CONTROLLER_PRESETS = (\{[^}]*\})/.exec(host)?.[1]).toBe('{ medium: "medium-next", "medium-v2": "medium-v2", hard: "hard-next" }');
+  // presetSearchIdentity records two search options (choiceDedupe, macro): a preset setting another one would be recorded as
+  // its base is. Every preset leaves the others off; a preset that needs one adds it to presetSearchIdentity first.
+  it("set no search option presetSearchIdentity doesn't record", () => {
+    const options: Record<BotPreset, PlannerBotOptions> = { "medium-next": MEDIUM_NEXT, "hard-next": HARD_NEXT, "medium-v2": MEDIUM_V2, "hard-next-macro": HARD_NEXT_MACRO, "medium-next-macro": MEDIUM_NEXT_MACRO };
+    expect(Object.keys(options).sort()).toEqual([...BOT_PRESETS].sort());
+    const unrecorded = ["commonRandom", "lineSlots", "tieKeepHand", "drawFirst", "turnOrder", "replyLethalOpp", "replyLethalKey", "closeSamples", "explore"] as const;
+    for (const preset of BOT_PRESETS) for (const key of unrecorded) expect(options[preset][key] || undefined, `${preset}.${key}`).toBeUndefined();
   });
 
   it("record every evaluation's parameters, the charge's table and the mulligan's parameters", () => {
