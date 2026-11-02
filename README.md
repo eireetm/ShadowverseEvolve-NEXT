@@ -288,6 +288,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
   - 配置：设置 → 联机 →"修改服务器配置"（联机界面里也有这个按钮），粘贴服务器的主人给你的文字，可以先"测试连接"。
   - **几台服务器**：配置里可以写几段 `[server]`，一台一段。大厅同时列出这几台的房间，每个房间写着在哪台；创建前可以选"在哪台服务器建房"（不选就是第一台）；用房间号加入时，每台都会找。
   - **大厅**：列出公开的房间（"xxx的房间"、规则、等待对手还是对局中、观战人数），点"加入"或"观战"就能进。创建时取消"在大厅里公开这个房间"，就只能用房间号进。
+  - **随机匹配**：服务器那一栏的"随机匹配"是单独的页面。选好赛制、禁卡表和卡组，点"开始随机匹配"，程序会在所有配置的服务器上随机进入一个赛制和禁卡表相同、没有密码的公开房间，房间的其他规则由房主决定，卡组自动准备。暂时没有合适的房间时，会自己开一个公开房间等人来，同时继续找。服务器提供网站的天梯队列时，也可能匹配到网站上的天梯玩家：卡组要先通过网站的卡检，不通过就继续找别的房间，不提示原因；这局的录像和你的名字会保存在那个网站上。对手用的是网站的网页端时，不管你的设置怎么选，这局的录像（没有名字和聊天）都会保存下来，用来训练 AI，联机界面会写明。
   - **房间密码**：创建时勾选"设置房间密码"，会随机生成 6 位数字，加入和观战都要输入；大厅里上锁的房间写着"需要密码"。
   - **保存对局**：设置 → 联机 →"联机自动保存对局到云端"（默认开）。双方都开着时，下完的对局会存到服务器上，用来训练 AI：只有种子、双方卡组和每一步，没有名字和聊天。有一方关掉就不存，房间里会写明这局存不存。
 - **不用服务器（P2P）**：
@@ -695,6 +696,7 @@ Sound effects (29):
   - Configuration: Settings > Online > "Edit the server configuration" (the online screen has the button too): paste the text the server's owner gave you; "Test the connection" first if you like.
   - **Several servers**: the configuration can have several `[server]` parts, one per server. The lobby lists the rooms of all of them, each said to be on its own; before making a room you can pick "Make the room on" (the first one unless you pick another); a code typed in is looked for on every server.
   - **Lobby**: the public rooms ("xxx's room", the rules, waiting or playing, the spectators), joined or watched with a click. Untick "List the room in the lobby" before making a room to have it joined by its code only.
+  - **Random match**: "Random match" in the server's part is a page of its own. Choose the format, the restriction list and a deck, press "Start random match", and the program goes at random to a public room without a password, of that format and restriction list, on any server configured; the room's other rules are its host's, and your deck is made ready by itself. When there is no such room, it makes a public room for someone to come to, and goes on looking. A server may offer a website's ladder queue, so you may also meet someone playing the ladder there: your deck has to pass that website's deck check first (if it doesn't, the search goes on, and you aren't told why), and the website keeps the game's replay and your name. When the other player is on a website's client, the game's replay (no names, no chat) is kept to train an AI whatever your settings say; the online screen says so.
   - **Room password**: tick "A password" before making a room: 6 random digits, asked of whoever joins or watches; the lobby marks such rooms "password".
   - **Keeping games**: Settings > Online > "Keep my online games on the server" (on by default). When both players have it on, a finished game is kept on the server to train the AI: the seed, both decks and every move, no names, no chat. One of them off: not kept; the room says which.
 - **Without the server (P2P)**:

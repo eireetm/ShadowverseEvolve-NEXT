@@ -88,6 +88,9 @@ describe("messages", () => {
     // A person who blocks the quick chat says so (only `true` counts).
     expect(parseMessage({ t: "hello", version: "online-6", cards: "abc", engine: "def", noQuickChat: true })).toEqual({ t: "hello", version: "online-6", cards: "abc", engine: "def", noQuickChat: true });
     expect(parseMessage({ t: "hello", version: "online-6", cards: "abc", engine: "def", noQuickChat: "yes" })).toEqual({ t: "hello", version: "online-6", cards: "abc", engine: "def" });
+    // A website's client says so (the online screen tells the other player it keeps its games).
+    expect(parseMessage({ t: "hello", version: "online-6", cards: "abc", engine: "def", site: "youshoubei" })).toEqual({ t: "hello", version: "online-6", cards: "abc", engine: "def", site: "youshoubei" });
+    expect(parseMessage({ t: "hello", version: "online-6", cards: "abc", engine: "def", site: 1 })).toEqual({ t: "hello", version: "online-6", cards: "abc", engine: "def" });
     expect(parseMessage({ t: "ping", n: 3 })).toEqual({ t: "ping", n: 3 });
     expect(parseMessage({ t: "select", extra: 1 })).toEqual({ t: "select" });
     for (const bad of [null, "hi", 3, { t: "chat" }, { t: "ping", n: "3" }, { t: "hello", version: 1 }, { t: "hello", version: "online-2", cards: "abc" }, { t: "unknown" }]) {

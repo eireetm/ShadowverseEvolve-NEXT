@@ -6,8 +6,11 @@
 // room's host tells the server what its lobby shows of the room (the host's name, the rules, who is in), a program can
 // follow the lobby (watchLobby), and a finished game can be sent for the server to keep. With several servers configured
 // (people of several servers playing together), a room is on one of them: a code typed in is looked for on all of them at
-// once, and the room is the one found. The server's side is packages/server (its relay.ts says the messages).
+// once, and the room is the one found. The server's side is packages/server (its relay.ts says the messages). A server may
+// also offer queues beside its rooms: people waiting on a site of its own, to meet with a deck that site takes (seekQueue; the
+// random match goes to them). packages/server has none: the lobby of a server that offers them lists them.
 import type { JsonValue, MessageAction, Room } from "trystero";
+import type { ReadyDeck } from "./messages";
 import { APP_ID } from "./relays";
 import type { Network } from "./rooms";
 import type { ServerSettings } from "./server-config";
@@ -81,6 +84,37 @@ export interface LobbyRoom extends Omit<RoomInfo, "public"> {
   locked?: boolean;
 }
 
+/**
+ * A queue the lobby lists beside the rooms, on a server that offers one: people waiting on a site of its own for a game of this
+ * format and restriction list. Only this is said of them: `id` is what to ask for (seekQueue).
+ */
+export interface LobbyQueue {
+  id: string;
+  format: string;
+  list: string | null;
+}
+
+/** What a program going to a queue tells its site, which makes a game only with a deck and a program it takes. */
+export interface SeekRequest {
+  /** Its person's name ("": none given), and whether they let their games be kept. */
+  name: string;
+  share: boolean;
+  /** The deck, as it will be made ready in the game's room. */
+  deck: ReadyDeck;
+  /** The program (net/online.ts thisProgram), and its restriction list's contents (lists.ts listFingerprint). */
+  version: string;
+  engine: string;
+  cards: string;
+  listHash: string | null;
+}
+
+/** The game a queue's site made with this program: its room, this program's seat in it, and the key to come in with if not its own. */
+export interface Sought {
+  room: string;
+  token: string;
+  key?: string;
+}
+
 /** What happened to a game sent to be kept (packages/server records.ts), or "unsent": no answer, no connection. */
 export type Kept = "kept" | "off" | "again" | "quota" | "disk" | "error" | "unsent";
 
@@ -92,6 +126,8 @@ export interface ServerRoom {
 
 /** How long the server has to answer before it counts as unreachable. */
 const ANSWER_MS = 12_000;
+/** How long a queue's site has to check a deck and make a game. */
+const SEEK_MS = 20_000;
 
 const PROBLEMS = new Set<string>(["key", "version", "app", "busy", "missing", "exists", "full", "password", "tries", "limit", "revoked"]);
 const problemOf = (why: unknown): ServerProblem => (typeof why === "string" && PROBLEMS.has(why) ? (why as ServerProblem) : "closed");
@@ -352,10 +388,16 @@ function joinServer(servers: readonly ServerSettings[], code: string, mode: Join
 }
 
 /**
- * Follow the server's lobby: the public rooms now and whenever they change (`onRooms`), until closed. A lost connection is
- * made again after a few seconds (meanwhile `onProblem` says why, and the list is empty).
+ * Follow the server's lobby: the public rooms now and whenever they change (`onRooms`; the queues it lists beside them,
+ * `onQueues`), until closed. A lost connection is made again after a few seconds (meanwhile `onProblem` says why, and the list
+ * is empty).
  */
-export function watchLobby(server: ServerSettings, onRooms: (rooms: LobbyRoom[]) => void, onProblem: (problem: ServerProblem | null) => void): { close(): void } {
+export function watchLobby(
+  server: ServerSettings,
+  onRooms: (rooms: LobbyRoom[]) => void,
+  onProblem: (problem: ServerProblem | null) => void,
+  onQueues?: (queues: LobbyQueue[]) => void,
+): { close(): void } {
   let closed = false;
   let socket: WebSocket | null = null;
   let again: ReturnType<typeof setTimeout> | null = null;
@@ -385,11 +427,15 @@ export function watchLobby(server: ServerSettings, onRooms: (rooms: LobbyRoom[])
         onProblem(null);
         ws.send(JSON.stringify({ t: "lobby" }));
       } else if (m.t === "refused") refusal = problemOf(m.why);
-      else if (m.t === "rooms" && Array.isArray(m.rooms)) onRooms(m.rooms.filter(lobbyRoom));
+      else if (m.t === "rooms" && Array.isArray(m.rooms)) {
+        onRooms(m.rooms.filter(lobbyRoom));
+        onQueues?.(Array.isArray(m.queues) ? m.queues.filter(lobbyQueue) : []);
+      }
     };
     ws.onclose = () => {
       if (closed) return;
       onRooms([]);
+      onQueues?.([]);
       onProblem(refusal ?? (welcomed ? "closed" : "unreachable"));
       // A refusal (the key) won't change by itself: try again later all the same, the owner may fix it meanwhile.
       again = setTimeout(connect, refusal ? 30_000 : 5000);
@@ -420,6 +466,65 @@ function lobbyRoom(v: unknown): v is LobbyRoom {
     typeof r.playing === "boolean" &&
     (r.locked === undefined || typeof r.locked === "boolean")
   );
+}
+
+/** Whether a listed queue is one (its shape: the older servers list none). */
+function lobbyQueue(v: unknown): v is LobbyQueue {
+  if (typeof v !== "object" || v === null) return false;
+  const q = v as Record<string, unknown>;
+  return typeof q.id === "string" && typeof q.format === "string" && (q.list === null || typeof q.list === "string");
+}
+
+/**
+ * Go to a queue of the server's lobby: connect, say who this is and what it comes with, and leave with the site's answer. The
+ * game it made with this program, or null: not taken, whyever (no reason is given: the deck, the program, nobody waiting any
+ * more), or no answer.
+ */
+export function seekQueue(server: ServerSettings, queue: string, request: SeekRequest): Promise<Sought | null> {
+  return new Promise((done) => {
+    let settled = false;
+    let ws: WebSocket | undefined;
+    const finish = (answer: Sought | null) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      ws?.close(1000);
+      done(answer);
+    };
+    const timer = setTimeout(() => finish(null), SEEK_MS);
+    try {
+      ws = new WebSocket(server.address);
+    } catch {
+      finish(null);
+      return;
+    }
+    const socket = ws;
+    socket.onopen = () => socket.send(JSON.stringify({ t: "hello", v: RELAY_PROTOCOL, app: APP_ID, key: server.key }));
+    socket.onmessage = (event: MessageEvent) => {
+      let m: Record<string, unknown> = {};
+      try {
+        m = JSON.parse(String(event.data)) as Record<string, unknown>;
+      } catch {
+        return;
+      }
+      if (m.t === "welcome") socket.send(JSON.stringify({ t: "seek", id: queue, ...request }));
+      else if (m.t === "sought") finish(soughtOf(m));
+      else if (m.t === "refused") finish(null);
+    };
+    socket.onclose = () => finish(null);
+  });
+}
+
+/** The site's answer, when it made a game. */
+function soughtOf(m: Record<string, unknown>): Sought | null {
+  if (typeof m.room !== "string" || typeof m.token !== "string" || m.room === "" || m.token === "") return null;
+  return { room: m.room, token: m.token, ...(typeof m.key === "string" && m.key !== "" ? { key: m.key } : {}) };
+}
+
+/** The server as the game's room of a queue wants it: its address says this program's seat, with the key the site gave. */
+export function seatServer(server: ServerSettings, sought: Sought): ServerSettings {
+  const join = server.address.includes("?") ? "&" : "?";
+  return { ...server, address: `${server.address}${join}lt=${encodeURIComponent(sought.token)}`, key: sought.key ?? server.key };
 }
 
 /** What a check of the server found: it takes this program (its round trip and spectator seats), or the problem. */

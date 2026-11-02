@@ -20,6 +20,8 @@ export interface Hello {
   name?: string;
   share?: boolean;
   noQuickChat?: boolean;
+  /** The website this program runs on, when it is a website's client: it keeps its games whatever the settings say. */
+  site?: string;
 }
 
 /**
@@ -266,6 +268,7 @@ export function parseMessage(value: unknown): NetMessage | null {
             ...(isString(m.name, 64) && cleanName(m.name) !== "" ? { name: cleanName(m.name) } : {}),
             ...(typeof m.share === "boolean" ? { share: m.share } : {}),
             ...(m.noQuickChat === true ? { noQuickChat: true } : {}),
+            ...(isString(m.site, 32) ? { site: m.site } : {}),
           }
         : null;
     case "select":

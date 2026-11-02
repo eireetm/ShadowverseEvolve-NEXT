@@ -76,9 +76,10 @@ export interface OnlineState {
   /**
    * The room of the last connection, to connect again the same way after losing it (null: codes by hand); `server`: the
    * online server it is on (null: the public networks; while a code is looked for on several servers, the first of them
-   * until it is found); its `password` on the server (6 digits; null: none), said again then.
+   * until it is found); its `password` on the server (6 digits; null: none), said again then; `open`: a room the random match
+   * made: public and without a password, whatever the settings say.
    */
-  room: { code: string; role: OnlineRole; server: ServerSettings | null; password: string | null } | null;
+  room: { code: string; role: OnlineRole; server: ServerSettings | null; password: string | null; open?: boolean } | null;
   /** Spectators watching the room's games (the host counts them and tells the others). */
   watchers: number;
   /** The room's spectator seats: the online server says how many its rooms have; the public networks' rooms have 2. */

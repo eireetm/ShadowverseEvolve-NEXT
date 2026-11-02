@@ -3526,19 +3526,24 @@ option {
   border-color: var(--sve-accent);
 }
 
-/* The rules before a room is made: as the room's own (.sve-online-prep), labels on one line, selects within the panel. */
+/* The rules before a room is made, and the random match's: as the room's own (.sve-online-prep), labels on one line, selects within the panel. */
 .sve-online-server .sve-online-rules,
 .sve-online-server .sve-format-picker,
-.sve-online-server .sve-field {
+.sve-online-server .sve-field,
+.sve-online-random .sve-online-rules,
+.sve-online-random .sve-format-picker,
+.sve-online-random .sve-field {
   min-width: 0;
   max-width: 100%;
 }
 
-.sve-online-server .sve-field > span {
+.sve-online-server .sve-field > span,
+.sve-online-random .sve-field > span {
   white-space: nowrap;
 }
 
-.sve-online-server .sve-field select {
+.sve-online-server .sve-field select,
+.sve-online-random .sve-field select {
   min-width: 0;
   max-width: 100%;
 }

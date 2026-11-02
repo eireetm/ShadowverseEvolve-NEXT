@@ -117,8 +117,11 @@ export function samePrograms(peer: Hello | null): boolean | null {
   return peer === null || hello.cards === "" ? null : peer.version === hello.version && peer.cards === hello.cards && peer.engine === hello.engine;
 }
 
+/** Who this program is, as it tells the other one (a queue's site makes a game only with the same program: random-match.ts). */
+export const thisProgram = (): { version: string; engine: string; cards: string } => ({ version: PROTOCOL, engine: ENGINE, cards: hello.cards });
+
 /** A deck file locked for a game: the leader the engine plays with, the other one shown (Cross Craft, formats.ts leadersFor). */
-export function readyDeckOf(deck: DeckFile, rules: Rules, catalog: Catalog): ReadyDeck {
+export function readyDeckOf(deck: DeckFile, rules: Pick<Rules, "format">, catalog: Catalog): ReadyDeck {
   const { leader, second } = leadersFor(deck, rules.format, catalog);
   return { name: deck.name, deck: toDeckList(deck, leader), leader2: second };
 }
@@ -142,7 +145,7 @@ function deckFileOf(ready: ReadyDeck): DeckFile {
 }
 
 /** A deck's problems under the game's rules (the check the deck's own program made before sending it, made here again). */
-export function problemsUnder(rules: Rules, deck: DeckFile, catalog: Catalog): Promise<FormatProblem[]> {
+export function problemsUnder(rules: Pick<Rules, "format" | "list">, deck: DeckFile, catalog: Catalog): Promise<FormatProblem[]> {
   return checkDeck(deck, rules.format, restrictionList(rules.list), catalog);
 }
 
@@ -949,7 +952,7 @@ function describeRoom(): void {
     format: rules.format,
     list: rules.list,
     turnOrder: rules.turnOrder,
-    public: getSettings().publicRooms,
+    public: room.open === true || getSettings().publicRooms,
     players: currentLink() ? 2 : 1,
     watchers: watchers.length,
     playing: playing(),
@@ -1013,17 +1016,19 @@ function serverProblem(problem: ServerProblem, role: "host" | JoinAs, mode: Join
  * Make a room — on an online server (`server`) or the public networks: its code, to pass to the other player; wait for them
  * (and spectators). On the server, a password too when the host chose one (6 random digits, to pass with the code; asked of
  * the other player and the spectators). `again`: the same room once more after a lost connection (its spectators aren't told
- * to go: they come back by themselves).
+ * to go: they come back by themselves). `open`: the random match's room, public and without a password whatever the settings say.
  */
-export function hostRoom(code = newRoomCode(), again = false, server: ServerSettings | null = null): void {
+export function hostRoom(code = newRoomCode(), again = false, server: ServerSettings | null = null, open = false): void {
   stopLooking();
   disconnect();
   dropWatchers(!again);
   if (getOnline().phase.kind !== "hosting") hostTries = 0;
-  // The same room again, or another code for it (the server had the one drawn): the same password.
-  const kept = again || hostTries > 0 ? (getOnline().room?.password ?? null) : null;
-  const password = server ? (kept ?? (!again && getSettings().roomPassword ? newRoomPassword() : null)) : null;
-  setOnline({ phase: { kind: "hosting", code }, error: null, room: { code, role: "host", server, password } });
+  // The same room again, or another code for it (the server had the one drawn): the same password, and open if it was.
+  const before = again || hostTries > 0 ? getOnline().room : null;
+  const opened = open || before?.open === true;
+  const kept = before?.password ?? null;
+  const password = server && !opened ? (kept ?? (!again && getSettings().roomPassword ? newRoomPassword() : null)) : null;
+  setOnline({ phase: { kind: "hosting", code }, error: null, room: { code, role: "host", server, password, ...(opened ? { open: true } : {}) } });
   meeting = meetRoom(code, "host", server, again ? "any" : "create", password, {
     onLink: (peer, as) => (as === "player" ? connected("host", peer) : addWatcher(peer)),
     onFull: () => undefined,

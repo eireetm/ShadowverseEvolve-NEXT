@@ -6,19 +6,20 @@
 // lost connection can be made again, and the game goes on where it was. A room's games can also be watched (a spectator's
 // seat, "观战"): the spectator sees them, and the chat, and does nothing else. The person's name goes with the connection;
 // on the servers, their lobby lists the public rooms ("xxx 的房间"; with several servers, each said to be on its own) to
-// join or watch with a click.
+// join or watch with a click, and the random match (a page of its own: RandomMatch.tsx) goes to one of them by itself.
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { errorText } from "../app/errors";
 import { updateSettings, useSettings } from "../app/settings";
-import { reportError, useApp } from "../app/store";
-import { cardCount, type DeckFile } from "../decks/format";
+import { useApp } from "../app/store";
 import type { TurnOrder } from "../engine/protocol";
-import { formatProblemText, type FormatProblem } from "../formats/formats";
+import { formatProblemText } from "../formats/formats";
 import { FormatPicker } from "../formats/FormatPicker";
-import { hostApi, type DeckFileEntry } from "../host/api";
+import { hostApi } from "../host/api";
 import { useT, type MessageKey, type Translate } from "../i18n";
 import { APP_VERSION, PLATFORM } from "../app/version";
+import { DeckChoice, useDeckChoice } from "./DeckChoice";
+import { RandomMatch } from "./RandomMatch";
+import { useSeconds } from "./use-seconds";
 import { checkNetwork, type NetworkCheck } from "../net/check";
 import { normalizeRoomCode, normalizeRoomPassword } from "../net/codes";
 import { cleanName, NAME_MAX, SPECTATOR_SEATS, TURN_LIMIT, type Rules } from "../net/messages";
@@ -37,7 +38,6 @@ import {
   joinRoom,
   leave,
   leavingConcedes,
-  problemsUnder,
   listProblem,
   ready,
   readyDeckOf,
@@ -57,16 +57,6 @@ import { loadServerConfig, useServerConfig } from "../net/server-config";
 
 /** Who goes first, as the game setup offers it (the rules' way first). */
 const TURN_ORDERS: readonly TurnOrder[] = ["choose", "random", "player1", "player2"];
-
-/** Seconds since `since`, updated every second (for "still looking" hints). */
-function useSeconds(since: number): number {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
-  }, []);
-  return Math.max(0, Math.floor((now - since) / 1000));
-}
 
 /** Whether a game over the connection is in progress (it goes on after a lost connection). */
 function useGameGoing(): boolean {
@@ -124,6 +114,8 @@ export function OnlineScreen({ onBack, onGame, onEditDecks }: Props) {
   useEffect(() => {
     void loadServerConfig();
   }, []);
+  // The random match's page: instead of all this while it is open.
+  const [random, setRandom] = useState(false);
   // Back to the menu: looking stops; a connection stays (the menu says so), and so does a game waiting for its connection.
   const back = () => {
     const kind = getOnline().phase.kind;
@@ -131,12 +123,21 @@ export function OnlineScreen({ onBack, onGame, onEditDecks }: Props) {
     else if (kind === "closed" && !going) leave();
     onBack();
   };
-  useBack(true, back);
+  useBack(!random, back);
+  if (random) {
+    return (
+      <div className="sve-menu">
+        <div className="sve-menu-panel sve-online" data-testid="online" data-phase={online.phase.kind}>
+          <RandomMatch identified={identified} onBack={() => setRandom(false)} onEditDecks={onEditDecks} />
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="sve-menu">
       <div className="sve-menu-panel sve-online" data-testid="online" data-phase={online.phase.kind}>
         <h2>{t("online.title")}</h2>
-        <Phase phase={online.phase} since={online.since} identified={identified} going={going} onGame={onGame} onEditDecks={onEditDecks} />
+        <Phase phase={online.phase} since={online.since} identified={identified} going={going} onGame={onGame} onEditDecks={onEditDecks} onRandom={() => setRandom(true)} />
         {online.error ? (
           <p className="sve-problem" data-testid="online-error">
             {typeof online.error === "string" ? t(online.error) : t("online.server.at", { name: online.error.server, text: t(online.error.key) })}
@@ -209,16 +210,17 @@ interface PhaseProps {
   going: boolean;
   onGame: () => void;
   onEditDecks: () => void;
+  onRandom: () => void;
 }
 
-function Phase({ phase, since, identified, going, onGame, onEditDecks }: PhaseProps) {
+function Phase({ phase, since, identified, going, onGame, onEditDecks, onRandom }: PhaseProps) {
   const t = useT();
   const seconds = useSeconds(since);
   const slow = seconds >= 20;
   const password = useOnline().room?.password ?? null;
   switch (phase.kind) {
     case "idle":
-      return <Start />;
+      return <Start onRandom={onRandom} />;
     case "hosting":
       return (
         <div className="sve-online-step">
@@ -299,12 +301,12 @@ function Phase({ phase, since, identified, going, onGame, onEditDecks }: PhasePr
 
 /**
  * Make a room, join one, or pass codes by hand: on the online servers when any is configured (their part first then), and on
- * the public networks.
+ * the public networks. `onRandom`: to the random match's page (not while a game waits for its connection).
  */
-function Start() {
+function Start({ onRandom }: { onRandom?: () => void }) {
   const configured = useServerConfig().servers.length > 0;
   // Keyed: a server saved in the window moves its part up without making it again (the window stays open).
-  const parts = [<ServerStart key="server" />, <PublicStart key="public" titled={configured} />];
+  const parts = [<ServerStart key="server" onRandom={onRandom} />, <PublicStart key="public" titled={configured} />];
   return (
     <div className="sve-online-step">
       <NameField />
@@ -544,7 +546,7 @@ let pickedHost: string | null = null;
  * host wants one; with several servers, on the one picked), or join one by its code (and its password, if it has one; looked
  * for on every server), to play or to watch. Without a server configured: what it is, and the configuration's window.
  */
-function ServerStart() {
+function ServerStart({ onRandom }: { onRandom: (() => void) | undefined }) {
   const t = useT();
   const settings = useSettings();
   const servers = useServerConfig().servers;
@@ -560,6 +562,11 @@ function ServerStart() {
       <h3>{host ? t("online.server.title", { name: servers.map((s) => s.name).join(t("common.listSeparator")) }) : t("online.server.titleNone")}</h3>
       {host ? (
         <>
+          {onRandom ? (
+            <button type="button" className="sve-primary sve-menu-button" onClick={onRandom} data-testid="online-random">
+              {t("online.random")}
+            </button>
+          ) : null}
           <p className="sve-hint">{t("online.server.rules")}</p>
           <fieldset className="sve-online-rules">
             <FormatPicker />
@@ -971,7 +978,12 @@ function Connected({ phase, identified, going, onGame, onEditDecks }: ConnectedP
         <PasswordFact />
       </ul>
       <WatchersFact />
-      {online.room?.server && online.records ? (
+      {phase.peer?.site ? (
+        // A website's client keeps its games whatever this program's setting says: not to be told otherwise.
+        <p className="sve-hint" data-testid="online-share-site">
+          {t("online.shareSite")}
+        </p>
+      ) : online.room?.server && online.records ? (
         <p className="sve-hint" data-testid="online-share" data-kept={gameKept() ? "yes" : "no"}>
           {t(gameKept() ? "online.shareYes" : "online.shareNo")}
         </p>
@@ -1016,10 +1028,8 @@ function Prep({ role, same, onEditDecks }: { role: "host" | "guest"; same: boole
   const catalog = useApp((s) => s.catalog);
   const { prep, room } = useOnline();
   const server = room?.server != null;
-  const [decks, setDecks] = useState<DeckFileEntry[] | null>(null);
-  const [status, setStatus] = useState<{ deck: DeckFile; problems: FormatProblem[] } | null>(null);
-  const file = settings.setupDecks[0];
   const rules = prep.rules;
+  const { file, decks, status } = useDeckChoice(rules);
 
   // The host's rules follow its settings.
   useEffect(() => {
@@ -1035,25 +1045,6 @@ function Prep({ role, same, onEditDecks }: { role: "host" | "guest"; same: boole
     settings.turnLimitOn,
     settings.turnLimitSeconds,
   ]);
-  useEffect(() => {
-    hostApi.listDecks().then(setDecks, (err: unknown) => reportError(String(err)));
-  }, []);
-  // This player's deck, checked under the game's rules.
-  useEffect(() => {
-    let live = true;
-    setStatus(null);
-    if (!catalog || !rules) return;
-    hostApi
-      .loadDeck(file)
-      .then(async (deck) => {
-        const problems = await problemsUnder(rules, deck, catalog);
-        if (live) setStatus({ deck, problems });
-      })
-      .catch((err: unknown) => reportError(`${file}: ${errorText(err, t)}`));
-    return () => {
-      live = false;
-    };
-  }, [file, rules, catalog]);
 
   const ctx = catalog ? { catalog, lang: settings.cardLang, t } : null;
   const isReady = prep.mine !== null;
@@ -1087,37 +1078,7 @@ function Prep({ role, same, onEditDecks }: { role: "host" | "guest"; same: boole
       </section>
       <section>
         <h3>{t("online.yourDeck")}</h3>
-        <label className="sve-field">
-          <span>{t("setup.deck")}</span>
-          <select value={file} disabled={isReady} onChange={(e) => updateSettings({ setupDecks: [e.target.value, settings.setupDecks[1]] })} data-testid="online-deck">
-            {!decks?.some((d) => d.file === file) ? <option value={file}>{file}</option> : null}
-            {(decks ?? []).map((d) => (
-              <option key={d.file} value={d.file}>
-                {d.name} ({d.file})
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="sve-deck-status">
-          {status === null ? (
-            <span className="sve-note">{t("setup.loadingDeck")}</span>
-          ) : (
-            <>
-              <span>{t("setup.deckSummary", { main: cardCount(status.deck.main), evolve: cardCount(status.deck.evolve) })}</span>
-              {status.problems.length === 0 ? <span className="sve-ok">{t("setup.deckOk")}</span> : null}
-              {status.problems.length > 0 && ctx && rules ? (
-                <div className="sve-problems" data-testid="online-deck-problems">
-                  {t("setup.deckProblems", { format: t(`format.${rules.format}`) })}
-                  <ul>
-                    {status.problems.map((problem, i) => (
-                      <li key={i}>{formatProblemText(problem, ctx)}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </>
-          )}
-        </div>
+        <DeckChoice file={file} decks={decks} status={status} format={rules?.format ?? null} disabled={isReady} />
         <div className="sve-online-join">
           {isReady ? (
             <button type="button" disabled={prep.starting} onClick={() => void ready(null)} data-testid="online-unready">
