@@ -16,12 +16,11 @@
   - 纯 TypeScript，结果确定，可以在没有界面的环境里运行，不依赖界面或文件。
   - 按综合规则（v1.26.1）逐条实现，规则判断都注明条款编号。
   - 支持 57 个卡包的 3,689 个卡牌定义，共 7,564 个印刷版本，异画共用同一个定义。
-  - BP22 的英文卡名和文本来自抓取数据里的英文翻译：官方英文版还没有这个卡包的数据。
 - **Bot（`@sve/bot`）**：界面上有四个难度，只用 Core 的公开 API：
   - Bot-简单：贪心，每个决策都模拟所有候选回答，评估局面后选最好的；
   - Bot-中等：规划整个回合，再模拟对手的下一回合，只用玩家看得到的信息；规划之前先找"确保能赢"的斩杀：在几个对手手牌和牌序的抽样里都能赢、对手应对也挡不住才执行；
   - Bot-中等v2：和中等一样公平，但看两回合（自己的回合、对手的回合、自己的下一回合），每次规划抽 3 种对手的手牌和牌序，搜得也更宽；比中等强、比困难弱，想得更久（手机 App 上只看一回合、只抽一种，但仍比中等搜得宽）；
-  - Bot-困难：同样规划（同样先找斩杀），但作弊，直接透过引擎读完整的局面（对手的手牌、双方牌堆的顺序）；而且看得更远：每种打法都接着模拟对手的回合和自己的下一回合，再比较（手机上只模拟到对手的回合，想得快些）。
+  - Bot-困难：同样规划（同样先找斩杀），但直接透过引擎读完整的局面（对手的手牌、双方牌堆的顺序）；而且看得更远：每种打法都接着模拟对手的回合和自己的下一回合，再比较（手机上只模拟到对手的回合，想得快些）。
   - 中等、中等v2 和困难都带着复盘对局后做的修正：估值算上 PP（上限和没用完的）和对手下回合看得到的斩杀，对手的结束阶段也会用快速卡，入场曲的条件不满足时一般不白打，换牌前模拟之后几个回合再决定换不换。`npm run bot:arena` 里它们叫 medium-next、medium-v2、hard-next；medium、hard 是修正之前的中等、困难（hard-next 还搜得更宽）。
   - 另有试验版 medium-beta（中等加上按消费曲线换牌、主战者体力的价值曲线，不作弊），只在 `npm run bot:arena` 里。
 - **GUI（`@sve/gui`）**：Web 界面（Vite + React），引擎和 Bot 在 Web Worker 里运行。
@@ -37,7 +36,7 @@
 
 - 这是非官方的同人项目，与 Cygames、Bushiroad 等官方无关，不做商业用途。
 - 仓库**不包含任何卡图、卡牌文本、官方美术或声音**。
-- 想看到卡图，请把自己的图片放进 `packages/gui/public/`（见"自定义资源"）。
+- 想看到卡图等内容，请把自己的图片放进 `packages/gui/public/`（见"自定义资源"）。
 
 ### 环境
 
@@ -76,7 +75,7 @@ npm run dev:gui
 | `npm run bot:arena -- [局数] [A] [B]` | Bot 互打（easy / medium / hard，界面难度的 medium-next / medium-v2 / hard-next，试验版 medium-beta；sve-fool / sve-good / sve-planner 是模仿 SVE Simulator 三个 AI 的对照组，只用于测试）：示例卡组，两局一组交换座位、轮流打遍所有卡组组合，打印按"对"计分的得分和 95% 区间、先后手、先手胜率、回合数、每副卡组的得分和思考时间。`--decks sd01,sd02` 选卡组（`train` / `holdout` / `legal`：`tools/rl/decksets.json` 的卡组集，按标准赛制和它的禁卡表检查），`--mirror` 双方用同一副，`--workers 8` 多进程一起打，`--seed` 换一批对局，`--independent` 每局单独的种子，`--range a-b` 只打其中一段，`--out 文件夹` 存下每一局（可重放的记录 `games.jsonl.gz`）和报告，`--replays N` 把前 N 局存成对局界面能打开的录像。`medium:identity`（把手写估值从外面传进去，应和 medium 完全一样）和 `medium:negated`（估值反过来，应该几乎全输）用来检查估值接口 |
 | `npm run rl:verify -- 文件夹` | 重放 `bot:arena --out` 存下的对局：每个输入是否合法、结果是否和记录一样 |
 | `npm run release:train -- --zip` | 打"训练数据包"：给帮忙跑对局的人 |
-| `npm run rl:ingest -- 文件夹` | 收下朋友们训练数据包里的对局：检查后并进数据集 |
+| `npm run rl:ingest -- 文件夹` | 收下训练数据包里的对局：检查后并进数据集 |
 | `npm run rl:coverage -- 文件夹` | `bot:arena --out` 存下的对局里，每种决定 Bot 实际比较了几个答案：重放每一局，对每个决定用引擎列出全部合法答案，和规划型 Bot 会比较的答案数对照；"有好几个合法答案、却只比较一个"的决定类型（盲区）排在前面，写明理由的列为"有意为之"。`--games N` 只看前 N 局 |
 | `npm run rl:behaviour -- 文件夹` | `bot:arena --out` 存下的对局里的行为统计：守护在自己回合横置登场的比例、能用速攻的时机和用了几次、对局结束时先后手各剩多少进化点和超进化点、回合结束时手里还有打得出的从者的比例。用来比较新旧两版 Bot（同门互打的胜率看不出共同的盲区）。`--games N` 只看前 N 局 |
 | `npm run rl:lethal -- 文件夹` | 统计 `bot:arena --out` 存下的对局里漏掉的斩杀：重放每一局，在每个己方主要阶段的决定上用宽搜索找"确保能赢"的斩杀（换 6 个公平抽样都能赢、对手应对也挡不住），找到了那回合却没赢就算漏掉；打印有漏斩杀的局数、漏的一方后来输掉的局数。较慢（每局几秒），`--games N` 只看前 N 局，`--workers N` 多进程 |
@@ -288,7 +287,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
   - 配置：设置 → 联机 →"修改服务器配置"（联机界面里也有这个按钮），粘贴服务器的主人给你的文字，可以先"测试连接"。
   - **几台服务器**：配置里可以写几段 `[server]`，一台一段。大厅同时列出这几台的房间，每个房间写着在哪台；创建前可以选"在哪台服务器建房"（不选就是第一台）；用房间号加入时，每台都会找。
   - **大厅**：列出公开的房间（"xxx的房间"、规则、等待对手还是对局中、观战人数），点"加入"或"观战"就能进。创建时取消"在大厅里公开这个房间"，就只能用房间号进。
-  - **随机匹配**：服务器那一栏的"随机匹配"是单独的页面。选好赛制、禁卡表和卡组，点"开始随机匹配"，程序会在所有配置的服务器上随机进入一个赛制和禁卡表相同、没有密码的公开房间，房间的其他规则由房主决定，卡组自动准备。暂时没有合适的房间时，会自己开一个公开房间等人来，同时继续找。服务器提供网站的天梯队列时，也可能匹配到网站上的天梯玩家：卡组要先通过网站的卡检，不通过就继续找别的房间，不提示原因；这局的录像和你的名字会保存在那个网站上。对手用的是网站的网页端时，不管你的设置怎么选，这局的录像（没有名字和聊天）都会保存下来，用来训练 AI，联机界面会写明。
+  - **随机匹配**：服务器那一栏的"随机匹配"是单独的页面。选好赛制、禁卡表和卡组，点"开始随机匹配"，程序会在所有配置的服务器上随机进入一个赛制和禁卡表相同、没有密码的公开房间，房间的其他规则由房主决定，卡组自动准备。暂时没有合适的房间时，会自己开一个公开房间等人来，同时继续找。
   - **房间密码**：创建时勾选"设置房间密码"，会随机生成 6 位数字，加入和观战都要输入；大厅里上锁的房间写着"需要密码"。
   - **保存对局**：设置 → 联机 →"联机自动保存对局到云端"（默认开）。双方都开着时，下完的对局会存到服务器上，用来训练 AI：只有种子、双方卡组和每一步，没有名字和聊天。有一方关掉就不存，房间里会写明这局存不存。
 - **不用服务器（P2P）**：
@@ -304,7 +303,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
   - **快速时点**：每个快速时点都由那位玩家自己的程序回答，对手看不出你手里有没有快速。侧边栏"调试"最上面有两个选项（默认关）："假快速时点"：没有能用的快速时也停 1 秒左右，像在考虑；"关闭快速时点"：所有快速时点都自动"不发动"，看起来像手里没有快速。
   - **聊天提醒**：设置 → 联机 →"联机聊天提醒"（默认关）。打开后，对手或观战者发了聊天消息时，屏幕上方会闪一下"有人发了一条聊天消息"；自己发的不提醒。
   - **快捷聊天**：牌桌右上角"显示侧边栏"左边的"快捷聊天"，选一句发出去：所有人的屏幕上都会闪一下"xxx发送了：你好。"（各自的界面语言），聊天里也有这一句，发送者的主战者会说这句话（见"自定义资源"的声音）。侧边栏"调试"最上面的"屏蔽快捷聊天"（默认关）：任何一方打开，双方都不能用。和 AI 对局时也能用（只有提示和声音）。
-  - **整理手牌**：牌桌右上角"快捷聊天"左边的"整理手牌"（手机上写"整理"：横着拿在"认输"左边，竖着拿在下面的按钮栏），点一下按消费从低到高排列，再点一下随机打散；和 Bot 对局时也有。只改你屏幕上的顺序，不影响对局。联机时对手和观战者只知道你动过手牌：他们屏幕上你的牌背会洗一下，换到各自随机的位置，之后看不出你出的是不是刚抽的那张；你的真实顺序不会发给任何人。没点的话，新抽的牌在对手屏幕上还在最右边，和现实里不切牌一样。
+  - **整理手牌**：牌桌右上角"快捷聊天"左边的"整理手牌"（手机上写"整理"：横着拿在"认输"左边，竖着拿在下面的按钮栏），点一下按消费从低到高排列，再点一下随机打散；和 Bot 对局时也有。只改你屏幕上的顺序，不影响对局。联机时对手和观战者只知道你动过手牌：他们屏幕上你的牌背会洗一下，换到各自随机的位置，你的真实顺序不会发给任何人。
 - **观战**：知道房间号的人点"观战"进房间看对局。P2P 的房间最多 2 人；用服务器时由服务器决定（默认 10 人）。
   - 只能看双方都看得到的信息（看不到手牌），可以换边；不能操作，也不能发言（能看到聊天）。
   - 使用服务器时，房主可以在规则里允许观战者看到手牌（观战者在"调试"里打开"显示所有背面的卡"）和发言。
@@ -333,7 +332,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
     - 示例卡组、空的 `replays/` 和 `public/` 文件夹结构；
     - 三语的 `README.txt`，以及写着版本、提交和引擎指纹的 `VERSION.txt`。
   - `--public <文件夹>`：把这个文件夹里的资源一起放进 `public/`（默认不放）。
-  - 仓库根目录有 `online-server.ini` 时，文件夹和私用的 zip 里带着它。程序本身不编进服务器配置，只读旁边的这个文件。
+  - 仓库根目录有服务器配置 `online-server.ini` 时，文件夹和私用的 zip 里带着它。程序本身不编进服务器配置，只读旁边的这个文件。
   - 需要 Node.js 20 以上。
   - **更新**：设置页最下面的"检查版本更新"，只有 PC 版有。
     - 检查：先问 GitHub（API，或者 `releases/latest` 的跳转）；都连不上时，再问几个中国常用的免费镜像，只读版本号。
@@ -349,8 +348,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
     - 在游戏关着时改，或者改完后刷新页面。设置跟着文件夹走，换端口、换浏览器也不会丢；从旧版更新时保留它。
 - **安卓版**：`npm run android:apk -- --release --public <资源文件夹> --out <APK 路径>`（选项见"安卓版"）。
   - 每次都要用同一个密钥签名（默认是仓库旁边的 `SVE-signing/`），换了密钥就不能覆盖安装。
-  - 密钥要备份，不要给别人。
-  - 仓库根目录有 `online-server.ini` 时，App 带着这个服务器。
+  - 仓库根目录有服务器配置 `online-server.ini` 时，App 带着这个服务器。
 - **联机**：双方的引擎指纹一样才能对局（`VERSION.txt` 和联机界面里都能看到）。
   - 改了 `packages/core/` 或 `packages/gui/src/engine/` 的代码，或者卡牌数据里规则用到的部分（编号、卡名、消费、攻防、类型、职业、种族、印刷版本……），指纹就会变，大家都要换新版。
   - 联机协议（`packages/gui/src/net/` 的 `PROTOCOL`）变了也一样；只改了界面的版本可以和旧版互相联机。
@@ -426,12 +424,11 @@ An unofficial rules engine, AI and client for the *Shadowverse: Evolve* trading 
   - Plain TypeScript and deterministic. It runs headless, with no dependency on a UI or on files.
   - It implements the Comprehensive Rules (v1.26.1) clause by clause, and every rules decision cites its clause number.
   - It supports 3,689 card definitions from 57 sets, 7,564 printings in all; alternate arts share one definition.
-  - BP22's English names and texts are the scraped data's English translation: the official English data of this set isn't out yet.
 - **Bot (`@sve/bot`)**: four levels in the interface, on the Core's public API only:
   - Bot-Easy: greedy. For each decision it simulates every candidate answer and picks the best-scoring result.
   - Bot-Medium: plans its whole turn, then plays out the opponent's next turn. It uses only what its player can see. Before planning it looks for a sure lethal: one that wins in several samples of the opponent's hand and the deck order, whatever the opponent answers.
   - Bot-Medium v2: fair like Bot-Medium, but it looks two turns ahead (its turn, the opponent's, its next one), takes 3 samples of the opponent's hand and the deck order each time it plans, and searches wider. Stronger than Bot-Medium, weaker than Bot-Hard, slower to think (in the phone apps: one turn ahead and one sample, though still a wider search than Bot-Medium).
-  - Bot-Hard: plans the same way (lethal first too), but cheats: reads the whole game (the opponent's hand, both decks in order). It also looks further: each way to play its turn is followed through the opponent's turn and its own next turn before they are compared (on phones only through the opponent's turn, to think faster).
+  - Bot-Hard: plans the same way (lethal first too), but reads the whole game directly through the engine (the opponent's hand, both decks in order). It also looks further: each way to play its turn is followed through the opponent's turn and its own next turn before they are compared (on phones only through the opponent's turn, to think faster).
   - Bot-Medium, Bot-Medium v2 and Bot-Hard carry fixes made from reviews of their games: the evaluation counts play points (the maximum and those left unused) and the lethal the opponent can be seen to have next turn, they play Quick cards in the opponent's end phase too, they rarely play a Fanfare for nothing when its condition isn't met, and they mulligan by playing out the next few turns both ways. In `npm run bot:arena` they are medium-next, medium-v2 and hard-next; medium and hard are Bot-Medium and Bot-Hard before these fixes (hard-next also searches wider).
   - A trial medium-beta (Bot-Medium with a mulligan by the cost curve and the leader's defense valued on a curve, fair) is only in `npm run bot:arena`.
 - **GUI (`@sve/gui`)**: a web interface (Vite + React). The engine and the bots run in a Web Worker.
@@ -447,7 +444,7 @@ An unofficial rules engine, AI and client for the *Shadowverse: Evolve* trading 
 
 - This is an unofficial fan project. It is not affiliated with Cygames, Bushiroad or any other rights holder, and it is not for commercial use.
 - The repository contains **no card images, card texts, official artwork or sounds**.
-- To see card images, put your own pictures in `packages/gui/public/` (see "Custom resources").
+- To see card images and the like, put your own pictures in `packages/gui/public/` (see "Custom resources").
 
 ### Requirements
 
@@ -486,7 +483,7 @@ Run these at the repository root:
 | `npm run bot:arena -- [games] [A] [B]` | Bots against each other (easy / medium / hard, the interface's medium-next / medium-v2 / hard-next, the trial medium-beta, and sve-fool / sve-good / sve-planner, imitations of SVE Simulator's three AIs used only as benchmarks): the sample decks, games in pairs with the seats swapped, going through every matchup of the decks; prints the score by pairs with a 95% interval, going first and second, the first player's win rate, game length, the score per deck and thinking time. `--decks sd01,sd02` picks decks (`train` / `holdout` / `legal`: the deck sets of `tools/rl/decksets.json`, checked against the standard format and its restriction list), `--mirror` gives both players the same deck, `--workers 8` plays on several processes, `--seed` another series of games, `--independent` a seed per game, `--range a-b` only part of the series, `--out folder` keeps every game (replayable records, `games.jsonl.gz`) and the report, `--replays N` saves the first N games as replays the GUI opens. `medium:identity` (the hand-written evaluation passed in from outside: plays exactly as medium) and `medium:negated` (the evaluation turned round: should lose nearly every game) check the evaluation interface |
 | `npm run rl:verify -- folder` | Replays the games `bot:arena --out` kept: is every input legal, does each game end as recorded |
 | `npm run release:train -- --zip` | Builds the training kit for people who lend their computers |
-| `npm run rl:ingest -- folder` | Takes the games friends made with the kit: checks them and adds them to the dataset |
+| `npm run rl:ingest -- folder` | Takes the games in training kits: checks them and adds them to the dataset |
 | `npm run rl:coverage -- folder` | How many answers a bot really compares at each kind of decision, in the games `bot:arena --out` kept: replays each game and, at every decision, sets the legal answers the engine lists against the answers a planner bot would compare. Decision types with several legal answers where only one is compared (blind spots) come first; those blind on purpose are marked with the reason. `--games N` takes the first N |
 | `npm run rl:behaviour -- folder` | Behaviour counts in the games `bot:arena --out` kept: Ward followers entering engaged in their own turn, quick windows with something to play and the Quick plays made, evolution and super-evolution points left at the end of a game for the first and the second player, turns ended with a playable follower in hand. For comparing two versions of a bot (win rates between bots that share a blind spot can't show it). `--games N` takes the first N |
 | `npm run rl:lethal -- folder` | Missed lethal in the games `bot:arena --out` kept: replays each game and, at each main phase decision of the player whose turn it is, looks hard for a sure lethal (it wins in 6 fair samples, whatever the opponent answers); one found in a turn the player didn't win is a miss. Prints the games with a miss and those the player who missed it lost. Slow (seconds a game): `--games N` takes the first N, `--workers N` uses N processes |
@@ -698,7 +695,7 @@ Sound effects (29):
   - Configuration: Settings > Online > "Edit the server configuration" (the online screen has the button too): paste the text the server's owner gave you; "Test the connection" first if you like.
   - **Several servers**: the configuration can have several `[server]` parts, one per server. The lobby lists the rooms of all of them, each said to be on its own; before making a room you can pick "Make the room on" (the first one unless you pick another); a code typed in is looked for on every server.
   - **Lobby**: the public rooms ("xxx's room", the rules, waiting or playing, the spectators), joined or watched with a click. Untick "List the room in the lobby" before making a room to have it joined by its code only.
-  - **Random match**: "Random match" in the server's part is a page of its own. Choose the format, the restriction list and a deck, press "Start random match", and the program goes at random to a public room without a password, of that format and restriction list, on any server configured; the room's other rules are its host's, and your deck is made ready by itself. When there is no such room, it makes a public room for someone to come to, and goes on looking. A server may offer a website's ladder queue, so you may also meet someone playing the ladder there: your deck has to pass that website's deck check first (if it doesn't, the search goes on, and you aren't told why), and the website keeps the game's replay and your name. When the other player is on a website's client, the game's replay (no names, no chat) is kept to train an AI whatever your settings say; the online screen says so.
+  - **Random match**: "Random match" in the server's part is a page of its own. Choose the format, the restriction list and a deck, press "Start random match", and the program goes at random to a public room without a password, of that format and restriction list, on any server configured; the room's other rules are its host's, and your deck is made ready by itself. When there is no such room, it makes a public room for someone to come to, and goes on looking.
   - **Room password**: tick "A password" before making a room: 6 random digits, asked of whoever joins or watches; the lobby marks such rooms "password".
   - **Keeping games**: Settings > Online > "Keep my online games on the server" (on by default). When both players have it on, a finished game is kept on the server to train the AI: the seed, both decks and every move, no names, no chat. One of them off: not kept; the room says which.
 - **Without the server (P2P)**:
@@ -714,7 +711,7 @@ Sound effects (29):
   - **Quick windows**: each Quick window is answered by its player's own program, so the other player can't tell whether you have a Quick card. The sidebar's Debug tab begins with two options (off by default): "Fake Quick pauses": with nothing to play, the game still stops about a second, as if you were deciding; "Skip Quick windows": every Quick window is answered "no" for you, as if you had none.
   - **Chat notice**: Settings > Online > "Online chat notice" (off by default). With it on, "Someone sent a chat message" flashes at the top of the screen when the other player or a spectator writes in the chat; your own messages don't.
   - **Quick chat**: "Quick chat", left of "Show sidebar" at the top right of the table, sends one of seven lines: everyone's screen flashes "xxx sent: Hello." (in their own interface language), it is in the chat, and the sender's leader says it (see the sounds in "Custom resources"). "Block the quick chat" at the top of the sidebar's Debug tab (off by default) turns it off for both players when either turns it on. It works against the AI too (the notice and the voice only).
-  - **Sort hand**: "Sort hand", left of "Quick chat" at the top right of the table ("Sort" on a phone: left of "Concede" held sideways, in the bar of buttons below held upright), puts your hand in order of cost, lowest first; pressed again, it shuffles it. It is there against a bot too. It only changes the order on your screen, nothing in the game. Online, the other player and the spectators only learn that you moved your cards: your backs shuffle on their screens, into random places of their own, and they can't tell afterwards whether you played the card you just drew. Your real order is sent to nobody. If you don't press it, a card you drew stays at the right end on the other player's screen, as when you don't shuffle at a real table.
+  - **Sort hand**: "Sort hand", left of "Quick chat" at the top right of the table ("Sort" on a phone: left of "Concede" held sideways, in the bar of buttons below held upright), puts your hand in order of cost, lowest first; pressed again, it shuffles it. It is there against a bot too. It only changes the order on your screen, nothing in the game. Online, the other player and the spectators only learn that you moved your cards: your backs shuffle on their screens, into random places of their own, and your real order is sent to nobody.
 - **Watching**: anyone with the room code can click "Watch" to watch the room's games: 2 spectators a room at most without the server; with it, as many as the server says (10 by default).
   - Spectators see only what both players can see (no hands) and can swap sides; they can't play or chat (they read the chat).
   - On the server, the host's rules can let spectators see the hands (each turns on "Reveal all hidden cards" on the Debug tab) and write in the chat.
@@ -743,7 +740,7 @@ Come in two kinds: for PCs and for Android.
     - the sample decks, an empty `replays/`, and the `public/` folder structure;
     - `README.txt` in three languages, and `VERSION.txt` with the version, the commit and the engine fingerprint.
   - `--public <folder>`: copies that folder's resources into `public/` (none by default).
-  - With `online-server.ini` at the repository's root, the folder and the private zip have it. The program itself has no server built in; it reads this file beside it.
+  - With the server configuration `online-server.ini` at the repository's root, the folder and the private zip have it. The program itself has no server built in; it reads this file beside it.
   - Requires Node.js 20 or newer.
   - **Updates**: "Check for updates" at the bottom of the settings, in the PC release only.
     - The check asks GitHub (its API, or the redirect of `releases/latest`); when neither answers, a few free mirrors much used in mainland China, for the version number only.
@@ -759,8 +756,7 @@ Come in two kinds: for PCs and for Android.
     - Edit it while the game is closed, or reload the page after saving. The settings go with the folder, so another port or browser doesn't lose them; keep the file when updating from an older version.
 - **Android**: `npm run android:apk -- --release --public <resource folder> --out <APK path>` (options under "Android app").
   - Always sign with the same key (by default `SVE-signing/` next to the repository). With another key, the APK can't be installed over the old one.
-  - Back the key up, and keep it to yourself.
-  - With `online-server.ini` at the repository's root, the app has that server.
+  - With the server configuration `online-server.ini` at the repository's root, the app has that server.
 - **Online play**: both sides need the same engine fingerprint (shown in `VERSION.txt` and in the online screen).
   - Changing code in `packages/core/` or `packages/gui/src/engine/`, or what the rules read of the card data (numbers, card names, costs, attack and defense, types, classes, traits, printings ...), changes it, and everyone needs the new release.
   - So does a new online protocol (`PROTOCOL` in `packages/gui/src/net/`); a release that only changes the interface plays with the older one.

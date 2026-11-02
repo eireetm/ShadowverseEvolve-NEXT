@@ -23,8 +23,8 @@ SVE NEXT  {{version}}
   其他系统：在这个文件夹里运行  node server.mjs
 
 能做的
-  - 对战 AI：3种不同难度的Bot。
-  - 构筑卡组、观看录像、设置（语言：English / 中文 / 日本語）。
+  - 对战 AI：4种不同难度的Bot。
+  - 构筑卡组、观看录像、设置（语言：English / 简繁中文 / 日本語）。
   - 联机对战：双方都要用同一个版本（{{version}}）。一方"创建房间"，把房间号发给对方；连不上时用"手动连接"。
 
 从旧版更新
@@ -161,8 +161,8 @@ SVE NEXT  {{version}}
   他の OS：このフォルダで  node server.mjs  を実行します。
 
 できること
-  - AI と対戦：3種類のBotから選択可能。
-  - デッキ構築、リプレイ、設定（言語：English / 中文 / 日本語）。
+  - AI と対戦：4種類のBotから選択可能。
+  - デッキ構築、リプレイ、設定（言語：English / 简繁中文 / 日本語）。
   - オンライン対戦：お互いに同じバージョン（{{version}}）が必要です。片方が「ルームを作る」でルームコードを相手に送ります。
     つながらないときは「手動で接続」を使ってください。
 
@@ -311,8 +311,8 @@ Start
   Other systems: run  node server.mjs  in this folder.
 
 What it does
-  - Play against the AI: 3 Bots with different difficulty.
-  - Build decks, watch replays, settings (language: English / 中文 / 日本語).
+  - Play against the AI: 4 Bots with different difficulty.
+  - Build decks, watch replays, settings (language: English / 简繁中文 / 日本語).
   - Online play: both players need the same version ({{version}}). One makes a room and sends the room code;
     if it can't connect, use "Connect by hand".
 
