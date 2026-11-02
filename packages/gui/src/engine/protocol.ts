@@ -17,9 +17,9 @@ import type {
   PlayerView,
   PrintingId,
 } from "@sve/core";
-import type { TurnClockView } from "./turn-clock";
+import type { ClockView } from "./turn-clock";
 
-export type { TurnClockView } from "./turn-clock";
+export type { ClockView } from "./turn-clock";
 
 /**
  * Who plays a seat: a person at this screen, a bot run by the worker, or a person at another program (online play:
@@ -102,6 +102,11 @@ export interface GameOptions {
    * core's default answer: the turn ends). Absent: no limit.
    */
   turnLimit?: number;
+  /**
+   * Online play, the host's rule: each player's minutes for the whole game, never given back (engine/turn-clock.ts). Out of
+   * time, their program concedes for them (CR 1.2.3). Absent: no limit.
+   */
+  totalLimit?: number;
   /** Who goes first (absent: as the rules say). */
   turnOrder?: TurnOrder;
   /**
@@ -135,6 +140,8 @@ export interface ReplayInfo {
   result: GameResult | null;
   /** The turn it was in when saved. */
   turn: number;
+  /** A game with a total time limit (GameOptions.totalLimit): each player's time left then (ms). */
+  totalLeft?: [number, number];
 }
 
 /**
@@ -234,8 +241,9 @@ export type ToWorker =
   /**
    * Online play, a spectator: the game two other programs play, from its options (both seats
    * "remote") and its inputs so far (played at once); the players' next answers come as "remoteInput", passed on by the host.
+   * `totalLeft`: the players' time left as the host counts it, with a total time limit.
    */
-  | { kind: "spectate"; options: GameOptions; inputs: RecordedInput[] }
+  | { kind: "spectate"; options: GameOptions; inputs: RecordedInput[]; totalLeft?: [number, number] }
   /** A spectator: which side of the table is at the bottom (both are shown as the other player sees them). */
   | { kind: "spectatorSide"; perspective: PlayerId }
   /**
@@ -410,7 +418,7 @@ export interface GameUpdate {
    * (`allowUndo`), `undo` is where "undo my last answer" goes back to: this person's last answer, while the other player
    * hasn't answered since and the game goes on (null: not now). A spectator may see both players' hidden cards
    * (`revealAllowed`: the host lets it; it turns on "reveal all" for that). `clock`: the players' time in a game with a turn
-   * time limit (GameOptions.turnLimit; null: none).
+   * time limit (GameOptions.turnLimit; null: none); `total`: with a total time limit (GameOptions.totalLimit; null: none).
    */
   online: {
     seat: PlayerId | null;
@@ -420,7 +428,8 @@ export interface GameUpdate {
     allowUndo: boolean;
     undo: number | null;
     revealAllowed: boolean;
-    clock: TurnClockView | null;
+    clock: ClockView | null;
+    total: ClockView | null;
   } | null;
   /** Whose view this is (the human's seat; in hot seat, the player who must decide). */
   perspective: PlayerId;

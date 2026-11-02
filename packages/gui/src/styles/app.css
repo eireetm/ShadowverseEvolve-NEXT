@@ -1340,6 +1340,21 @@ option {
   font-weight: 700;
 }
 
+.sve-player-time {
+  color: var(--sve-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.sve-player-time-running {
+  color: var(--sve-text);
+  font-weight: 600;
+}
+
+.sve-player-time-low {
+  color: var(--sve-bad);
+  font-weight: 700;
+}
+
 .sve-center-prompt {
   color: var(--sve-muted);
   line-height: 1.35;

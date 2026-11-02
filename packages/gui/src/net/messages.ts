@@ -62,15 +62,28 @@ export interface Rules {
    * null: no limit). Out of time, their program ends the turn for them.
    */
   turnLimit: number | null;
+  /**
+   * Each player's minutes for the whole game, never given back (GameOptions.totalLimit; null: no limit). Out of time, their
+   * program concedes for them.
+   */
+  totalLimit: number | null;
 }
 
 /** The turn time limit a host may choose, in seconds: at least, at most, and the one offered first. */
-export const TURN_LIMIT = { min: 10, max: 3600, first: 600 } as const;
+export const TURN_LIMIT = { min: 10, max: 3600, first: 900 } as const;
+
+/** The total time limit a host may choose, in minutes: at least, at most, and the one offered first. */
+export const TOTAL_LIMIT = { min: 1, max: 600, first: 30 } as const;
+
+/** A whole number within a limit's range, or null when the value isn't one. */
+const limitOf = (value: unknown, range: { min: number; max: number }): number | null =>
+  typeof value === "number" && Number.isInteger(value) && value >= range.min && value <= range.max ? value : null;
 
 /** A turn time limit as the rules take it (a whole number of seconds within TURN_LIMIT), or null when it isn't one. */
-export function turnLimitOf(value: unknown): number | null {
-  return typeof value === "number" && Number.isInteger(value) && value >= TURN_LIMIT.min && value <= TURN_LIMIT.max ? value : null;
-}
+export const turnLimitOf = (value: unknown): number | null => limitOf(value, TURN_LIMIT);
+
+/** A total time limit as the rules take it (a whole number of minutes within TOTAL_LIMIT), or null when it isn't one. */
+export const totalLimitOf = (value: unknown): number | null => limitOf(value, TOTAL_LIMIT);
 
 /** A player's deck, locked for the game ("ready"). */
 export interface ReadyDeck {
@@ -110,6 +123,9 @@ export interface WatchedGame {
   allowUndo?: boolean;
   /** The players' turn time limit in seconds (Rules.turnLimit), shown to the spectator too. */
   turnLimit?: number;
+  /** The players' total time limit in minutes (Rules.totalLimit), shown to the spectator too; each one's time left (ms) as the host counts it. */
+  totalLimit?: number;
+  totalLeft?: [number, number];
 }
 
 /** The inputs a "backlog" message brings at most. */
@@ -223,6 +239,8 @@ function watchedGame(v: unknown): WatchedGame | null {
     backlog: g.backlog,
     ...(g.allowUndo === true ? { allowUndo: true } : {}),
     ...(turnLimitOf(g.turnLimit) !== null ? { turnLimit: turnLimitOf(g.turnLimit)! } : {}),
+    ...(totalLimitOf(g.totalLimit) !== null ? { totalLimit: totalLimitOf(g.totalLimit)! } : {}),
+    ...(Array.isArray(g.totalLeft) && g.totalLeft.length === 2 && g.totalLeft.every((ms) => typeof ms === "number" && ms >= 0 && ms <= TOTAL_LIMIT.max * 60_000) ? { totalLeft: [g.totalLeft[0] as number, g.totalLeft[1] as number] as [number, number] } : {}),
     ...(Array.isArray(g.players) && g.players.length === 2 && g.players.every((p) => isString(p, 64)) ? { players: [cleanName(g.players[0] as string), cleanName(g.players[1] as string)] as [string, string] } : {}),
   };
 }
@@ -248,6 +266,7 @@ export function watchedOptions(game: WatchedGame): GameOptions {
     turnOrder: game.turnOrder,
     allowUndo: game.allowUndo === true,
     ...(game.turnLimit ? { turnLimit: game.turnLimit } : {}),
+    ...(game.totalLimit ? { totalLimit: game.totalLimit } : {}),
   };
 }
 
@@ -316,6 +335,7 @@ export function parseMessage(value: unknown): NetMessage | null {
           watchHands: r.watchHands === true,
           watchChat: r.watchChat === true,
           turnLimit: turnLimitOf(r.turnLimit),
+          totalLimit: totalLimitOf(r.totalLimit),
         },
       };
     }

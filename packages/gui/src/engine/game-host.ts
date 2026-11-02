@@ -54,7 +54,7 @@ import { abilityOf, normalPlayCost, playableCards, PSEUDO_DEF } from "./core-int
 import { ProcessingTracker } from "./processing";
 import { diceLanded, flightDelay, planFlights, planTimeline } from "../game/animation/plan";
 import { revealedToHand, type Revealing } from "./reveals";
-import { TurnClock } from "./turn-clock";
+import { TotalClock, TurnClock } from "./turn-clock";
 import { findCard, forEachCard, withoutMemory } from "./view-utils";
 
 export interface Scheduler {
@@ -319,8 +319,12 @@ export class GameHost {
     diceRolls: true,
   };
   private cancelTimer: (() => void) | null = null;
-  /** Online play with a turn time limit (GameOptions.turnLimit): the players' time, the game it counts (its seed), its alarm. */
+  /**
+   * Online play with a time limit: the players' time for their turns (GameOptions.turnLimit) and for the whole game
+   * (GameOptions.totalLimit), the game they count (its seed), their alarm.
+   */
   private clock: TurnClock | null = null;
+  private totalClock: TotalClock | null = null;
   private clockGame: string | null = null;
   private cancelClock: (() => void) | null = null;
   /**
@@ -395,7 +399,7 @@ export class GameHost {
       case "spectate":
         this.watching = null;
         this.spectating = true;
-        return this.begin(message.options, message.inputs);
+        return this.begin(message.options, message.inputs, message.totalLeft);
       case "spectatorSide":
         if (!this.spectating) return;
         this.spectatorSide = message.perspective;
@@ -472,7 +476,8 @@ export class GameHost {
   replay(): Replay | null {
     const game = this.game;
     if (!this.options || !game) return null;
-    return { format: "sve-replay", version: 1, options: this.options, inputs: [...this.inputs], info: { result: game.result, turn: game.state.turn } };
+    const totalLeft = this.totalClock?.view().left;
+    return { format: "sve-replay", version: 1, options: this.options, inputs: [...this.inputs], info: { result: game.result, turn: game.state.turn, ...(totalLeft ? { totalLeft } : {}) } };
   }
 
   /** The session (tests). */
@@ -480,8 +485,11 @@ export class GameHost {
     return this.game;
   }
 
-  /** A new game, then its first inputs again (rewind, replays). Bots start afresh: replayed answers are not re-decided. */
-  private begin(given: GameOptions, replay: readonly RecordedInput[]): void {
+  /**
+   * A new game, then its first inputs again (rewind, replays). Bots start afresh: replayed answers are not re-decided.
+   * `totalLeft`: a spectator's clock starts from the players' time left as the host counts it.
+   */
+  private begin(given: GameOptions, replay: readonly RecordedInput[], totalLeft?: readonly [number, number]): void {
     this.stopTimer();
     // A replay or bug report file of an older version may name a level no longer offered.
     const options: GameOptions = { ...given, controllers: [knownController(given.controllers[0]), knownController(given.controllers[1])] };
@@ -494,14 +502,17 @@ export class GameHost {
     this.game = game;
     this.options = options;
     this.inputs = [];
-    // A new game's clock, and nothing answered by itself yet. The same game again (answers taken back, a spectator coming
-    // back) keeps the time used: taking answers back gives no time back.
-    if (this.clockGame !== options.seed) {
-      this.clockGame = options.seed;
+    // A new game's clocks, and nothing answered by itself yet. The same game again (answers taken back, a spectator coming
+    // back) keeps the time used: taking answers back gives no time back. An online game's replay, played on or watched here,
+    // has no clocks, whatever time was left.
+    const online = !this.watching && options.controllers.includes("remote");
+    if (!online || this.clockGame !== options.seed) {
+      this.clockGame = online ? options.seed : null;
       this.automatic.clear();
-      const online = !this.watching && options.controllers.includes("remote");
       this.clock = online && options.turnLimit ? new TurnClock(options.turnLimit * 1000, () => this.now()) : null;
+      this.totalClock = online && options.totalLimit ? new TotalClock(options.totalLimit * 60_000, () => this.now()) : null;
     }
+    if (totalLeft) this.totalClock?.setLeft(totalLeft);
     // Watching, nobody plays: the replay's inputs are its answers.
     this.bots = this.watching
       ? [null, null]
@@ -549,8 +560,8 @@ export class GameHost {
   private answer(seat: PlayerId, answer: Answer): void {
     // The other program is being asked to take an answer back: this person's next one waits for what it says.
     if (this.hold && !this.isRemote(seat)) return;
-    // Out of time (GameOptions.turnLimit): this program answers for them now.
-    if (this.clock?.out(seat) && !this.isRemote(seat)) return;
+    // Out of time: this program answers for them now (GameOptions.turnLimit), or concedes for them (GameOptions.totalLimit).
+    if ((this.clock?.out(seat) || this.totalClock?.out(seat)) && !this.isRemote(seat)) return;
     const game = this.game;
     const decision = game?.decision;
     if (!game || !decision) return this.error("there is no decision to answer");
@@ -712,7 +723,7 @@ export class GameHost {
    * everything waits until a person has seen it ("acknowledge"); quick windows where passing is all a player can do are
    * passed here, as the core's autoResolve would (GameOptions.askEveryQuickWindow) — online, by each player's own program
    * when it answers its person's windows (GameOptions.ownQuickWindows: ownAnswer). Out of time, a player's program answers
-   * for them (GameOptions.turnLimit).
+   * for them (GameOptions.turnLimit), or concedes for them (GameOptions.totalLimit).
    */
   private pump(): void {
     this.stopTimer();
@@ -725,6 +736,8 @@ export class GameHost {
     if (game.isOver) this.announcement = null;
     for (;;) {
       this.tick();
+      const outOfTotal = this.outOfTotalTime();
+      if (outOfTotal !== null) return this.concede(outOfTotal);
       // Out of time: what this person hasn't seen yet doesn't hold the game.
       if (this.localOutOfTime()) {
         this.announcement = null;
@@ -853,12 +866,14 @@ export class GameHost {
     return true;
   }
 
-  /** The turn clock follows the game (online play with a turn time limit): whose time runs from now. */
+  /** The clocks follow the game (online play with a time limit): whose time runs from now. */
   private tick(): void {
     const game = this.game;
-    if (!this.clock || !game || this.replaying) return;
+    if ((!this.clock && !this.totalClock) || !game || this.replaying) return;
     const state = game.state;
-    this.clock.follow({ turn: state.phase === "setup" ? 0 : state.turn, active: state.activePlayer, deciding: game.decision?.player ?? null, over: game.isOver });
+    const moment = { turn: state.phase === "setup" ? 0 : state.turn, active: state.activePlayer, deciding: game.decision?.player ?? null, over: game.isOver };
+    this.clock?.follow(moment);
+    this.totalClock?.follow(moment);
   }
 
   /** Whether the time running is this program's person's, and it is out. */
@@ -867,15 +882,30 @@ export class GameHost {
     return running !== null && running !== undefined && this.remotes().length === 1 && !this.isRemote(running) && this.clock!.out(running);
   }
 
-  /** Online play with a turn time limit: come back when this person's time runs out (their program answers for them then). */
+  /**
+   * The seat of this program's person when they have no time left for the game: their program concedes for them (not while
+   * an answer is being taken back: that comes first; not in games that differ: they are being reported, and nobody loses).
+   */
+  private outOfTotalTime(): PlayerId | null {
+    const remotes = this.remotes();
+    if (!this.totalClock || remotes.length !== 1 || this.game?.isOver || this.hold || this.desync) return null;
+    const mine = opponentOf(remotes[0]!);
+    return this.totalClock.out(mine) ? mine : null;
+  }
+
+  /** How long until a clock runs out on this program's person (Infinity: it isn't their time that runs). */
+  private localTimeLeft(clock: TurnClock | TotalClock | null): number {
+    const running = clock?.runningFor;
+    return running === null || running === undefined || this.remotes().length !== 1 || this.isRemote(running) ? Infinity : clock!.timeLeft(running);
+  }
+
+  /** Online play with a time limit: come back when this person's time runs out (their program acts for them then). */
   private armClock(): void {
     this.cancelClock?.();
     this.cancelClock = null;
-    const clock = this.clock;
-    const running = clock?.runningFor;
-    if (!clock || running === null || running === undefined || this.remotes().length !== 1 || this.isRemote(running) || this.game?.isOver) return;
-    const left = clock.timeLeft(running);
-    if (left > 0) {
+    if (this.game?.isOver) return;
+    const left = Math.min(this.localTimeLeft(this.clock), this.localTimeLeft(this.totalClock));
+    if (left > 0 && left < Infinity) {
       this.cancelClock = this.scheduler.schedule(() => {
         this.cancelClock = null;
         this.pump();
@@ -1040,8 +1070,9 @@ export class GameHost {
     if (remotes.length === 0) return null;
     const allowUndo = !!this.options?.allowUndo;
     const clock = this.clock?.view() ?? null;
-    if (remotes.length === 2) return { seat: null, remote: null, desync: this.desync, spectating: true, allowUndo, undo: null, revealAllowed: this.spectatorReveal, clock };
-    return { seat: opponentOf(remotes[0]!), remote: remotes[0]!, desync: this.desync, spectating: false, allowUndo, undo: this.undoPoint(), revealAllowed: false, clock };
+    const total = this.totalClock?.view() ?? null;
+    if (remotes.length === 2) return { seat: null, remote: null, desync: this.desync, spectating: true, allowUndo, undo: null, revealAllowed: this.spectatorReveal, clock, total };
+    return { seat: opponentOf(remotes[0]!), remote: remotes[0]!, desync: this.desync, spectating: false, allowUndo, undo: this.undoPoint(), revealAllowed: false, clock, total };
   }
 
   private watchState(): WatchState | null {

@@ -2,7 +2,7 @@
 // storage): the defaults are used. The PC release also keeps most of them in its settings.ini (settings-file.ts).
 import { useSyncExternalStore } from "react";
 import { knownController, type FormatId, type SeatController, type TurnOrder } from "../engine/protocol";
-import { TURN_LIMIT } from "../net/messages";
+import { TOTAL_LIMIT, TURN_LIMIT } from "../net/messages";
 import type { TurnServer } from "../net/relays";
 
 /** "zh-Hant": Traditional Chinese, the Simplified Chinese converted (i18n/hant.ts). */
@@ -69,6 +69,9 @@ export interface Settings {
   /** Online play, the host's rule: a turn time limit (on or not, and its seconds, kept while off). */
   turnLimitOn: boolean;
   turnLimitSeconds: number;
+  /** Online play, the host's rule: a total time limit (on or not, and its minutes, kept while off). */
+  totalLimitOn: boolean;
+  totalLimitMinutes: number;
   /**
    * Online play, this player's own: a quick window where they have nothing to play is passed after a pause like a person's
    * (fakeQuick); every quick window of theirs is passed for them (skipQuick).
@@ -115,6 +118,8 @@ export const DEFAULT_SETTINGS: Settings = {
   allowWatchChat: false,
   turnLimitOn: false,
   turnLimitSeconds: TURN_LIMIT.first,
+  totalLimitOn: false,
+  totalLimitMinutes: TOTAL_LIMIT.first,
   fakeQuick: false,
   skipQuick: false,
   blockQuickChat: false,
@@ -122,7 +127,7 @@ export const DEFAULT_SETTINGS: Settings = {
 
 /**
  * Settings saved by an older version, brought up to date: "deck restrictions" off became the unlimited format; Bot-Hard
- * beta, removed, became Bot-Hard.
+ * beta, removed, became Bot-Hard; a turn time limit not in use, at the 600 seconds once offered first, is offered as now.
  */
 export function migrateSettings(saved: Partial<Settings> & { setupRestrictions?: boolean }): Settings {
   const { setupRestrictions, ...rest } = saved;
@@ -132,6 +137,7 @@ export function migrateSettings(saved: Partial<Settings> & { setupRestrictions?:
     ...(setupRestrictions === false && rest.format === undefined ? { format: "unlimited" as const } : {}),
     ...rest,
     ...(Array.isArray(controllers) && controllers.length === 2 ? { setupControllers: [knownController(controllers[0]), knownController(controllers[1])] } : {}),
+    ...(rest.turnLimitSeconds === 600 && !rest.turnLimitOn ? { turnLimitSeconds: TURN_LIMIT.first } : {}),
   };
 }
 

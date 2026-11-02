@@ -22,7 +22,7 @@ import { RandomMatch } from "./RandomMatch";
 import { useSeconds } from "./use-seconds";
 import { checkNetwork, type NetworkCheck } from "../net/check";
 import { normalizeRoomCode, normalizeRoomPassword } from "../net/codes";
-import { cleanName, NAME_MAX, SPECTATOR_SEATS, TURN_LIMIT, type Rules } from "../net/messages";
+import { cleanName, NAME_MAX, SPECTATOR_SEATS, TOTAL_LIMIT, TURN_LIMIT, type Rules } from "../net/messages";
 import { watchLobby, type LobbyRoom, type ServerProblem } from "../net/server";
 import type { Via } from "../net/link";
 import type { ServerSettings } from "../net/server-config";
@@ -472,35 +472,52 @@ function UndoField({ testId }: { testId: string }) {
   );
 }
 
-/**
- * The turn time limit (the host's rule): none, or each player's seconds for their turn and their answers in the other
- * player's turn after it. The seconds are taken when the field is left (or Enter), within TURN_LIMIT.
- */
-function TurnLimitField({ testId }: { testId: string }) {
-  const t = useT();
-  const { turnLimitOn, turnLimitSeconds } = useSettings();
-  const [text, setText] = useState(String(turnLimitSeconds));
+/** A time limit of the host's rules: none, or how much; the number is taken when the field is left (or Enter), within its range. */
+function LimitField({
+  testId,
+  valueTestId,
+  label,
+  help,
+  unit,
+  on,
+  value,
+  range,
+  onOn,
+  onValue,
+}: {
+  testId: string;
+  valueTestId: string;
+  label: string;
+  help: string;
+  unit: string;
+  on: boolean;
+  value: number;
+  range: { min: number; max: number };
+  onOn: (on: boolean) => void;
+  onValue: (value: number) => void;
+}) {
+  const [text, setText] = useState(String(value));
   useEffect(() => {
-    setText(String(turnLimitSeconds));
-  }, [turnLimitSeconds]);
+    setText(String(value));
+  }, [value]);
   const take = () => {
     const n = Math.round(Number(text));
-    const seconds = text.trim() !== "" && Number.isFinite(n) ? Math.min(TURN_LIMIT.max, Math.max(TURN_LIMIT.min, n)) : turnLimitSeconds;
-    setText(String(seconds));
-    if (seconds !== turnLimitSeconds) updateSettings({ turnLimitSeconds: seconds });
+    const taken = text.trim() !== "" && Number.isFinite(n) ? Math.min(range.max, Math.max(range.min, n)) : value;
+    setText(String(taken));
+    if (taken !== value) onValue(taken);
   };
   return (
     <span className="sve-online-turn-limit">
-      <label className="sve-online-check-label" title={t("online.turnLimitHelp")}>
-        <input type="checkbox" checked={turnLimitOn} onChange={(e) => updateSettings({ turnLimitOn: e.target.checked })} data-testid={`${testId}-turn-limit`} />
-        {t("online.turnLimit")}
+      <label className="sve-online-check-label" title={help}>
+        <input type="checkbox" checked={on} onChange={(e) => onOn(e.target.checked)} data-testid={testId} />
+        {label}
       </label>
-      {turnLimitOn ? (
+      {on ? (
         <label className="sve-online-turn-limit-seconds">
           <input
             type="number"
-            min={TURN_LIMIT.min}
-            max={TURN_LIMIT.max}
+            min={range.min}
+            max={range.max}
             value={text}
             inputMode="numeric"
             onChange={(e) => setText(e.target.value)}
@@ -508,12 +525,52 @@ function TurnLimitField({ testId }: { testId: string }) {
             onKeyDown={(e) => {
               if (e.key === "Enter") take();
             }}
-            data-testid={`${testId}-turn-limit-seconds`}
+            data-testid={valueTestId}
           />
-          {t("online.turnLimitSeconds")}
+          {unit}
         </label>
       ) : null}
     </span>
+  );
+}
+
+/** The turn time limit (the host's rule): each player's seconds for their turn and their answers in the other player's turn after it. */
+function TurnLimitField({ testId }: { testId: string }) {
+  const t = useT();
+  const { turnLimitOn, turnLimitSeconds } = useSettings();
+  return (
+    <LimitField
+      testId={`${testId}-turn-limit`}
+      valueTestId={`${testId}-turn-limit-seconds`}
+      label={t("online.turnLimit")}
+      help={t("online.turnLimitHelp")}
+      unit={t("online.turnLimitSeconds")}
+      on={turnLimitOn}
+      value={turnLimitSeconds}
+      range={TURN_LIMIT}
+      onOn={(on) => updateSettings({ turnLimitOn: on })}
+      onValue={(seconds) => updateSettings({ turnLimitSeconds: seconds })}
+    />
+  );
+}
+
+/** The total time limit (the host's rule): each player's minutes for the whole game; out of time, they lose. */
+function TotalLimitField({ testId }: { testId: string }) {
+  const t = useT();
+  const { totalLimitOn, totalLimitMinutes } = useSettings();
+  return (
+    <LimitField
+      testId={`${testId}-total-limit`}
+      valueTestId={`${testId}-total-limit-minutes`}
+      label={t("online.totalLimit")}
+      help={t("online.totalLimitHelp")}
+      unit={t("online.totalLimitMinutes")}
+      on={totalLimitOn}
+      value={totalLimitMinutes}
+      range={TOTAL_LIMIT}
+      onOn={(on) => updateSettings({ totalLimitOn: on })}
+      onValue={(minutes) => updateSettings({ totalLimitMinutes: minutes })}
+    />
   );
 }
 
@@ -573,6 +630,7 @@ function ServerStart({ onRandom }: { onRandom: (() => void) | undefined }) {
             <TurnOrderField testId="online-server-turn-order" />
             <UndoField testId="online-server-undo" />
             <TurnLimitField testId="online-server" />
+            <TotalLimitField testId="online-server" />
             <WatchFields testId="online-server" />
           </fieldset>
           {servers.length > 1 ? (
@@ -1012,6 +1070,7 @@ function rulesText(rules: Rules, t: ReturnType<typeof useT>): string {
   const extras = [
     rules.undo ? t("online.rulesUndo") : null,
     rules.turnLimit !== null ? t("online.rulesTurnLimit", { s: rules.turnLimit }) : null,
+    rules.totalLimit !== null ? t("online.rulesTotalLimit", { m: rules.totalLimit }) : null,
     rules.watchHands ? t("online.rulesWatchHands") : null,
     rules.watchChat ? t("online.rulesWatchChat") : null,
   ];
@@ -1044,6 +1103,8 @@ function Prep({ role, same, onEditDecks }: { role: "host" | "guest"; same: boole
     settings.allowWatchChat,
     settings.turnLimitOn,
     settings.turnLimitSeconds,
+    settings.totalLimitOn,
+    settings.totalLimitMinutes,
   ]);
 
   const ctx = catalog ? { catalog, lang: settings.cardLang, t } : null;
@@ -1062,6 +1123,7 @@ function Prep({ role, same, onEditDecks }: { role: "host" | "guest"; same: boole
             <TurnOrderField testId="online-turn-order" />
             <UndoField testId="online-undo" />
             <TurnLimitField testId="online" />
+            <TotalLimitField testId="online" />
             {server ? <WatchFields testId="online" /> : null}
           </fieldset>
         ) : (

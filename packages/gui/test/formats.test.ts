@@ -159,6 +159,15 @@ describe("deck files and settings", () => {
     expect("setupRestrictions" in migrateSettings({ setupRestrictions: false } as never)).toBe(false);
   });
 
+  it("offer a turn time limit not in use at the seconds offered now; one in use, or chosen, stays", () => {
+    expect(migrateSettings({ turnLimitOn: false, turnLimitSeconds: 600 }).turnLimitSeconds).toBe(900);
+    expect(migrateSettings({ turnLimitSeconds: 600 }).turnLimitSeconds).toBe(900);
+    expect(migrateSettings({ turnLimitOn: true, turnLimitSeconds: 600 }).turnLimitSeconds).toBe(600);
+    expect(migrateSettings({ turnLimitOn: false, turnLimitSeconds: 120 }).turnLimitSeconds).toBe(120);
+    expect(migrateSettings({}).turnLimitSeconds).toBe(900);
+    expect(migrateSettings({}).totalLimitMinutes).toBe(30);
+  });
+
   it("turn the removed Bot-Hard beta, saved by an older version, into Bot-Hard", () => {
     expect(migrateSettings({ setupControllers: ["human", "hard-beta"] } as never).setupControllers).toEqual(["human", "hard"]);
     expect(migrateSettings({ setupControllers: ["hard-beta", "medium"] } as never).setupControllers).toEqual(["hard", "medium"]);

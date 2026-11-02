@@ -22,7 +22,7 @@ import { setHandOpen, useHandOpen } from "../phone/hand";
 import { AttackArrow } from "./AttackArrow";
 import { CardMenu } from "./CardMenu";
 import { setPlacingName } from "./center-state";
-import { CenterLine } from "./CenterLine";
+import { CenterLine, PlayerTotalTime } from "./CenterLine";
 import { DiceRoll } from "./DiceRoll";
 import { DragLayer } from "./DragLayer";
 import { PIECES, pieceStyle, pileRect, rectStyle, rowRect, slotRect, spareRect, type PileZone, type SlotZone, type TableLayout, type TableMode } from "./layout";
@@ -401,6 +401,7 @@ function PlayerPanel({ update, side, opponent, marks }: { update: GameUpdate; si
       <div className="sve-player-counts">
         {t("game.hand")} {side.hand.length} · {t("game.deck")} {side.deckCount}
       </div>
+      <PlayerTotalTime update={update} player={side.id} />
       {side.triggerZone.length > 0 ? (
         <div className="sve-trigger" data-zone={`${side.id}:triggerZone`}>
           <span className="sve-zone-label">{t("game.trigger")}</span>

@@ -93,8 +93,8 @@ describe("online play: two programs, one game", () => {
       const a = side(0, options(seed), announce);
       const b = side(1, options(seed), announce);
       // Each side is told whose seat is the other program's; nobody is asked the other's decisions.
-      expect(a.last().online).toEqual({ seat: 0, remote: 1, desync: null, spectating: false, allowUndo: false, undo: null, revealAllowed: false, clock: null });
-      expect(b.last().online).toEqual({ seat: 1, remote: 0, desync: null, spectating: false, allowUndo: false, undo: null, revealAllowed: false, clock: null });
+      expect(a.last().online).toEqual({ seat: 0, remote: 1, desync: null, spectating: false, allowUndo: false, undo: null, revealAllowed: false, clock: null, total: null });
+      expect(b.last().online).toEqual({ seat: 1, remote: 0, desync: null, spectating: false, allowUndo: false, undo: null, revealAllowed: false, clock: null, total: null });
       play(a, b);
       expect(a.last().result).not.toBeNull();
       expect(b.last().result).toEqual(a.last().result);
@@ -212,11 +212,11 @@ describe("online play: two programs, one game", () => {
 // the game's options and inputs so far, then both players' answers; its engine plays both seats as "remote".
 
 /** A spectator's worker host, started on the game of `options` with its first inputs (the backlog). */
-function spectator(options: GameOptions, backlog: RecordedInput[] = []) {
+function spectator(options: GameOptions, backlog: RecordedInput[] = [], scheduler: Scheduler = { schedule: () => () => undefined }, totalLeft?: [number, number]) {
   const messages: FromWorker[] = [];
-  const host = new GameHost(engine, (m) => messages.push(m), { schedule: () => () => undefined });
+  const host = new GameHost(engine, (m) => messages.push(m), scheduler);
   host.handle({ kind: "settings", settings: { botDelayMs: 0, attackPauseMs: 0, announceQuick: true } });
-  host.handle({ kind: "spectate", options: { ...options, controllers: ["remote", "remote"] }, inputs: backlog });
+  host.handle({ kind: "spectate", options: { ...options, controllers: ["remote", "remote"] }, inputs: backlog, ...(totalLeft ? { totalLeft } : {}) });
   const updates = () => messages.filter((m): m is Extract<FromWorker, { kind: "update" }> => m.kind === "update").map((m) => m.update);
   return { host, messages, last: () => updates().at(-1)!, updates };
 }
@@ -237,7 +237,7 @@ describe("online play: spectators", () => {
     const a = side(0, options("watch-1"), false);
     const b = side(1, options("watch-1"), false);
     const w = spectator(options("watch-1"));
-    expect(w.last().online).toEqual({ seat: null, remote: null, desync: null, spectating: true, allowUndo: false, undo: null, revealAllowed: false, clock: null });
+    expect(w.last().online).toEqual({ seat: null, remote: null, desync: null, spectating: true, allowUndo: false, undo: null, revealAllowed: false, clock: null, total: null });
     play(a, b);
     expect(a.last().result).not.toBeNull();
     const rng = seedRng("watch-order");
@@ -645,6 +645,146 @@ describe("online play: the turn time limit", () => {
     expect(a.last().online?.clock).toBeNull();
     const w = spectator({ ...own("clock-watch"), turnLimit: 60 });
     expect(w.last().online?.clock).toEqual({ left: [60_000, 60_000], running: null, limit: 60_000 });
+  });
+});
+
+describe("online play: the total time limit", () => {
+  /** The clock as a program shows it now. */
+  const totalOf = (s: Side) => {
+    s.host.handle({ kind: "settings", settings: {} });
+    return s.last().online!.total!;
+  };
+  /** Two programs of a game whose players pass every quick window (at once: the tests answer nothing else there). */
+  const timed = (seed: string, extra: Partial<GameOptions>, time: VirtualTime): [Side, Side] => {
+    const opts: GameOptions = { ...own(seed), ...extra };
+    return [side(0, opts, false, time, { skipQuick: true }), side(1, opts, false, time, { skipQuick: true })];
+  };
+
+  it("runs in the setup and the turns, is never given back; out of time, the player's program concedes for them", () => {
+    const time = new VirtualTime();
+    const [a, b] = timed("total-1", { totalLimit: 1 }, time);
+    expect(a.last().online?.clock).toBeNull();
+    // The setup counts: whoever it waits for.
+    const asked = a.host.session!.decision!.player;
+    expect(totalOf(a)).toEqual({ left: [60_000, 60_000], running: asked, limit: 60_000 });
+    time.advance(5_000);
+    expect(totalOf(a).left[asked]).toBe(55_000);
+    expect(totalOf(b).left[asked]).toBe(55_000);
+    expect(totalOf(a).left[(1 - asked) as 0 | 1]).toBe(60_000);
+
+    answerByDefault(a, b, () => state(a).turn === 1 && state(a).phase === "main");
+    const active = state(a).activePlayer;
+    const other = (1 - active) as 0 | 1;
+    const [mine, theirs] = active === 0 ? [a, b] : [b, a];
+    expect(totalOf(mine).running).toBe(active);
+    const before = totalOf(mine).left;
+    time.advance(10_000);
+    expect(totalOf(mine).left[active]).toBe(before[active] - 10_000);
+    expect(totalOf(theirs).left[active]).toBe(before[active] - 10_000);
+    expect(totalOf(mine).left[other]).toBe(before[other]);
+
+    // The turn changes: the time used stays used, and the other player's runs.
+    answerByDefault(a, b, () => state(a).turn === 2 && state(a).phase === "main");
+    expect(totalOf(theirs).running).toBe(other);
+    expect(totalOf(theirs).left[active]).toBe(before[active] - 10_000);
+
+    // Out of time: the other player's program concedes for them; both games end there, and the time left says why.
+    time.advance(before[other] + 1);
+    expect(theirs.last().result).toEqual({ winner: active, losses: [{ player: other, reason: "concede" }] });
+    expect(theirs.host.replay()!.inputs.at(-1)).toEqual({ input: { type: "concede", player: other }, by: other });
+    settle(a, b);
+    expect(mine.last().result).toEqual(theirs.last().result);
+    expect(theirs.last().online?.total?.left[other]).toBe(0);
+    expect(mine.last().online?.total?.left[other]).toBe(0);
+    expect(totalOf(mine).running).toBeNull();
+    expect(errorsOf(a, b)).toEqual([]);
+  });
+
+  it("an answer after the time is out isn't taken, even before the alarm", () => {
+    const time = new VirtualTime();
+    const [a, b] = timed("total-2", { totalLimit: 1 }, time);
+    const d = a.host.session!.decision!;
+    const asked = d.player === 0 ? a : b;
+    const inputs = asked.host.replay()!.inputs.length;
+    time.time += 60_000;
+    asked.host.handle({ kind: "answer", seat: d.player, answer: defaultAnswer(d) });
+    expect(asked.host.replay()!.inputs.length).toBe(inputs);
+    time.advance(1);
+    expect(asked.last().result?.losses).toEqual([{ player: d.player, reason: "concede" }]);
+    settle(a, b);
+    expect(errorsOf(a, b)).toEqual([]);
+  });
+
+  it("with a turn time limit too: the turn's time out ends the turn, the game's time out loses it", () => {
+    const time = new VirtualTime();
+    const [a, b] = timed("total-3", { turnLimit: 30, totalLimit: 1 }, time);
+    answerByDefault(a, b, () => state(a).turn === 1 && state(a).phase === "main");
+    const active = state(a).activePlayer;
+    time.advance(30_001);
+    settle(a, b);
+    expect(state(a).turn).toBe(2);
+    expect(a.last().result).toBeNull();
+    time.advance(30_001);
+    settle(a, b);
+    expect(state(a).turn).toBe(3);
+    expect(state(a).activePlayer).toBe(active);
+    expect(a.last().result).toBeNull();
+    // The whole turn's time again, but less of the game's: that one runs out first.
+    time.advance(30_000);
+    settle(a, b);
+    expect(a.last().result?.losses).toEqual([{ player: active, reason: "concede" }]);
+    expect(b.last().result).toEqual(a.last().result);
+    expect(errorsOf(a, b)).toEqual([]);
+  });
+
+  it("taking answers back gives no time back; out of time while asking for it, the answer comes first", () => {
+    const time = new VirtualTime();
+    const [a, b] = timed("total-4", { totalLimit: 1, allowUndo: true }, time);
+    const d = a.host.session!.decision!;
+    const asked = d.player === 0 ? a : b;
+    time.advance(5_000);
+    asked.host.handle({ kind: "answer", seat: d.player, answer: defaultAnswer(d) });
+    asked.host.handle({ kind: "takeBack", inputs: 0, seat: d.player });
+    expect(asked.host.replay()!.inputs).toEqual([]);
+    expect(totalOf(asked).left[d.player]).toBe(55_000);
+    // Asking the other program to take an answer back: out of time meanwhile, it concedes once the answer has come.
+    asked.host.handle({ kind: "hold", on: true });
+    time.advance(55_001);
+    expect(asked.last().result).toBeNull();
+    asked.host.handle({ kind: "hold", on: false });
+    expect(asked.last().result?.losses).toEqual([{ player: d.player, reason: "concede" }]);
+  });
+
+  it("a spectator's clock starts from the host's count, is only shown, and a game's replay played on here has none", () => {
+    const time = new VirtualTime();
+    const opts: GameOptions = { ...own("total-5"), totalLimit: 1 };
+    const w = spectator(opts, [], time, [12_000, 34_000]);
+    const asked = w.host.session!.decision!.player;
+    expect(w.last().online?.total?.left).toEqual([12_000, 34_000]);
+    time.advance(40_000);
+    w.host.handle({ kind: "settings", settings: {} });
+    expect(w.last().online?.total?.left[asked]).toBe(0);
+    expect(w.last().result).toBeNull();
+    expect(w.messages.filter((m) => m.kind === "localInput")).toEqual([]);
+
+    // What the host sends a spectator who comes: its count when the game is read out.
+    const [a, b] = timed("total-6", { totalLimit: 1 }, time);
+    time.advance(7_000);
+    expect(a.host.replay()!.info?.totalLeft).toEqual(totalOf(a).left);
+    expect(side(0, own("total-none"), false).host.replay()!.info?.totalLeft).toBeUndefined();
+
+    // Lost on time, then played on from before its end, here (the same game's seed): no clock holds its person.
+    time.advance(60_000);
+    settle(a, b);
+    expect(a.last().result?.losses[0]?.reason).toBe("concede");
+    const replay = a.host.replay()!;
+    a.host.handle({ kind: "loadReplay", replay, inputs: replay.inputs.length - 1 });
+    expect(a.last().online).toBeNull();
+    const d = a.host.session!.decision!;
+    a.host.handle({ kind: "answer", seat: d.player, answer: defaultAnswer(d) });
+    expect(a.host.replay()!.inputs.length).toBe(replay.inputs.length);
+    expect(a.last().result).toBeNull();
+    expect(errorsOf(a, b)).toEqual([]);
   });
 });
 

@@ -1,6 +1,7 @@
 // The end of the game over the table: who won and why, then save its replay, a new game (online:
 // another one with the same player), the main menu, or a last look at the board. The end of a replay being watched: watch
 // it again, or back to the replays.
+import type { PlayerId } from "@sve/core";
 import { useState } from "react";
 import { errorText } from "../../app/errors";
 import { engine } from "../../app/store";
@@ -15,6 +16,15 @@ interface Props {
   onNewGame: () => void;
   onMenu: () => void;
   onReplays: () => void;
+}
+
+/**
+ * Whether a player who conceded was out of a total time limit (their program conceded for them): this program's count of the
+ * other player's time can be behind theirs by the network's delay, so about none left counts.
+ */
+function outOfTotalTime(update: GameUpdate, player: PlayerId): boolean {
+  const left = update.online?.total?.left[player];
+  return left !== undefined && left < 3000;
 }
 
 export function ResultOverlay({ update, onNewGame, onMenu, onReplays }: Props) {
@@ -50,7 +60,7 @@ export function ResultOverlay({ update, onNewGame, onMenu, onReplays }: Props) {
     <div className="sve-result-overlay" data-testid="result-overlay">
       <div className="sve-result-panel">
         <h2>{title}</h2>
-        <p>{result.losses.map((l) => `${playerLabel(l.player, update, t)}: ${t(`game.reason.${l.reason}` as const)}`).join("; ")}</p>
+        <p>{result.losses.map((l) => `${playerLabel(l.player, update, t)}: ${t(outOfTotalTime(update, l.player) && l.reason === "concede" ? "game.reason.outOfTime" : (`game.reason.${l.reason}` as const))}`).join("; ")}</p>
         {update.watch ? (
           <div className="sve-result-buttons">
             <button type="button" className="sve-primary" onClick={() => engine.send({ kind: "watchControl", seek: 0, playing: true })} data-testid="result-watch-again">

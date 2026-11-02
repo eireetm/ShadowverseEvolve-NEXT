@@ -99,13 +99,13 @@ describe("messages", () => {
   });
 
   it("carry a game's preparation and answers, checked field by field", () => {
-    const rules = { format: "crossCraft", list: "01_26_EN_CROSS", listHash: "1a2b3c4d5e", turnOrder: "random", undo: false, watchHands: false, watchChat: false, turnLimit: null };
+    const rules = { format: "crossCraft", list: "01_26_EN_CROSS", listHash: "1a2b3c4d5e", turnOrder: "random", undo: false, watchHands: false, watchChat: false, turnLimit: null, totalLimit: null };
     expect(parseMessage({ t: "rules", rules })).toEqual({ t: "rules", rules });
     // The list's fingerprint: none when it isn't a text.
     expect(parseMessage({ t: "rules", rules: { ...rules, listHash: 7 } })).toEqual({ t: "rules", rules: { ...rules, listHash: null } });
     // What the spectators may do (the server's rooms): only when the host says so; an older host's rules say nothing of it.
     expect(parseMessage({ t: "rules", rules: { ...rules, watchHands: true, watchChat: "yes" } })).toEqual({ t: "rules", rules: { ...rules, watchHands: true } });
-    const { watchHands: _h, watchChat: _c, turnLimit: _l, ...older } = rules;
+    const { watchHands: _h, watchChat: _c, turnLimit: _l, totalLimit: _m, ...older } = rules;
     expect(parseMessage({ t: "rules", rules: older })).toEqual({ t: "rules", rules });
     expect(parseMessage({ t: "rules", rules: { ...rules, list: null } })).toEqual({ t: "rules", rules: { ...rules, list: null } });
     // Taking answers back: allowed only when the host says so.
@@ -114,6 +114,9 @@ describe("messages", () => {
     // A turn time limit: whole seconds from 10 to 3600, else none.
     expect(parseMessage({ t: "rules", rules: { ...rules, turnLimit: 600 } })).toEqual({ t: "rules", rules: { ...rules, turnLimit: 600 } });
     for (const turnLimit of [9, 3601, 60.5, "600", true]) expect(parseMessage({ t: "rules", rules: { ...rules, turnLimit } })).toEqual({ t: "rules", rules });
+    // A total time limit: whole minutes from 1 to 600, else none.
+    expect(parseMessage({ t: "rules", rules: { ...rules, totalLimit: 30 } })).toEqual({ t: "rules", rules: { ...rules, totalLimit: 30 } });
+    for (const totalLimit of [0, 601, 1.5, "30", true]) expect(parseMessage({ t: "rules", rules: { ...rules, totalLimit } })).toEqual({ t: "rules", rules });
     for (const t of ["undo", "undoOk", "undoNo", "takeBack"] as const) {
       expect(parseMessage({ t, from: 12 })).toEqual({ t, from: 12 });
       expect(parseMessage({ t, from: -1 })).toBeNull();
@@ -192,6 +195,12 @@ describe("messages", () => {
     expect(parseMessage({ t: "watch", game: { ...game, turnLimit: 90 } })).toEqual({ t: "watch", game: { ...game, turnLimit: 90 } });
     expect(parseMessage({ t: "watch", game: { ...game, turnLimit: 5 } })).toEqual({ t: "watch", game });
     expect(watchedOptions({ ...game, turnLimit: 90 } as unknown as WatchedGame).turnLimit).toBe(90);
+    // A total time limit, and the players' time left as the host counts it.
+    expect(parseMessage({ t: "watch", game: { ...game, totalLimit: 30, totalLeft: [1200.5, 0] } })).toEqual({ t: "watch", game: { ...game, totalLimit: 30, totalLeft: [1200.5, 0] } });
+    for (const totalLeft of [[1], [1, -1], [1, "2"], "12", [1, 36_000_001]]) expect(parseMessage({ t: "watch", game: { ...game, totalLeft } })).toEqual({ t: "watch", game });
+    expect(parseMessage({ t: "watch", game: { ...game, totalLimit: 0 } })).toEqual({ t: "watch", game });
+    expect(watchedOptions({ ...game, totalLimit: 30 } as unknown as WatchedGame).totalLimit).toBe(30);
+    expect(watchedOptions(game as unknown as WatchedGame).totalLimit).toBeUndefined();
     const input = { type: "mainPhase", action: { type: "endMainPhase" } };
     expect(parseMessage({ t: "backlog", start: 0, inputs: [{ input, by: 0 }, { input: { type: "quick", action: { type: "pass" } }, by: null }] })).toEqual({
       t: "backlog",

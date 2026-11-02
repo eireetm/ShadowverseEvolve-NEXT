@@ -23,7 +23,7 @@ import { newRoomCode, newRoomPassword } from "./codes";
 import type { PeerLink } from "./link";
 import { answerConnection, BadCodeError, offerConnection, type ManualAttempt } from "./manual";
 import type { MessageKey } from "../i18n";
-import { BACKLOG_PIECE, CHAT_MAX, cleanName, MAX_SPECTATOR_SEATS, SPECTATOR_SEATS, turnLimitOf, watchedOptions, type Hello, type JoinAs, type NetMessage, type QuickChatId, type ReadyDeck, type Rules, type WatchedGame } from "./messages";
+import { BACKLOG_PIECE, CHAT_MAX, cleanName, MAX_SPECTATOR_SEATS, SPECTATOR_SEATS, totalLimitOf, turnLimitOf, watchedOptions, type Hello, type JoinAs, type NetMessage, type QuickChatId, type ReadyDeck, type Rules, type WatchedGame } from "./messages";
 import type { TurnServer } from "./relays";
 import { REVEAL_PAUSE_MS } from "../game/animation/plan";
 import { meet, type Admission, type Meeting, type MeetingHandlers } from "./rooms";
@@ -448,11 +448,15 @@ export function onlineOptions(seed: string, rules: Rules, host: ReadyDeck, guest
     turnOrder: rules.turnOrder,
     allowUndo: rules.undo,
     ...(rules.turnLimit !== null ? { turnLimit: rules.turnLimit } : {}),
+    ...(rules.totalLimit !== null ? { totalLimit: rules.totalLimit } : {}),
   };
 }
 
-/** A game's options as a spectator's program needs them (messages.ts watchedOptions makes them back), with its backlog's size. */
-function watchedGame(options: GameOptions, backlog: number): WatchedGame {
+/**
+ * A game's options as a spectator's program needs them (messages.ts watchedOptions makes them back), with its backlog's size
+ * and, in a game going on with a total time limit, the players' time left.
+ */
+function watchedGame(options: GameOptions, backlog: number, totalLeft?: [number, number]): WatchedGame {
   return {
     id: options.seed,
     decks: options.decks,
@@ -466,6 +470,8 @@ function watchedGame(options: GameOptions, backlog: number): WatchedGame {
     players: getOnline().names ?? [myName(), lastPeer?.name ?? ""],
     allowUndo: options.allowUndo === true,
     ...(options.turnLimit ? { turnLimit: options.turnLimit } : {}),
+    ...(options.totalLimit ? { totalLimit: options.totalLimit } : {}),
+    ...(totalLeft ? { totalLeft } : {}),
   };
 }
 
@@ -583,6 +589,7 @@ function hostRules(): Rules {
     watchHands: server && settings.allowWatchHands,
     watchChat: server && settings.allowWatchChat,
     turnLimit: settings.turnLimitOn ? turnLimitOf(settings.turnLimitSeconds) : null,
+    totalLimit: settings.totalLimitOn ? totalLimitOf(settings.totalLimitMinutes) : null,
   };
 }
 
@@ -712,7 +719,7 @@ async function sendGame(w: Watcher): Promise<void> {
   if (!replay || replay.options.seed !== getOnline().game?.id) {
     w.link.send({ t: "watch", game: null });
   } else {
-    w.link.send({ t: "watch", game: watchedGame(replay.options, replay.inputs.length) });
+    w.link.send({ t: "watch", game: watchedGame(replay.options, replay.inputs.length, replay.info?.totalLeft) });
     for (let start = 0; start < replay.inputs.length; start += BACKLOG_PIECE) {
       w.link.send({ t: "backlog", start, inputs: replay.inputs.slice(start, start + BACKLOG_PIECE) });
     }
@@ -843,7 +850,7 @@ function startWatching(): void {
   // the hidden cards only when the host allows it (the rules it sent).
   const { revealAll: _, ...settings } = playSettings();
   engine.send({ kind: "settings", settings });
-  engine.send({ kind: "spectate", options: watchedOptions(coming.game), inputs: coming.inputs });
+  engine.send({ kind: "spectate", options: watchedOptions(coming.game), inputs: coming.inputs, ...(coming.game.totalLeft ? { totalLeft: coming.game.totalLeft } : {}) });
   engine.send({ kind: "spectatorReveal", allowed: getOnline().prep.rules?.watchHands === true });
   const continuing = getOnline().game?.id === coming.game.id;
   setOnline({ game: { id: coming.game.id, seat: null }, names: coming.game.players ?? null });

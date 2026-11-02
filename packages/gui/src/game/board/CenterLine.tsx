@@ -2,8 +2,9 @@
 // buttons that finish the pending decision (end the main phase, pass, confirm a selection, keep the hand ...). Everything
 // else about a decision is on the table (lit cards and their menus) or in the decision window (DecisionDialog). What it
 // says and offers is center-state.ts (a phone shows the same in its columns).
+import type { PlayerId } from "@sve/core";
 import { useEffect, useMemo, useState } from "react";
-import type { GameUpdate } from "../../engine/protocol";
+import type { ClockView, GameUpdate } from "../../engine/protocol";
 import { useT } from "../../i18n";
 import { ProcessingPrompt } from "../decisions/ProcessingPrompt";
 import { playerLabel } from "../labels";
@@ -41,12 +42,8 @@ export function CenterLine({ update, placing = null }: { update: GameUpdate; pla
   );
 }
 
-/**
- * Online play with a turn time limit: whose time is running and how much of it is left, counted down here between the
- * worker's updates (each says the time left when it was made); null when no time runs.
- */
-export function useTurnClock(update: GameUpdate): { player: 0 | 1; seconds: number } | null {
-  const clock = update.online?.clock ?? null;
+/** A player's time left on a clock now (ms), counted down here between the worker's updates (each says the time left when it was made). */
+function useClockLeft(clock: ClockView | null): (player: PlayerId) => number {
   const at = useMemo(() => Date.now(), [clock]);
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -54,9 +51,40 @@ export function useTurnClock(update: GameUpdate): { player: 0 | 1; seconds: numb
     const timer = window.setInterval(() => setTick((n) => n + 1), 250);
     return () => window.clearInterval(timer);
   }, [clock]);
+  return (player) => (!clock ? 0 : clock.running === player ? Math.max(0, clock.left[player] - (Date.now() - at)) : clock.left[player]);
+}
+
+/** Online play with a turn time limit: whose time is running and how much of it is left; null when no time runs. */
+export function useTurnClock(update: GameUpdate): { player: 0 | 1; seconds: number } | null {
+  const clock = update.online?.clock ?? null;
+  const left = useClockLeft(clock);
   if (!clock || clock.running === null || update.result) return null;
   const player = clock.running;
-  return { player, seconds: Math.ceil(Math.max(0, clock.left[player] - (Date.now() - at)) / 1000) };
+  return { player, seconds: Math.ceil(left(player) / 1000) };
+}
+
+/**
+ * Online play with a total time limit: a player's time left for the game, on their panel (both are always there, like a chess
+ * clock's). The last minute stands out: out of time, they lose.
+ */
+export function PlayerTotalTime({ update, player }: { update: GameUpdate; player: PlayerId }) {
+  const t = useT();
+  const clock = update.online?.total ?? null;
+  const left = useClockLeft(clock);
+  if (!clock) return null;
+  const seconds = Math.ceil(left(player) / 1000);
+  const running = clock.running === player && !update.result;
+  return (
+    <div
+      className={`sve-player-time${running ? " sve-player-time-running" : ""}${seconds <= 60 ? " sve-player-time-low" : ""}`}
+      title={t("online.totalLimit")}
+      data-testid={`player-total-${player}`}
+      data-running={running}
+      data-seconds={seconds}
+    >
+      {t("game.totalTime", { time: clockTime(seconds) })}
+    </div>
+  );
 }
 
 /** A clock's time left as m:ss. */

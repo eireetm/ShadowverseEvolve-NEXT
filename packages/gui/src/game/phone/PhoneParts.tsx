@@ -8,7 +8,7 @@ import type { GameUpdate } from "../../engine/protocol";
 import { useT } from "../../i18n";
 import { Chat } from "../../online/Chat";
 import type { CenterState } from "../board/center-state";
-import { clockTime, useTurnClock } from "../board/CenterLine";
+import { clockTime, PlayerTotalTime, useTurnClock } from "../board/CenterLine";
 import { CardArt } from "../card/CardArt";
 import { CardDetails } from "../card/CardDetails";
 import { DebugPanel } from "../debug/DebugPanel";
@@ -152,6 +152,7 @@ export function PhonePlayer({ update, side, upright = false, mirrored = false }:
           {t("game.sep")} <strong>{side.superEvolutionPoints}</strong>
         </span>
       </div>
+      <PlayerTotalTime update={update} player={side.id} />
     </>
   );
   return (

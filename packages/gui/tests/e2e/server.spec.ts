@@ -477,11 +477,11 @@ test("a turn time limit: the host's rule, the clock on the table, the turn endin
   const host = await openOnline(browser, SERVER, { setupTurnOrder: "player1", setupDecks: ["samples/sd01.json", "samples/sd02.json"] });
   const guest = await openOnline(browser, SERVER, { setupDecks: ["samples/sd03.json", "samples/sd02.json"] });
   watchProblems([host, guest], problems);
-  // Off at first; on, 600 seconds are offered; the host takes 10 (within 10–3600: 5 becomes 10).
+  // Off at first; on, 900 seconds are offered; the host takes 10 (within 10–3600: 5 becomes 10).
   await expect(host.getByTestId("online-server-turn-limit")).not.toBeChecked();
   await expect(host.getByTestId("online-server-turn-limit-seconds")).toHaveCount(0);
   await host.getByTestId("online-server-turn-limit").check();
-  await expect(host.getByTestId("online-server-turn-limit-seconds")).toHaveValue("600");
+  await expect(host.getByTestId("online-server-turn-limit-seconds")).toHaveValue("900");
   await host.getByTestId("online-server-turn-limit-seconds").fill("5");
   await host.getByTestId("online-server-turn-limit-seconds").press("Enter");
   await expect(host.getByTestId("online-server-turn-limit-seconds")).toHaveValue("10");
@@ -524,5 +524,59 @@ test("a turn time limit: the host's rule, the clock on the table, the turn endin
   await host.getByTestId("debug-skip-quick").check();
   await expect(host.getByTestId("debug-skip-quick")).toBeChecked();
   expect(await host.evaluate(() => (JSON.parse(localStorage.getItem("sve-gui-settings") ?? "{}") as { skipQuick?: boolean }).skipQuick)).toBe(true);
+  expect(problems).toEqual([]);
+});
+
+test("a total time limit: the host's rule, both players' time on their panels, a spectator's too; out of time, the game is lost", async ({ browser }) => {
+  test.setTimeout(240_000);
+  const problems: string[] = [];
+  const host = await openOnline(browser, SERVER, { setupTurnOrder: "player1", setupDecks: ["samples/sd01.json", "samples/sd02.json"] });
+  const guest = await openOnline(browser, SERVER, { setupDecks: ["samples/sd03.json", "samples/sd02.json"] });
+  const spectator = await openOnline(browser, SERVER);
+  watchProblems([host, guest, spectator], problems);
+  // Off at first; on, 30 minutes are offered; the host takes 1 (within 1–600: 0 becomes 1).
+  await expect(host.getByTestId("online-server-total-limit")).not.toBeChecked();
+  await expect(host.getByTestId("online-server-total-limit-minutes")).toHaveCount(0);
+  await host.getByTestId("online-server-total-limit").check();
+  await expect(host.getByTestId("online-server-total-limit-minutes")).toHaveValue("30");
+  await host.getByTestId("online-server-total-limit-minutes").fill("0");
+  await host.getByTestId("online-server-total-limit-minutes").press("Enter");
+  await expect(host.getByTestId("online-server-total-limit-minutes")).toHaveValue("1");
+  await host.getByTestId("online-server-host").click();
+  const code = (await host.getByTestId("online-room-code").innerText({ timeout: 30_000 })).trim();
+  await guest.getByTestId("online-server-code").fill(code);
+  await guest.getByTestId("online-server-join").click();
+  await expect(guest.getByTestId("online-rules")).toHaveText("Standard · restriction list: None · first player: Player 1 goes first · total time 1 min", { timeout: 30_000 });
+  // In the room the host still has it (and could change it).
+  await expect(host.getByTestId("online-total-limit")).toBeChecked();
+  await expect(host.getByTestId("online-total-limit-minutes")).toHaveValue("1");
+  await readyBoth(host, guest);
+
+  // The setup counts: the host is asked first, its time runs on both tables; no turn clock without a turn limit.
+  await expect(host.locator(".sve-decision")).toHaveAttribute("data-decision", "mulligan", { timeout: 30_000 });
+  for (const page of [host, guest]) {
+    await expect(page.getByTestId("player-total-0")).toHaveAttribute("data-running", "true", { timeout: 30_000 });
+    await expect(page.getByTestId("player-total-0")).toHaveText(/^Total time 0:\d\d$/);
+    await expect(page.getByTestId("player-total-1")).toHaveAttribute("data-running", "false");
+    await expect(page.getByTestId("player-total-1")).toHaveText("Total time 1:00");
+    await expect(page.getByTestId("center-clock")).toHaveCount(0);
+  }
+  // The last minute stands out (here, all of it).
+  await expect(host.getByTestId("player-total-0")).toHaveClass(/sve-player-time-low/);
+
+  // A spectator who comes later sees the time left as the host counts it, not the whole of it.
+  await expect(host.getByTestId("player-total-0")).toHaveAttribute("data-seconds", /^[0-4]?\d$/, { timeout: 30_000 });
+  await spectator.getByTestId("online-server-code").fill(code);
+  await spectator.getByTestId("online-server-watch").click();
+  await expect(spectator.getByTestId("player-total-0")).toHaveAttribute("data-seconds", /^[0-4]?\d$/, { timeout: 30_000 });
+  await expect(spectator.getByTestId("player-total-1")).toHaveText("Total time 1:00");
+
+  // Nobody answers: out of time, player 1's program concedes for them; said so on every table.
+  await expect(host.getByTestId("result-overlay")).toContainText("Defeat", { timeout: 60_000 });
+  await expect(host.getByTestId("result-overlay")).toContainText("out of time");
+  await expect(guest.getByTestId("result-overlay")).toContainText("Victory", { timeout: 30_000 });
+  await expect(guest.getByTestId("result-overlay")).toContainText("out of time");
+  await expect(spectator.getByTestId("result-overlay")).toContainText("out of time", { timeout: 30_000 });
+  await expect(host.getByTestId("player-total-0")).toHaveText("Total time 0:00");
   expect(problems).toEqual([]);
 });
