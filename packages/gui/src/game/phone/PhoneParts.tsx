@@ -64,7 +64,7 @@ export function PhoneCardPanel({
           {t("app.dismiss")}
         </button>
       </div>
-      <div className="sve-phone-log-body">{tab === "chat" ? <Chat /> : tab === "debug" ? <DebugPanel update={update} /> : <LogPanel update={update} />}</div>
+      <div className="sve-phone-log-body">{tab === "chat" ? <Chat /> : tab === "debug" ? <DebugPanel update={update} /> : <LogPanel update={update} onCard={onCloseLog} />}</div>
     </section>
   );
 }

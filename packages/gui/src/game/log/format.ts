@@ -6,6 +6,7 @@ import { counterName } from "../../i18n/counters";
 import type { CardLang, UiLang } from "../../app/settings";
 import type { GameUpdate, LogEntry } from "../../engine/protocol";
 import type { MessageKey, Translate } from "../../i18n";
+import type { FocusCard } from "../focus";
 import { playerLabel } from "../labels";
 
 export interface LogContext {
@@ -19,9 +20,39 @@ export interface LogContext {
   shuffled?: ReadonlyMap<number, ReadonlySet<PlayerId>>;
 }
 
+/** A part of a line's text that names a card the log's viewer knows: where, and what the card panel shows for it. */
+export interface LogLink {
+  start: number;
+  end: number;
+  card: Pick<FocusCard, "id" | "def" | "printing">;
+}
+
 export interface LogLine {
   kind: "turn" | "event" | "minor";
   text: string;
+  /** The names in `text`, in order, not overlapping. */
+  links: readonly LogLink[];
+}
+
+/** A line being put together: its names still marked in its text (markName). */
+type MarkedLine = Omit<LogLine, "links">;
+
+/** A name in a line being put together: its card's place in the line's list, and the name (private use characters: in no text). */
+const markName = (index: number, name: string): string => `${index}${name}`;
+const MARKED_NAME = /(\d+)([^]*)/g;
+
+/** A line as it is shown: its words without the marks, and where the names are in them (each language's message puts them elsewhere). */
+function withLinks(line: MarkedLine, cards: readonly LogLink["card"][]): LogLine {
+  const links: LogLink[] = [];
+  let text = "";
+  let at = 0;
+  for (const m of line.text.matchAll(MARKED_NAME)) {
+    text += line.text.slice(at, m.index);
+    links.push({ start: text.length, end: text.length + m[2]!.length, card: cards[Number(m[1])]! });
+    text += m[2]!;
+    at = m.index + m[0].length;
+  }
+  return { kind: line.kind, text: text + line.text.slice(at), links };
 }
 
 /** Events that only matter while debugging (shown with "show all"). */
@@ -42,14 +73,28 @@ const MINOR = new Set<GameEvent["type"]>([
 const zoneKey = (zone: string | undefined): MessageKey => (zone ? (`log.zone.${zone}` as MessageKey) : "log.zone.none");
 
 export function describeEntry(entry: LogEntry, ctx: LogContext, showAll: boolean): LogLine | null {
+  const cards: LogLink["card"][] = [];
+  const line = markedLine(entry, ctx, showAll, cards);
+  return line && withLinks(line, cards);
+}
+
+/** A log entry's line with its names marked, their cards added to `cards`. */
+function markedLine(entry: LogEntry, ctx: LogContext, showAll: boolean, cards: LogLink["card"][]): MarkedLine | null {
   const { t, update } = ctx;
   const event = entry.event;
+  // A card this program has no data of is only a name.
+  const named = (card: LogLink["card"], fallback?: string): string => {
+    const def = ctx.catalog.def(card.def);
+    if (!def) return cardName(def, ctx.lang, fallback);
+    cards.push(card);
+    return markName(cards.length - 1, cardName(def, ctx.lang, fallback));
+  };
   const name = (id: CardId | null | undefined): string => {
     const info = id ? entry.cards[id] : undefined;
-    return info ? cardName(ctx.catalog.def(info.def), ctx.lang) : t("log.aCard");
+    return id && info ? named({ id, def: info.def, printing: info.printing }) : t("log.aCard");
   };
   const player = (p: 0 | 1) => playerLabel(p, update, t);
-  const line = (text: string, kind: LogLine["kind"] = "event"): LogLine => ({ kind, text });
+  const line = (text: string, kind: LogLine["kind"] = "event"): MarkedLine => ({ kind, text });
   switch (event.type) {
     case "turnStarted":
       return line(t("log.turn", { n: event.turn, player: player(event.player) }), "turn");
@@ -95,7 +140,7 @@ export function describeEntry(entry: LogEntry, ctx: LogContext, showAll: boolean
       return line(t("log.gameEnded", { result }));
     }
     case "manualOp":
-      return line(t("log.manual", { text: manualText(event.op, ctx, name, player) }));
+      return line(t("log.manual", { text: manualText(event.op, ctx, name, (def) => named({ def, printing: null }, def), player) }));
     default:
       if (!showAll && MINOR.has(event.type)) return null;
       return showAll ? line(JSON.stringify(event), "minor") : null;
@@ -103,8 +148,8 @@ export function describeEntry(entry: LogEntry, ctx: LogContext, showAll: boolean
 }
 
 /** A manual operation (testing by hand, outside the rules) in words; its own events follow it in the log. */
-function manualText(op: ManualOp, ctx: LogContext, name: (id: CardId) => string, player: (p: 0 | 1) => string): string {
-  const { t, catalog, lang } = ctx;
+function manualText(op: ManualOp, ctx: LogContext, name: (id: CardId) => string, defName: (def: string) => string, player: (p: 0 | 1) => string): string {
+  const { t } = ctx;
   const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
   switch (op.kind) {
     case "draw":
@@ -114,7 +159,7 @@ function manualText(op: ManualOp, ctx: LogContext, name: (id: CardId) => string,
     case "shuffle":
       return t("manualLog.shuffle", { player: player(op.player) });
     case "search":
-      return t("manualLog.search", { player: player(op.player), card: cardName(catalog.def(op.def), lang, op.def) });
+      return t("manualLog.search", { player: player(op.player), card: defName(op.def) });
     case "points": {
       const parts = [
         op.playPoints !== undefined || op.maxPlayPoints !== undefined ? `${t("game.pp")} ${op.playPoints ?? "-"}/${op.maxPlayPoints ?? "-"}` : null,
@@ -126,7 +171,7 @@ function manualText(op: ManualOp, ctx: LogContext, name: (id: CardId) => string,
     case "leaderDefense":
       return t("manualLog.leaderDefense", { player: player(op.player), n: op.value });
     case "token":
-      return t("manualLog.token", { player: player(op.player), card: cardName(catalog.def(op.token), lang, op.token), zone: t(`log.zone.${op.to}`) });
+      return t("manualLog.token", { player: player(op.player), card: defName(op.token), zone: t(`log.zone.${op.to}`) });
     case "move":
       return t("manualLog.move", { card: name(op.card), zone: t(`manual.to.${op.to}`) });
     case "destroy":
@@ -199,7 +244,7 @@ function describeMoves(
   ctx: LogContext,
   name: (id: CardId | null | undefined) => string,
   showAll: boolean,
-): LogLine | null {
+): MarkedLine | null {
   const { t, update } = ctx;
   // Setup, playing (the "plays" line says it) and mulligans (their own line) are not repeated.
   const shown = moves.filter((m) => showAll || (m.reason !== "setup" && m.reason !== "play" && m.reason !== "mulligan"));

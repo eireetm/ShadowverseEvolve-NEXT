@@ -2353,7 +2353,7 @@ option {
   margin: 0 0 4px;
 }
 
-/* A token the text names: a click shows its card in the panel. Words of the text, only underlined. */
+/* A card a card's text or a log line names: a click shows it in the panel. Words of the text, only underlined. */
 .sve-card-link {
   color: var(--sve-card-link, inherit);
   text-decoration: underline dotted;

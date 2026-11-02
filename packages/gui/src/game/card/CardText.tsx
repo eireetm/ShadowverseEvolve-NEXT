@@ -22,9 +22,32 @@ function iconParts(text: string, lang: CardLang, key: string): ReactNode[] {
 }
 
 /**
- * A line of card text (its `index`th): its words, its {[...]} icons drawn, and its links (when given). A link is inline text
- * acting as a button (not a <button>, which is laid out as one box: a long name couldn't wrap with the words around it).
+ * A card's name that opens the card in the card panel (in a card's text, in a log line): inline text acting as a button (not
+ * a <button>, which is laid out as one box: a long name couldn't wrap with the words around it).
  */
+export function CardLink({ def, testId, lang, onOpen, children }: { def: string; testId: string; lang?: string; onOpen: () => void; children: ReactNode }) {
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      className="sve-card-link"
+      lang={lang}
+      onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        e.preventDefault();
+        // As a button does: the keys click it.
+        e.currentTarget.click();
+      }}
+      data-testid={testId}
+      data-def={def}
+    >
+      {children}
+    </span>
+  );
+}
+
+/** A line of card text (its `index`th): its words, its {[...]} icons drawn, and its links (when given). */
 function lineParts(line: string, lang: CardLang, links?: TextLinks, index = 0): ReactNode[] {
   const found = links?.find(index) ?? [];
   if (found.length === 0) return iconParts(line, lang, "t");
@@ -32,25 +55,10 @@ function lineParts(line: string, lang: CardLang, links?: TextLinks, index = 0): 
   let at = 0;
   for (const [i, link] of found.entries()) {
     if (link.start > at) parts.push(...iconParts(line.slice(at, link.start), lang, `t${i}`));
-    const open = () => links!.open(link.def);
     parts.push(
-      <span
-        key={`l${i}`}
-        role="button"
-        tabIndex={0}
-        className="sve-card-link"
-        onClick={open}
-        onKeyDown={(e) => {
-          if (e.key !== "Enter" && e.key !== " ") return;
-          e.preventDefault();
-          // As a button does: the keys click it.
-          e.currentTarget.click();
-        }}
-        data-testid="card-text-link"
-        data-def={link.def}
-      >
+      <CardLink key={`l${i}`} def={link.def} testId="card-text-link" onOpen={() => links!.open(link.def)}>
         {line.slice(link.start, link.end)}
-      </span>,
+      </CardLink>,
     );
     at = link.end;
   }
