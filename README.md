@@ -324,7 +324,7 @@ tools/                  卡牌数据构建、查卡、条款提取和核对、�
 - **PC 版**：`npm run release:pc -- --zip`
   - 在仓库旁边生成 `SVEN-<版本>-pc/` 文件夹和两个 zip：
     - `SVEN-<版本>-pc.zip`：只有程序，不带 `online-server.ini` 和 `public/` 里的文件。
-    - `SVEN-<版本>-pc-private.zip`：整个文件夹，带着 `online-server.ini` 和 `--public` 的资源。
+    - `SVEN-<版本>-pc-private.zip`：整个文件夹，带着 `online-server.ini` 和卡牌文本（`public/text/`），不带别的资源；加了 `--public` 才有那些资源。
   - 文件夹已经存在时不会覆盖：换一个 `--out <文件夹>`，或者先删掉旧的。
   - 里面有：
     - 程序（`app/`）；
@@ -732,7 +732,7 @@ Come in two kinds: for PCs and for Android.
 - **PC**: `npm run release:pc -- --zip`
   - It writes a folder `SVEN-<version>-pc/` next to the repository, and two zips:
     - `SVEN-<version>-pc.zip`: the program only, without `online-server.ini` or the files in `public/`.
-    - `SVEN-<version>-pc-private.zip`: the whole folder, with `online-server.ini` and the `--public` resources.
+    - `SVEN-<version>-pc-private.zip`: the whole folder, with `online-server.ini` and the card texts (`public/text/`), no other resources unless `--public` adds them.
   - It never writes into an existing folder: pass another `--out <folder>`, or delete the old one first.
   - Inside:
     - the program (`app/`);
