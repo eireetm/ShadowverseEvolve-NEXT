@@ -367,10 +367,10 @@ describe("the online server's configuration", () => {
   });
 
   it("says several servers, a [server] part each, in its order; a wrong part is said by its place and left out", () => {
-    const two = "[server]\nname = 北京\naddress = wss://203.0.113.7\nkey = abcdefgh12345678\n\n[server]\nname = 右手杯\naddress = wss://example.cn/sve-ws/\nkey = 12345678abcdefgh\n";
+    const two = "[server]\nname = 北京\naddress = wss://203.0.113.7\nkey = abcdefgh12345678\n\n[server]\nname = 上海\naddress = wss://example.cn/sve-ws/\nkey = 12345678abcdefgh\n";
     const servers = [
       { name: "北京", address: "wss://203.0.113.7", key: "abcdefgh12345678" },
-      { name: "右手杯", address: "wss://example.cn/sve-ws/", key: "12345678abcdefgh" },
+      { name: "上海", address: "wss://example.cn/sve-ws/", key: "12345678abcdefgh" },
     ];
     expect(parseServerConfig(two)).toEqual({ servers, problems: [], parts: 2 });
     // Another section (a server's own file's) says no server; the same server again, and a part without its key, are said.

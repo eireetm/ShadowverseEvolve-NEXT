@@ -20,7 +20,7 @@ export interface Hello {
   name?: string;
   share?: boolean;
   noQuickChat?: boolean;
-  /** The website this program runs on, when it is a website's client: it keeps its games whatever the settings say. */
+  /** Another client of this protocol says which it is: what it keeps doesn't go by the settings here. */
   site?: string;
 }
 
