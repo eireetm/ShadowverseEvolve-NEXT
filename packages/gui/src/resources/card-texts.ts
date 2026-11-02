@@ -2,8 +2,9 @@
 // in the repository): they come in two layers, and the first that has a set's texts in a language gives them, as a whole file
 // (decided by the project owner, 2026-10-18):
 //  1. the player's own: public/text/<SET>_<lang>.json;
-//  2. this machine's: the data build's files packages/core/data/<SET>_<lang>.json, which the dev server gives
-//     (host/plugin.ts /api/card-texts); a release has none of its own (the private release's are in its public/text/).
+//  2. the program's own (host/api.ts builtInCardTexts): the data build's files packages/core/data/<SET>_<lang>.json, which the
+//     dev server gives (host/plugin.ts /api/card-texts) and the private PC release has built in (host/embedded-card-texts.ts);
+//     another release and the apps have none.
 // Both are the format of core/data/set-file.ts: a card a file doesn't list has no text in its language, and the card shows the
 // next language's (catalog.ts cardTextLang), or none. Only the page shows them: games, replays and online play don't change.
 import { readCardTextFile, withCardTexts, type CardTextFile, type CardTextLang, type LocalizedText } from "@sve/core";
@@ -12,14 +13,14 @@ import { hostApi } from "../host/api";
 /** A text file in public/: "text/BP22_cn.json" (set BP22, Chinese). */
 const OWN_TEXT_FILE = /^text\/([A-Za-z0-9]+)_(en|cn|ja)\.json$/;
 
-/** The files whose texts are shown: this machine's that the player's don't replace, then the player's. */
+/** The files whose texts are shown: the program's that the player's don't replace, then the player's. */
 let shown: readonly CardTextFile[] = [];
 let problems: readonly string[] = [];
 const listeners = new Set<() => void>();
 
 /**
  * Read the texts: the player's files among those of public/ (resources.ts lists them), each checked as the data's are (one
- * that isn't a text file of its name's set and language is left out, cardTextProblems names it), and this machine's.
+ * that isn't a text file of its name's set and language is left out, cardTextProblems names it), and the program's.
  */
 export async function loadCardTexts(publicFiles: Iterable<string>): Promise<void> {
   const own: CardTextFile[] = [];
@@ -42,11 +43,11 @@ export async function loadCardTexts(publicFiles: Iterable<string>): Promise<void
       try {
         builtIn.push(readCardTextFile(json));
       } catch (err) {
-        console.warn("card texts of this machine:", err);
+        console.warn("the program's card texts:", err);
       }
     }
   } catch (err) {
-    console.warn("card texts of this machine:", err);
+    console.warn("the program's card texts:", err);
   }
   const replaced = new Set(own.map((f) => `${f.set}_${f.lang}`));
   shown = [...builtIn.filter((f) => !replaced.has(`${f.set}_${f.lang}`)), ...own];

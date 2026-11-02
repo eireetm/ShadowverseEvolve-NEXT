@@ -54,8 +54,9 @@ export interface Host {
   /** Every file under public/ ("images/cards/BP01-001.png", ...). */
   resources(): Promise<string[]>;
   /**
-   * The card text files of this machine (packages/core/data/<SET>_<lang>.json, not in the repository): the dev server's, which
-   * has them; none in a release or the apps (their texts are the player's, public/text/). Unchecked JSON.
+   * The card text files the program has of its own (packages/core/data/<SET>_<lang>.json, not in the repository): those built
+   * into the private PC release (embedded-card-texts.ts), or the dev server's; none in another release or the apps (their
+   * texts are the player's, public/text/). Unchecked JSON.
    */
   builtInCardTexts(): Promise<unknown[]>;
   listDecks(): Promise<DeckFileEntry[]>;
@@ -117,8 +118,10 @@ export const serverHost: Host = {
 
   resources: async () => (await getJson<{ files: string[] }>("/api/resources")).files,
 
-  // A release's server has no such files (and no such address): none.
+  // Those built in, or the dev server's; a release's server has no such files (and no such address): none.
   builtInCardTexts: async () => {
+    const { EMBEDDED_CARD_TEXTS } = await import("./embedded-card-texts");
+    if (EMBEDDED_CARD_TEXTS.length > 0) return EMBEDDED_CARD_TEXTS;
     const res = await fetch("/api/card-texts");
     return res.ok ? ((await res.json()) as { files: unknown[] }).files : [];
   },

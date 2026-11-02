@@ -3,11 +3,11 @@
  * (host/release-server.ts), the sample decks, and the empty folders for the player's own files. `npm run release:pc` at the
  * repository root; options (after `--`):
  *   --out <folder>     where (default: SVEN-<version>-pc beside the repository). It must not exist yet, or be empty.
- *   --public <folder>  copy this folder's files into the release's public/ (default: none, only the empty folders and the
- *                      card texts, public/text/)
+ *   --public <folder>  copy this folder's files into the release's public/ (default: none, only the empty folders)
  *   --zip              also write the zips: <folder>.zip, the program only, for GitHub's release (the program's updates
- *                      download it: host/update.ts); <folder>-private.zip, the whole folder with online-server.ini, the
- *                      card texts and the resources, to send to friends (only when the folder has those)
+ *                      download it: host/update.ts); <folder>-private.zip, the whole folder, to send to friends: its program
+ *                      has this machine's card texts built in, and it has online-server.ini and the resources (only when
+ *                      there are any of those)
  * The version is packages/gui/package.json's. VERSION.txt also gets the commit and the engine fingerprint: online, both
  * programs need the same fingerprint.
  */
@@ -19,6 +19,7 @@ import { build as bundle } from "esbuild";
 import { Zip, ZipDeflate, ZipPassThrough } from "fflate";
 import { build } from "vite";
 import { engineFingerprint } from "../fingerprint.ts";
+import { readCardTexts } from "../host/resources.ts";
 
 const gui = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repo = resolve(gui, "..", "..");
@@ -83,9 +84,20 @@ console.log(`SVE NEXT ${version} (PC) -> ${out}`);
 mkdirSync(out, { recursive: true });
 
 // 1. The app, without public/ (the release has its own), and without the project's online server: the release reads it from
-// online-server.ini beside the program, and the app goes onto GitHub, where a server's address and key must never be.
+// online-server.ini beside the program, and the app goes onto GitHub, where a server's address and key must never be. Without
+// the card texts for the same reason: the folder's program gets them once the zip for GitHub is written (5.).
 process.env.SVE_NO_ONLINE_SERVER = "1";
-await build({ configFile: join(gui, "vite.config.ts"), root: gui, publicDir: false, build: { outDir: join(out, "app"), emptyOutDir: true }, logLevel: "warn" });
+/** Build the app into the folder, with these card text files built in, if any (src/host/embedded-card-texts.ts). */
+const buildApp = (texts?: readonly unknown[]) =>
+  build({
+    configFile: join(gui, "vite.config.ts"),
+    root: gui,
+    publicDir: false,
+    define: texts ? { __EMBEDDED_CARD_TEXTS__: JSON.stringify(JSON.stringify(texts)) } : {},
+    build: { outDir: join(out, "app"), emptyOutDir: true },
+    logLevel: "warn",
+  });
+await buildApp();
 
 // 2. The server: one file for Node, with the host code it uses. Paths in its comments are relative to the repository.
 await bundle({
@@ -107,13 +119,6 @@ mkdirSync(join(out, "replays"), { recursive: true });
 for (const keep of filesUnder(join(gui, "public")).filter((path) => basename(path) === ".gitkeep")) {
   mkdirSync(join(out, "public", dirname(keep)), { recursive: true });
 }
-// The card texts of this machine (packages/core/data/<SET>_<lang>.json, not in the repository): the program has none of its
-// own, they are the player's files in public/text/ — so, as every file of public/, in the -private zip only, never in
-// GitHub's (5.), and an update leaves them (host/update.ts). The --public folder's own texts go over them.
-const dataDir = join(repo, "packages", "core", "data");
-const texts = readdirSync(dataDir).filter((name) => /^[A-Za-z0-9]+_(?:en|cn|ja)\.json$/.test(name));
-for (const name of texts) cpSync(join(dataDir, name), join(out, "public", "text", name));
-console.log(texts.length > 0 ? `card texts: ${texts.length} files in public/text/ (the -private zip only)` : "card texts: none on this machine (npm run build:cards writes them)");
 if (ownPublic) cpSync(ownPublic, join(out, "public"), { recursive: true });
 
 // The online server's configuration, when the project has one (online-server.ini at the repository's root, not in the
@@ -145,7 +150,8 @@ writeWindowsText(
 
 // 5. The zips, the folder itself at their top, its empty folders kept; pictures and sounds stored as they are.
 //    <folder>.zip: for GitHub's release, which the program's updates download — the program only: no online-server.ini (a
-//    server's address and key are for those its owner gives them to) and no files in public/ (resources aren't published).
+//    server's address and key are for those its owner gives them to), no files in public/ and no card texts (neither are
+//    published).
 //    <folder>-private.zip: the whole folder, to send to friends, when it has those.
 async function writeZip(file: string, keep: (path: string) => boolean): Promise<void> {
   const top = basename(out);
@@ -166,16 +172,22 @@ async function writeZip(file: string, keep: (path: string) => boolean): Promise<
   });
   console.log(`zip: ${file} (${(statSync(file).size / 2 ** 20).toFixed(1)} MB)`);
 }
+const players = (path: string) => path === "online-server.ini" || (path.startsWith("public/") && !path.endsWith("/"));
 if (zip) {
-  const players = (path: string) => path === "online-server.ini" || (path.startsWith("public/") && !path.endsWith("/"));
   await writeZip(`${out}.zip`, (path) => !players(path));
   const forGitHub = `SVEN-${version}-pc.zip`;
   if (basename(`${out}.zip`) !== forGitHub) console.log(`  For GitHub, upload it as ${forGitHub}: the updates look for that name.`);
   console.log(`  GitHub: a release tagged v${version} (not a pre-release) with ${forGitHub}; the program's "check for updates" finds it.`);
-  if (filesUnder(out).some(players)) {
-    await writeZip(`${out}-private.zip`, () => true);
-    console.log("  Not for GitHub: the -private zip has online-server.ini or resources. Send it to friends only.");
-  }
+}
+// The card texts of this machine (packages/core/data/<SET>_<lang>.json, not in the repository) go into the folder's program;
+// the player's files of public/text/ still go over them (src/resources/card-texts.ts). A machine without them, as a clone of
+// the repository, has nothing to build in, and the program stays as it is.
+const texts = readCardTexts({ cardTextsDir: join(repo, "packages", "core", "data") });
+if (texts.length > 0) await buildApp(texts);
+console.log(texts.length > 0 ? `card texts: ${texts.length} files built into the folder's program (not GitHub's zip)` : "card texts: none on this machine (npm run build:cards writes them), none built in");
+if (zip && (texts.length > 0 || filesUnder(out).some(players))) {
+  await writeZip(`${out}-private.zip`, () => true);
+  console.log("  Not for GitHub: the -private zip has the card texts, online-server.ini or resources. Send it to friends only.");
 }
 
 const files = filesUnder(out);

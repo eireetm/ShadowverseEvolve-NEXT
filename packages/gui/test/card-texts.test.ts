@@ -8,8 +8,13 @@ import { cardTextProblems, loadCardTexts, withShownTexts } from "../src/resource
 import { hasDataTexts, withDataTexts } from "../../../tools/lib/card-texts";
 
 // The card texts the page shows (resources/card-texts.ts): the engine has none; the player's public/text/<SET>_<lang>.json,
-// else this machine's (the dev server's packages/core/data/<SET>_<lang>.json), each file a set's texts in its language as a
-// whole. The card text shown falls back to the next language for a card a file doesn't list.
+// else the program's (the dev server's packages/core/data/<SET>_<lang>.json, or those built into the private release), each
+// file a set's texts in its language as a whole. The card text shown falls back to the next language for a card a file
+// doesn't list.
+
+/** The texts built into the program (host/embedded-card-texts.ts): none, but for the tests that put some in. */
+const embedded = vi.hoisted((): unknown[] => []);
+vi.mock("../src/host/embedded-card-texts", () => ({ EMBEDDED_CARD_TEXTS: embedded }));
 
 const core: CatalogCard[] = CORE_CARDS.map((def) => ({ ...def, status: "scripted" }));
 /** The cards with this machine's texts (not in the repository): what the dev server's page shows without files of its own. */
@@ -58,6 +63,7 @@ describe("reading the card texts", () => {
   afterEach(() => {
     setHost(serverHost);
     vi.unstubAllGlobals();
+    embedded.length = 0;
   });
 
   it("takes the player's file of a set and language over this machine's, and this machine's others", async () => {
@@ -75,5 +81,55 @@ describe("reading the card texts", () => {
     const shown = new Catalog(withShownTexts(core));
     expect([text(shown, "BP22-001", "cn"), shown.def("BP22-002")!.text.cn, text(shown, "BP22-001", "ja")]).toEqual(["我的中文。", null, "この機械の日本語。"]);
     expect(cardTextProblems()).toEqual(["public/text/BP01_cn.json"]);
+  });
+
+  it("a program with texts built in shows them with no file of the player's, and the player's file of a set and language over them", async () => {
+    embedded.push(
+      { format: 1, set: "BP22", lang: "cn", cards: { "BP22-001": "内嵌的中文。", "BP22-002": "内嵌的另一张。" } },
+      { format: 1, set: "BP22", lang: "ja", cards: { "BP22-001": "内蔵の日本語。" } },
+    );
+    const own = { format: 1, set: "BP22", lang: "cn", cards: { "BP22-001": "我的中文。" } };
+    let hasFile = true;
+    vi.stubGlobal("fetch", async (url: string) => (url === "/text/BP22_cn.json" && hasFile ? new Response(JSON.stringify(own)) : new Response("", { status: 404 })));
+    const shown = () => {
+      const catalog = new Catalog(withShownTexts(core));
+      return [text(catalog, "BP22-001", "cn"), catalog.def("BP22-002")!.text.cn, text(catalog, "BP22-001", "ja")];
+    };
+
+    await loadCardTexts([]);
+    expect(shown()).toEqual(["内嵌的中文。", "内嵌的另一张。", "内蔵の日本語。"]);
+    expect(cardTextProblems()).toEqual([]);
+
+    await loadCardTexts(["text/BP22_cn.json"]);
+    expect(shown()).toEqual(["我的中文。", null, "内蔵の日本語。"]);
+
+    // A file of the player's that can't be read replaces nothing: it is named, and the built-in texts stay.
+    hasFile = false;
+    await loadCardTexts(["text/BP22_cn.json"]);
+    expect(shown()).toEqual(["内嵌的中文。", "内嵌的另一张。", "内蔵の日本語。"]);
+    expect(cardTextProblems()).toEqual(["public/text/BP22_cn.json"]);
+  });
+
+  it("a program without any (GitHub's release, a clone without the texts) shows none, and nothing is wrong", async () => {
+    vi.stubGlobal("fetch", async () => new Response("", { status: 404 }));
+    await loadCardTexts([]);
+    expect(new Catalog(withShownTexts(core)).def("BP22-001")!.text).toEqual({ en: "", cn: null, ja: null });
+    expect(cardTextProblems()).toEqual([]);
+  });
+});
+
+describe("the card texts built into the program", () => {
+  const read = async () => (await vi.importActual<typeof import("../src/host/embedded-card-texts")>("../src/host/embedded-card-texts")).EMBEDDED_CARD_TEXTS;
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  });
+
+  it("are what the private release's build put in, else none", async () => {
+    expect(await read()).toEqual([]);
+    vi.resetModules();
+    vi.stubGlobal("__EMBEDDED_CARD_TEXTS__", JSON.stringify([{ format: 1, set: "BP22", lang: "cn", cards: {} }]));
+    expect(await read()).toEqual([{ format: 1, set: "BP22", lang: "cn", cards: {} }]);
   });
 });

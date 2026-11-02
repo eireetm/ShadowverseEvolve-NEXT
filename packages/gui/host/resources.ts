@@ -115,7 +115,7 @@ const CARD_TEXT_FILE = /^[A-Za-z0-9]+_(?:en|cn|ja)\.json$/;
  * The card text files of this machine (HostConfig.cardTextsDir), parsed, unchecked (the page checks them as the player's);
  * none without the folder. One that isn't JSON is left out.
  */
-export function readCardTexts(cfg: HostConfig): unknown[] {
+export function readCardTexts(cfg: Pick<HostConfig, "cardTextsDir">): unknown[] {
   const dir = cfg.cardTextsDir;
   if (!dir || !existsSync(dir)) return [];
   return readdirSync(dir)
