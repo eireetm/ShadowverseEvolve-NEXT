@@ -64,9 +64,6 @@ export function RandomMatch({ identified, onBack, onEditDecks }: Props) {
           >
             {t("online.randomStart")}
           </button>
-          <p className="sve-hint" data-testid="random-note">
-            {t("online.randomNote")}
-          </p>
           <button type="button" onClick={back} data-testid="random-back">
             {t("common.back")}
           </button>

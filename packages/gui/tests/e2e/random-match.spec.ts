@@ -39,7 +39,6 @@ async function makeRoom(page: Page): Promise<string> {
 async function startLooking(page: Page): Promise<void> {
   await page.getByTestId("online-random").click();
   await expect(page.getByTestId("random-match")).toBeVisible();
-  await expect(page.getByTestId("random-note")).toBeVisible();
   await expect(page.getByTestId("random-start")).toBeEnabled({ timeout: 60_000 });
   await page.getByTestId("random-start").click();
   await expect(page.getByTestId("random-status")).toBeVisible();

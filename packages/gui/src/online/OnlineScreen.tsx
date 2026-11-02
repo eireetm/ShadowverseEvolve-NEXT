@@ -1036,12 +1036,8 @@ function Connected({ phase, identified, going, onGame, onEditDecks }: ConnectedP
         <PasswordFact />
       </ul>
       <WatchersFact />
-      {phase.peer?.site ? (
-        // A website's client keeps its games whatever this program's setting says: not to be told otherwise.
-        <p className="sve-hint" data-testid="online-share-site">
-          {t("online.shareSite")}
-        </p>
-      ) : online.room?.server && online.records ? (
+      {/* Whether the two programs' settings keep the game; not with a website's client, which doesn't go by them. */}
+      {online.room?.server && online.records && !phase.peer?.site ? (
         <p className="sve-hint" data-testid="online-share" data-kept={gameKept() ? "yes" : "no"}>
           {t(gameKept() ? "online.shareYes" : "online.shareNo")}
         </p>
