@@ -29,7 +29,8 @@ import { REVEAL_PAUSE_MS } from "../game/animation/plan";
 import { meet, type Admission, type Meeting, type MeetingHandlers } from "./rooms";
 import { serverNetwork, type JoinMode, type ProblemAt, type ServerProblem, type ServerRoom } from "./server";
 import { currentServers, serverNow, type ServerSettings } from "./server-config";
-import { currentLink, gameStarted, getOnline, NO_PREP, setChatRelay, setLink, setOnline, setUndoRequest, type OnlineError, type OnlineRole, type Prep } from "./state";
+import { currentLink, gameStarted, getOnline, NO_PREP, setChatRelay, setHandRelay, setLink, setOnline, setUndoRequest, type OnlineError, type OnlineRole, type Prep } from "./state";
+import { otherHandMoved } from "../game/hand-order";
 import { quickChatHeard } from "../game/quick-chat";
 
 export { sendChat, useOnline, getOnline, canChat, type OnlinePhase } from "./state";
@@ -295,6 +296,10 @@ async function receive(message: NetMessage): Promise<void> {
       if (message.quick && state.game?.seat != null) quickChatHeard(state.game.seat === 0 ? 1 : 0, message.quick, getOnline());
       // The host's spectators read the other player's lines too (the other player is player 2).
       if (phase.role === "host") toWatchers({ t: "chat", text: message.text, seat: 1, ...quickOf(message) });
+      break;
+    case "handMoved":
+      if (state.game?.seat != null) handMovedBy(state.game.seat === 0 ? 1 : 0);
+      if (phase.role === "host") toWatchers({ t: "handMoved", seat: 1 });
       break;
     case "ping":
       link?.send({ t: "pong", n: message.n });
@@ -739,6 +744,17 @@ setChatRelay((text, quick) => {
   if (getOnline().phase.kind === "connected") toWatchers({ t: "chat", text, seat: 0, ...(quick ? { quick } : {}) });
 });
 
+// The host's person moving their hand: its spectators are told too (the host is player 1).
+setHandRelay(() => {
+  if (getOnline().phase.kind === "connected") toWatchers({ t: "handMoved", seat: 0 });
+});
+
+/** A player moved their hand: its backs here in a new order, while the screen shows that game. */
+function handMovedBy(seat: 0 | 1): void {
+  const update = getApp().update;
+  if (update && update.seed === getOnline().game?.id) otherHandMoved(update, seat);
+}
+
 /** A chat message's quick chat line, if it is one, for a chat line or a message passed on. */
 const quickOf = (message: { quick?: QuickChatId }): { quick?: QuickChatId } => (message.quick ? { quick: message.quick } : {});
 
@@ -808,6 +824,9 @@ function hear(message: NetMessage): void {
         // A player's quick chat line: shown, and said by their leader.
         if (message.quick) quickChatHeard(message.seat, message.quick, getOnline());
       } else if (message.watcher !== undefined) setOnline({ chat: [...state.chat, { from: "watcher" as const, name: message.watcher, text: message.text }].slice(-200) });
+      break;
+    case "handMoved":
+      if (message.seat !== undefined && state.game && !incoming) handMovedBy(message.seat);
       break;
     case "rules":
       // What the host lets its spectators do: write in the chat (state.ts canChat), see the hidden cards (the engine).

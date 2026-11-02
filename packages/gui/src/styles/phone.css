@@ -738,6 +738,13 @@
   font-size: 14px;
 }
 
+.sve-portrait-bottom .sve-hand-order {
+  flex: 0 0 52px;
+  height: 45px;
+  padding: 0 2px;
+  font-size: 14px;
+}
+
 .sve-portrait-bottom .sve-phone-actions {
   flex: 1;
   min-width: 0;

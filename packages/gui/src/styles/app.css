@@ -1087,6 +1087,35 @@ option {
   top: 3px;
 }
 
+/* A hand being arranged (game/hand-order.ts): its cards slide to their new places, the other player's backs with a dip,
+   for it to be seen: backs look all the same. Only then: a card landing in a hand aims at where its place is. */
+.sve-hand-arranging .sve-hand-card {
+  transition: left 0.28s ease-in-out, transform 0.14s ease-out;
+}
+
+.sve-hand-opponent.sve-hand-arranging .sve-hand-card {
+  animation: sve-hand-shuffle 0.28s ease-in-out;
+}
+
+.sve-hand-opponent.sve-hand-arranging .sve-hand-card:nth-child(even) {
+  animation-name: sve-hand-shuffle-even;
+}
+
+@keyframes sve-hand-shuffle {
+  50% {
+    margin-top: 8px;
+  }
+}
+
+@keyframes sve-hand-shuffle-even {
+  25% {
+    margin-top: 4px;
+  }
+  75% {
+    margin-top: 10px;
+  }
+}
+
 /* A card put into a hand in public (searched, taken from a cemetery): the other player's turns face up in their hand,
    larger and lit, shakes twice and turns back; one's own shakes twice. The times are the table's (animation/plan.ts). */
 .sve-hand-card.sve-card-revealed {

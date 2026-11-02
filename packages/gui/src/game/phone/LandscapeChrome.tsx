@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import type { GameUpdate } from "../../engine/protocol";
 import { useT } from "../../i18n";
 import { useCenterState, usePlacingName } from "../board/center-state";
+import { HandOrderButton } from "../HandOrderButton";
 import { OnlineStatus } from "../OnlineStatus";
 import { QuickChat } from "../QuickChat";
 import { PhoneActions, PhoneCardPanel, PhonePlayer, PhonePrompt, type PhoneTab } from "./PhoneParts";
@@ -25,7 +26,10 @@ interface ToolsProps {
   onSwapSides: (() => void) | null;
 }
 
-/** The top left (menu, quick chat, log, a spectator's side) and the top right (the connection online, conceding). */
+/**
+ * The top left (menu, quick chat, log, a spectator's side) and the top right (the connection online, arranging the hand,
+ * conceding: the left's row is full).
+ */
 export function LandscapeTools({ update, seat, logOpen, onMenu, onLog, onConcede, onChat, onOnline, onSwapSides }: ToolsProps) {
   const t = useT();
   return (
@@ -46,6 +50,7 @@ export function LandscapeTools({ update, seat, logOpen, onMenu, onLog, onConcede
       </div>
       <div className="sve-phone-topright">
         {update.online ? <OnlineStatus update={update} chatOpen={false} onChat={onChat} onOnline={onOnline} /> : null}
+        {seat !== null ? <HandOrderButton update={update} seat={seat} short /> : null}
         {seat !== null && !update.result ? (
           <button type="button" className="sve-concede" onClick={onConcede} data-testid="game-concede">
             {t("game.concede")}

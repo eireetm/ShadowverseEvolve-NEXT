@@ -15,6 +15,7 @@ import { abilityName, abilityText, giverName } from "../card/ability-display";
 import { CardTextLine, plainLine } from "../card/CardText";
 import { CardTile } from "../card/CardTile";
 import { setHighlight } from "../focus";
+import { arrangedIds, shownHand } from "../hand-order";
 import { sendAnswer, setRedrawing, toggleChosen, useInteraction } from "../interaction";
 import { cardLabel } from "../labels";
 import { optionText } from "../options";
@@ -362,7 +363,8 @@ function OrderCards({ d, info, update, answer, busy }: FormProps<"orderCards">) 
 function MulliganOrder({ d, info, update, answer, busy }: FormProps<"mulligan">) {
   const t = useT();
   const label = useLabel(update);
-  const [order, setOrder] = useState<CardId[]>(d.hand);
+  // At first as the table draws the hand (game/hand-order.ts).
+  const [order, setOrder] = useState<CardId[]>(() => arrangedIds(d.hand, shownHand(update.seed, d.player).order));
   useBack(true, () => setRedrawing(false));
   return (
     <>

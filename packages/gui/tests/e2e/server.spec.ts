@@ -580,3 +580,52 @@ test("a total time limit: the host's rule, both players' time on their panels, a
   await expect(host.getByTestId("player-total-0")).toHaveText("Total time 0:00");
   expect(problems).toEqual([]);
 });
+
+test("the hand's button: the other programs only draw that hand's backs in another order; no input, the same game", async ({ browser }) => {
+  test.setTimeout(240_000);
+  const problems: string[] = [];
+  const host = await openOnline(browser, SERVER, { setupTurnOrder: "player1", setupDecks: ["samples/sd01.json", "samples/sd02.json"] });
+  const guest = await openOnline(browser, SERVER, { setupDecks: ["samples/sd03.json", "samples/sd02.json"] });
+  const spectator = await openOnline(browser, SERVER);
+  watchProblems([host, guest, spectator], problems);
+  await host.getByTestId("online-server-host").click();
+  const code = (await host.getByTestId("online-room-code").innerText({ timeout: 30_000 })).trim();
+  await guest.getByTestId("online-server-code").fill(code);
+  await guest.getByTestId("online-server-join").click();
+  await spectator.getByTestId("online-server-code").fill(code);
+  await spectator.getByTestId("online-server-watch").click();
+  await expect(spectator.getByTestId("online-watching")).toBeVisible({ timeout: 30_000 });
+  await readyBoth(host, guest);
+  await expect(host.locator(".sve-decision")).toHaveAttribute("data-decision", "mulligan", { timeout: 30_000 });
+  await expect(spectator.locator(".sve-table")).toBeVisible({ timeout: 30_000 });
+  // A spectator has no such button.
+  await expect(spectator.getByTestId("hand-order")).toHaveCount(0);
+
+  /** A player's hand as a program draws it: the cards' ids, left to right. */
+  const hand = (page: Page, seat: 0 | 1) => page.locator(`[data-zone="${seat}:hand"] .sve-hand-card`).evaluateAll((cards) => cards.map((c) => (c as HTMLElement).dataset.card!));
+  const inputs = () => Promise.all([host, guest].map((p) => p.locator(".sve-decision").getAttribute("data-inputs")));
+  for (const page of [host, guest, spectator]) await expect.poll(async () => (await hand(page, 0)).length).toBe(4);
+  for (const page of [host, guest, spectator]) await expect.poll(async () => (await hand(page, 1)).length).toBe(4);
+  const before = await inputs();
+
+  // The host presses: its backs move on the other two screens (each in an order of its own), the other hand stays.
+  const [guestSees, watcherSees, guestOwn] = await Promise.all([hand(guest, 0), hand(spectator, 0), hand(guest, 1)]);
+  await host.getByTestId("hand-order").click();
+  await expect.poll(() => hand(guest, 0)).not.toEqual(guestSees);
+  await expect.poll(() => hand(spectator, 0)).not.toEqual(watcherSees);
+  expect([...(await hand(guest, 0))].sort()).toEqual([...guestSees].sort());
+  expect(await hand(guest, 1)).toEqual(guestOwn);
+
+  // The guest presses: the same the other way (passed on to the spectator by the host).
+  const [hostSees, watcherSees2, hostOwn] = await Promise.all([hand(host, 1), hand(spectator, 1), hand(host, 0)]);
+  await guest.getByTestId("hand-order").click();
+  await expect.poll(() => hand(host, 1)).not.toEqual(hostSees);
+  await expect.poll(() => hand(spectator, 1)).not.toEqual(watcherSees2);
+  expect(await hand(host, 0)).toEqual(hostOwn);
+
+  // No answer was given, and the game goes on the same on both sides.
+  expect(await inputs()).toEqual(before);
+  await playAtRandom(host, guest, 20, problems);
+  await expectSameInputs(host, guest);
+  expect(problems).toEqual([]);
+});

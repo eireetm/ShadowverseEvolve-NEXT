@@ -7,6 +7,7 @@ import { useLayoutEffect, useRef } from "react";
 import type { GameUpdate } from "../../engine/protocol";
 import { useT } from "../../i18n";
 import { useCenterState, usePlacingName } from "../board/center-state";
+import { HandOrderButton } from "../HandOrderButton";
 import { OnlineStatus } from "../OnlineStatus";
 import { QuickChat } from "../QuickChat";
 import { WatchBar } from "../watch/WatchBar";
@@ -119,6 +120,7 @@ export function PortraitBottom({
   return (
     <div className="sve-portrait-bottom" data-testid="phone-bottom">
       {seat !== null ? <QuickChat update={update} /> : null}
+      {seat !== null ? <HandOrderButton update={update} seat={seat} short /> : null}
       <button type="button" className={`sve-portrait-log${logOpen ? " sve-tab-active" : ""}`} onClick={onLog} aria-pressed={logOpen} data-testid="phone-log">
         {t("tab.log")}
       </button>

@@ -164,6 +164,19 @@ export function sendQuickChat(quick: QuickChatId, text: string): boolean {
   return true;
 }
 
+/** The host: its person moving their hand is told to the spectators too (net/online.ts sets it). */
+let handRelay: (() => void) | null = null;
+
+export function setHandRelay(fn: (() => void) | null): void {
+  handRelay = fn;
+}
+
+/** This person moved the cards of their hand about (game/hand-order.ts): the other programs are told that, and no more. */
+export function sendHandMoved(): void {
+  link?.send({ t: "handMoved" });
+  handRelay?.();
+}
+
 /** A game over the connection has begun: the online screen shows it. */
 const starts = new Set<() => void>();
 

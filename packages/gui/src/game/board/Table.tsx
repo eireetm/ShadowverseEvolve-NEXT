@@ -13,6 +13,7 @@ import { useT } from "../../i18n";
 import { useShownCards } from "../animation/reveal";
 import { CardTile, type CardMark } from "../card/CardTile";
 import { DecisionDialog } from "../decisions/DecisionDialog";
+import { arranged, useShownHand } from "../hand-order";
 import { actionsFor, answerFor, attackTargets, dragKind, openManual, openMenu, sendAnswer, toggleChosen, useInteraction } from "../interaction";
 import { ManualDialog } from "../manual/ManualDialog";
 import { LookedCards } from "./LookedCards";
@@ -315,7 +316,10 @@ function HandStrip({
   spread?: boolean;
 }) {
   const t = useT();
-  const cards = side.hand;
+  const { animations } = useSettings();
+  // As this screen draws it (game/hand-order.ts): a replay being watched, as the game has it.
+  const hand = useShownHand(update.watch ? null : update.seed, side.id);
+  const cards = arranged(side.hand, hand.order);
   const n = cards.length;
   const cardWidth = opponent ? layout.opponentHandCardWidth : layout.handCardWidth;
   const gap = cardWidth * 0.06;
@@ -330,7 +334,7 @@ function HandStrip({
   const shown = useShownCards();
   return (
     <div
-      className={`sve-hand-strip ${opponent ? "sve-hand-opponent" : "sve-hand-own"}`}
+      className={`sve-hand-strip ${opponent ? "sve-hand-opponent" : "sve-hand-own"}${hand.arranging && animations ? " sve-hand-arranging" : ""}`}
       data-zone={`${side.id}:hand`}
       data-spread={spread ? "" : undefined}
       style={spread ? ({ "--hand-spread-card-width": `${spreadWidth}px` } as CSSProperties) : undefined}

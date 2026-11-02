@@ -11,6 +11,7 @@ import { ZoneBrowser } from "./board/ZoneBrowser";
 import { CardDetails } from "./card/CardDetails";
 import { installLongPress } from "./long-press";
 import { DebugPanel } from "./debug/DebugPanel";
+import { HandOrderButton } from "./HandOrderButton";
 import { LogPanel } from "./log/LogPanel";
 import { OnlineStatus } from "./OnlineStatus";
 import { handOpen, setHandOpen, useHandOpen } from "./phone/hand";
@@ -68,13 +69,13 @@ export function GameScreen({ onMenu, onNewGame, onReplays, onOnline }: Props) {
   // Quick card is announced, and when the phone's table goes.
   useEffect(() => setHandOpen(false), [update?.inputCount, update?.decision != null, update?.announcement?.seq, phone]);
   useEffect(() => () => setHandOpen(false), []);
-  // A tap anywhere but on the spread hand's cards or a card's menu folds the hand.
+  // A tap anywhere but on the spread hand's cards, a card's menu or the button that arranges the hand folds the hand.
   useEffect(() => {
     if (phone !== "landscape") return;
     const down = (event: PointerEvent) => {
       if (!handOpen()) return;
       const target = event.target;
-      if (target instanceof Element && (target.closest(".sve-hand-own .sve-hand-card") || target.closest(".sve-card-menu"))) return;
+      if (target instanceof Element && (target.closest(".sve-hand-own .sve-hand-card") || target.closest(".sve-card-menu") || target.closest(".sve-hand-order"))) return;
       setHandOpen(false);
     };
     document.addEventListener("pointerdown", down, true);
@@ -202,6 +203,7 @@ export function GameScreen({ onMenu, onNewGame, onReplays, onOnline }: Props) {
       ) : null}
       {seat !== null || !sidebar ? (
         <div className={`sve-game-corner${sidebar ? " sve-game-corner-sidebar" : ""}`}>
+          {seat !== null ? <HandOrderButton update={update} seat={seat} /> : null}
           {seat !== null ? <QuickChat update={update} /> : null}
           {!sidebar ? (
             <button type="button" className="sve-sidebar-show" onClick={() => setSidebar(true)} data-testid="sidebar-show">

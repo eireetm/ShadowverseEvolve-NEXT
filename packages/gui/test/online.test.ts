@@ -117,6 +117,11 @@ describe("messages", () => {
     // A total time limit: whole minutes from 1 to 600, else none.
     expect(parseMessage({ t: "rules", rules: { ...rules, totalLimit: 30 } })).toEqual({ t: "rules", rules: { ...rules, totalLimit: 30 } });
     for (const totalLimit of [0, 601, 1.5, "30", true]) expect(parseMessage({ t: "rules", rules: { ...rules, totalLimit } })).toEqual({ t: "rules", rules });
+    // A player moved their hand: nothing of it; a spectator is told whose.
+    expect(parseMessage({ t: "handMoved" })).toEqual({ t: "handMoved" });
+    expect(parseMessage({ t: "handMoved", seat: 1 })).toEqual({ t: "handMoved", seat: 1 });
+    expect(parseMessage({ t: "handMoved", order: ["a", "b"] })).toEqual({ t: "handMoved" });
+    expect(parseMessage({ t: "handMoved", seat: 2 })).toBeNull();
     for (const t of ["undo", "undoOk", "undoNo", "takeBack"] as const) {
       expect(parseMessage({ t, from: 12 })).toEqual({ t, from: 12 });
       expect(parseMessage({ t, from: -1 })).toBeNull();

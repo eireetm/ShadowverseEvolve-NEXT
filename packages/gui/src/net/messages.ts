@@ -145,6 +145,12 @@ export type NetMessage =
    * line says which (`quick`; `text` has it in the sender's language, for programs before it).
    */
   | { t: "chat"; text: string; seat?: 0 | 1; watcher?: string; quick?: QuickChatId }
+  /**
+   * The sender's player moved the cards of their hand about: their backs are drawn in a new order, each program's own
+   * (game/hand-order.ts). No input and nothing of the hand: the game and the card order aren't in it. Passed on by the host
+   * to a spectator, it says whose (`seat`).
+   */
+  | { t: "handMoved"; seat?: 0 | 1 }
   /** The host: how many spectators are watching (to the players and the spectators). */
   | { t: "watchers"; n: number }
   /** The host, to a spectator: the game being played now (null: none yet), its inputs so far following as "backlog". */
@@ -305,6 +311,8 @@ export function parseMessage(value: unknown): NetMessage | null {
         ...(m.watcher !== undefined ? { watcher: cleanName(m.watcher as string) } : {}),
         ...(isQuickChat(m.quick) ? { quick: m.quick } : {}),
       };
+    case "handMoved":
+      return m.seat === undefined ? { t: "handMoved" } : isSeat(m.seat) ? { t: "handMoved", seat: m.seat } : null;
     case "watchers":
       return isIndex(m.n) && m.n <= MAX_SPECTATOR_SEATS ? { t: "watchers", n: m.n } : null;
     case "watch": {
