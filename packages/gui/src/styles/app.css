@@ -2603,6 +2603,72 @@ option {
   gap: 8px;
 }
 
+.sve-zone-buttons {
+  flex: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+/* A cemetery's stats, folded out under the window's title. */
+.sve-zone-stats-toggle::after {
+  content: " ▾";
+}
+
+.sve-zone-stats-toggle[aria-expanded="true"]::after {
+  content: " ▴";
+}
+
+.sve-zone-stats {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--sve-border);
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.sve-zone-stats dl {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px 12px;
+}
+
+.sve-zone-stats dt {
+  color: var(--sve-muted);
+}
+
+.sve-zone-stats dd {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 14px;
+}
+
+.sve-zone-stats-trait {
+  flex-basis: 100%;
+}
+
+.sve-zone-stats-parts {
+  color: var(--sve-muted);
+}
+
+.sve-zone-stats-total {
+  flex: none;
+  color: var(--sve-accent);
+  font-weight: 700;
+}
+
+.sve-game-compact .sve-zone-stats {
+  font-size: 11px;
+}
+
 .sve-face-up-card {
   display: flex;
   flex-direction: column;

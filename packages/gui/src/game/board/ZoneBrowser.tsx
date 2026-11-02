@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { CardView, HiddenCardView } from "@sve/core";
 import { useApp } from "../../app/store";
 import type { GameUpdate } from "../../engine/protocol";
@@ -7,6 +7,7 @@ import type { SideZone } from "../../engine/view-utils";
 import { useT, type MessageKey } from "../../i18n";
 import { CardTile } from "../card/CardTile";
 import { playerLabel } from "../labels";
+import { CemeteryStats } from "./CemeteryStats";
 import { openZone, useOpenZone } from "./zone-browser";
 import { useBack } from "../../app/back";
 
@@ -28,12 +29,13 @@ const ZONE_KEYS: Record<SideZone | "leader", MessageKey> = {
 /**
  * A pile opened from the board (cemetery, banished, evolve deck; a Cross Craft player's leaders): every card its viewer may
  * see. A card the pending decision lets act (an ability used from the cemetery ...) is lit: a click closes the window and
- * opens its menu.
+ * opens its menu. A cemetery's window has its stats too, folded out by a button (and still out when it is opened again).
  */
 export function ZoneBrowser({ update }: { update: GameUpdate }) {
   const open = useOpenZone();
   const catalog = useApp((s) => s.catalog);
   const t = useT();
+  const [statsOut, setStatsOut] = useState(false);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") openZone(null);
@@ -77,10 +79,18 @@ export function ZoneBrowser({ update }: { update: GameUpdate }) {
       <div className="sve-modal" onClick={(e) => e.stopPropagation()}>
         <header className="sve-modal-header">
           <span>{t("game.zoneTitle", { player: playerLabel(open.player, update, t), zone: t(ZONE_KEYS[open.zone]) })}</span>
-          <button type="button" onClick={() => openZone(null)}>
-            {t("game.close")}
-          </button>
+          <span className="sve-zone-buttons">
+            {open.zone === "cemetery" ? (
+              <button type="button" className="sve-zone-stats-toggle" aria-expanded={statsOut} onClick={() => setStatsOut(!statsOut)} data-testid="zone-stats-toggle">
+                {t("game.cemeteryStats")}
+              </button>
+            ) : null}
+            <button type="button" onClick={() => openZone(null)} data-testid="zone-close">
+              {t("game.close")}
+            </button>
+          </span>
         </header>
+        {open.zone === "cemetery" && statsOut ? <CemeteryStats cards={side.cemetery} /> : null}
         <div className="sve-modal-cards">
           {cards.length === 0 ? <span className="sve-hint">{t("game.empty")}</span> : null}
           {cards.map((card) =>
