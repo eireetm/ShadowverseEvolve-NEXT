@@ -9,6 +9,7 @@ import {
   fixOptions,
   HARD_NEXT,
   HARD_NEXT_MACRO,
+  HARD_NEXT_MACRO_IN,
   HARD_OPTIONS,
   MACRO_DEFAULTS,
   macroProblems,
@@ -17,9 +18,11 @@ import {
   MEDIUM_OPTIONS,
   MEDIUM_V2,
   MEDIUM_V2_MACRO,
+  MEDIUM_V2_MACRO_IN,
   levelPreset,
   presetIdentities,
   presetSearchIdentity,
+  searchIdentityOf,
   type BotPreset,
   type PlannerBotOptions,
 } from "../src";
@@ -74,9 +77,37 @@ describe("presets", () => {
     expect(MEDIUM_V2_MACRO.macro).not.toBe(HARD_NEXT_MACRO.macro);
     expect(MEDIUM_NEXT_MACRO.cheat).toBeUndefined();
     expect(MEDIUM_V2_MACRO.cheat).toBeUndefined();
-    expect(BOT_PRESETS).toEqual(["medium-next", "hard-next", "medium-v2", "hard-next-macro", "medium-next-macro", "medium-v2-macro"]);
+    expect(BOT_PRESETS).toEqual(["medium-next", "hard-next", "medium-v2", "hard-next-macro", "medium-next-macro", "medium-v2-macro", "medium-v2-macro-in", "hard-next-macro-in"]);
     const search = "dedupe=1+macro=12:keep=2,sub=4,dec=40,share=0.25";
-    expect(BOT_PRESETS.map((p) => presetSearchIdentity(p))).toEqual([null, null, null, search, search, search]);
+    const inner = `${search}+macroInner=12:keep=2,sub=4,dec=40,share=0.25+inner=300x4`;
+    expect(BOT_PRESETS.map((p) => presetSearchIdentity(p))).toEqual([null, null, null, search, search, search, inner, inner]);
+  });
+
+  // The two with the later turns of the two-turn search by actions too: not levels of the interface.
+  it("add the two with the inner searches by actions: their bases with exactly that, on the budget and width of the searches they replace", () => {
+    const withoutInner = (o: PlannerBotOptions) => {
+      const { macroInner: _m, innerSimulations: _s, innerBeam: _b, ...rest } = o;
+      return rest;
+    };
+    const macros: unknown[] = [];
+    for (const [candidate, base] of [[MEDIUM_V2_MACRO_IN, MEDIUM_V2_MACRO], [HARD_NEXT_MACRO_IN, HARD_NEXT_MACRO]] as const) {
+      // toStrictEqual compares functions by reference: the same evaluations, the same reader of the charge's table.
+      expect(withoutInner(candidate)).toStrictEqual(base);
+      expect([base.macroInner, base.innerSimulations, base.innerBeam, base.innerPlans, base.maxDepth]).toEqual([undefined, undefined, undefined, undefined, undefined]);
+      // Written out in levels.ts; today's defaults with 12 actions, and the planner's own inner budget and width.
+      expect(candidate.macroInner).toEqual({ ...MACRO_DEFAULTS, actions: 12 });
+      expect(macroProblems(candidate.macroInner!)).toEqual([]);
+      expect([candidate.innerSimulations, candidate.innerBeam]).toEqual([300, 4]);
+      macros.push(candidate.macro, candidate.macroInner, base.macro);
+    }
+    // Each preset's own objects: a tool that turns one off on the object doesn't touch another.
+    expect(new Set(macros).size).toBe(macros.length);
+    expect(HARD_NEXT_MACRO_IN.cheat).toBe(true);
+    expect(MEDIUM_V2_MACRO_IN.cheat).toBeUndefined();
+    for (const effort of [1, 0.5]) for (const level of ["medium", "medium-v2", "hard"] as const) expect(levelPreset(level, effort)).not.toMatch(/-in$/);
+    expect(searchIdentityOf({})).toBeNull();
+    expect(searchIdentityOf({ innerSimulations: 450, innerBeam: 6, maxDepth: 14 })).toBe("inner=450x6+depth=14");
+    expect(searchIdentityOf({ innerBeam: 6 })).toBe("inner=300x6");
   });
 
   // No verdict covers a preset on a slower device: a level changes there on its own measurement.
@@ -84,8 +115,8 @@ describe("presets", () => {
   it("searching by actions, the fair presets decide on what their player can see only: other hidden cards, same decision", () => {
     const engine = createEngine({ cards: ALL_CARDS, scripts: ALL_SCRIPTS });
     const pool = deckPool(engine);
-    const compared = { "medium-next-macro": 0, "medium-v2-macro": 0 };
-    for (const [preset, games, most] of [["medium-next-macro", 3, 6], ["medium-v2-macro", 1, 2]] as const) {
+    const compared = { "medium-next-macro": 0, "medium-v2-macro": 0, "medium-v2-macro-in": 0 };
+    for (const [preset, games, most] of [["medium-next-macro", 3, 6], ["medium-v2-macro", 1, 2], ["medium-v2-macro-in", 1, 2]] as const) {
       for (let i = 0; i < games; i++) {
         const seed = `preset-fair-${preset}-${i}`;
         const g = engine.newGame({ seed, players: [randomDeck(pool, `${seed}/0`), randomDeck(pool, `${seed}/1`)], config: { deckRestrictions: false } });
@@ -102,19 +133,19 @@ describe("presets", () => {
       }
       expect(compared[preset], preset).toBeGreaterThanOrEqual(most);
     }
-  }, 300_000);
+  }, 600_000);
 
   it("give each interface level its preset by effort: by actions on a computer, the older ones on a slower device", () => {
     expect((["medium", "medium-v2", "hard"] as const).map((level) => levelPreset(level, 1))).toEqual(["medium-next-macro", "medium-v2-macro", "hard-next-macro"]);
     for (const effort of [0.5, 0.99]) expect((["medium", "medium-v2", "hard"] as const).map((level) => levelPreset(level, effort))).toEqual(["medium-next", "medium-v2", "hard-next"]);
   });
 
-  // presetSearchIdentity records two search options (choiceDedupe, macro): a preset setting another one would be recorded as
-  // its base is. Every preset leaves the others off; a preset that needs one adds it to presetSearchIdentity first.
+  // presetSearchIdentity records the search options searchIdentityOf writes: a preset setting another one would be recorded as
+  // its base is. Every preset leaves the others off; a preset that needs one adds it to searchIdentityOf first.
   it("set no search option presetSearchIdentity doesn't record", () => {
-    const options: Record<BotPreset, PlannerBotOptions> = { "medium-next": MEDIUM_NEXT, "hard-next": HARD_NEXT, "medium-v2": MEDIUM_V2, "hard-next-macro": HARD_NEXT_MACRO, "medium-next-macro": MEDIUM_NEXT_MACRO, "medium-v2-macro": MEDIUM_V2_MACRO };
+    const options: Record<BotPreset, PlannerBotOptions> = { "medium-next": MEDIUM_NEXT, "hard-next": HARD_NEXT, "medium-v2": MEDIUM_V2, "hard-next-macro": HARD_NEXT_MACRO, "medium-next-macro": MEDIUM_NEXT_MACRO, "medium-v2-macro": MEDIUM_V2_MACRO, "medium-v2-macro-in": MEDIUM_V2_MACRO_IN, "hard-next-macro-in": HARD_NEXT_MACRO_IN };
     expect(Object.keys(options).sort()).toEqual([...BOT_PRESETS].sort());
-    const unrecorded = ["commonRandom", "lineSlots", "tieKeepHand", "drawFirst", "turnOrder", "replyLethalOpp", "replyLethalKey", "closeSamples", "explore"] as const;
+    const unrecorded = ["commonRandom", "lineSlots", "tieKeepHand", "drawFirst", "turnOrder", "replyLethalOpp", "replyLethalKey", "closeSamples", "explore", "innerPlans"] as const;
     for (const preset of BOT_PRESETS) for (const key of unrecorded) expect(options[preset][key] || undefined, `${preset}.${key}`).toBeUndefined();
   });
 
@@ -138,6 +169,8 @@ describe("presets", () => {
     expect(presetIdentities("hard-next-macro")).toEqual(twoTurns);
     expect(presetIdentities("medium-next-macro")).toEqual(oneTurn);
     expect(presetIdentities("medium-v2-macro")).toEqual(twoTurns);
+    expect(presetIdentities("hard-next-macro-in")).toEqual(twoTurns);
+    expect(presetIdentities("medium-v2-macro-in")).toEqual(twoTurns);
     // On a slower device: one turn ahead, the mulligan's samples scaled (at least 2).
     const half = { ...oneTurn, mull: "mull=sim:k=4,t=3,margin=0,opp=greedy,cand=32" };
     for (const preset of BOT_PRESETS) expect(presetIdentities(preset, 0.5), preset).toEqual(half);
@@ -222,4 +255,20 @@ describe("presets", () => {
       expect(played.bot.macroStats.searches, `${preset} at ${effort}`).toBeGreaterThan(0);
     }
   }, 60_000);
+
+  // The inner searches are the two-turn search's: on a computer by actions; on a slower device (one turn ahead, presetAt) there
+  // are none, so the two play there as their bases do.
+  it("build the presets with the inner searches by actions, which have none below effort 1", () => {
+    for (const [preset, base] of [["medium-v2-macro-in", "medium-v2-macro"], ["hard-next-macro-in", "hard-next-macro"]] as const) {
+      const played = playTurn(preset, 1);
+      expect(played.field, preset).toEqual([]);
+      expect(played.bot.macroInnerStats.searches, preset).toBeGreaterThan(0);
+      expect(played.bot.macroInnerStats.searches, preset).toBe(played.bot.innerStats.searches);
+      expect(playTurn(base, 1).bot.macroInnerStats.searches, base).toBe(0);
+      const slower = playTurn(preset, 0.5);
+      expect(slower.field, preset).toEqual(playTurn(base, 0.5).field);
+      expect(slower.bot.innerStats, preset).toEqual({ searches: 0, expansions: 0, capped: 0, noPlan: 0 });
+      expect(slower.bot.macroInnerStats.searches, preset).toBe(0);
+    }
+  }, 120_000);
 });

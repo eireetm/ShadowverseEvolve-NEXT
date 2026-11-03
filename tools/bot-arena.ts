@@ -3,7 +3,8 @@
  *
  * A bot is a level (easy | medium | hard | medium-beta), a preset (medium-next-macro | medium-v2-macro | hard-next-macro: the
  * GUI's Bot-Medium, Bot-Medium v2 and Bot-Hard on a computer; medium-next | medium-v2 | hard-next: the presets a phone plays,
- * there at a lower effort, here at effort 1; packages/bot levels.ts createPresetBot), one of sve-server's AIs imitated (sve-fool, sve-good,
+ * there at a lower effort, here at effort 1; medium-v2-macro-in | hard-next-macro-in: not in the GUI, the later turns of their
+ * two-turn search by actions too; packages/bot levels.ts createPresetBot), one of sve-server's AIs imitated (sve-fool, sve-good,
  * sve-planner; tools/sve-server-ais), or easy / medium / hard with its evaluation swapped, to check the evaluation interface:
  * "medium:identity" plays with the hand-written evaluation passed in from outside (exactly as medium does), and
  * "medium:negated" scores its own positions the other way round (it plays to lose). "medium2" is Medium searching two turns
@@ -44,6 +45,7 @@ import {
   BOT_PRESETS,
   HARD_NEXT,
   HARD_NEXT_MACRO,
+  HARD_NEXT_MACRO_IN,
   HARD_OPTIONS,
   MEDIUM_BETA_OPTIONS,
   MEDIUM_NEXT,
@@ -51,6 +53,7 @@ import {
   MEDIUM_OPTIONS,
   MEDIUM_V2,
   MEDIUM_V2_MACRO,
+  MEDIUM_V2_MACRO_IN,
   PlannerBot,
   createBot,
   createPresetBot,
@@ -148,6 +151,8 @@ const PLANNER_OPTIONS: Partial<Record<string, PlannerBotOptions>> = {
   "hard-next-macro": HARD_NEXT_MACRO,
   "medium-next-macro": MEDIUM_NEXT_MACRO,
   "medium-v2-macro": MEDIUM_V2_MACRO,
+  "medium-v2-macro-in": MEDIUM_V2_MACRO_IN,
+  "hard-next-macro-in": HARD_NEXT_MACRO_IN,
   medium2: MEDIUM2,
 } satisfies Record<Exclude<BotLevel, "easy"> | BotPreset | "medium2", PlannerBotOptions>;
 /**
@@ -159,7 +164,7 @@ const PLANNER_OPTIONS: Partial<Record<string, PlannerBotOptions>> = {
 const controllerOf = (spec: string) => {
   const level = SPEC.exec(spec)![1]!;
   if (level === "easy" || level.startsWith("sve-")) return "greedy";
-  if (level === "medium-v2" || level === "medium-v2-macro") return "medium-v2";
+  if (level === "medium-v2" || level === "medium-v2-macro" || level === "medium-v2-macro-in") return "medium-v2";
   return PLANNER_OPTIONS[level]?.cheat ? "hard" : "medium";
 };
 

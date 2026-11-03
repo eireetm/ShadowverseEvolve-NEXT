@@ -1,9 +1,9 @@
 import type { Answer, Decision } from "./core";
 
-// Macro steps (PlannerBotOptions.macro): the root search of a turn by actions, not by decisions. A main phase answer (CR
-// 7.3.3) and every decision inside its action up to our next main phase decision — targets (CR 10.6.2.3), the order of
-// pending abilities (10.5.2.2), optional costs (10.4.7), a Ward follower's entry (12.8.2), the cards selected — are one step
-// of the beam: the plans compared at one step have taken the same number of actions, and none is ranked half-paid. The
+// Macro steps (PlannerBotOptions.macro): the root search of a turn by actions, not by decisions (macroInner: the two-turn
+// search's inner searches too, on their own budget and width). A main phase answer (CR 7.3.3) and every decision inside its
+// action up to our next main phase decision — targets (CR 10.6.2.3), the order of pending abilities (10.5.2.2), optional
+// costs (10.4.7), a Ward follower's entry (12.8.2), the cards selected — are one step of the beam: the plans compared at one step have taken the same number of actions, and none is ranked half-paid. The
 // decision-by-decision beam ranks every node by the evaluation, so an action that pays first and gets later (BP08-037's
 // -10: 3 to 7 cards banished, then the effect) sits below the plans that took no such action at every step in between and
 // is cut before it completes; and a plan's depth counts decisions, so a turn of many choices stops early (in the meta-deck
@@ -13,7 +13,7 @@ import type { Answer, Decision } from "./core";
 // Completions that differ only in the order of their pending abilities are one (the better kept), and the best few of an
 // action go on to the next step.
 
-/** macro's parameters (planner.ts macroBeam). */
+/** macro's and macroInner's parameters (planner.ts macroBeam). */
 export interface MacroOptions {
   /** Most actions in one plan (the beam's steps). */
   actions: number;
@@ -46,6 +46,11 @@ export function macroProblems(o: MacroOptions): string[] {
 /** The parameters as the records write them: "macro=<actions>:keep=<n>,sub=<n>,dec=<n>,share=<x>". */
 export function macroIdentity(o: MacroOptions): string {
   return `macro=${o.actions}:keep=${o.keep},sub=${o.sub},dec=${o.dec},share=${o.share}`;
+}
+
+/** macroInner's parameters as the records write them: macroIdentity's form, named "macroInner=". */
+export function macroInnerIdentity(o: MacroOptions): string {
+  return macroIdentity(o).replace(/^macro=/, "macroInner=");
 }
 
 /** A plan's point as this module reads it (planner.ts Node). */

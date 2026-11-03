@@ -12,6 +12,7 @@ export {
   fixIdentities,
   presetIdentities,
   presetSearchIdentity,
+  searchIdentityOf,
   BOT_LEVELS,
   BOT_PRESETS,
   MEDIUM_OPTIONS,
@@ -23,6 +24,8 @@ export {
   HARD_NEXT_MACRO,
   MEDIUM_NEXT_MACRO,
   MEDIUM_V2_MACRO,
+  HARD_NEXT_MACRO_IN,
+  MEDIUM_V2_MACRO_IN,
   FIX_DEFAULTS,
   LEADER_CURVE,
   type Bot,
@@ -67,7 +70,7 @@ export { tableGates, resolveGatesOf, gateMet, type TableGates } from "./conditio
 export { bundledCardTable, bundledGates } from "./card-table";
 export { SIM_DEFAULTS, SIM_KEYS, SIM_EXTRA_KEYS, SIM_ADAPTIVE, FINISHED, simMulligan, simIdentity, simExtraIdentity, simProblems, simExtraProblems, simSampleLimit, simEstimate, simStopsBefore, simHorizon, playOpening, plansItself, type SimParams, type SimOutcome, type SimContext, type MulliganStats, type MulliganWorld, type MulliganDecision, type Playout, type Agent } from "./mulligan-sim";
 export { setupSample, setupWorld, hiddenPools, stepBack, type SetupSample } from "./setup-sample";
-export { MACRO_DEFAULTS, MACRO_RANGES, macroProblems, macroIdentity, actionsOf, completionKey, keptCompletions, type MacroOptions, type MacroNode } from "./macro-steps";
+export { MACRO_DEFAULTS, MACRO_RANGES, macroProblems, macroIdentity, macroInnerIdentity, actionsOf, completionKey, keptCompletions, type MacroOptions, type MacroNode } from "./macro-steps";
 export { CLOSE_DEFAULTS, closeProblems, closeIdentity, isClose, type CloseSampleOptions } from "./close-samples";
 export { deckOverlap, fixedTurnOrder, ownDeckList, turnOrderFor, turnOrderIdentity, turnOrderProblems, type TurnOrderChoice, type TurnOrderEntry, type TurnOrderTable } from "./turn-order";
 export { evaluate, curveValue, exactResults, weightsEvaluator, DEFAULT_WEIGHTS, type EvalWeights, type Evaluator, type LeaderCurve } from "./evaluate";

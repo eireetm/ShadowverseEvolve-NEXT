@@ -182,12 +182,19 @@ export interface PlannerBotOptions {
   /**
    * The root search by actions (macro-steps.ts): a main phase answer with every decision inside its action is one step of
    * the beam, the plans at a step have taken as many actions, a plan is at most `actions` actions long (and `dec` decisions;
-   * `maxDepth` is then the two-turn search's inner searches' only). The decisions inside an action are searched whole while
-   * they fit a `share` of the budget left, else by a beam at least `sub` wide, and finished by the fast answers where that
-   * runs out; the best `keep` completions of each action go on. Its budget is `maxSimulations`, every expansion counted.
-   * Default: none (the beam by decisions).
+   * `maxDepth` is then the two-turn search's inner searches' only, unless `macroInner`). The decisions inside an action are
+   * searched whole while they fit a `share` of the budget left, else by a beam at least `sub` wide, and finished by the fast
+   * answers where that runs out; the best `keep` completions of each action go on. Its budget is `maxSimulations`, every
+   * expansion counted. Default: none (the beam by decisions).
    */
   macro?: MacroOptions;
+  /**
+   * Two turns: the inner searches (the opponent's turn and our next one, on `innerSimulations` and `innerBeam`) by actions too,
+   * with these parameters (macro-steps.ts), so that an action paying over many decisions completes there and `maxDepth` limits
+   * neither. They stay inner searches: the later turns' cheaper model, no conditional charges. Looking one turn ahead no inner
+   * search runs, so it does nothing there. Default: none (by decisions).
+   */
+  macroInner?: MacroOptions;
   /**
    * Two turns: the opponent's lethal search in their simulated turn tries at most this many answers (it searches when one is
    * within reach), in place of `replyLethal` there; ours in our turn after and the one-turn reply keep `replyLethal`. With
@@ -271,6 +278,13 @@ export class PlannerBot {
    * were still going when the action limit, the budget or the decision cap stopped them.
    */
   readonly macroStats = { searches: 0, layers: 0, actions: 0, subExpansions: 0, finishedFast: 0, actionCut: 0, budgetOut: 0, decisionCut: 0 };
+  /** macroInner: the same counts for the two-turn search's inner searches (macroStats stays the root's alone). */
+  readonly macroInnerStats = { searches: 0, layers: 0, actions: 0, subExpansions: 0, finishedFast: 0, actionCut: 0, budgetOut: 0, decisionCut: 0 };
+  /**
+   * The two-turn search's inner searches, by decisions or by actions, so a bot with macroInner can be read against one without:
+   * how many, their expansions, those that spent their budget, and those that left no plan (scored where they began).
+   */
+  readonly innerStats = { searches: 0, expansions: 0, capped: 0, noPlan: 0 };
   /** closeSamples: comparisons looked at, those made longer, samples added, cut samples played again exactly, choices changed. */
   readonly closeStats = { comparisons: 0, refined: 0, extraSamples: 0, recomputed: 0, changed: 0 };
   /**
@@ -322,8 +336,9 @@ export class PlannerBot {
   /** drawFirst, turnOrder (off: false, null). */
   private readonly drawFirst: boolean;
   private readonly turnOrder: TurnOrderTable | null;
-  /** macro, replyLethalOpp, replyLethalKey, closeSamples (off: null, 0, "view", null). */
+  /** macro, macroInner, replyLethalOpp, replyLethalKey, closeSamples (off: null, null, 0, "view", null). */
   private readonly macro: MacroOptions | null;
+  private readonly macroInner: MacroOptions | null;
   private readonly replyLethalOpp: number;
   private readonly replyLethalKey: "view" | "position";
   private readonly closeSamples: CloseSampleOptions | null;
@@ -400,6 +415,10 @@ export class PlannerBot {
     const macroIssues = macro ? macroProblems(macro) : [];
     if (macroIssues.length) throw new Error(`macro: ${macroIssues.join("; ")}`);
     this.macro = macro;
+    const macroInner = options.macroInner ? { ...options.macroInner } : null;
+    const macroInnerIssues = macroInner ? macroProblems(macroInner) : [];
+    if (macroInnerIssues.length) throw new Error(`macroInner: ${macroInnerIssues.join("; ")}`);
+    this.macroInner = macroInner;
     this.replyLethalOpp = options.replyLethalOpp ?? 0;
     this.replyLethalKey = options.replyLethalKey ?? "view";
     const close = options.closeSamples ? { ...options.closeSamples } : null;
@@ -655,8 +674,10 @@ export class PlannerBot {
    * its turn would end there. Returns the finished plans, best first, one per position.
    */
   private beam(root: Node, actor: PlayerId, turn: number, world: () => GameSession, budget: number, width: number, score: Evaluator = this.evaluator, inner = false): Node[] {
-    // macro: this turn's own search by actions (the two-turn search's inner ones stay by decisions).
-    if (this.macro !== null && !inner) return this.macroBeam(root, actor, turn, world, budget, width, score, this.macro);
+    if (inner) this.innerStats.searches += 1;
+    // macro: this turn's own search by actions; macroInner: the two-turn search's inner ones (each stays by decisions without).
+    const byActions = inner ? this.macroInner : this.macro;
+    if (byActions !== null) return this.macroBeam(root, actor, turn, world, budget, width, score, byActions, inner);
     const finished: Node[] = [];
     const seen = new Set<string>([root.key]);
     let frontier = [root];
@@ -680,6 +701,7 @@ export class PlannerBot {
       children.sort((a, b) => b.value - a.value);
       frontier = children.slice(0, width);
     }
+    if (inner && budget <= 0) this.innerStats.capped += 1;
     for (const node of frontier) if (canEnd(node.session.decision!)) finished.push(node);
     finished.sort((a, b) => b.value - a.value);
     const one = new Map<string, Node>();
@@ -693,10 +715,12 @@ export class PlannerBot {
    * `width` positions, so the plans ranked against each other have taken as many actions and none is half-paid. At most
    * `o.actions` steps, and no action from a plan of `o.dec` decisions. Every expansion counts against `budget`. A root inside
    * an action (a plan made again in the middle of one) finishes that action as its first step. Returns the finished plans,
-   * best first, one per position (as beam()).
+   * best first, one per position (as beam()). An inner search of the two-turn search (macroInner) is the same search with
+   * `inner` passed to every expansion (expand, advance: the later turns' cheaper model, no conditional charges) and counted
+   * apart; its root is at a main phase decision (turnValue), and its plans go on as those of beam() do.
    */
-  private macroBeam(root: Node, actor: PlayerId, turn: number, world: () => GameSession, budget: number, width: number, score: Evaluator, o: MacroOptions): Node[] {
-    const stats = this.macroStats;
+  private macroBeam(root: Node, actor: PlayerId, turn: number, world: () => GameSession, budget: number, width: number, score: Evaluator, o: MacroOptions, inner: boolean): Node[] {
+    const stats = inner ? this.macroInnerStats : this.macroStats;
     stats.searches += 1;
     const finished: Node[] = [];
     const seen = new Set<string>([root.key]);
@@ -719,7 +743,7 @@ export class PlannerBot {
         const d = node.session.decision!;
         if (d.type !== "mainPhase") {
           // The root in the middle of an action: that action is this step.
-          add(this.completeAction(node, actor, turn, world, score, left, o));
+          add(this.completeAction(node, actor, turn, world, score, left, o, inner));
           continue;
         }
         if (canEnd(d)) finished.push(node);
@@ -728,10 +752,10 @@ export class PlannerBot {
         for (const answer of this.branches(d, lookupFromReader(node.session.reader()))) {
           if (left.budget <= 0) break;
           left.budget -= 1;
-          const child = this.expand(node, answer, actor, turn, world, score);
+          const child = this.expand(node, answer, actor, turn, world, score, inner);
           if (!child) continue;
           stats.actions += 1;
-          add(child.done || child.session.decision?.type === "mainPhase" ? [child] : this.completeAction(child, actor, turn, world, score, left, o));
+          add(child.done || child.session.decision?.type === "mainPhase" ? [child] : this.completeAction(child, actor, turn, world, score, left, o, inner));
         }
       }
       children.sort((a, b) => b.value - a.value);
@@ -742,6 +766,7 @@ export class PlannerBot {
       else if (left.budget <= 0) stats.budgetOut += 1;
       else stats.decisionCut += 1;
     }
+    if (inner && left.budget <= 0) this.innerStats.capped += 1;
     for (const node of frontier) if (canEnd(node.session.decision!)) finished.push(node);
     finished.sort((a, b) => b.value - a.value);
     const one = new Map<string, Node>();
@@ -760,8 +785,8 @@ export class PlannerBot {
    * keptCompletions: the better of two that differ only in which pending ability went first, then the best `o.keep`, one
    * per position), with every completion that ended the turn or the game.
    */
-  private completeAction(start: Node, actor: PlayerId, turn: number, world: () => GameSession, score: Evaluator, left: { budget: number }, o: MacroOptions): Node[] {
-    const stats = this.macroStats;
+  private completeAction(start: Node, actor: PlayerId, turn: number, world: () => GameSession, score: Evaluator, left: { budget: number }, o: MacroOptions, inner: boolean): Node[] {
+    const stats = inner ? this.macroInnerStats : this.macroStats;
     let allowance = Math.min(left.budget, Math.max(this.maxBranches, Math.floor(left.budget * o.share)));
     const completions: Node[] = [];
     const open: Node[] = [];
@@ -785,7 +810,7 @@ export class PlannerBot {
           allowance -= 1;
           left.budget -= 1;
           stats.subExpansions += 1;
-          const child = this.expand(node, answer, actor, turn, world, score);
+          const child = this.expand(node, answer, actor, turn, world, score, inner);
           if (!child) continue;
           if (child.done || child.session.decision?.type === "mainPhase") completions.push(child);
           else if (!inside.has(child.key)) {
@@ -801,7 +826,7 @@ export class PlannerBot {
     let best: Node | undefined;
     for (const n of open) if (best === undefined || n.value > best.value) best = n;
     if (best !== undefined) {
-      const done = this.finishFast(best, actor, turn, world, score, left, o);
+      const done = this.finishFast(best, actor, turn, world, score, left, o, inner);
       if (done !== null) {
         stats.finishedFast += 1;
         completions.push(done);
@@ -812,12 +837,12 @@ export class PlannerBot {
   }
 
   /** A position inside an action played on by the fast answers (policy.ts) to the action's end (null: a step failed or too many). */
-  private finishFast(node: Node, actor: PlayerId, turn: number, world: () => GameSession, score: Evaluator, left: { budget: number }, o: MacroOptions): Node | null {
+  private finishFast(node: Node, actor: PlayerId, turn: number, world: () => GameSession, score: Evaluator, left: { budget: number }, o: MacroOptions, inner: boolean): Node | null {
     let at = node;
     for (let i = 0; i <= o.dec && !at.done && at.session.decision?.type !== "mainPhase"; i++) {
       const d = at.session.decision!;
       left.budget -= 1;
-      const next = this.expand(at, fastAnswer(d, lookupFromReader(at.session.reader())), actor, turn, world, score);
+      const next = this.expand(at, fastAnswer(d, lookupFromReader(at.session.reader())), actor, turn, world, score, inner);
       if (next === null) return null;
       at = next;
     }
@@ -1110,7 +1135,10 @@ export class PlannerBot {
     const root = this.node(world(), null, null, actor, nextTurn, "decide", score);
     const finished = this.beam(root, actor, nextTurn, world, this.innerSimulations, this.innerBeam, score, true);
     const plans = this.kinds(finished, root, actor, level === 1 ? this.innerPlans[0] : this.innerPlans[1], false);
-    if (plans.length === 0) return leaf();
+    if (plans.length === 0) {
+      this.innerStats.noPlan += 1;
+      return leaf();
+    }
     let value = actor === me ? -Infinity : Infinity;
     for (const [i, plan] of plans.entries()) {
       let v: number;
@@ -1472,6 +1500,7 @@ export class PlannerBot {
   private expand(node: Node, answer: Answer, me: PlayerId, turn: number, world: () => GameSession, score: Evaluator = this.evaluator, inner = false): Node | null {
     // The conditional charges follow this turn's own search only (not the later turns of a two-turn search).
     if (this.cond !== null && !inner && this.watching === null) return this.expandWatched(node, answer, me, turn, world, score);
+    if (inner) this.innerStats.expansions += 1;
     this.stats.simulations += 1;
     try {
       const session = this.copy(node, world);

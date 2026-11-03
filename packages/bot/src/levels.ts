@@ -5,7 +5,7 @@ import { DANGER_DEFAULTS, danger, dangerIdentity, dangerStartParams, type Danger
 import { PP1_DEFAULTS, pp1Evaluator, pp1GreedyParams, pp1Identity, type Pp1Params } from "./eval-pp";
 import type { LeaderCurve } from "./evaluate";
 import { GreedyBot } from "./greedy";
-import { macroIdentity } from "./macro-steps";
+import { macroIdentity, macroInnerIdentity } from "./macro-steps";
 import { SIM_DEFAULTS, simIdentity, type SimParams } from "./mulligan-sim";
 import { PlannerBot, type PlannerBotOptions } from "./planner";
 import { quickIdentity } from "./quick-window";
@@ -183,6 +183,20 @@ export const MEDIUM_NEXT_MACRO: PlannerBotOptions = { ...MEDIUM_NEXT, ...MACRO_S
 /** The two-turn fair Medium with every fix (MEDIUM_V2), its own turn searched by actions. */
 export const MEDIUM_V2_MACRO: PlannerBotOptions = { ...MEDIUM_V2, ...MACRO_STEPS, macro: { ...MACRO_STEPS.macro } };
 
+/**
+ * The two-turn search's inner searches by actions too (planner.ts macroInner): the opponent's turn and our next one get an
+ * action that pays over many decisions, which the searches by decisions can't finish, and no limit of decisions. On the
+ * budget and width of the searches they replace, written out with the parameters of the root's (MACRO_STEPS), so that a
+ * later change of the defaults doesn't change a preset. Not levels of the interface yet (levelPreset names neither).
+ */
+const INNER_STEPS = { macroInner: { actions: 12, keep: 2, sub: 4, dec: 40, share: 0.25 }, innerSimulations: 300, innerBeam: 4 } satisfies PlannerBotOptions;
+
+/** Hard searching by actions (HARD_NEXT_MACRO), the later turns of its two-turn search by actions too. */
+export const HARD_NEXT_MACRO_IN: PlannerBotOptions = { ...HARD_NEXT_MACRO, macro: { ...MACRO_STEPS.macro }, ...INNER_STEPS, macroInner: { ...INNER_STEPS.macroInner } };
+
+/** The two-turn fair Medium searching by actions (MEDIUM_V2_MACRO), the later turns of its two-turn search by actions too. */
+export const MEDIUM_V2_MACRO_IN: PlannerBotOptions = { ...MEDIUM_V2_MACRO, macro: { ...MACRO_STEPS.macro }, ...INNER_STEPS, macroInner: { ...INNER_STEPS.macroInner } };
+
 /** A preset: a level's options, some of them set otherwise, and the fixes for its lookahead. */
 function withFixes(level: PlannerBotOptions, changes: PlannerBotOptions): PlannerBotOptions {
   const options = { ...level, ...changes };
@@ -195,8 +209,8 @@ function lookaheadOf(options: PlannerBotOptions, effort: number): 1 | 2 {
 }
 
 /** The presets by name (not levels of createBot yet). */
-export type BotPreset = "medium-next" | "hard-next" | "medium-v2" | "hard-next-macro" | "medium-next-macro" | "medium-v2-macro";
-export const BOT_PRESETS: readonly BotPreset[] = ["medium-next", "hard-next", "medium-v2", "hard-next-macro", "medium-next-macro", "medium-v2-macro"];
+export type BotPreset = "medium-next" | "hard-next" | "medium-v2" | "hard-next-macro" | "medium-next-macro" | "medium-v2-macro" | "medium-v2-macro-in" | "hard-next-macro-in";
+export const BOT_PRESETS: readonly BotPreset[] = ["medium-next", "hard-next", "medium-v2", "hard-next-macro", "medium-next-macro", "medium-v2-macro", "medium-v2-macro-in", "hard-next-macro-in"];
 const PRESET_OPTIONS: Record<BotPreset, PlannerBotOptions> = {
   "medium-next": MEDIUM_NEXT,
   "hard-next": HARD_NEXT,
@@ -204,6 +218,8 @@ const PRESET_OPTIONS: Record<BotPreset, PlannerBotOptions> = {
   "hard-next-macro": HARD_NEXT_MACRO,
   "medium-next-macro": MEDIUM_NEXT_MACRO,
   "medium-v2-macro": MEDIUM_V2_MACRO,
+  "medium-v2-macro-in": MEDIUM_V2_MACRO_IN,
+  "hard-next-macro-in": HARD_NEXT_MACRO_IN,
 };
 
 /** The interface's planning levels (Bot-Easy has no preset). */
@@ -269,13 +285,28 @@ export function presetIdentities(preset: BotPreset, effort = 1): ReturnType<type
 }
 
 /**
- * The search options a preset sets on top of its level's searches, as the game records write them ("dedupe=1" for
- * choiceDedupe, then macro's identity: macro-steps.ts macroIdentity), or null for a preset without them. Not part of
- * presetIdentities (the evaluations), which a preset searching by actions shares with its base. The same at every effort
- * (presetAt leaves them).
+ * The search options a preset sets on top of its level's searches, as the game records write them, or null for a preset
+ * without them. Not part of presetIdentities (the evaluations), which a preset searching by actions shares with its base. The
+ * same at every effort (presetAt leaves them).
  */
 export function presetSearchIdentity(preset: BotPreset): string | null {
-  const options = PRESET_OPTIONS[preset];
-  const parts = [...(options.choiceDedupe ? ["dedupe=1"] : []), ...(options.macro ? [macroIdentity(options.macro)] : [])];
+  return searchIdentityOf(PRESET_OPTIONS[preset]);
+}
+
+/**
+ * Search options as the game records write them: "dedupe=1" for choiceDedupe, macro's identity, macroInner's (macro-steps.ts),
+ * "inner=<budget>x<width>" for the inner searches' size when either is set (the planner's default for one left out, so the
+ * record says what was played), "depth=<n>" for maxDepth. Null when none is set. Options none of the older presets sets write
+ * nothing for them, so those presets' records are as they were.
+ */
+export function searchIdentityOf(options: PlannerBotOptions): string | null {
+  const size = options.innerSimulations !== undefined || options.innerBeam !== undefined ? [`inner=${options.innerSimulations ?? 300}x${options.innerBeam ?? 4}`] : [];
+  const parts = [
+    ...(options.choiceDedupe ? ["dedupe=1"] : []),
+    ...(options.macro ? [macroIdentity(options.macro)] : []),
+    ...(options.macroInner ? [macroInnerIdentity(options.macroInner)] : []),
+    ...size,
+    ...(options.maxDepth !== undefined ? [`depth=${options.maxDepth}`] : []),
+  ];
   return parts.length > 0 ? parts.join("+") : null;
 }
