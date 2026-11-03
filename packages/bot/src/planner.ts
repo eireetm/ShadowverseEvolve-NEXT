@@ -275,11 +275,12 @@ export class PlannerBot {
   /**
    * macro: root searches by actions; their steps; actions expanded (a main phase answer and its decisions); expansions
    * inside actions; actions finished by the fast answers (their allowance or the decision cap ran out); searches whose plans
-   * were still going when the action limit, the budget or the decision cap stopped them.
+   * were still going when the action limit or the budget stopped them; searches in which a plan reached the decision cap
+   * (either of those too, or neither); actions that left no completion, so that they are in no plan (completeAction).
    */
-  readonly macroStats = { searches: 0, layers: 0, actions: 0, subExpansions: 0, finishedFast: 0, actionCut: 0, budgetOut: 0, decisionCut: 0 };
+  readonly macroStats = { searches: 0, layers: 0, actions: 0, subExpansions: 0, finishedFast: 0, actionCut: 0, budgetOut: 0, decisionCut: 0, dropped: 0 };
   /** macroInner: the same counts for the two-turn search's inner searches (macroStats stays the root's alone). */
-  readonly macroInnerStats = { searches: 0, layers: 0, actions: 0, subExpansions: 0, finishedFast: 0, actionCut: 0, budgetOut: 0, decisionCut: 0 };
+  readonly macroInnerStats = { searches: 0, layers: 0, actions: 0, subExpansions: 0, finishedFast: 0, actionCut: 0, budgetOut: 0, decisionCut: 0, dropped: 0 };
   /**
    * The two-turn search's inner searches, by decisions or by actions, so a bot with macroInner can be read against one without:
    * how many, their expansions, those that spent their budget, and those that left no plan (scored where they began).
@@ -724,7 +725,7 @@ export class PlannerBot {
     stats.searches += 1;
     const finished: Node[] = [];
     const seen = new Set<string>([root.key]);
-    const left = { budget };
+    const left = { budget, reachedDec: false };
     let frontier = [root];
     let step = 0;
     for (; step < o.actions && frontier.length > 0 && left.budget > 0; step++) {
@@ -747,7 +748,10 @@ export class PlannerBot {
           continue;
         }
         if (canEnd(d)) finished.push(node);
-        if (node.depth >= o.dec) continue;
+        if (node.depth >= o.dec) {
+          left.reachedDec = true;
+          continue;
+        }
         if (this.choiceDedupe || this.commonRandom) this.at = node;
         for (const answer of this.branches(d, lookupFromReader(node.session.reader()))) {
           if (left.budget <= 0) break;
@@ -761,11 +765,13 @@ export class PlannerBot {
       children.sort((a, b) => b.value - a.value);
       frontier = children.slice(0, width);
     }
+    // Plans left when the loop stopped: only its action limit or the budget stops it with some. A plan at the decision cap
+    // leaves the frontier by itself, so that is counted where it happens.
     if (frontier.length > 0) {
       if (step >= o.actions) stats.actionCut += 1;
-      else if (left.budget <= 0) stats.budgetOut += 1;
-      else stats.decisionCut += 1;
+      else stats.budgetOut += 1;
     }
+    if (left.reachedDec) stats.decisionCut += 1;
     if (inner && left.budget <= 0) this.innerStats.capped += 1;
     for (const node of frontier) if (canEnd(node.session.decision!)) finished.push(node);
     finished.sort((a, b) => b.value - a.value);
@@ -780,12 +786,15 @@ export class PlannerBot {
    * charges follow it as in beam()); a level keeps every position while the allowance can give each the answers of one
    * more decision (at this action's average), else the best `o.sub` or more by value (all inside the same action). The
    * allowance is a share of the budget left (`o.share`, at least one decision's answers). The best position left
-   * unexpanded where the allowance or the decision cap (`o.dec`) ran out is finished by the fast answers (policy.ts), so an
-   * action is never dropped and a long one still reaches its end. Returns the completions kept (macro-steps.ts
-   * keptCompletions: the better of two that differ only in which pending ability went first, then the best `o.keep`, one
-   * per position), with every completion that ended the turn or the game.
+   * unexpanded where the allowance or the decision cap (`o.dec`) ran out is finished by the fast answers (policy.ts), so a
+   * long action still reaches its end. Returns the completions kept (macro-steps.ts keptCompletions: the better of two that
+   * differ only in which pending ability went first, then the best `o.keep`, one per position), with every completion that
+   * ended the turn or the game. It returns none, and the action is in no plan (counted: `dropped`), when every answer comes
+   * back to a position already reached inside the action (the beam by decisions takes a position it has seen for a cycle too:
+   * a choice that changes nothing, followed by the same decision), when the fast answers don't reach its end within
+   * `o.dec` + 1 steps, or when the expansions fail.
    */
-  private completeAction(start: Node, actor: PlayerId, turn: number, world: () => GameSession, score: Evaluator, left: { budget: number }, o: MacroOptions, inner: boolean): Node[] {
+  private completeAction(start: Node, actor: PlayerId, turn: number, world: () => GameSession, score: Evaluator, left: { budget: number; reachedDec: boolean }, o: MacroOptions, inner: boolean): Node[] {
     const stats = inner ? this.macroInnerStats : this.macroStats;
     let allowance = Math.min(left.budget, Math.max(this.maxBranches, Math.floor(left.budget * o.share)));
     const completions: Node[] = [];
@@ -797,6 +806,7 @@ export class PlannerBot {
     while (level.length > 0) {
       const next: Node[] = [];
       for (const node of level) {
+        if (node.depth >= o.dec) left.reachedDec = true;
         if (allowance <= 0 || node.depth >= o.dec) {
           open.push(node);
           continue;
@@ -832,6 +842,7 @@ export class PlannerBot {
         completions.push(done);
       }
     }
+    if (completions.length === 0) stats.dropped += 1;
     const ended = completions.filter((c) => c.done);
     return [...ended, ...keptCompletions(completions.filter((c) => !c.done), start, o.keep)];
   }

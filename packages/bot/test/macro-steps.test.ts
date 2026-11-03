@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { createEngine, script, validateAnswer, type Answer, type GameSession } from "../src/core";
 import { ALL_CARDS, ALL_SCRIPTS } from "../../core/src/sets";
-import { GreedyBot, MACRO_DEFAULTS, MEDIUM_OPTIONS, PlannerBot, actionsOf, completionKey, keptCompletions, macroIdentity, macroInnerIdentity, macroProblems, type MacroNode, type MacroOptions, type PlannerBotOptions } from "../src";
+import { GreedyBot, MACRO_DEFAULTS, MEDIUM_OPTIONS, PlannerBot, actionsOf, completionKey, evaluate, keptCompletions, macroIdentity, macroInnerIdentity, macroProblems, type Evaluator, type MacroNode, type MacroOptions, type PlannerBotOptions } from "../src";
 import { deckPool, drive, randomAgent, randomDeck, testFollower, testSpell } from "../../core/src/testing";
 
 // Macro steps (PlannerBotOptions.macro, macroInner, macro-steps.ts): the root search and the two-turn search's inner ones by
 // actions — a main phase answer with every decision inside its action is one step of the beam.
 
 const { defineCard, fanfare, spell } = script;
+const EITHER = [
+  { id: "a", label: "A" },
+  { id: "b", label: "B" },
+];
 const cards = createEngine({
   cards: [
     testFollower("PAYER", 1, 1, 1, { text: "Fanfare: discard a card, three times. Then deal 6 damage to the enemy leader." }),
@@ -17,9 +21,35 @@ const cards = createEngine({
     testFollower("CARD_B", 6, 3, 3),
     testFollower("CARD_C", 7, 4, 4),
     testFollower("FILLER", 1, 1, 1),
+    testFollower("LONG", 1, 1, 1, { text: "Fanfare: choose one, then deal 1 damage to the enemy leader, thirty times." }),
+    testFollower("BLANK", 1, 1, 1, { text: "Fanfare: choose one, twice. Neither does anything." }),
     testSpell("QZAP", 1, { text: "Quick. Destroy an enemy follower." }),
   ],
   scripts: {
+    // Longer than any allowance of these tests, every answer moving the game on.
+    LONG: defineCard({
+      abilities: [
+        fanfare({
+          *resolve(fx) {
+            for (let i = 0; i < 30; i++) {
+              yield* fx.choose(EITHER);
+              yield* fx.dealDamage(fx.game.leader(fx.game.opponent(fx.controller)), 1);
+            }
+          },
+        }),
+      ],
+    }),
+    // A choice that changes nothing, then the same decision (BP12-069's Fanfare on a full field): the position comes back.
+    BLANK: defineCard({
+      abilities: [
+        fanfare({
+          *resolve(fx) {
+            yield* fx.choose(EITHER);
+            yield* fx.choose(EITHER);
+          },
+        }),
+      ],
+    }),
     QZAP: defineCard({
       keywords: ["quick"],
       abilities: [
@@ -72,8 +102,8 @@ interface PNode {
   key: string;
 }
 interface Internals {
-  node(session: GameSession, parent: null, answer: null, me: number, turn: number, stop: "decide"): PNode;
-  beam(root: PNode, actor: number, turn: number, world: () => GameSession, budget: number, width: number, score?: undefined, inner?: boolean): PNode[];
+  node(session: GameSession, parent: null, answer: null, me: number, turn: number, stop: "decide", score?: Evaluator): PNode;
+  beam(root: PNode, actor: number, turn: number, world: () => GameSession, budget: number, width: number, score?: Evaluator, inner?: boolean): PNode[];
   completeAction(...a: unknown[]): PNode[];
   expand(...a: unknown[]): PNode | null;
 }
@@ -81,9 +111,10 @@ interface Internals {
 /**
  * The root search (`inner`: an inner search of the two-turn search, as turnValue calls it) of a bot with these options at a
  * position: the finished plans, every action's completions returned, and what every expansion was told about being inner.
+ * `at`: the score the search is given (as turnValue gives the opponent's turn its model's), the enemy leader's defense, our field.
  */
-function search(options: PlannerBotOptions, hand: string[], budget = 600, width = 6, inner = false) {
-  const t = drive(cards, { me: { hand, field: ["HITTER"], deck: many(10, "FILLER"), playPoints: 3, maxPlayPoints: 3 }, opp: { deck: many(10, "FILLER"), leaderDefense: 20 } });
+function search(options: PlannerBotOptions, hand: string[], budget = 600, width = 6, inner = false, at: { score?: Evaluator; leaderDefense?: number; field?: string[] } = {}) {
+  const t = drive(cards, { me: { hand, field: at.field ?? ["HITTER"], deck: many(10, "FILLER"), playPoints: 3, maxPlayPoints: 3 }, opp: { deck: many(10, "FILLER"), leaderDefense: at.leaderDefense ?? 20 } });
   const bot = new PlannerBot(cards, { ...MEDIUM_OPTIONS, lethalSearch: 0, seed: "m", ...options });
   const b = bot as unknown as Internals;
   const completed: PNode[][] = [];
@@ -102,8 +133,8 @@ function search(options: PlannerBotOptions, hand: string[], budget = 600, width 
   const game = t.game;
   const turn = game.state.turn;
   const world = () => game.determinized(0, "macro-test");
-  const root = b.node(world(), null, null, 0, turn, "decide");
-  const finished = b.beam(root, 0, turn, world, budget, width, undefined, inner);
+  const root = b.node(world(), null, null, 0, turn, "decide", at.score);
+  const finished = b.beam(root, 0, turn, world, budget, width, at.score, inner);
   const opp = (n: PNode) => n.session.state.players[1].leaderDefense;
   const steps = (n: PNode) => {
     const out: string[] = [];
@@ -178,7 +209,25 @@ describe("macro steps: the root search by actions", () => {
   it("an allowance spent before the action ends: the best position left is finished by the fast answers, not dropped", () => {
     const { finished, opp, bot } = search({ macro: { ...MACRO_DEFAULTS, share: 0.01, sub: 1 }, maxBranches: 2, choiceDedupe: true }, ["PAYER", "CARD_A", "CARD_B", "CARD_C", "FILLER"], 40);
     expect(bot.macroStats.finishedFast).toBeGreaterThan(0);
+    expect(bot.macroStats.dropped).toBe(0);
     expect(finished.some((n) => opp(n) <= 14)).toBe(true);
+  });
+
+  it("a plan at the decision cap is counted (no action started from it, an action reaching it finished by the fast answers); today's cap isn't reached here", () => {
+    const hand = ["PAYER", "CARD_A", "CARD_B", "CARD_C", "FILLER"];
+    const capped = search({ macro: { ...MACRO_DEFAULTS, dec: 2 }, choiceDedupe: true }, hand);
+    expect(capped.bot.macroStats.decisionCut).toBe(1);
+    expect(capped.bot.macroStats.finishedFast).toBeGreaterThan(0);
+    expect(Math.max(...capped.finished.map((n) => actionsOf(n)))).toBeLessThanOrEqual(2);
+    expect(search({ macro: { ...MACRO_DEFAULTS }, choiceDedupe: true }, hand).bot.macroStats.decisionCut).toBe(0);
+    // Without reaching it inside an action too: two one-decision actions, and the third isn't started.
+    const between = search({ macro: { ...MACRO_DEFAULTS, dec: 2 }, choiceDedupe: true }, ["FILLER", "FILLER"]);
+    expect(between.bot.macroStats.decisionCut).toBe(1);
+    expect(between.bot.macroStats.finishedFast).toBe(0);
+    // Inside an action only: one action allowed, so no step starts from the plan it leaves.
+    const inside = search({ macro: { ...MACRO_DEFAULTS, dec: 2, actions: 1 }, choiceDedupe: true }, hand);
+    expect(inside.bot.macroStats.decisionCut).toBe(1);
+    expect(inside.bot.macroStats.finishedFast).toBeGreaterThan(0);
   });
 
   it("two orders of DOUBLE's pending Fanfares: the better one kept (CR 10.5.2.2), one plan of that action", () => {
@@ -241,7 +290,7 @@ describe("macro steps: the inner searches by actions (macroInner)", () => {
     const { bot, flags, finished } = search(ON, HAND, 300, 4, true);
     expect(finished.length).toBeGreaterThan(0);
     expect(new Set(flags)).toEqual(new Set([true]));
-    expect(bot.macroStats).toEqual({ searches: 0, layers: 0, actions: 0, subExpansions: 0, finishedFast: 0, actionCut: 0, budgetOut: 0, decisionCut: 0 });
+    expect(bot.macroStats).toEqual({ searches: 0, layers: 0, actions: 0, subExpansions: 0, finishedFast: 0, actionCut: 0, budgetOut: 0, decisionCut: 0, dropped: 0 });
     expect(bot.macroInnerStats.searches).toBe(1);
     expect(bot.macroInnerStats.subExpansions).toBeGreaterThan(0);
     expect(bot.innerStats.searches).toBe(1);
@@ -258,6 +307,76 @@ describe("macro steps: the inner searches by actions (macroInner)", () => {
     expect(root.bot.macroStats.searches).toBe(1);
   });
 
+  it("the option stays out of a root search by decisions: no search by actions, the same plans", () => {
+    const root = search(ON, HAND, 300, 4);
+    expect([root.bot.macroStats.searches, root.bot.macroInnerStats.searches, root.bot.innerStats.searches]).toEqual([0, 0, 0]);
+    const plain = search({ choiceDedupe: true }, HAND, 300, 4);
+    expect(root.finished.map((n) => n.key)).toEqual(plain.finished.map((n) => n.key));
+  });
+
+  it("reads its own parameters when the root's are set too, and the root its own", () => {
+    const longest = (macro: number, macroInner: number, inner: boolean) => {
+      const { finished } = search({ choiceDedupe: true, macro: { ...MACRO_DEFAULTS, actions: macro }, macroInner: { ...MACRO_DEFAULTS, actions: macroInner } }, HAND, 300, 4, inner);
+      return Math.max(...finished.map((n) => actionsOf(n)));
+    };
+    expect(longest(1, 3, true)).toBe(3);
+    expect(longest(3, 1, true)).toBe(1);
+    expect(longest(1, 3, false)).toBe(1);
+    expect(longest(3, 1, false)).toBe(3);
+  });
+
+  it("is as wide as it is told, not as wide as the root", () => {
+    const narrow = search(ON, HAND, 300, 1, true);
+    const wide = search(ON, HAND, 300, 4, true);
+    expect(narrow.bot.innerStats.expansions).toBeLessThan(wide.bot.innerStats.expansions);
+  });
+
+  it("ranks the plans by the score it is given (the opponent's model in their turn), not by the bot's own evaluation", () => {
+    let scored = 0;
+    const worstFirst: Evaluator = (view, who) => {
+      scored += 1;
+      return -evaluate(view, who);
+    };
+    const own = search(ON, HAND, 300, 4, true);
+    const flipped = search(ON, HAND, 300, 4, true, { score: worstFirst });
+    expect(scored).toBeGreaterThan(0);
+    expect(flipped.finished[0]!.key).not.toBe(own.finished[0]!.key);
+  });
+
+  it("the fast answers' steps spend the budget: a long action ends the search, with less than the budget spent on the rest", () => {
+    const budget = 40;
+    const { bot, finished, opp } = search(ON, ["LONG", "LONG", "FILLER"], budget, 4, true, { leaderDefense: 1000 });
+    expect(bot.macroInnerStats.finishedFast).toBe(1);
+    expect(finished.some((n) => opp(n) === 1000 - 30)).toBe(true);
+    expect(bot.innerStats.capped).toBe(1);
+    expect(bot.macroInnerStats.actions + bot.macroInnerStats.subExpansions).toBeLessThan(budget);
+    expect(bot.innerStats.expansions).toBeLessThanOrEqual(budget + MACRO_DEFAULTS.dec + 1);
+  });
+
+  it("an action can leave no completion, which is counted: a choice changing nothing, then the same decision, or too long for the fast answers", () => {
+    // The position comes back after either answer, which a search takes for a cycle (by decisions too: no plan plays it there).
+    const blank = search(ON, ["BLANK"], 300, 4, true, { field: [] });
+    expect(blank.bot.macroInnerStats.dropped).toBe(1);
+    expect(blank.finished.some((n) => blank.steps(n)[0] === "play BLANK")).toBe(false);
+    const byDecisions = search({ choiceDedupe: true }, ["BLANK"], 300, 4, true, { field: [] });
+    expect(byDecisions.finished.some((n) => byDecisions.steps(n)[0] === "play BLANK")).toBe(false);
+    // The fast answers stop after dec + 1 steps, 6 of the action's 30 decisions.
+    const small = { macroInner: { ...MACRO_DEFAULTS, dec: 5 }, choiceDedupe: true } satisfies PlannerBotOptions;
+    const long = search(small, ["LONG"], 300, 4, true, { leaderDefense: 1000, field: [] });
+    expect(long.bot.macroInnerStats.dropped).toBe(1);
+    expect(long.bot.macroInnerStats.finishedFast).toBe(0);
+    expect(long.finished.some((n) => long.steps(n)[0] === "play LONG")).toBe(false);
+    // A card that can complete leaves none dropped.
+    expect(search(ON, HAND, 300, 4, true).bot.macroInnerStats.dropped).toBe(0);
+  });
+
+  it("the decision cap of its own is counted apart from the root's", () => {
+    const capped = search({ macroInner: { ...MACRO_DEFAULTS, dec: 2 }, choiceDedupe: true }, HAND, 300, 4, true);
+    expect(capped.bot.macroInnerStats.decisionCut).toBe(1);
+    expect(capped.bot.macroStats.decisionCut).toBe(0);
+    expect(search(ON, HAND, 300, 4, true).bot.macroInnerStats.decisionCut).toBe(0);
+  });
+
   it("an allowance spent before the action ends is finished by the fast answers, told it is inner: no conditional charge there", () => {
     const small = { macroInner: { ...MACRO_DEFAULTS, share: 0.01, sub: 1 }, maxBranches: 2, choiceDedupe: true, conditional: { scope: "declared" } } satisfies PlannerBotOptions;
     const { bot, flags, finished, opp } = search(small, HAND, 40, 6, true);
@@ -272,10 +391,13 @@ describe("macro steps: the inner searches by actions (macroInner)", () => {
   });
 
   it("the budget of one still gives a plan where the turn can end, and an action started is finished", () => {
-    const { bot, finished } = search(ON, HAND, 1, 4, true);
+    const { bot, finished, opp } = search(ON, ["PAYER", "CARD_A", "CARD_B", "CARD_C"], 1, 4, true, { field: [] });
     expect(finished.length).toBeGreaterThan(0);
     expect(bot.innerStats.capped).toBe(1);
     expect(bot.innerStats.expansions).toBeLessThanOrEqual(1 + MACRO_DEFAULTS.dec + 1);
+    // The one answer the budget gives started PAYER: its three payments and its effect are there, by the fast answers.
+    expect(bot.macroInnerStats.finishedFast).toBe(1);
+    expect(finished.some((n) => actionsOf(n) === 1 && opp(n) === 14)).toBe(true);
   });
 
   it("the other side's answers there are the later turns' cheaper model: 4 candidates, at quick windows with something to play", () => {
@@ -402,6 +524,7 @@ describe("macro steps: the inner searches by actions (macroInner)", () => {
   // A fair bot's inner searches read its sample (the world they start from), as its root's does, never the real game.
   it("a fair bot decides on what its player can see only: other hidden cards, same decision", () => {
     let compared = 0;
+    let innerSearches = 0;
     for (let i = 0; i < 3 && compared < 8; i++) {
       const seed = `macro-in-fair-${i}`;
       const g = engine.newGame({ seed, players: [randomDeck(pool, `${seed}/0`), randomDeck(pool, `${seed}/1`)], config: { deckRestrictions: false } });
@@ -409,14 +532,18 @@ describe("macro steps: the inner searches by actions (macroInner)", () => {
       for (let step = 0; g.decision && step < 400 && compared < 8; step++) {
         const d = g.decision;
         if (d.type === "mainPhase" && g.state.turn >= 3 && step % 3 === 0) {
-          const answer = new PlannerBot(engine, { seed: "fair", ...SMALL }).decide(g);
+          const bot = new PlannerBot(engine, { seed: "fair", ...SMALL });
+          const answer = bot.decide(g);
           expect(new PlannerBot(engine, { seed: "fair", ...SMALL }).decide(g.determinized(d.player, `other hidden cards ${step}`)), `game ${i} step ${step}`).toEqual(answer);
+          innerSearches += bot.macroInnerStats.searches;
           compared += 1;
         }
         g.act(random(d, g));
       }
     }
     expect(compared).toBe(8);
+    // These decisions did reach the inner searches: one plan to compare would run none, and the comparison would prove nothing.
+    expect(innerSearches).toBeGreaterThan(0);
   }, 600_000);
 });
 

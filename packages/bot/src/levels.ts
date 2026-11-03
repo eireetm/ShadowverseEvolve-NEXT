@@ -185,9 +185,10 @@ export const MEDIUM_V2_MACRO: PlannerBotOptions = { ...MEDIUM_V2, ...MACRO_STEPS
 
 /**
  * The two-turn search's inner searches by actions too (planner.ts macroInner): the opponent's turn and our next one get an
- * action that pays over many decisions, which the searches by decisions can't finish, and no limit of decisions. On the
- * budget and width of the searches they replace, written out with the parameters of the root's (MACRO_STEPS), so that a
- * later change of the defaults doesn't change a preset. Not levels of the interface yet (levelPreset names neither).
+ * action that pays over many decisions, which the searches by decisions can't finish, with a plan at most 12 actions and 40
+ * decisions long in place of their 10 decisions. On the budget and width of the searches they replace, written out with the
+ * parameters of the root's (MACRO_STEPS), so that a later change of the defaults doesn't change a preset. Not levels of the
+ * interface yet (levelPreset names neither).
  */
 const INNER_STEPS = { macroInner: { actions: 12, keep: 2, sub: 4, dec: 40, share: 0.25 }, innerSimulations: 300, innerBeam: 4 } satisfies PlannerBotOptions;
 

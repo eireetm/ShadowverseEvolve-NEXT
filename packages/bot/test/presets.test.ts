@@ -116,6 +116,7 @@ describe("presets", () => {
     const engine = createEngine({ cards: ALL_CARDS, scripts: ALL_SCRIPTS });
     const pool = deckPool(engine);
     const compared = { "medium-next-macro": 0, "medium-v2-macro": 0, "medium-v2-macro-in": 0 };
+    let innerByActions = 0;
     for (const [preset, games, most] of [["medium-next-macro", 3, 6], ["medium-v2-macro", 1, 2], ["medium-v2-macro-in", 1, 2]] as const) {
       for (let i = 0; i < games; i++) {
         const seed = `preset-fair-${preset}-${i}`;
@@ -125,7 +126,9 @@ describe("presets", () => {
           const d = g.decision;
           if (d.type === "mainPhase" && g.state.turn >= 3 && step % 4 === 0) {
             const other = g.determinized(d.player, `other hidden cards ${step}`);
-            expect(createPresetBot(engine, preset, "fair").decide(other), `${preset} step ${step}`).toEqual(createPresetBot(engine, preset, "fair").decide(g));
+            const bot = createPresetBot(engine, preset, "fair");
+            expect(createPresetBot(engine, preset, "fair").decide(other), `${preset} step ${step}`).toEqual(bot.decide(g));
+            innerByActions += bot.macroInnerStats.searches;
             compared[preset] += 1;
           }
           g.act(random(d, g));
@@ -133,6 +136,8 @@ describe("presets", () => {
       }
       expect(compared[preset], preset).toBeGreaterThanOrEqual(most);
     }
+    // medium-v2-macro-in's decisions did reach its inner searches: with one plan to compare they run none, and proving nothing.
+    expect(innerByActions).toBeGreaterThan(0);
   }, 600_000);
 
   it("give each interface level its preset by effort: by actions on a computer, the older ones on a slower device", () => {
