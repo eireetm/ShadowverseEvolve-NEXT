@@ -7,6 +7,7 @@ export { PlannerBot, type PlannerBotOptions, type ConditionalOptions } from "./p
 export {
   createBot,
   createPresetBot,
+  levelPreset,
   fixOptions,
   fixIdentities,
   presetIdentities,
@@ -21,12 +22,14 @@ export {
   MEDIUM_V2,
   HARD_NEXT_MACRO,
   MEDIUM_NEXT_MACRO,
+  MEDIUM_V2_MACRO,
   FIX_DEFAULTS,
   LEADER_CURVE,
   type Bot,
   type BotEvaluation,
   type BotLevel,
   type BotPreset,
+  type InterfaceLevel,
   type FixParams,
 } from "./levels";
 export { curveScore, redrawByExpectation, redrawKnowingDeck, type CurveCard } from "./mulligan";

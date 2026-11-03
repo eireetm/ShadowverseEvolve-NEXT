@@ -41,6 +41,7 @@ describe("the online fingerprint", () => {
     "gui/src/engine/view-utils.ts": "export const FOUND = 1;\n",
     "gui/src/engine/game-host.ts": "export function pace(): number {\n  return 1;\n}\n",
     "gui/src/engine/client.ts": "export const PAGE = 1;\n",
+    "bot/src/levels.ts": 'export const PRESET = "one";\n',
   };
   const card = { id: "X-001", name: "Knight", names: { en: "Knight", cn: "骑士", ja: "ナイト" }, cost: 1, text: { en: "Ward.", cn: "【守护】", ja: "【守護】" }, traits: ["兵士"] };
   const write = (changes: Record<string, string> = {}, data: Record<string, unknown> = card) => {
@@ -70,6 +71,8 @@ describe("the online fingerprint", () => {
     expect(write({ "core/src/data/fixes.ts": 'export const FIX = "漢字";\n' })).toBe(base);
     expect(write({ "core/src/testing/driver.ts": "export const DRIVE = 2;\n" })).toBe(base);
     expect(write({ "gui/src/engine/client.ts": "export const PAGE = 2;\n" })).toBe(base);
+    // No bot plays an online game: which preset a level plays is no reason for online players to update.
+    expect(write({ "bot/src/levels.ts": 'export const PRESET = "two";\n' })).toBe(base);
     // What a player is shown.
     expect(write({ "core/src/view/player-view.ts": "export const SHOWN = 2;\n" })).toBe(base);
     expect(write({ "gui/src/engine/view-utils.ts": "export const FOUND = 2;\n" })).toBe(base);

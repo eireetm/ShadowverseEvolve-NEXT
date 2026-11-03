@@ -16,7 +16,8 @@ const describe = (err: unknown): string => (err instanceof Error ? `${err.messag
 
 try {
   const engine = createEngine({ cards: ALL_CARDS, scripts: ALL_SCRIPTS });
-  // A phone is slower than a computer: the planning bots search less there, so they answer in about the same time.
+  // A phone is slower than a computer: the planning bots search less there, so they answer in about the same time. The effort
+  // also chooses their presets (@sve/bot levelPreset): below 1, the ones before those searching by actions.
   const host = new GameHost(engine, send, timerScheduler, { botEffort: import.meta.env.MODE === "android" || import.meta.env.MODE === "ios" ? 0.5 : 1 });
   scope.onmessage = (event) => {
     try {

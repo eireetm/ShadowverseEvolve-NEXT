@@ -1,7 +1,7 @@
 // The game host: runs one game at a time in the engine worker — the core session, the bots, the list of inputs (for undo
 // and replays), and what the GUI is shown: views, the pending decision and the log. No worker or DOM API here, so tests
 // run it in Node. Nothing in it decides rules: legal answers come from the core's decisions.
-import { createBot, createPresetBot, type BotPreset } from "@sve/bot";
+import { createBot, createPresetBot, levelPreset, type BotPreset } from "@sve/bot";
 import {
   ALL_AUTO_RESOLVABLE,
   defaultAnswer,
@@ -82,14 +82,6 @@ interface Bot {
   decide(game: GameSession): Answer;
 }
 
-/**
- * The preset each planning level plays (@sve/bot createPresetBot; since 2026-10-26, when they beat the levels they replace
- * in paired games): Bot-Medium the one-turn Medium with the expert fixes (medium-next), Bot-Medium v2 the two-turn fair bot
- * with a wider search and every fix (medium-v2), Bot-Hard the two-turn Hard with the fixes and a wider root search
- * (hard-next). createBot's own "medium" and "hard" stay as they were: other tools compare against them.
- */
-export const CONTROLLER_PRESETS = { medium: "medium-next", "medium-v2": "medium-v2", hard: "hard-next" } as const satisfies Partial<Record<SeatController, BotPreset>>;
-
 /** What a seat's bot is made of (makeBot): Bot-Easy, a preset at an effort, the random bot, or none (a person). */
 export type BotRecipe =
   | { kind: "easy"; seed: string }
@@ -99,13 +91,15 @@ export type BotRecipe =
 
 /**
  * The bot for a seat's controller, seeded from the game and the seat (the same game and inputs give the same bot answers;
- * a level's seed is `${seed}:${controller}:${seat}`, as before the presets). `effort` scales how much the presets search
- * (GameHostOptions.botEffort: below 1 the two-turn ones look one turn ahead); Bot-Easy has no search to scale.
+ * a level's seed is `${seed}:${controller}:${seat}`, as before the presets). The planning levels play @sve/bot's presets,
+ * which levelPreset chooses by `effort`; createBot's own "medium" and "hard" stay as they were (other tools compare against
+ * them). `effort` also scales how much the presets search (GameHostOptions.botEffort: below 1 the two-turn ones look one
+ * turn ahead); Bot-Easy has no search to scale.
  */
 export function botRecipe(controller: SeatController, seed: string, seat: PlayerId, effort: number): BotRecipe {
   if (controller === "greedy") return { kind: "easy", seed: `${seed}:greedy:${seat}` };
   if (controller === "medium" || controller === "medium-v2" || controller === "hard") {
-    return { kind: "preset", preset: CONTROLLER_PRESETS[controller], seed: `${seed}:${controller}:${seat}`, effort };
+    return { kind: "preset", preset: levelPreset(controller, effort), seed: `${seed}:${controller}:${seat}`, effort };
   }
   if (controller === "random") return { kind: "random", seed: `${seed}:random:${seat}` };
   return null;
@@ -297,7 +291,7 @@ interface QuickPlay {
 const CARD_KEYS = new Set(["card", "newCard", "target", "attacker", "defender", "source", "follower", "evolveCard", "token", "cards", "id"]);
 
 export interface GameHostOptions {
-  /** How much the planning bots search (1: fully). A phone thinks less, so they answer in about the same time. */
+  /** How much the planning bots search (1: fully), and which presets they play (@sve/bot levelPreset). A phone thinks less, so they answer in about the same time. */
   botEffort?: number;
 }
 

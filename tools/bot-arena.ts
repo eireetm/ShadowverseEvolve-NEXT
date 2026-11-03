@@ -1,8 +1,9 @@
 /**
  * Bots against each other: npm run bot:arena -- [games] [a] [b] [options]
  *
- * A bot is a level (easy | medium | hard | medium-beta), a preset (medium-next | medium-v2 | hard-next: the GUI's Bot-Medium,
- * Bot-Medium v2 and Bot-Hard, packages/bot levels.ts createPresetBot), one of sve-server's AIs imitated (sve-fool, sve-good,
+ * A bot is a level (easy | medium | hard | medium-beta), a preset (medium-next-macro | medium-v2-macro | hard-next-macro: the
+ * GUI's Bot-Medium, Bot-Medium v2 and Bot-Hard on a computer; medium-next | medium-v2 | hard-next: the presets a phone plays,
+ * there at a lower effort, here at effort 1; packages/bot levels.ts createPresetBot), one of sve-server's AIs imitated (sve-fool, sve-good,
  * sve-planner; tools/sve-server-ais), or easy / medium / hard with its evaluation swapped, to check the evaluation interface:
  * "medium:identity" plays with the hand-written evaluation passed in from outside (exactly as medium does), and
  * "medium:negated" scores its own positions the other way round (it plays to lose). "medium2" is Medium searching two turns
@@ -49,6 +50,7 @@ import {
   MEDIUM_NEXT_MACRO,
   MEDIUM_OPTIONS,
   MEDIUM_V2,
+  MEDIUM_V2_MACRO,
   PlannerBot,
   createBot,
   createPresetBot,
@@ -145,18 +147,19 @@ const PLANNER_OPTIONS: Partial<Record<string, PlannerBotOptions>> = {
   "medium-v2": MEDIUM_V2,
   "hard-next-macro": HARD_NEXT_MACRO,
   "medium-next-macro": MEDIUM_NEXT_MACRO,
+  "medium-v2-macro": MEDIUM_V2_MACRO,
   medium2: MEDIUM2,
 } satisfies Record<Exclude<BotLevel, "easy"> | BotPreset | "medium2", PlannerBotOptions>;
 /**
  * The GUI's controller for a replay's seat (only shown while watching): a bot that cheats (its options' `cheat`: Hard and
  * the presets built on it) as Bot-Hard, Medium v2 as itself, the greedy bots as Bot-Easy, the rest as Bot-Medium. Only
- * a label: createBot's levels and the presets the GUI doesn't offer are labelled so too, though the GUI's levels play other
- * presets (the replay gives the recorded answers, whoever gave them).
+ * a label: createBot's levels, medium-beta and medium2 are labelled so too, though the GUI's levels play the presets (the
+ * replay gives the recorded answers, whoever gave them).
  */
 const controllerOf = (spec: string) => {
   const level = SPEC.exec(spec)![1]!;
   if (level === "easy" || level.startsWith("sve-")) return "greedy";
-  if (level === "medium-v2") return level;
+  if (level === "medium-v2" || level === "medium-v2-macro") return "medium-v2";
   return PLANNER_OPTIONS[level]?.cheat ? "hard" : "medium";
 };
 

@@ -16,13 +16,15 @@ import {
   MEDIUM_NEXT_MACRO,
   MEDIUM_OPTIONS,
   MEDIUM_V2,
+  MEDIUM_V2_MACRO,
+  levelPreset,
   presetIdentities,
   presetSearchIdentity,
   type BotPreset,
   type PlannerBotOptions,
 } from "../src";
 import { ALL_CARDS, ALL_SCRIPTS } from "../../core/src/sets";
-import { drive, scenario, testFollower } from "../../core/src/testing";
+import { deckPool, drive, randomAgent, randomDeck, scenario, testFollower } from "../../core/src/testing";
 
 // The presets built on the expert fixes (levels.ts): what each is, what it records, and the levels left as they are.
 
@@ -45,9 +47,9 @@ describe("presets", () => {
     expect(fixOptions(FIX_DEFAULTS).conditional?.gates).toBeTypeOf("function");
   });
 
-  // Two candidates, not in the GUI: Hard's and Medium's presets with their own turn searched by actions (macro-steps.ts) and
-  // the choices told apart, everything else their bases'. The two search options are recorded on their own.
-  it("add two candidates: hard-next and medium-next with exactly the root search by actions and the choices told apart", () => {
+  // The presets a computer's levels play: the older ones with their own turn searched by actions (macro-steps.ts) and the
+  // choices told apart, everything else their bases'. The two search options are recorded on their own.
+  it("add the three searching by actions: their bases with exactly the root search by actions and the choices told apart", () => {
     const withoutSearch = (o: PlannerBotOptions) => {
       const { choiceDedupe: _d, macro: _m, ...rest } = o;
       return rest;
@@ -55,6 +57,7 @@ describe("presets", () => {
     const candidates = [
       [HARD_NEXT_MACRO, HARD_NEXT],
       [MEDIUM_NEXT_MACRO, MEDIUM_NEXT],
+      [MEDIUM_V2_MACRO, MEDIUM_V2],
     ] as const;
     for (const [candidate, base] of candidates) {
       // toStrictEqual compares functions by reference: the same evaluations, the same reader of the charge's table.
@@ -68,16 +71,48 @@ describe("presets", () => {
     }
     expect(HARD_NEXT_MACRO.macro).not.toBe(MEDIUM_NEXT_MACRO.macro);
     expect(HARD_NEXT_MACRO.cheat).toBe(true);
+    expect(MEDIUM_V2_MACRO.macro).not.toBe(HARD_NEXT_MACRO.macro);
     expect(MEDIUM_NEXT_MACRO.cheat).toBeUndefined();
-    expect(BOT_PRESETS).toEqual(["medium-next", "hard-next", "medium-v2", "hard-next-macro", "medium-next-macro"]);
+    expect(MEDIUM_V2_MACRO.cheat).toBeUndefined();
+    expect(BOT_PRESETS).toEqual(["medium-next", "hard-next", "medium-v2", "hard-next-macro", "medium-next-macro", "medium-v2-macro"]);
     const search = "dedupe=1+macro=12:keep=2,sub=4,dec=40,share=0.25";
-    expect(BOT_PRESETS.map((p) => presetSearchIdentity(p))).toEqual([null, null, null, search, search]);
+    expect(BOT_PRESETS.map((p) => presetSearchIdentity(p))).toEqual([null, null, null, search, search, search]);
+  });
+
+  // No verdict covers a preset on a slower device: a level changes there on its own measurement.
+  // The levels called fair: searching by actions reads the samples (world) as the other searches do, never the real game.
+  it("searching by actions, the fair presets decide on what their player can see only: other hidden cards, same decision", () => {
+    const engine = createEngine({ cards: ALL_CARDS, scripts: ALL_SCRIPTS });
+    const pool = deckPool(engine);
+    const compared = { "medium-next-macro": 0, "medium-v2-macro": 0 };
+    for (const [preset, games, most] of [["medium-next-macro", 3, 6], ["medium-v2-macro", 1, 2]] as const) {
+      for (let i = 0; i < games; i++) {
+        const seed = `preset-fair-${preset}-${i}`;
+        const g = engine.newGame({ seed, players: [randomDeck(pool, `${seed}/0`), randomDeck(pool, `${seed}/1`)], config: { deckRestrictions: false } });
+        const random = randomAgent(`pf${i}`);
+        for (let step = 0; g.decision && step < 300 && compared[preset] < most * (i + 1); step++) {
+          const d = g.decision;
+          if (d.type === "mainPhase" && g.state.turn >= 3 && step % 4 === 0) {
+            const other = g.determinized(d.player, `other hidden cards ${step}`);
+            expect(createPresetBot(engine, preset, "fair").decide(other), `${preset} step ${step}`).toEqual(createPresetBot(engine, preset, "fair").decide(g));
+            compared[preset] += 1;
+          }
+          g.act(random(d, g));
+        }
+      }
+      expect(compared[preset], preset).toBeGreaterThanOrEqual(most);
+    }
+  }, 300_000);
+
+  it("give each interface level its preset by effort: by actions on a computer, the older ones on a slower device", () => {
+    expect((["medium", "medium-v2", "hard"] as const).map((level) => levelPreset(level, 1))).toEqual(["medium-next-macro", "medium-v2-macro", "hard-next-macro"]);
+    for (const effort of [0.5, 0.99]) expect((["medium", "medium-v2", "hard"] as const).map((level) => levelPreset(level, effort))).toEqual(["medium-next", "medium-v2", "hard-next"]);
   });
 
   // presetSearchIdentity records two search options (choiceDedupe, macro): a preset setting another one would be recorded as
   // its base is. Every preset leaves the others off; a preset that needs one adds it to presetSearchIdentity first.
   it("set no search option presetSearchIdentity doesn't record", () => {
-    const options: Record<BotPreset, PlannerBotOptions> = { "medium-next": MEDIUM_NEXT, "hard-next": HARD_NEXT, "medium-v2": MEDIUM_V2, "hard-next-macro": HARD_NEXT_MACRO, "medium-next-macro": MEDIUM_NEXT_MACRO };
+    const options: Record<BotPreset, PlannerBotOptions> = { "medium-next": MEDIUM_NEXT, "hard-next": HARD_NEXT, "medium-v2": MEDIUM_V2, "hard-next-macro": HARD_NEXT_MACRO, "medium-next-macro": MEDIUM_NEXT_MACRO, "medium-v2-macro": MEDIUM_V2_MACRO };
     expect(Object.keys(options).sort()).toEqual([...BOT_PRESETS].sort());
     const unrecorded = ["commonRandom", "lineSlots", "tieKeepHand", "drawFirst", "turnOrder", "replyLethalOpp", "replyLethalKey", "closeSamples", "explore"] as const;
     for (const preset of BOT_PRESETS) for (const key of unrecorded) expect(options[preset][key] || undefined, `${preset}.${key}`).toBeUndefined();
@@ -99,9 +134,10 @@ describe("presets", () => {
     expect(presetIdentities("medium-v2")).toEqual(twoTurns);
     expect(presetIdentities("hard-next")).toEqual(twoTurns);
     expect(presetIdentities("medium-next")).toEqual(oneTurn);
-    // The candidates record their bases' (their own search options apart: presetSearchIdentity).
+    // The presets searching by actions record their bases' (their own search options apart: presetSearchIdentity).
     expect(presetIdentities("hard-next-macro")).toEqual(twoTurns);
     expect(presetIdentities("medium-next-macro")).toEqual(oneTurn);
+    expect(presetIdentities("medium-v2-macro")).toEqual(twoTurns);
     // On a slower device: one turn ahead, the mulligan's samples scaled (at least 2).
     const half = { ...oneTurn, mull: "mull=sim:k=4,t=3,margin=0,opp=greedy,cand=32" };
     for (const preset of BOT_PRESETS) expect(presetIdentities(preset, 0.5), preset).toEqual(half);
@@ -168,14 +204,17 @@ describe("presets", () => {
     expect(fieldAfter("medium-next", 1)).toEqual(["PIECE"]);
   }, 60_000);
 
-  // The candidates build and play as their bases look ahead; each searched its own turn by actions, on a slower device too
-  // (presetAt keeps the two search options there, and the counts are scaled as the base's).
-  it("build the candidates, which search their own turn by actions at every effort", () => {
+  // The presets searching by actions build and play as their bases look ahead; each searched its own turn by actions, on a
+  // slower device too, should a level play one there (presetAt keeps the two search options, and the counts are scaled as
+  // the base's).
+  it("build the presets searching by actions, which do so at every effort", () => {
     const cases = [
       ["hard-next-macro", 1, []],
       ["medium-next-macro", 1, ["PIECE"]],
+      ["medium-v2-macro", 1, []],
       ["hard-next-macro", 0.5, ["PIECE"]],
       ["medium-next-macro", 0.5, ["PIECE"]],
+      ["medium-v2-macro", 0.5, ["PIECE"]],
     ] as const;
     for (const [preset, effort, field] of cases) {
       const played = playTurn(preset, effort);

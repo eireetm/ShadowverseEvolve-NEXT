@@ -26,7 +26,7 @@ export type { ClockView } from "./turn-clock";
  * their answers come as "remoteInput"). The bots: "greedy" is Bot-Easy (the name it had
  * before the levels, kept for saved settings and replays), "medium" plans its turn fairly, "medium-v2" (Bot-Medium v2)
  * plans fairly two turns ahead, "hard" plans reading every hidden card, "random" answers at random (testing). The planning
- * levels play @sve/bot's presets (game-host.ts CONTROLLER_PRESETS): a saved "medium" or "hard" plays its level's current
+ * levels play @sve/bot's presets (@sve/bot levelPreset): a saved "medium" or "hard" plays its level's current
  * preset, whatever played it when the file was saved.
  * Which bots read hidden cards is said in the README only, not in the GUI.
  */

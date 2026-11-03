@@ -174,11 +174,14 @@ export const MEDIUM_V2: PlannerBotOptions = /* @__PURE__ */ withFixes(MEDIUM_OPT
  */
 const MACRO_STEPS = { choiceDedupe: true, macro: { actions: 12, keep: 2, sub: 4, dec: 40, share: 0.25 } } satisfies PlannerBotOptions;
 
-/** Hard with the fixes and the wider root search (HARD_NEXT), its own turn searched by actions: a candidate, not in the GUI. */
+/** Hard with the fixes and the wider root search (HARD_NEXT), its own turn searched by actions. */
 export const HARD_NEXT_MACRO: PlannerBotOptions = { ...HARD_NEXT, ...MACRO_STEPS, macro: { ...MACRO_STEPS.macro } };
 
-/** Medium with the fixes (MEDIUM_NEXT, one turn), its turn searched by actions: a candidate, not in the GUI. */
+/** Medium with the fixes (MEDIUM_NEXT, one turn), its turn searched by actions. */
 export const MEDIUM_NEXT_MACRO: PlannerBotOptions = { ...MEDIUM_NEXT, ...MACRO_STEPS, macro: { ...MACRO_STEPS.macro } };
+
+/** The two-turn fair Medium with every fix (MEDIUM_V2), its own turn searched by actions. */
+export const MEDIUM_V2_MACRO: PlannerBotOptions = { ...MEDIUM_V2, ...MACRO_STEPS, macro: { ...MACRO_STEPS.macro } };
 
 /** A preset: a level's options, some of them set otherwise, and the fixes for its lookahead. */
 function withFixes(level: PlannerBotOptions, changes: PlannerBotOptions): PlannerBotOptions {
@@ -192,15 +195,33 @@ function lookaheadOf(options: PlannerBotOptions, effort: number): 1 | 2 {
 }
 
 /** The presets by name (not levels of createBot yet). */
-export type BotPreset = "medium-next" | "hard-next" | "medium-v2" | "hard-next-macro" | "medium-next-macro";
-export const BOT_PRESETS: readonly BotPreset[] = ["medium-next", "hard-next", "medium-v2", "hard-next-macro", "medium-next-macro"];
+export type BotPreset = "medium-next" | "hard-next" | "medium-v2" | "hard-next-macro" | "medium-next-macro" | "medium-v2-macro";
+export const BOT_PRESETS: readonly BotPreset[] = ["medium-next", "hard-next", "medium-v2", "hard-next-macro", "medium-next-macro", "medium-v2-macro"];
 const PRESET_OPTIONS: Record<BotPreset, PlannerBotOptions> = {
   "medium-next": MEDIUM_NEXT,
   "hard-next": HARD_NEXT,
   "medium-v2": MEDIUM_V2,
   "hard-next-macro": HARD_NEXT_MACRO,
   "medium-next-macro": MEDIUM_NEXT_MACRO,
+  "medium-v2-macro": MEDIUM_V2_MACRO,
 };
+
+/** The interface's planning levels (Bot-Easy has no preset). */
+export type InterfaceLevel = "medium" | "medium-v2" | "hard";
+
+const COMPUTER_PRESETS: Record<InterfaceLevel, BotPreset> = { medium: "medium-next-macro", "medium-v2": "medium-v2-macro", hard: "hard-next-macro" };
+const SLOWER_DEVICE_PRESETS: Record<InterfaceLevel, BotPreset> = { medium: "medium-next", "medium-v2": "medium-v2", hard: "hard-next" };
+
+/**
+ * The preset an interface level plays at an effort. A computer (effort 1) plays the presets searching by actions, each of
+ * which beat the one it replaced in paired games at that effort. A slower device (effort below 1) keeps those it replaced:
+ * there the searches are scaled down and the two-turn presets look one turn ahead, which those games say nothing about; a
+ * preset changes there after its own measurement. Kept here and not in the interface's engine code: no bot plays an online
+ * game, so a level changing its preset is no reason for online players to update.
+ */
+export function levelPreset(level: InterfaceLevel, effort: number): BotPreset {
+  return (effort >= 1 ? COMPUTER_PRESETS : SLOWER_DEVICE_PRESETS)[level];
+}
 
 /**
  * A preset's options at an effort, before scaledPlanner scales its counts. At 1 the preset as it is. Below 1 (a slower
