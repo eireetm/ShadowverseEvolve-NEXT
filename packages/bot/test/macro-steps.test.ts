@@ -328,6 +328,33 @@ describe("macro steps: the inner searches by actions (macroInner)", () => {
     expect(on.macroStats).toEqual(off.macroStats);
   }, 120_000);
 
+  it("it moves the two-turn comparison: the opponent's three-decision payment, cut half-paid by the beam, is played out by actions", () => {
+    /** The values plan() compares the same root plans by (cheating: the opponent's hand is the real one, PAYER in it). */
+    const compared = (options: PlannerBotOptions) => {
+      const t = drive(cards, {
+        me: { hand: ["FILLER", "HITTER"], field: ["HITTER"], deck: many(10, "FILLER"), playPoints: 3, maxPlayPoints: 3 },
+        opp: { hand: ["PAYER", "CARD_A", "CARD_B", "CARD_C", "FILLER"], deck: many(10, "FILLER"), maxPlayPoints: 3, leaderDefense: 20 },
+      });
+      const bot = new PlannerBot(cards, { ...MEDIUM_OPTIONS, cheat: true, lethalSearch: 0, replyLethal: 0, lookahead: 2, maxDepth: 2, innerSimulations: 100, seed: "m", choiceDedupe: true, macro: { ...MACRO_DEFAULTS }, ...options });
+      const b = bot as unknown as { pick(candidates: unknown[], values: number[], turn: number): unknown };
+      const seen: number[][] = [];
+      const pick = b.pick;
+      b.pick = function (this: unknown, candidates: unknown[], values: number[], turn: number) {
+        seen.push([...values]);
+        return pick.call(this, candidates, values, turn);
+      };
+      bot.decide(t.game);
+      expect([bot.stats.fallbacks, bot.stats.simulationFailures]).toEqual([0, 0]);
+      return seen;
+    };
+    const on = compared({ macroInner: { ...MACRO_DEFAULTS } });
+    const off = compared({});
+    expect(on.length).toBe(1);
+    expect(on[0]!.length).toBeGreaterThan(1);
+    expect(on[0]!.length).toBe(off[0]!.length);
+    expect(on[0]).not.toEqual(off[0]);
+  }, 120_000);
+
   it("looking one turn ahead no inner search runs: the option changes nothing", () => {
     const answers = (options: PlannerBotOptions) => {
       const t = drive(cards, { me: { hand: ["PAYER", "CARD_A", "CARD_B", "CARD_C"], field: ["HITTER"], deck: many(10, "FILLER"), playPoints: 3, maxPlayPoints: 3 }, opp: { deck: many(10, "FILLER"), leaderDefense: 20 } });
