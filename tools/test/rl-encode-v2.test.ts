@@ -77,9 +77,9 @@ describe("rl:encode --encoder 2", () => {
     const pile = readNpy(readFileSync(join(a, "pile-0000.npy")));
     expect(off.data).toBeInstanceOf(Int32Array);
     expect(off.shape).toEqual([glob.shape[0]! + 1, 2]);
-    expect(glob.shape[1]).toBe(159);
+    expect(glob.shape[1]).toBe(163);
     expect([off.data[off.data.length - 2], off.data[off.data.length - 1]]).toEqual([card.shape[0], pile.shape[0]]);
     const meta = JSON.parse(readFileSync(join(a, "meta.json"), "utf8")) as { formatVersion: number; encoder: { version: number; pooled: { dims: number } } };
-    expect([meta.formatVersion, meta.encoder.version, meta.encoder.pooled.dims]).toEqual([2, 2, 6735]);
+    expect([meta.formatVersion, meta.encoder.version, meta.encoder.pooled.dims]).toEqual([2, 2, 6739]);
   });
 });

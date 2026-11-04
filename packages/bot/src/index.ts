@@ -107,6 +107,8 @@ export {
 export { ENCODER_VERSION, ENCODER_LAYOUT, PLAYER_TYPES_V1, COUNTER_KINDS, encode, decode, describe, encoderSchema, infoDefOf, knownDeck, type EncoderContext, type EncoderSchema, type EncodeDiagnostics, type KnownDeck, type PlayerType, type DescribeNames } from "./encoder";
 export {
   ENCODER_V2_VERSION,
+  ENCODER_V2_MINOR,
+  PLAYER_TYPES_V2,
   ZONES_V2,
   GLOBAL_COLUMNS_V2,
   CARD_HEADER_V2,
@@ -124,6 +126,7 @@ export {
   poolV2,
   decodeV2,
   describeV2,
+  type PlayerTypeV2,
   type EncoderV2Context,
   type EncoderV2Schema,
   type PreparedV2,

@@ -1,6 +1,6 @@
 import { opponentOf, type CardView, type DefId, type HiddenCardView, type MainAction, type PlayerId, type PlayerSideView, type PlayerView } from "./core";
 import { CARD_FEATURE_COLUMNS, type CardFeatureTable, type RefFilter } from "./card-features";
-import { COUNTER_KINDS, infoDefOf, PLAYER_TYPES_V1, type KnownDeck, type PlayerType } from "./encoder";
+import { COUNTER_KINDS, infoDefOf, type KnownDeck } from "./encoder";
 import {
   cardToken,
   defFacts,
@@ -20,7 +20,7 @@ import {
 } from "./encoder-v2-refs";
 
 /**
- * Encoder v2: a position as one player sees it, stored as tokens (D20–D22). A global block (159 whole numbers: v1's game and
+ * Encoder v2: a position as one player sees it, stored as tokens. A global block (163 whole numbers: v1's game and
  * side numbers, what the viewer can do now, counters, and per side the evolve matchings, the deck's main traits and the
  * odds of what the opponent's hidden hand holds); one token per card the viewer sees or remembers that can matter (hands,
  * fields, EX areas, cemetery cards with a live ability, equipment) with what it is now, what can be done with it, its evolve
@@ -28,16 +28,25 @@ import {
  * and one entry per (pile, definition) with its number of copies (cemeteries, banished cards, evolve decks, my deck, the
  * opponent's unseen cards). A card is never its id or name: it is its definition's index (a pointer to the card table's
  * row, D21) and a per-game row of list-level facts (gdef: copies in each list, the deck's trait slots, evolve partners in
- * the list). The pooled vector (poolV2, 6,735 values) is derived from these arrays. Fair (D23): only the view, both lists
+ * the list). The pooled vector (poolV2, 6,739 values) is derived from these arrays. Fair: only the view, both lists
  * and the table; whatever the viewer can't see is drawn from the cards it hasn't seen.
  */
 export const ENCODER_V2_VERSION = 2;
+/** v2.1: the table of who plays grew; the first 159 global columns and everything else are as in v2. */
+export const ENCODER_V2_MINOR = 1;
+
+/**
+ * Who plays a side on, a table that only grows at its end: medium and easy (the stage 1 data's bots), human (the online
+ * records), expert (the search bots since: BEST2, the macro steps...). The value of a position depends on who plays on.
+ */
+export const PLAYER_TYPES_V2 = ["medium", "easy", "human", "expert"] as const;
+export type PlayerTypeV2 = (typeof PLAYER_TYPES_V2)[number];
 
 /** What the encoder needs besides the view, fixed for a game (by seat). */
 export interface EncoderV2Context {
   table: CardFeatureTable;
   decks: readonly [KnownDeck, KnownDeck];
-  players: readonly [PlayerType, PlayerType];
+  players: readonly [PlayerTypeV2, PlayerTypeV2];
 }
 
 // ---- Zones ----
@@ -103,7 +112,7 @@ const PHASES = ["setup", "start", "main", "end", "over"] as const;
 const ACT = ["nPlay", "nAttackers", "nAttackLeader", "reachNow", "nEvolve", "canSuperEvolve", "nActivate"];
 const ODDS = ["quick", "ward", "charge", "removal", "aoe", "heal", "summon", "draw"] as const;
 
-/** The global block (159): v1's mask, players, game numbers, actions and counters (same names), then encoder v2's own. */
+/** The global block (163): v1's mask, players, game numbers, actions and counters (same names), encoder v2's own, then v2.1's players. */
 export const GLOBAL_COLUMNS_V2: readonly string[] = [
   "mask.decides",
   ...["me.medium", "me.easy", "opp.medium", "opp.easy"].map((c) => `player.${c}`),
@@ -134,6 +143,7 @@ export const GLOBAL_COLUMNS_V2: readonly string[] = [
   "g.slot.shared",
   ...ODDS.map((o) => `g.opp.odds.${o}`),
   "g.opp.listExact",
+  ...["me.human", "me.expert", "opp.human", "opp.expert"].map((c) => `player.${c}`),
 ];
 const G = new Map(GLOBAL_COLUMNS_V2.map((c, i) => [c, i]));
 const gi = (n: string) => G.get(n)!;
@@ -141,7 +151,7 @@ const WHO = ["me", "opp"] as const;
 /** The global block's positions, found once. */
 const GI = {
   mask: gi("mask.decides"),
-  player: WHO.map((w) => PLAYER_TYPES_V1.map((t) => gi(`player.${w}.${t}`))),
+  player: WHO.map((w) => PLAYER_TYPES_V2.map((t) => gi(`player.${w}.${t}`))),
   turn: gi("g.turn"),
   first: gi("g.me.first"),
   active: gi("g.me.active"),
@@ -260,13 +270,14 @@ const PILE_FEATURES = [...CARD_FEATURE_COLUMNS, ...GDEF_COLUMNS_V2];
 
 export interface EncoderV2Schema {
   version: number;
+  minor: number;
   zones: typeof ZONES_V2;
   global: { names: readonly string[]; masked: readonly number[] };
   card: { header: readonly string[]; body: readonly string[]; width: number; applies: Readonly<Record<number, readonly string[]>> };
   pile: { names: readonly string[] };
   gdef: { header: readonly string[]; names: readonly string[] };
   pooled: { dims: number; names: readonly string[]; groups: readonly { name: string; start: number; end: number }[]; masked: readonly number[] };
-  playerTypes: readonly PlayerType[];
+  playerTypes: readonly PlayerTypeV2[];
 }
 
 let schemaCache: EncoderV2Schema | null = null;
@@ -294,13 +305,14 @@ export function encoderV2Schema(): EncoderV2Schema {
   }
   schemaCache = {
     version: ENCODER_V2_VERSION,
+    minor: ENCODER_V2_MINOR,
     zones: ZONES_V2,
     global: { names: GLOBAL_COLUMNS_V2, masked: ACT.map((c) => G.get(`act.${c}`)!) },
     card: { header: CARD_HEADER_V2, body: CARD_BODY_COLUMNS_V2, width: CARD_WIDTH_V2, applies: A_APPLIES },
     pile: { names: PILE_COLUMNS_V2 },
     gdef: { header: GDEF_HEADER_V2, names: GDEF_COLUMNS_V2 },
     pooled: { dims: names.length, names, groups, masked: masked.sort((a, b) => a - b) },
-    playerTypes: PLAYER_TYPES_V1,
+    playerTypes: PLAYER_TYPES_V2,
   };
   return schemaCache;
 }
@@ -527,7 +539,7 @@ export function encodeV2(view: PlayerView, me: PlayerId, prep: PreparedV2, diag?
   if (view.viewer !== me) throw new Error(`the view is player ${view.viewer}'s, not ${me}'s`);
   const ctx = prep.ctx;
   const table = ctx.table;
-  if (!PLAYER_TYPES_V1.includes(ctx.players[0]) || !PLAYER_TYPES_V1.includes(ctx.players[1])) throw new Error(`a player type encoder v2 doesn't know: ${ctx.players.join(", ")}`);
+  if (!PLAYER_TYPES_V2.includes(ctx.players[0]) || !PLAYER_TYPES_V2.includes(ctx.players[1])) throw new Error(`a player type encoder v2 doesn't know: ${ctx.players.join(", ")}`);
   const opp = opponentOf(me);
   const mine = view.players[me];
   const theirs = view.players[opp];
@@ -581,7 +593,7 @@ export function encodeV2(view: PlayerView, me: PlayerId, prep: PreparedV2, diag?
     glob[i] = sat(v, diag);
   };
   set(GI.mask, deciding ? 1 : 0);
-  [me, opp].forEach((side, w) => PLAYER_TYPES_V1.forEach((t, j) => set(GI.player[w]![j]!, ctx.players[side] === t ? 1 : 0)));
+  [me, opp].forEach((side, w) => PLAYER_TYPES_V2.forEach((t, j) => set(GI.player[w]![j]!, ctx.players[side] === t ? 1 : 0)));
   set(GI.turn, view.turn);
   set(GI.first, view.firstPlayer === me ? 1 : 0);
   set(GI.active, view.activePlayer === me ? 1 : 0);
@@ -950,7 +962,7 @@ export function encodeV2(view: PlayerView, me: PlayerId, prep: PreparedV2, diag?
 // ---- The pooled vector ----
 
 /**
- * The pooled vector (6,735, encoderV2Schema().pooled) from the stored arrays: the global block, then per group the count, the
+ * The pooled vector (6,739, encoderV2Schema().pooled) from the stored arrays: the global block, then per group the count, the
  * sum (piles weighted by their copies) and, for some groups, the column-wise max of static ‖ gdef (‖ body for cards). The
  * masked positions are −1 when the viewer isn't deciding (written after pooling).
  */
@@ -1053,7 +1065,7 @@ export interface DescribeV2Names {
   keyword?(keyword: string): string;
 }
 
-const PLAYER_NAMES: Record<PlayerType, string> = { medium: "中等 Bot", easy: "简单 Bot" };
+const PLAYER_NAMES: Record<PlayerTypeV2, string> = { medium: "中等 Bot", easy: "简单 Bot", human: "真人", expert: "搜索专家" };
 const ZONE_CN: Record<string, string> = {
   "hand.me": "我方手牌",
   "field.me": "我方场上",

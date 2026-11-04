@@ -18,7 +18,7 @@
  * A game whose bucket (tools/rl/sampling.ts) is 0–79 is training data, 80–89 validation, 90–99 test; a job with holdout decks
  * (its job file has withOne) is a test set of its own (split 3).
  * --encoder 2 (default output <run dir>/enc-v2): encoder v2 (packages/bot/src/encoder-v2.ts) instead of x — per shard
- * glob-NNNN.npy (int16 [n, 159]), card-NNNN.npy (int16 card tokens [Nc, 103]), pile-NNNN.npy (int16 [Np, 4]), off-NNNN.npy
+ * glob-NNNN.npy (int16 [n, 163]), card-NNNN.npy (int16 card tokens [Nc, 103]), pile-NNNN.npy (int16 [Np, 4]), off-NNNN.npy
  * (int32 [n + 1, 2]: each sample's first card and pile row), gbase-NNNN.npy (int32 [n]: its game's first gdef row),
  * gdef-NNNN.npy (int16 [Ng, 25]), with the same y / side / w1; static.npy and defs.json (the card table's rows by
  * definition index), pooled-check (poolV2 of fixed samples, recomputed from the written arrays), goldens, stats.json, and
@@ -38,6 +38,8 @@ import {
   CARD_FEATURES_VERSION,
   DEFAULT_WEIGHTS,
   MEDIUM_OPTIONS,
+  PLAYER_TYPES_V1,
+  PLAYER_TYPES_V2,
   PlannerBot,
   cardFeatureTable,
   decode,
@@ -127,8 +129,8 @@ export const SIDE_COLUMNS = [
 ] as const;
 const COL = Object.fromEntries(SIDE_COLUMNS.map((c, i) => [c, i])) as Record<(typeof SIDE_COLUMNS)[number], number>;
 const W1_COLUMNS = [...W1_TERMS.map((t) => `w1.me.${t}`), ...W1_TERMS.map((t) => `w1.opp.${t}`)];
-/** The players' bots, as the encoder's one-hot has them (v1: the bots of the stage 1 data). */
-const PLAYER_TYPES = ["medium", "easy"] as const;
+/** The players' bots, as the encoder's one-hot has them (v1: the bots of the stage 1 data; v2: its table, the same two first). */
+const PLAYER_TYPES: readonly string[] = v2 ? PLAYER_TYPES_V2 : PLAYER_TYPES_V1;
 const DECKS = [...DECK_SETS.train, ...DECK_SETS.holdout];
 
 /** One game's line of games.csv, and where its rows are. */
@@ -419,7 +421,7 @@ function runWorker(k: number): void {
       drop("unfinished");
       continue;
     }
-    const bots = g.bots.map((b) => PLAYER_TYPES.indexOf(b.level as (typeof PLAYER_TYPES)[number]));
+    const bots = g.bots.map((b) => PLAYER_TYPES.indexOf(b.level));
     if (bots.some((b) => b < 0)) {
       drop("a bot the encoder has no player type for");
       continue;

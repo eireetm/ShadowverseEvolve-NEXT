@@ -6,7 +6,7 @@ import { createEngine, randomAnswer, randomInt, seedRng, type GameSession, type 
 import { ALL_CARDS, ALL_SCRIPTS } from "../../core/src/sets";
 import { deckPool, randomDeck } from "../../core/src/testing";
 import { scenario } from "../../core/src/testing/scenario";
-import { CARD_FEATURE_COLUMNS, cardFeatureTable, encode, encoderSchema, knownDeck, type CardFeatureFile, type EncoderContext } from "../src";
+import { CARD_FEATURE_COLUMNS, cardFeatureTable, encode, encoderSchema, knownDeck, PLAYER_TYPES_V1, type CardFeatureFile, type EncoderContext } from "../src";
 import {
   CARD_BODY_COLUMNS_V2,
   CARD_WIDTH_V2,
@@ -15,9 +15,11 @@ import {
   emptyDiagnosticsV2,
   encodeV2,
   encoderV2Schema,
+  ENCODER_V2_MINOR,
   ENCODER_V2_VERSION,
   GDEF_COLUMNS_V2,
   GLOBAL_COLUMNS_V2,
+  PLAYER_TYPES_V2,
   POOL_LAYOUT_V2,
   poolV2,
   prepareV2,
@@ -41,7 +43,7 @@ function randomGame(seed: string) {
   const pool = deckPool(engine);
   const decks = [randomDeck(pool, `${seed}/0`), randomDeck(pool, `${seed}/1`)] as const;
   const game = engine.newGame({ seed, players: [decks[0], decks[1]], config: JOB_CONFIG });
-  const ctx: EncoderV2Context = { table, decks: [knownDeck(definitionOf, decks[0]), knownDeck(definitionOf, decks[1])], players: ["medium", "easy"] };
+  const ctx: EncoderContext = { table, decks: [knownDeck(definitionOf, decks[0]), knownDeck(definitionOf, decks[1])], players: ["medium", "easy"] };
   return { game, ctx };
 }
 function play(game: GameSession, seed: string, at: (game: GameSession, step: number) => void, steps = 3000) {
@@ -69,11 +71,11 @@ function gathered(enc: EncodedV2, prep: PreparedV2): string[] {
 }
 
 describe("the layout", () => {
-  it("has 159 global values, card tokens of 3 + 100, pile entries of 4, gdef rows of 2 + 23, a pooled vector of 6,735", () => {
-    expect([GLOBAL_COLUMNS_V2.length, CARD_WIDTH_V2, CARD_BODY_COLUMNS_V2.length, GDEF_COLUMNS_V2.length, schema.pooled.dims]).toEqual([159, 103, 100, 23, 6735]);
-    expect(new Set(GLOBAL_COLUMNS_V2).size).toBe(159);
+  it("has 163 global values, card tokens of 3 + 100, pile entries of 4, gdef rows of 2 + 23, a pooled vector of 6,739", () => {
+    expect([GLOBAL_COLUMNS_V2.length, CARD_WIDTH_V2, CARD_BODY_COLUMNS_V2.length, GDEF_COLUMNS_V2.length, schema.pooled.dims]).toEqual([163, 103, 100, 23, 6739]);
+    expect(new Set(GLOBAL_COLUMNS_V2).size).toBe(163);
     expect(new Set(CARD_BODY_COLUMNS_V2).size).toBe(100);
-    expect(new Set(schema.pooled.names).size).toBe(6735);
+    expect(new Set(schema.pooled.names).size).toBe(6739);
     // Static, gdef and body names never collide.
     const all = [...CARD_FEATURE_COLUMNS, ...GDEF_COLUMNS_V2, ...CARD_BODY_COLUMNS_V2];
     expect(new Set(all).size).toBe(all.length);
@@ -82,6 +84,14 @@ describe("the layout", () => {
     expect(schema.pooled.groups.map((g) => g.name)).toEqual(POOL_LAYOUT_V2.map((g) => g.name));
     const names = [...GLOBAL_COLUMNS_V2, ...CARD_BODY_COLUMNS_V2, ...GDEF_COLUMNS_V2, ...schema.pooled.names, ...ZONES_V2.map((z) => `${z.code}:${z.name}`)].join("\n");
     expect([ENCODER_V2_VERSION, createHash("sha256").update(names).digest("hex").slice(0, 16)]).toEqual([2, NAMES_HASH_V2]);
+  });
+
+  // A column of v2 never moves, so v2's data keeps its meaning: a new player type goes at the end of the block.
+  it("keeps v2's 159 global columns first, in their order; the table of who plays only grows at its end", () => {
+    expect(createHash("sha256").update(GLOBAL_COLUMNS_V2.slice(0, 159).join("\n")).digest("hex").slice(0, 16)).toBe("f7209471c3c28e4d");
+    expect(GLOBAL_COLUMNS_V2.slice(159)).toEqual(["player.me.human", "player.me.expert", "player.opp.human", "player.opp.expert"]);
+    expect(PLAYER_TYPES_V2.slice(0, PLAYER_TYPES_V1.length)).toEqual([...PLAYER_TYPES_V1]);
+    expect([schema.version, schema.minor, schema.playerTypes]).toEqual([ENCODER_V2_VERSION, ENCODER_V2_MINOR, PLAYER_TYPES_V2]);
   });
 
   it("never looks at a game, only at the view (static guard)", () => {
@@ -156,6 +166,32 @@ describe("encoding real positions", () => {
     });
     expect(checked).toBeGreaterThan(40);
   }, 240_000);
+
+  it("lights only the columns of who plays, swapped from the other seat; nothing else depends on them", () => {
+    const { game, ctx } = randomGame("players2");
+    const lit = (prep: PreparedV2, v: PlayerId) => {
+      const { global } = encodeV2(game.view(v), v, prep);
+      return GLOBAL_COLUMNS_V2.flatMap((n, i) => (n.startsWith("player.") && global[i] !== 0 ? [`${n}=${global[i]}`] : []));
+    };
+    const prep = prepareV2({ ...ctx, players: ["human", "expert"] });
+    const swapped = prepareV2({ ...ctx, players: ["expert", "human"] });
+    expect(lit(prep, 0)).toEqual(["player.me.human=1", "player.opp.expert=1"]);
+    expect(lit(prep, 1)).toEqual(["player.me.expert=1", "player.opp.human=1"]);
+    expect(lit(swapped, 0)).toEqual(lit(prep, 1));
+    expect(lit(swapped, 1)).toEqual(lit(prep, 0));
+    const rest = (p: PreparedV2, v: PlayerId) => {
+      const enc = encodeV2(game.view(v), v, p);
+      return [[...enc.global].filter((_, i) => !GLOBAL_COLUMNS_V2[i]!.startsWith("player.")), [...enc.cards], [...enc.piles]];
+    };
+    const plain = prepareV2(ctx);
+    for (const v of [0, 1] as PlayerId[]) expect(rest(prep, v)).toEqual(rest(plain, v));
+  });
+
+  it("refuses a player type it doesn't know", () => {
+    const { game, ctx } = randomGame("players2");
+    const prep = prepareV2({ ...ctx, players: ["medium", "robot" as "medium"] });
+    expect(() => encodeV2(game.view(0), 0, prep)).toThrow(/a player type encoder v2 doesn't know/);
+  });
 
   it("reads memory only through `known`: without it, only the revealed hand cards", () => {
     const g = scenario(engine, {
@@ -338,18 +374,18 @@ function seatsSwapped(view: PlayerView): PlayerView {
   return copy;
 }
 
-const NAMES_HASH_V2 = "0c256241f6077c99";
+const NAMES_HASH_V2 = "69a4c5ee60eed78f";
 const GOLDEN_V2: string[] = [
-  "sd01@10/0:f9efa59e36cc",
-  "sd01@10/1:6c2eb889e7df",
-  "sd01@25/0:2b3bb9bb0c6f",
-  "sd01@25/1:e13bf0065dd1",
-  "sd01@40/0:7cf1361bc17e",
-  "sd01@40/1:b450570f0c26",
-  "csd02a@20/0:6b4d51a6203f",
-  "csd02a@20/1:5faf6829bfd0",
-  "csd02a@50/0:bd05baa5d6db",
-  "csd02a@50/1:db3b8186c0f0",
-  "csd02a@90/0:01fff6b7be5e",
-  "csd02a@90/1:96c97e8666bc",
+  "sd01@10/0:20683f06b62a",
+  "sd01@10/1:57b950f62e18",
+  "sd01@25/0:e0bf23da948f",
+  "sd01@25/1:cfcaf98f77c6",
+  "sd01@40/0:b7078ac94e62",
+  "sd01@40/1:452ec10d2368",
+  "csd02a@20/0:14cb8601e621",
+  "csd02a@20/1:cad8faef264e",
+  "csd02a@50/0:5e027ffaa6c9",
+  "csd02a@50/1:796ae901e8d9",
+  "csd02a@90/0:5539cea23041",
+  "csd02a@90/1:0ea8a01832a4",
 ];

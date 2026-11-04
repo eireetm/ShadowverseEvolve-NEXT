@@ -5,8 +5,8 @@ check_encv2.py can compare it with the TypeScript one (check C20). Training read
 checked against this one).
 
   enc = EncV2("D:/SVE/rl-runs/stage1-v1/enc-v2")
-  s = enc.sample(0)          # glob [159], cards [nc, 103], piles [np, 4], gdef [ng, 25] (the sample's game's rows)
-  x = enc.pooled([0, 1, 2])  # int64 [3, 6735]
+  s = enc.sample(0)          # glob [163], cards [nc, 103], piles [np, 4], gdef [ng, 25] (the sample's game's rows)
+  x = enc.pooled([0, 1, 2])  # int64 [3, 6739]
 """
 import json
 import os
