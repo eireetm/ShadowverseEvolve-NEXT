@@ -26,6 +26,8 @@ export type Responder = ((session: GameSession) => Answer) | null;
 export interface LethalStep {
   answer: Answer;
   defs: Record<CardId, DefId>;
+  /** It answers a Ward follower's entry (CR 12.8.2 (i)): an entry the search didn't play has no step of its own. */
+  wardEntry?: true;
 }
 
 export interface LethalSearchOptions {
@@ -120,12 +122,13 @@ function replaceIds(value: unknown, map: (id: string) => string): unknown {
   return value;
 }
 
-/** The step of giving `answer` in `s`: with the cards it names. */
+/** The step of giving `answer` in `s`: with the cards it names, and whether its decision is a Ward follower's entry. */
 export function stepOf(s: GameSession, answer: Answer): LethalStep {
   const lookup = lookupFromReader(s.reader());
   const defs: Record<CardId, DefId> = {};
   for (const id of cardIds(answer)) defs[id] = lookup(id)?.def ?? "";
-  return { answer, defs };
+  const d = s.decision;
+  return d?.type === "selectCards" && d.reason === "wardEnterEngaged" ? { answer, defs, wardEntry: true } : { answer, defs };
 }
 
 /**

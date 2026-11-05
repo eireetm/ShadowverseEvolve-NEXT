@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createEngine, script, type PlayerView } from "../src/core";
 import { GreedyBot, HARD_OPTIONS, MEDIUM_BETA_OPTIONS, MEDIUM_OPTIONS, PlannerBot, exactResults, lethalWithinReach, type PlannerBotOptions } from "../src";
-import { lineWins, lineWinsAgainstAll, stepOf } from "../src/lethal";
+import { lineWins, lineWinsAgainstAll, searchSureLethal, stepOf } from "../src/lethal";
 import { drive, testFollower, testSpell, type DriveSpec } from "../../core/src/testing";
 
 // Sure lethal first (lethal.ts): a line that surely wins this turn is played before the turn is planned.
@@ -21,6 +21,8 @@ const cards = createEngine({
     testFollower("STORM1", 1, 6, 1),
     testFollower("BIG", 2, 5, 5),
     testFollower("WARDCALL", 1, 1, 1),
+    testFollower("WARDCALL2", 1, 1, 1),
+    testFollower("WARDLING", 1, 1, 1),
     testSpell("QBURN", 1, { text: "Quick. Deal 2 damage to an enemy follower." }),
   ],
   scripts: {
@@ -66,6 +68,18 @@ const cards = createEngine({
         }),
       ],
     }),
+    // Ward. Fanfare: select 2 cards in your cemetery and summon them.
+    WARDCALL2: defineCard({
+      keywords: ["ward"],
+      abilities: [
+        fanfare({
+          *resolve(fx) {
+            yield* fx.putOntoField(yield* fx.selectCards(fx.game.cards(fx.controller, "cemetery"), 2, 2));
+          },
+        }),
+      ],
+    }),
+    WARDLING: defineCard({ keywords: ["ward"] }),
     QBURN: defineCard({
       keywords: ["quick"],
       abilities: [
@@ -192,13 +206,39 @@ describe("sure lethal first", () => {
     }
   });
 
-  it("a line that can't answer a Ward follower's entry is dropped, and the entry answered as without a line", () => {
+  it("a Ward follower summoned by an effect inside the line is a step of it too", () => {
+    const spec: DriveSpec = { me: { deck: fillers(10), hand: ["WARDCALL2"], cemetery: ["WARDLING", "STORMER"], playPoints: 1 }, opp: { deck: fillers(10), leaderDefense: 6 } };
+    for (const options of [MEDIUM_OPTIONS, HARD_OPTIONS]) {
+      const played = ourTurn(spec, options);
+      expect(played).toMatchObject({ won: true, opponent: 0 });
+      expect(played.stats).toMatchObject({ played: 1, dropped: 0 });
+    }
+  });
+
+  it("a line that can't answer a Ward follower's entry it played is dropped, and the entry answered as without a line", () => {
     const t = drive(cards, wardInLine).play("WARDCALL");
     const bot = new PlannerBot(cards, { seed: "s", ...MEDIUM_OPTIONS });
-    const line = { turn: t.game.state.turn, steps: [{ answer: { type: "confirm", yes: true }, defs: {} }], given: 0 };
+    // Its step for the entry engages another Ward follower.
+    const line = { turn: t.game.state.turn, steps: [{ answer: { type: "selectCards", cards: ["c999"] }, defs: { c999: "WALL" }, wardEntry: true }], given: 0 };
     (bot as unknown as { lethal: typeof line }).lethal = line;
     expect(bot.decide(t.game)).toEqual({ type: "selectCards", cards: [] });
     expect(bot.lethalStats.dropped).toBe(1);
+  });
+
+  it("a Ward follower's entry the line didn't play is answered as without a line, and the line goes on", () => {
+    const t = drive(cards, wardInLine).play("WARDCALL");
+    // The line as a search finds it once the entry is answered (a sample where the entry went otherwise): no step for it.
+    const s = t.game.clone();
+    s.act({ type: "selectCards", cards: [] });
+    const found = searchSureLethal(0, { budget: 200, beam: 8, maxBranches: 8, world: () => s.clone(), checks: 0, searchResponder: () => null, checkResponder: () => null, maxLines: 2, seed: "s" });
+    expect(found.line).not.toBeNull();
+    expect(found.line!.some((step) => step.wardEntry)).toBe(false);
+    const bot = new PlannerBot(cards, { seed: "s", ...MEDIUM_OPTIONS });
+    const line = { turn: t.game.state.turn, steps: found.line!, given: 0 };
+    (bot as unknown as { lethal: typeof line }).lethal = line;
+    for (let i = 0; i < 40 && t.game.decision?.player === 0; i++) t.game.act(bot.decide(t.game));
+    expect(t.game.result?.winner).toBe(0);
+    expect(bot.lethalStats).toMatchObject({ searches: 0, dropped: 0 });
   });
 
   it("is off in a planner made without it (the opponent models)", () => {

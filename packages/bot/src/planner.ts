@@ -497,15 +497,18 @@ export class PlannerBot {
   }
 
   /**
-   * CR 12.8.2 (i): a Ward follower entering during a sure lethal being played. The choice is a decision of the line, one of
-   * its steps as the search played it: answered from outside, the line would stay a step behind, and its step for this choice
-   * would answer the next decision (an empty one fits a Fanfare's "up to 2": the lethal is lost). So the line answers it. Null:
-   * no line is being played here, or it can't answer and is dropped (sureLethal): wardOnEntry answers.
+   * CR 12.8.2 (i): a Ward follower entering during a sure lethal being played. Where the search played the entry, the choice
+   * is one of the line's steps: answered from outside, the line would stay a step behind, and its step for this choice would
+   * answer the next decision (an empty one fits a Fanfare's "up to 2": the lethal is lost). So the line answers it. An entry
+   * the search didn't play (a sample or an opponent's answer that went otherwise) has no step: the line's next step is the
+   * next decision's. Null: no line is being played here, its next step isn't an entry's, or it can't answer and is dropped
+   * (sureLethal): wardOnEntry answers.
    */
   private lineAtWardEntry(game: GameSession, me: PlayerId): Answer | null {
     const state = game.state;
     const line = this.lethal;
     if (!line || line.turn !== state.turn || line.given >= line.steps.length || state.activePlayer !== me || state.phase !== "main") return null;
+    if (!line.steps[line.given]!.wardEntry) return null;
     return this.sureLethal(game, me);
   }
 
