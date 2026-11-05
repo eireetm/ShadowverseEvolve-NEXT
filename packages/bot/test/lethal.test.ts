@@ -6,7 +6,7 @@ import { drive, testFollower, testSpell, type DriveSpec } from "../../core/src/t
 
 // Sure lethal first (lethal.ts): a line that surely wins this turn is played before the turn is planned.
 
-const { defineCard, spell } = script;
+const { defineCard, fanfare, spell } = script;
 const cards = createEngine({
   cards: [
     testFollower("FAIRY", 1, 1, 1),
@@ -20,6 +20,7 @@ const cards = createEngine({
     testSpell("SEEK", 1, { text: "Search your deck for a follower and put it into your hand." }),
     testFollower("STORM1", 1, 6, 1),
     testFollower("BIG", 2, 5, 5),
+    testFollower("WARDCALL", 1, 1, 1),
     testSpell("QBURN", 1, { text: "Quick. Deal 2 damage to an enemy follower." }),
   ],
   scripts: {
@@ -54,6 +55,17 @@ const cards = createEngine({
       ],
     }),
     STORM1: defineCard({ keywords: ["storm"] }),
+    // Ward. Fanfare: select up to 2 cards in your cemetery and summon them.
+    WARDCALL: defineCard({
+      keywords: ["ward"],
+      abilities: [
+        fanfare({
+          *resolve(fx) {
+            yield* fx.putOntoField(yield* fx.selectCards(fx.game.cards(fx.controller, "cemetery"), 0, 2));
+          },
+        }),
+      ],
+    }),
     QBURN: defineCard({
       keywords: ["quick"],
       abilities: [
@@ -167,6 +179,26 @@ describe("sure lethal first", () => {
       expect(risky.stats.unsurePlans).toBeGreaterThan(0);
     }
     expect(ourTurn(decoy("FILLER"), HARD_OPTIONS)).toMatchObject({ won: true, first: { played: 1 } });
+  });
+
+  // The only lethal: play the Ward follower, summon the 6/1 Storm follower with its Fanfare, attack.
+  const wardInLine: DriveSpec = { me: { deck: fillers(10), hand: ["WARDCALL"], cemetery: ["STORMER"], playPoints: 1 }, opp: { deck: fillers(10), leaderDefense: 6 } };
+
+  it("a Ward follower's entry is a step of the line (CR 12.8.2): the line's next step goes to the Fanfare, up to N would take any", () => {
+    for (const options of [MEDIUM_OPTIONS, HARD_OPTIONS]) {
+      const played = ourTurn(wardInLine, options);
+      expect(played).toMatchObject({ won: true, opponent: 0 });
+      expect(played.stats).toMatchObject({ played: 1, dropped: 0 });
+    }
+  });
+
+  it("a line that can't answer a Ward follower's entry is dropped, and the entry answered as without a line", () => {
+    const t = drive(cards, wardInLine).play("WARDCALL");
+    const bot = new PlannerBot(cards, { seed: "s", ...MEDIUM_OPTIONS });
+    const line = { turn: t.game.state.turn, steps: [{ answer: { type: "confirm", yes: true }, defs: {} }], given: 0 };
+    (bot as unknown as { lethal: typeof line }).lethal = line;
+    expect(bot.decide(t.game)).toEqual({ type: "selectCards", cards: [] });
+    expect(bot.lethalStats.dropped).toBe(1);
   });
 
   it("is off in a planner made without it (the opponent models)", () => {
