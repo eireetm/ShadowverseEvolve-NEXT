@@ -199,6 +199,13 @@ export const HARD_NEXT_MACRO_IN: PlannerBotOptions = { ...HARD_NEXT_MACRO, macro
 /** The two-turn fair Medium searching by actions (MEDIUM_V2_MACRO), the later turns of its two-turn search by actions too. */
 export const MEDIUM_V2_MACRO_IN: PlannerBotOptions = { ...MEDIUM_V2_MACRO, macro: { ...MACRO_STEPS.macro }, ...INNER_STEPS, macroInner: { ...INNER_STEPS.macroInner } };
 
+/**
+ * The computer's Hard (HARD_NEXT_MACRO_IN) with twice its inner searches' budget: 600 answers per plan search of the
+ * opponent's turn and our next one, their width as it is. Searching those turns by actions paid for the cheating bot, which
+ * reads the real game there, so they get more budget. Written out as the others are; no level (levelPreset).
+ */
+export const HARD_NEXT_MACRO_IN_BUD: PlannerBotOptions = { ...HARD_NEXT_MACRO_IN, macro: { ...MACRO_STEPS.macro }, macroInner: { ...INNER_STEPS.macroInner }, innerSimulations: 600 };
+
 /** A preset: a level's options, some of them set otherwise, and the fixes for its lookahead. */
 function withFixes(level: PlannerBotOptions, changes: PlannerBotOptions): PlannerBotOptions {
   const options = { ...level, ...changes };
@@ -211,8 +218,8 @@ function lookaheadOf(options: PlannerBotOptions, effort: number): 1 | 2 {
 }
 
 /** The presets by name (not levels of createBot yet). */
-export type BotPreset = "medium-next" | "hard-next" | "medium-v2" | "hard-next-macro" | "medium-next-macro" | "medium-v2-macro" | "medium-v2-macro-in" | "hard-next-macro-in";
-export const BOT_PRESETS: readonly BotPreset[] = ["medium-next", "hard-next", "medium-v2", "hard-next-macro", "medium-next-macro", "medium-v2-macro", "medium-v2-macro-in", "hard-next-macro-in"];
+export type BotPreset = "medium-next" | "hard-next" | "medium-v2" | "hard-next-macro" | "medium-next-macro" | "medium-v2-macro" | "medium-v2-macro-in" | "hard-next-macro-in" | "hard-next-macro-in-bud";
+export const BOT_PRESETS: readonly BotPreset[] = ["medium-next", "hard-next", "medium-v2", "hard-next-macro", "medium-next-macro", "medium-v2-macro", "medium-v2-macro-in", "hard-next-macro-in", "hard-next-macro-in-bud"];
 const PRESET_OPTIONS: Record<BotPreset, PlannerBotOptions> = {
   "medium-next": MEDIUM_NEXT,
   "hard-next": HARD_NEXT,
@@ -222,6 +229,7 @@ const PRESET_OPTIONS: Record<BotPreset, PlannerBotOptions> = {
   "medium-v2-macro": MEDIUM_V2_MACRO,
   "medium-v2-macro-in": MEDIUM_V2_MACRO_IN,
   "hard-next-macro-in": HARD_NEXT_MACRO_IN,
+  "hard-next-macro-in-bud": HARD_NEXT_MACRO_IN_BUD,
 };
 
 /** The interface's planning levels (Bot-Easy has no preset). */

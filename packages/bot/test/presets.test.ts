@@ -10,6 +10,7 @@ import {
   HARD_NEXT,
   HARD_NEXT_MACRO,
   HARD_NEXT_MACRO_IN,
+  HARD_NEXT_MACRO_IN_BUD,
   HARD_OPTIONS,
   MACRO_DEFAULTS,
   macroProblems,
@@ -77,13 +78,14 @@ describe("presets", () => {
     expect(MEDIUM_V2_MACRO.macro).not.toBe(HARD_NEXT_MACRO.macro);
     expect(MEDIUM_NEXT_MACRO.cheat).toBeUndefined();
     expect(MEDIUM_V2_MACRO.cheat).toBeUndefined();
-    expect(BOT_PRESETS).toEqual(["medium-next", "hard-next", "medium-v2", "hard-next-macro", "medium-next-macro", "medium-v2-macro", "medium-v2-macro-in", "hard-next-macro-in"]);
+    expect(BOT_PRESETS).toEqual(["medium-next", "hard-next", "medium-v2", "hard-next-macro", "medium-next-macro", "medium-v2-macro", "medium-v2-macro-in", "hard-next-macro-in", "hard-next-macro-in-bud"]);
     const search = "dedupe=1+macro=12:keep=2,sub=4,dec=40,share=0.25";
     const inner = `${search}+macroInner=12:keep=2,sub=4,dec=40,share=0.25+inner=300x4`;
-    expect(BOT_PRESETS.map((p) => presetSearchIdentity(p))).toEqual([null, null, null, search, search, search, inner, inner]);
+    const innerX2 = `${search}+macroInner=12:keep=2,sub=4,dec=40,share=0.25+inner=600x4`;
+    expect(BOT_PRESETS.map((p) => presetSearchIdentity(p))).toEqual([null, null, null, search, search, search, inner, inner, innerX2]);
   });
 
-  // The two with the later turns of the two-turn search by actions too: not levels of the interface.
+  // The two with the later turns of the two-turn search by actions too: the cheating one is the computer's Hard.
   it("add the two with the inner searches by actions: their bases with exactly that, on the budget and width of the searches they replace", () => {
     const withoutInner = (o: PlannerBotOptions) => {
       const { macroInner: _m, innerSimulations: _s, innerBeam: _b, ...rest } = o;
@@ -113,6 +115,27 @@ describe("presets", () => {
     expect(searchIdentityOf({})).toBeNull();
     expect(searchIdentityOf({ innerSimulations: 450, innerBeam: 6, maxDepth: 14 })).toBe("inner=450x6+depth=14");
     expect(searchIdentityOf({ innerBeam: 6 })).toBe("inner=300x6");
+  });
+
+  // The computer's Hard with twice its inner searches' budget: no level of the interface.
+  it("add Hard with twice the inner searches' budget: hard-next-macro-in with exactly that, its width as it is", () => {
+    const withoutBudget = (o: PlannerBotOptions) => {
+      const { innerSimulations: _s, ...rest } = o;
+      return rest;
+    };
+    // toStrictEqual compares functions by reference: the same evaluations, the same reader of the charge's table.
+    expect(withoutBudget(HARD_NEXT_MACRO_IN_BUD)).toStrictEqual(withoutBudget(HARD_NEXT_MACRO_IN));
+    expect([HARD_NEXT_MACRO_IN.innerSimulations, HARD_NEXT_MACRO_IN_BUD.innerSimulations]).toEqual([300, 600]);
+    expect([HARD_NEXT_MACRO_IN.innerBeam, HARD_NEXT_MACRO_IN_BUD.innerBeam]).toEqual([4, 4]);
+    for (const key of ["evaluator", "replyEvaluator", "greedyEvaluator"] as const) expect(HARD_NEXT_MACRO_IN_BUD[key]).toBe(HARD_NEXT_MACRO_IN[key]);
+    expect(HARD_NEXT_MACRO_IN_BUD.cheat).toBe(true);
+    // Each preset's own objects: a tool that turns one off on the object doesn't touch another.
+    const objects = [HARD_NEXT_MACRO, MEDIUM_NEXT_MACRO, MEDIUM_V2_MACRO, MEDIUM_V2_MACRO_IN, HARD_NEXT_MACRO_IN, HARD_NEXT_MACRO_IN_BUD].flatMap((o) => [o.macro, o.macroInner]).filter((o) => o !== undefined);
+    expect(objects).toHaveLength(9);
+    expect(new Set(objects).size).toBe(objects.length);
+    expect(presetSearchIdentity("hard-next-macro-in-bud")).toBe(presetSearchIdentity("hard-next-macro-in")!.replace(/\+inner=300x4$/, "+inner=600x4"));
+    expect(presetIdentities("hard-next-macro-in-bud")).toEqual(presetIdentities("hard-next-macro-in"));
+    for (const effort of [1, 0.99, 0.5]) for (const level of ["medium", "medium-v2", "hard"] as const) expect(levelPreset(level, effort)).not.toBe("hard-next-macro-in-bud");
   });
 
   // No verdict covers a preset on a slower device: a level changes there on its own measurement.
@@ -153,7 +176,7 @@ describe("presets", () => {
   // presetSearchIdentity records the search options searchIdentityOf writes: a preset setting another one would be recorded as
   // its base is. Every preset leaves the others off; a preset that needs one adds it to searchIdentityOf first.
   it("set no search option presetSearchIdentity doesn't record", () => {
-    const options: Record<BotPreset, PlannerBotOptions> = { "medium-next": MEDIUM_NEXT, "hard-next": HARD_NEXT, "medium-v2": MEDIUM_V2, "hard-next-macro": HARD_NEXT_MACRO, "medium-next-macro": MEDIUM_NEXT_MACRO, "medium-v2-macro": MEDIUM_V2_MACRO, "medium-v2-macro-in": MEDIUM_V2_MACRO_IN, "hard-next-macro-in": HARD_NEXT_MACRO_IN };
+    const options: Record<BotPreset, PlannerBotOptions> = { "medium-next": MEDIUM_NEXT, "hard-next": HARD_NEXT, "medium-v2": MEDIUM_V2, "hard-next-macro": HARD_NEXT_MACRO, "medium-next-macro": MEDIUM_NEXT_MACRO, "medium-v2-macro": MEDIUM_V2_MACRO, "medium-v2-macro-in": MEDIUM_V2_MACRO_IN, "hard-next-macro-in": HARD_NEXT_MACRO_IN, "hard-next-macro-in-bud": HARD_NEXT_MACRO_IN_BUD };
     expect(Object.keys(options).sort()).toEqual([...BOT_PRESETS].sort());
     const unrecorded = ["commonRandom", "lineSlots", "tieKeepHand", "drawFirst", "turnOrder", "replyLethalOpp", "replyLethalKey", "closeSamples", "explore", "innerPlans"] as const;
     for (const preset of BOT_PRESETS) for (const key of unrecorded) expect(options[preset][key] || undefined, `${preset}.${key}`).toBeUndefined();
@@ -181,6 +204,7 @@ describe("presets", () => {
     expect(presetIdentities("medium-v2-macro")).toEqual(twoTurns);
     expect(presetIdentities("hard-next-macro-in")).toEqual(twoTurns);
     expect(presetIdentities("medium-v2-macro-in")).toEqual(twoTurns);
+    expect(presetIdentities("hard-next-macro-in-bud")).toEqual(twoTurns);
     // On a slower device: one turn ahead, the mulligan's samples scaled (at least 2).
     const half = { ...oneTurn, mull: "mull=sim:k=4,t=3,margin=0,opp=greedy,cand=32" };
     for (const preset of BOT_PRESETS) expect(presetIdentities(preset, 0.5), preset).toEqual(half);
@@ -269,7 +293,7 @@ describe("presets", () => {
   // The inner searches are the two-turn search's: on a computer by actions; on a slower device (one turn ahead, presetAt) there
   // are none, so the two play there as their bases do.
   it("build the presets with the inner searches by actions, which have none below effort 1", () => {
-    for (const [preset, base] of [["medium-v2-macro-in", "medium-v2-macro"], ["hard-next-macro-in", "hard-next-macro"]] as const) {
+    for (const [preset, base] of [["medium-v2-macro-in", "medium-v2-macro"], ["hard-next-macro-in", "hard-next-macro"], ["hard-next-macro-in-bud", "hard-next-macro"]] as const) {
       const played = playTurn(preset, 1);
       expect(played.field, preset).toEqual([]);
       expect(played.bot.macroInnerStats.searches, preset).toBeGreaterThan(0);
