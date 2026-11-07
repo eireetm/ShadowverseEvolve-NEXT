@@ -71,7 +71,7 @@ describe("the GUI's bot levels", () => {
     // A computer plays the presets searching by actions, a slower device those they replaced.
     expect(botRecipe("medium", "s", seat, 1)).toEqual({ kind: "preset", preset: "medium-next-macro", seed: "s:medium:1", effort: 1 });
     expect(botRecipe("medium-v2", "s", seat, 1)).toEqual({ kind: "preset", preset: "medium-v2-macro", seed: "s:medium-v2:1", effort: 1 });
-    expect(botRecipe("hard", "s", 0, 1)).toEqual({ kind: "preset", preset: "hard-next-macro", seed: "s:hard:0", effort: 1 });
+    expect(botRecipe("hard", "s", 0, 1)).toEqual({ kind: "preset", preset: "hard-next-macro-in", seed: "s:hard:0", effort: 1 });
     expect(botRecipe("medium", "s", seat, 0.5)).toEqual({ kind: "preset", preset: "medium-next", seed: "s:medium:1", effort: 0.5 });
     expect(botRecipe("medium-v2", "s", seat, 0.5)).toEqual({ kind: "preset", preset: "medium-v2", seed: "s:medium-v2:1", effort: 0.5 });
     expect(botRecipe("hard", "s", 0, 0.5)).toEqual({ kind: "preset", preset: "hard-next", seed: "s:hard:0", effort: 0.5 });

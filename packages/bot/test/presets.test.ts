@@ -104,7 +104,12 @@ describe("presets", () => {
     expect(new Set(macros).size).toBe(macros.length);
     expect(HARD_NEXT_MACRO_IN.cheat).toBe(true);
     expect(MEDIUM_V2_MACRO_IN.cheat).toBeUndefined();
-    for (const effort of [1, 0.5]) for (const level of ["medium", "medium-v2", "hard"] as const) expect(levelPreset(level, effort)).not.toMatch(/-in$/);
+    // Hard on a computer plays the cheating one (it beat hard-next-macro in paired games); the fair one is no level, and no
+    // level plays one on a slower device.
+    for (const effort of [1, 0.5]) for (const level of ["medium", "medium-v2", "hard"] as const) {
+      if (level === "hard" && effort === 1) expect(levelPreset(level, effort)).toBe("hard-next-macro-in");
+      else expect(levelPreset(level, effort)).not.toMatch(/-in$/);
+    }
     expect(searchIdentityOf({})).toBeNull();
     expect(searchIdentityOf({ innerSimulations: 450, innerBeam: 6, maxDepth: 14 })).toBe("inner=450x6+depth=14");
     expect(searchIdentityOf({ innerBeam: 6 })).toBe("inner=300x6");
@@ -141,7 +146,7 @@ describe("presets", () => {
   }, 600_000);
 
   it("give each interface level its preset by effort: by actions on a computer, the older ones on a slower device", () => {
-    expect((["medium", "medium-v2", "hard"] as const).map((level) => levelPreset(level, 1))).toEqual(["medium-next-macro", "medium-v2-macro", "hard-next-macro"]);
+    expect((["medium", "medium-v2", "hard"] as const).map((level) => levelPreset(level, 1))).toEqual(["medium-next-macro", "medium-v2-macro", "hard-next-macro-in"]);
     for (const effort of [0.5, 0.99]) expect((["medium", "medium-v2", "hard"] as const).map((level) => levelPreset(level, effort))).toEqual(["medium-next", "medium-v2", "hard-next"]);
   });
 

@@ -1,10 +1,10 @@
 /**
  * Bots against each other: npm run bot:arena -- [games] [a] [b] [options]
  *
- * A bot is a level (easy | medium | hard | medium-beta), a preset (medium-next-macro | medium-v2-macro | hard-next-macro: the
- * GUI's Bot-Medium, Bot-Medium v2 and Bot-Hard on a computer; medium-next | medium-v2 | hard-next: the presets a phone plays,
- * there at a lower effort, here at effort 1; medium-v2-macro-in | hard-next-macro-in: not in the GUI, the later turns of their
- * two-turn search by actions too; packages/bot levels.ts createPresetBot), one of sve-server's AIs imitated (sve-fool, sve-good,
+ * A bot is a level (easy | medium | hard | medium-beta), a preset (medium-next-macro | medium-v2-macro | hard-next-macro-in:
+ * the GUI's Bot-Medium, Bot-Medium v2 and Bot-Hard on a computer, Hard's the later turns of its two-turn search by actions too;
+ * hard-next-macro: Hard before that; medium-next | medium-v2 | hard-next: the presets a phone plays, there at a lower effort,
+ * here at effort 1; medium-v2-macro-in: not in the GUI; packages/bot levels.ts createPresetBot), one of sve-server's AIs imitated (sve-fool, sve-good,
  * sve-planner; tools/sve-server-ais), or easy / medium / hard with its evaluation swapped, to check the evaluation interface:
  * "medium:identity" plays with the hand-written evaluation passed in from outside (exactly as medium does), and
  * "medium:negated" scores its own positions the other way round (it plays to lose). "medium2" is Medium searching two turns
