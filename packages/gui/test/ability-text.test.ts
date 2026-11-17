@@ -37,11 +37,10 @@ function located(card: Card): { index: number; group: string; rank: number; coun
  * Card texts that don't say an ability the way the others do: the ability shows no text in that language (no other language's
  * paragraph instead). A missing mark (BP03-071's English Fanfare, BP21-096's Chinese Evolve), a misspelt one (CP02-069
  * "Activat"), another timing than the other languages and the script (the English texts of BP18-029 and BP18-052 say On Evolve
- * where the Japanese and Chinese ones say Strike), a text that isn't the card's (BP08-U07's Chinese one).
+ * where the Japanese and Chinese ones say Strike).
  */
 const DATA_PROBLEMS: readonly string[] = [
   "BP03-071 en fanfare 1/1",
-  "BP08-U07 cn fanfare 1/1",
   "BP18-029 en strike 1/1",
   "BP18-052 en strike 1/1",
   "BP21-096 cn evolve 1/1",

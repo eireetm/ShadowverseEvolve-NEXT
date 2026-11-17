@@ -91,8 +91,8 @@ describe("encoding real positions", () => {
 
   it("counts no reach for a follower whose attack went below 0 (damage of 0 or less isn't dealt, CR 1.3.2.2)", () => {
     // Found by encoding every decision of 1000 whole-pool games: a leader attacker with attack -1 made the sum negative.
-    const { game, ctx } = randomGame("pool1000:103");
-    play(game, "pool1000:103", () => {}, 87);
+    const { game, ctx } = randomGame("pool1000:55");
+    play(game, "pool1000:55", () => {}, 20);
     const view = game.view(1);
     const leader = view.players[0].leader!.id;
     const decision = view.decision!;

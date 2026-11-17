@@ -15,7 +15,7 @@
 - **Core（规则引擎，`@sve/core`）**
   - 纯 TypeScript，结果确定，可以在没有界面的环境里运行，不依赖界面或文件。
   - 按综合规则（v1.26.1）逐条实现，规则判断都注明条款编号。
-  - 支持 57 个卡包的 3,689 个卡牌定义，共 7,564 个印刷版本，异画共用同一个定义。
+  - 支持 57 个卡包的 3,686 个卡牌定义，共 7,573 个印刷版本，异画共用同一个定义（卡面印着另一个名字的异画也是）。
 - **Bot（`@sve/bot`）**：界面上有四个难度，只用 Core 的公开 API：
   - Bot-简单：贪心，每个决策都模拟所有候选回答，评估局面后选最好的；
   - Bot-中等：规划整个回合，再模拟对手的下一回合，只用玩家看得到的信息；规划之前先找"确保能赢"的斩杀：在几个对手手牌和牌序的抽样里都能赢、对手应对也挡不住才执行；
@@ -424,7 +424,7 @@ An unofficial rules engine, AI and client for the *Shadowverse: Evolve* trading 
 - **Core (the rules engine, `@sve/core`)**
   - Plain TypeScript and deterministic. It runs headless, with no dependency on a UI or on files.
   - It implements the Comprehensive Rules (v1.26.1) clause by clause, and every rules decision cites its clause number.
-  - It supports 3,689 card definitions from 57 sets, 7,564 printings in all; alternate arts share one definition.
+  - It supports 3,686 card definitions from 57 sets, 7,573 printings in all; alternate arts share one definition (those printed with a name of their own too).
 - **Bot (`@sve/bot`)**: four levels in the interface, on the Core's public API only:
   - Bot-Easy: greedy. For each decision it simulates every candidate answer and picks the best-scoring result.
   - Bot-Medium: plans its whole turn, then plays out the opponent's next turn. It uses only what its player can see. Before planning it looks for a sure lethal: one that wins in several samples of the opponent's hand and the deck order, whatever the opponent answers.

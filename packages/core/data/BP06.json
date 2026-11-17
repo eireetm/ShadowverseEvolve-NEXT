@@ -804,6 +804,8 @@
     "BP06-035",
     "BP06-SL07",
     "BP06-U03",
+    "BP06-036",
+    "BP06-SP01",
     "PR-165"
    ],
    "name": "Kuon, Founder of Onmyodo",
@@ -822,31 +824,19 @@
    "traits": [
     "挑戦者",
     "陰陽師"
-   ]
-  },
-  {
-   "id": "BP06-036",
-   "printings": [
-    "BP06-036",
-    "BP06-SP01"
    ],
-   "name": "Clear Intellect, Koyori Hakui",
-   "names": {
-    "en": "Clear Intellect, Koyori Hakui",
-    "cn": "聪明的头脑·博衣小夜璃",
-    "ja": "澄明なる頭脳・博衣こより"
-   },
-   "class": "Runecraft",
-   "type": "follower",
-   "evolved": false,
-   "token": false,
-   "cost": 15,
-   "attack": 5,
-   "defense": 5,
-   "traits": [
-    "挑戦者",
-    "陰陽師"
-   ]
+   "alternateNames": {
+    "BP06-036": {
+     "en": "Clear Intellect, Koyori Hakui",
+     "cn": "聪明的头脑·博衣小夜璃",
+     "ja": "澄明なる頭脳・博衣こより"
+    },
+    "BP06-SP01": {
+     "en": "Clear Intellect, Koyori Hakui",
+     "cn": "聪明的头脑·博衣小夜璃",
+     "ja": "澄明なる頭脳・博衣こより"
+    }
+   }
   },
   {
    "id": "BP06-037",
@@ -973,6 +963,7 @@
    "id": "BP06-042",
    "printings": [
     "BP06-042",
+    "BP06-043",
     "PR-132"
    ],
    "name": "Shikigami Summons",
@@ -990,29 +981,14 @@
    "defense": null,
    "traits": [
     "陰陽師"
-   ]
-  },
-  {
-   "id": "BP06-043",
-   "printings": [
-    "BP06-043"
    ],
-   "name": "Koyo's Big Invention",
-   "names": {
-    "en": "Koyo's Big Invention",
-    "cn": "小夜的大发明",
-    "ja": "こよの大発明"
-   },
-   "class": "Runecraft",
-   "type": "spell",
-   "evolved": false,
-   "token": false,
-   "cost": 2,
-   "attack": null,
-   "defense": null,
-   "traits": [
-    "陰陽師"
-   ]
+   "alternateNames": {
+    "BP06-043": {
+     "en": "Koyo's Big Invention",
+     "cn": "小夜的大发明",
+     "ja": "こよの大発明"
+    }
+   }
   },
   {
    "id": "BP06-044",
@@ -1295,6 +1271,8 @@
     "BP06-056",
     "BP06-SL12",
     "BP06-U04",
+    "BP06-057",
+    "BP06-SP02",
     "SP01-027",
     "SP01-SL27",
     "SP01-SP17",
@@ -1315,30 +1293,19 @@
    "defense": 3,
    "traits": [
     "ドラゴニュート"
-   ]
-  },
-  {
-   "id": "BP06-057",
-   "printings": [
-    "BP06-057",
-    "BP06-SP02"
    ],
-   "name": "Blue Sea Predator, Chloe Sakamata",
-   "names": {
-    "en": "Blue Sea Predator, Chloe Sakamata",
-    "cn": "沧海的捕食者·沙花叉库洛艾",
-    "ja": "滄海の捕食者・沙花叉クロヱ"
-   },
-   "class": "Dragoncraft",
-   "type": "follower",
-   "evolved": false,
-   "token": false,
-   "cost": 1,
-   "attack": 1,
-   "defense": 3,
-   "traits": [
-    "ドラゴニュート"
-   ]
+   "alternateNames": {
+    "BP06-057": {
+     "en": "Blue Sea Predator, Chloe Sakamata",
+     "cn": "沧海的捕食者·沙花叉库洛艾",
+     "ja": "滄海の捕食者・沙花叉クロヱ"
+    },
+    "BP06-SP02": {
+     "en": "Blue Sea Predator, Chloe Sakamata",
+     "cn": "沧海的捕食者·沙花叉库洛艾",
+     "ja": "滄海の捕食者・沙花叉クロヱ"
+    }
+   }
   },
   {
    "id": "BP06-058",
@@ -1413,6 +1380,7 @@
    "id": "BP06-061",
    "printings": [
     "BP06-061",
+    "BP06-062",
     "PR-317"
    ],
    "name": "Whitefrost Whisper",
@@ -1430,29 +1398,14 @@
    "defense": null,
    "traits": [
     "ドラゴニュート"
-   ]
-  },
-  {
-   "id": "BP06-062",
-   "printings": [
-    "BP06-062"
    ],
-   "name": "I'll Clean You Up♡",
-   "names": {
-    "en": "I'll Clean You Up♡",
-    "cn": "开始打扫了哦♡",
-    "ja": "お掃除しちゃうぞ♡"
-   },
-   "class": "Dragoncraft",
-   "type": "spell",
-   "evolved": false,
-   "token": false,
-   "cost": 2,
-   "attack": null,
-   "defense": null,
-   "traits": [
-    "ドラゴニュート"
-   ]
+   "alternateNames": {
+    "BP06-062": {
+     "en": "I'll Clean You Up♡",
+     "cn": "开始打扫了哦♡",
+     "ja": "お掃除しちゃうぞ♡"
+    }
+   }
   },
   {
    "id": "BP06-063",

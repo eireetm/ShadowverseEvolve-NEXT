@@ -121,7 +121,6 @@ import c_BP08_117 from "./BP08-117";
 import c_BP08_T01 from "./BP08-T01";
 import c_BP08_T02 from "./BP08-T02";
 import c_BP08_T03 from "./BP08-T03";
-import c_BP08_U07 from "./BP08-U07";
 
 /**
  * Card scripts of BP08, keyed by canonical definition id (alternate printings resolve to the
@@ -249,5 +248,4 @@ export const BP08_SCRIPTS: ScriptRegistry = {
   "BP08-T01": c_BP08_T01,
   "BP08-T02": c_BP08_T02,
   "BP08-T03": c_BP08_T03,
-  "BP08-U07": c_BP08_U07,
 };

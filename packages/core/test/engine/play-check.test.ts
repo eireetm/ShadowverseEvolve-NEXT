@@ -188,7 +188,7 @@ type Zone = "hand" | "ex" | "cemetery" | "banished" | "evolveDeck" | "oppCemeter
 const COUNT_THEMSELVES: Record<string, string[]> = {
   banished: ["BP17-051", "BP18-042"],
   cemetery: [
-    ...["BP01-057", "BP01-104", "BP02-074", "BP06-035", "BP06-036", "BP06-047", "BP09-075", "BP11-017", "BP12-001", "BP12-038"],
+    ...["BP01-057", "BP01-104", "BP02-074", "BP06-035", "BP06-047", "BP09-075", "BP11-017", "BP12-001", "BP12-038"],
     ...["BP13-052", "BP13-053", "BP13-093", "BP15-082", "BP16-057", "BP18-056", "BP21-053", "CP01-060", "CP03-061", "ECP02-072"],
   ],
   ex: ["BP01-103", "BP14-011"],

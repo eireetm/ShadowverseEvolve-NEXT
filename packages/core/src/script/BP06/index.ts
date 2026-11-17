@@ -34,14 +34,12 @@ import c_BP06_032 from "./BP06-032";
 import c_BP06_033 from "./BP06-033";
 import c_BP06_034 from "./BP06-034";
 import c_BP06_035 from "./BP06-035";
-import c_BP06_036 from "./BP06-036";
 import c_BP06_037 from "./BP06-037";
 import c_BP06_038 from "./BP06-038";
 import c_BP06_039 from "./BP06-039";
 import c_BP06_040 from "./BP06-040";
 import c_BP06_041 from "./BP06-041";
 import c_BP06_042 from "./BP06-042";
-import c_BP06_043 from "./BP06-043";
 import c_BP06_044 from "./BP06-044";
 import c_BP06_045 from "./BP06-045";
 import c_BP06_046 from "./BP06-046";
@@ -55,12 +53,10 @@ import c_BP06_053 from "./BP06-053";
 import c_BP06_054 from "./BP06-054";
 import c_BP06_055 from "./BP06-055";
 import c_BP06_056 from "./BP06-056";
-import c_BP06_057 from "./BP06-057";
 import c_BP06_058 from "./BP06-058";
 import c_BP06_059 from "./BP06-059";
 import c_BP06_060 from "./BP06-060";
 import c_BP06_061 from "./BP06-061";
-import c_BP06_062 from "./BP06-062";
 import c_BP06_063 from "./BP06-063";
 import c_BP06_064 from "./BP06-064";
 import c_BP06_065 from "./BP06-065";
@@ -163,14 +159,12 @@ export const BP06_SCRIPTS: ScriptRegistry = {
   "BP06-033": c_BP06_033,
   "BP06-034": c_BP06_034,
   "BP06-035": c_BP06_035,
-  "BP06-036": c_BP06_036,
   "BP06-037": c_BP06_037,
   "BP06-038": c_BP06_038,
   "BP06-039": c_BP06_039,
   "BP06-040": c_BP06_040,
   "BP06-041": c_BP06_041,
   "BP06-042": c_BP06_042,
-  "BP06-043": c_BP06_043,
   "BP06-044": c_BP06_044,
   "BP06-045": c_BP06_045,
   "BP06-046": c_BP06_046,
@@ -184,12 +178,10 @@ export const BP06_SCRIPTS: ScriptRegistry = {
   "BP06-054": c_BP06_054,
   "BP06-055": c_BP06_055,
   "BP06-056": c_BP06_056,
-  "BP06-057": c_BP06_057,
   "BP06-058": c_BP06_058,
   "BP06-059": c_BP06_059,
   "BP06-060": c_BP06_060,
   "BP06-061": c_BP06_061,
-  "BP06-062": c_BP06_062,
   "BP06-063": c_BP06_063,
   "BP06-064": c_BP06_064,
   "BP06-065": c_BP06_065,

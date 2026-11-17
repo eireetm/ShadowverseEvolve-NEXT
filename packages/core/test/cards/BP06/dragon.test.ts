@@ -17,7 +17,7 @@ describe("BP06 Dragoncraft", () => {
     expect([evo.field(), evo.hand()]).toEqual([["BP06-054", "BP06-063"], ["V1"]]);
   });
 
-  it("056 / 057 Filene / Chloe — engage an enemy follower (no refresh next time); with Overflow, a Whitefrost Whisper into the EX area", () => {
+  it("056 Filene (also its hololive printings 057 / SP02) — engage an enemy follower (no refresh next time); with Overflow, a Whitefrost Whisper into the EX area", () => {
     for (const card of ["BP06-056", "BP06-057"]) {
       const t = d({ me: { hand: [card], deck: ["V1", "BP06-061"], playPoints: 7 }, opp: { field: ["V5"] } }).play(card).flush().pick("BP06-061");
       expect([t.engaged("opp:V5"), t.ex()]).toEqual([true, ["BP06-061"]]);
@@ -36,11 +36,14 @@ describe("BP06 Dragoncraft", () => {
     expect([t.ex(), t.zone("me", "evolveDeck").length]).toEqual([["BP06-059"], 1]);
   });
 
-  it("061 / 062 Whitefrost Whisper / I'll Clean You Up♡ — 1 less with Overflow; destroy an engaged follower; 2 to its leader with Filene", () => {
+  it("061 Whitefrost Whisper (also its hololive printing 062) — 1 less with Overflow; destroy an engaged follower; 2 to its leader with Filene", () => {
     for (const card of ["BP06-061", "BP06-062"]) {
       const t = d({ me: { hand: [card], field: ["BP06-056"] }, opp: { field: [{ card: "V5", engaged: true }, "V3"] } }).play(card);
       expect([t.field("opp"), t.leader("opp")]).toEqual([["V3"], 18]);
     }
+    // Filene's hololive printing (BP06-057, Chloe) is a Filene.
+    const chloe = d({ me: { hand: ["BP06-061"], field: ["BP06-057"] }, opp: { field: [{ card: "V5", engaged: true }] } }).play("BP06-061");
+    expect(chloe.leader("opp")).toBe(18);
     const plain = d({ me: { hand: ["BP06-061"], playPoints: 1, maxPlayPoints: 7 }, opp: { field: [{ card: "V5", engaged: true }] } });
     expect(plain.play("BP06-061").leader("opp")).toBe(20);
     expect(d({ me: { hand: ["BP06-061"] }, opp: { field: ["V5"] } }).canPlay("BP06-061")).toBe(false);

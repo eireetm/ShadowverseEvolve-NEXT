@@ -119,8 +119,8 @@ describe("BP08 Neutral", () => {
     expect(d({ me: { field: ["BP08-T03"] } }).keywords("BP08-T03")).toEqual(["rush"]);
   });
 
-  it("U07 Ms. Tart Man — a different card with Tart Man's text", () => {
+  it("U07 Ms. Tart Man — a printing of Tart Man (the card name in small type above its own, CR 2.13)", () => {
     const t = d({ me: { hand: ["BP08-U07"], deck: ["V1", "V3"], playPoints: 4 } }).play("BP08-U07").pick("V1");
-    expect([t.hand(), E.db.get("BP08-U07").name]).toEqual([["V1"], "Ms. Tart Man"]);
+    expect([t.hand(), E.db.ofPrinting("BP08-U07").id, E.db.ofPrinting("BP08-U07").name]).toEqual([["V1"], "BP08-108", "Tart Man"]);
   });
 });

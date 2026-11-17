@@ -2552,7 +2552,8 @@
   {
    "id": "BP08-108",
    "printings": [
-    "BP08-108"
+    "BP08-108",
+    "BP08-U07"
    ],
    "name": "Tart Man",
    "names": {
@@ -2569,7 +2570,14 @@
    "defense": 4,
    "traits": [
     "光輝"
-   ]
+   ],
+   "alternateNames": {
+    "BP08-U07": {
+     "en": "Ms. Tart Man",
+     "cn": "蛋塔子",
+     "ja": "タル子マン"
+    }
+   }
   },
   {
    "id": "BP08-109",
@@ -2908,28 +2916,6 @@
    "defense": 1,
    "traits": [
     "海洋"
-   ]
-  },
-  {
-   "id": "BP08-U07",
-   "printings": [
-    "BP08-U07"
-   ],
-   "name": "Ms. Tart Man",
-   "names": {
-    "en": "Ms. Tart Man",
-    "cn": "蛋塔子",
-    "ja": "タル子マン"
-   },
-   "class": "Neutral",
-   "type": "follower",
-   "evolved": false,
-   "token": false,
-   "cost": 4,
-   "attack": 4,
-   "defense": 4,
-   "traits": [
-    "光輝"
    ]
   }
  ]

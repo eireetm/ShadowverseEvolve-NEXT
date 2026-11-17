@@ -10,11 +10,11 @@ const d = (spec: DriveSpec) => drive(E, spec);
 const ONMYOJI7 = Array<string>(7).fill("BP06-042");
 
 describe("BP06 Runecraft", () => {
-  it("035 / 036 Kuon / Koyori — 1 less per spell or Onmyoji card in the cemetery; a Celestial Shikigami; engage: Storm to Shikigami", () => {
+  it("035 Kuon (also its hololive printings 036 / SP01) — 1 less per spell or Onmyoji card in the cemetery; a Celestial Shikigami; engage: Storm to Shikigami", () => {
     for (const card of ["BP06-035", "BP06-036"]) {
       const t = d({ me: { hand: [card], cemetery: Array<string>(10).fill("BP06-042"), playPoints: 5 } }).play(card);
-      expect([t.pp(), t.field()]).toEqual([0, [card, "BP06-T01"]]);
-      t.activate(card).pick("BP06-T01");
+      expect([t.pp(), t.field()]).toEqual([0, ["BP06-035", "BP06-T01"]]);
+      t.activate("BP06-035").pick("BP06-T01");
       expect(t.keywords("BP06-T01")).toEqual(["aura", "storm"]);
     }
     const second = d({ me: { hand: ["BP06-035"], field: ["BP06-T01"], cemetery: Array<string>(12).fill("KILL"), playPoints: 3 } }).play("BP06-035");
@@ -47,7 +47,7 @@ describe("BP06 Runecraft", () => {
     expect(lw.leader("opp")).toBe(17);
   });
 
-  it("042 / 043 Shikigami Summons / Koyo's Big Invention — a Paper Shikigami; draw with 7 spells and Onmyoji cards", () => {
+  it("042 Shikigami Summons (also its hololive printing 043) — a Paper Shikigami; draw with 7 spells and Onmyoji cards", () => {
     for (const card of ["BP06-042", "BP06-043"]) {
       const t = d({ me: { hand: [card], cemetery: ONMYOJI7, deck: ["V1"] } }).play(card);
       expect([t.field(), t.hand()]).toEqual([["BP06-T02"], ["V1"]]);
@@ -74,9 +74,11 @@ describe("BP06 Runecraft", () => {
     expect([t.field("opp"), t.leader("opp"), t.pp()]).toEqual([[], 17, 0]);
   });
 
-  it("048 Talisman Disciple — Last Words: search a Shikigami Summons", () => {
+  it("048 Talisman Disciple — Last Words: search a Shikigami Summons (its hololive printing BP06-043 too)", () => {
     const t = d({ me: { field: ["BP06-048"], hand: ["QUICK-SAC"], deck: ["V1", "BP06-042"] } }).play("QUICK-SAC").pick("BP06-042");
     expect(t.hand()).toEqual(["BP06-042"]);
+    const koyo = d({ me: { field: ["BP06-048"], hand: ["QUICK-SAC"], deck: ["V1", "BP06-043"] } }).play("QUICK-SAC").pick("BP06-042");
+    expect(koyo.game.state.cards[koyo.id("BP06-042@hand")]!.printing).toBe("BP06-043");
   });
 
   it("049 / 050 Charming Gentlemouse — pay 2 to summon another; evolved: twice the Gentlemice in damage", () => {

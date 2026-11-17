@@ -21,6 +21,30 @@ describe("card pool (all supported sets)", () => {
     expect(Object.keys(ALL_SCRIPTS).length).toBe(SUPPORTED_SETS.reduce((n, s) => n + Object.keys(SETS[s].scripts).length, 0));
   });
 
+  /**
+   * A printing with a big name of its own and the card name in small type above it (CP02's units, CP04's groups, BP06's
+   * hololive printings, BP08-U07) is that card: the data names it by its big name, so a new set's such printing comes in
+   * as a card of its own. Check its image (assets/<no>/<no>.webp) and merge it with `treated_as` in data/fixes.ts — the
+   * printed name becomes an alternate name, shown only (CR 2.13). Different cards that only share a text stay apart, listed
+   * here with the reason.
+   */
+  it.skipIf(!hasDataTexts())("no two cards are the same but for their names (an unmerged printing with its own big name)", () => {
+    const SAME_TEXT_ONLY = new Set([
+      // サンライトシスター / 鉄拳の神父: Evolve (1), Ward, 4/4 for 4 — two Havencraft cards, no card name in small type.
+      "BP12-097 BP16-105",
+    ]);
+    const groups = new Map<string, string[]>();
+    for (const c of withTexts.all()) {
+      // The text without its reference block (a printing may lack the tokens' lines).
+      const body = (c.text.ja ?? "").split(/\n―{3,}/)[0]!.replace(/\s+/g, "");
+      if (body === "") continue;
+      const key = JSON.stringify([c.type, c.class, c.evolved, c.token, c.cost, c.attack, c.defense, [...c.traits].sort(), c.universe ?? null, body]);
+      groups.set(key, [...(groups.get(key) ?? []), c.id]);
+    }
+    const same = [...groups.values()].filter((ids) => ids.length > 1).map((ids) => ids.sort().join(" "));
+    expect(same.filter((ids) => !SAME_TEXT_ONLY.has(ids))).toEqual([]);
+  });
+
   it.skipIf(!hasDataTexts())("every card with a text has a Chinese text (else the Chinese interface shows English; fixed in data/fixes.ts)", () => {
     const missing = withTexts.all().filter((c) => c.text.ja && !c.text.cn).map((c) => c.id);
     expect(missing).toEqual([]);
@@ -50,6 +74,11 @@ describe("card pool (all supported sets)", () => {
     expect(vania.alternateNames?.["BP02-070"]?.en).toBe("La+ Darkness, Laplace's Demon");
     expect(db.ofPrinting("BP02-082").id).toBe("BP02-081");
     expect(db.named("La+ Darkness, Laplace's Demon")).toEqual([]);
+    // Printings with a big name of their own and the card name in small type above it (data/fixes.ts): BP06's hololive
+    // printings, BP08-U07.
+    const of = ["BP06-036", "BP06-SP01", "BP06-043", "BP06-057", "BP06-SP02", "BP06-062", "BP08-U07"].map((p) => db.ofPrinting(p).id);
+    expect(of).toEqual(["BP06-035", "BP06-035", "BP06-042", "BP06-056", "BP06-056", "BP06-061", "BP08-108"]);
+    expect(db.ofPrinting("BP06-036").alternateNames?.["BP06-036"]?.ja).toBe("澄明なる頭脳・博衣こより");
   });
 
   it.skipIf(!hasDataTexts())("uses effect_en where the scraped official English text belongs to another card", () => {

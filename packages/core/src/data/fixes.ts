@@ -195,6 +195,17 @@ export const DATA_FIXES: Readonly<Record<string, DataFix>> = {
   "CP02-U13a": { treated_as: "New Generations" },
   "CP02-U13b": { treated_as: "New Generations" },
   "CP02-U13c": { treated_as: "New Generations" },
+  // BP06's hololive printings and BP08-U07 have a big name of their own, with the card name in small type above it, and the
+  // texts, class, stats and traits of that card (decided by the project owner; assets/BP06-036: 陰陽の開祖・クオン above
+  // 澄明なる頭脳・博衣こより; BP06-043: 式神の使役; BP06-057 / SP02: 銀氷のドラゴニュート・フィルレイン; BP06-062: 銀氷の吐息;
+  // BP08-U07: タルトマン above タル子マン) — the same case as CP02's unit printings.
+  "BP06-036": { treated_as: "Kuon, Founder of Onmyodo" },
+  "BP06-SP01": { treated_as: "Kuon, Founder of Onmyodo" },
+  "BP06-043": { treated_as: "Shikigami Summons" },
+  "BP06-057": { treated_as: "Filene, Whitefrost Dragonewt" },
+  "BP06-SP02": { treated_as: "Filene, Whitefrost Dragonewt" },
+  "BP06-062": { treated_as: "Whitefrost Whisper" },
+  "BP08-U07": { treated_as: "Tart Man" },
   // CP04's SP / U printings of three cards carry the big name of the characters shown together, with the card name in
   // small type above it (assets/CP04-SP06a: ユニ above ユニ＆クロエ＆チエル; CP04-SP10a: ランファ; CP04-SP12a: ノゾミ), and
   // the texts, class, stats and traits of that card — the same case as CP02's unit printings.
