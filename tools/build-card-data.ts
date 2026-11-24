@@ -10,8 +10,8 @@
  * canonical printing's set (`<SET>.json`), its texts to the set's text file of each language (`<SET>_en.json`,
  * `<SET>_cn.json`, `<SET>_ja.json`). Also writes docs/card-data-report.md.
  *
- * Pre-release sets (data/preview.ts, e.g. BP22) are read from their Japanese data file next to the assets folder
- * (D:\SVE\BP22.json) instead. Custom (community-made) sets (data/custom.ts, e.g. DIY01) are listed in the repository;
+ * Pre-release sets (data/preview.ts, e.g. CP05) are read from their Japanese data file next to the assets folder
+ * (D:\SVE\CP05\CP05.json) instead, their pictures (when they have them) from the folder named after the set. Custom (community-made) sets (data/custom.ts, e.g. DIY01) are listed in the repository;
  * their pictures are in a folder named after the set beside the assets folder (D:\SVE\DIY01).
  *
  * The core package never reads the file system; this tool is the only place that does.
@@ -21,7 +21,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CardDataError, groupPrintings, normalizePrinting, type NormalizedPrinting } from "../packages/core/src/data/normalize";
 import { applyDataFixes, DATA_FIXES } from "../packages/core/src/data/fixes";
-import { PREVIEW_SETS, previewRawCards, type PreviewKind, type PreviewSetFile } from "../packages/core/src/data/preview";
+import { PREVIEW_SETS, previewRawCards, previewSetFile, type PreviewKind } from "../packages/core/src/data/preview";
 import { CUSTOM_SETS, customRawCards } from "../packages/core/src/data/custom";
 import type { RawCardJson } from "../packages/core/src/data/raw";
 import { CardDatabase } from "../packages/core/src/data/database";
@@ -95,7 +95,7 @@ for (const [set, preview] of Object.entries(PREVIEW_SETS)) {
   if (!supported.has(set)) continue;
   const file = resolve(assetsDir, "..", preview.file);
   if (!existsSync(file)) throw new Error(`pre-release set ${set}: ${file} not found (data/preview.ts)`);
-  const json = JSON.parse(readFileSync(file, "utf8")) as PreviewSetFile;
+  const json = previewSetFile(set, JSON.parse(readFileSync(file, "utf8")));
   if (json.収録コード !== set) throw new Error(`${file}: 収録コード ${json.収録コード}, expected ${set}`);
   const summary: PreviewSummary = { set, file, printings: [], reprints: [] };
   const englishNameOf = (ja: string, kind: PreviewKind): string | null => {
@@ -137,9 +137,9 @@ for (const c of cards) {
   if (c.frontFace !== undefined) continue; // a back face (CR 2.14): checked with its front
   for (const p of c.printings) {
     const raw = raws.get(p)!;
-    if (raw.preview) continue; // no images yet (the report's pre-release section)
-    // A custom set's pictures: in its folder beside the assets folder (data/custom.ts).
-    const folder = raw.custom ? join(assetsDir, "..", raw.set) : join(assetsDir, p);
+    if (raw.preview && !raw.image) continue; // no images yet (the report's pre-release section)
+    // A custom set's pictures and a pre-release set's: in its folder beside the assets folder (data/custom.ts, data/preview.ts).
+    const folder = raw.custom || raw.preview ? join(assetsDir, "..", raw.set) : join(assetsDir, p);
     if (!existsSync(join(folder, raw.image))) warnings.push(`${p}: image file ${raw.image} missing`);
     if (raw.back && !existsSync(join(folder, raw.back.image))) warnings.push(`${p}: image file ${raw.back.image} missing`);
   }
@@ -217,19 +217,22 @@ const report = [
   "",
   "## 别名印刷（CR 2.13）",
   "",
-  ...cards.flatMap((c) => Object.entries(c.alternateNames ?? {}).map(([p, n]) => `- ${p}「${n.en}」是 ${c.id} ${c.name} 的别名印刷`)),
+  // A pre-release printing's English name is the placeholder: its Japanese one is the printed name.
+  ...cards.flatMap((c) =>
+    Object.entries(c.alternateNames ?? {}).map(([p, n]) => `- ${p}「${c.preview ? (n.ja ?? n.en) : n.en}」是 ${c.id} ${c.name} 的别名印刷`),
+  ),
   "",
   "## 测试版（先行）卡包",
   "",
-  "只有日文和中文数据的卡包（`data/preview.ts`），按日文实现、中文对照。英文卡名和文本是占位符 `unavailable`；还没有卡图。",
+  "只有日文和中文数据的卡包（`data/preview.ts`），按日文实现、中文对照。英文卡名和文本是占位符 `unavailable`；卡图在卡包同名的文件夹里（登记了 `images` 的卡包），没有的还没有卡图。",
   "",
   ...previews.flatMap((p) => {
     const defs = previewDefinitions.filter((id) => setOf[id] === p.set).map((id) => cards.find((c) => c.id === id)!);
     const withoutCn = defs.filter((c) => !c.names.cn);
     return [
       `- ${p.set}：\`${p.file}\`，${p.printings.length} 个印刷版本；新定义 ${defs.length} 个；${p.reprints.length} 个是已有卡的再录或衍生物，并入已有的定义`,
-      `  - 再录：${p.reprints.map((r) => `${r.printing}（${r.name}）`).join("、")}`,
-      `  - 中文卡名：${defs.length - withoutCn.length} 个（\`data/preview.ts\` 登记的译名表，或其他卡的中文文本）；${withoutCn.length} 个没有（界面显示日文卡名）`,
+      ...(p.reprints.length > 0 ? [`  - 再录：${p.reprints.map((r) => `${r.printing}（${r.name}）`).join("、")}`] : []),
+      `  - 中文卡名：${defs.length - withoutCn.length} 个（卡表的中文卡名、\`data/preview.ts\` 登记的译名表，或其他卡的中文文本）；${withoutCn.length} 个没有（界面显示日文卡名）`,
       ...(withoutCn.length > 0 ? [`  - 没有中文卡名的：${withoutCn.map((c) => `${c.id} ${c.name}`).join("、")}`] : []),
     ];
   }),

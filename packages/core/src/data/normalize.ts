@@ -85,6 +85,9 @@ export function parseCardType(cardNo: string, raw: readonly string[]): {
       case "Equipment":
         primaries.push("equipment");
         break;
+      case "Treasure":
+        primaries.push("treasure");
+        break;
       case "Evolved":
         evolved = true;
         break;
@@ -113,6 +116,10 @@ export function parseCardType(cardNo: string, raw: readonly string[]): {
   // CR 14.5.2.1 — equipment exists only as tokens (CP04).
   if (type === "equipment" && (!token || evolved || advanced)) {
     throw new CardDataError(`${cardNo}: equipment must be a token`);
+  }
+  // CR JP 14.6.1.1 — treasures are tokens made by rules or effects (CP05).
+  if (type === "treasure" && (!token || evolved || advanced)) {
+    throw new CardDataError(`${cardNo}: a treasure must be a token`);
   }
   // CR 9.2 — advanced cards are followers (BP10) or spells (BP13). Other kinds fail until they appear.
   if (advanced && (evolved || token || (type !== "follower" && type !== "spell"))) {
@@ -171,8 +178,10 @@ function checkStats(
   const fail = (msg: string) => {
     throw new CardDataError(`${cardNo}: ${msg} (cost=${cost}, atk=${atk}, def=${def})`);
   };
-  if (type === "leader" || type === "crest") {
-    // CR 2.5 — neither is played, so neither has a cost (crests: 9.1.4.2, BP20).
+  if (type === "leader" || type === "crest" || type === "treasure") {
+    // CR 2.5 — none is played, so none has a cost (crests: 9.1.4.2, BP20). A treasure prints neither cost nor stats
+    // (CP05-T09 … T15; the token list of the Japanese rules' appendix A has no cost column for them), and a cost of 0
+    // would let it make up "different costs" (CP05-T15 ruling Q2933).
     if (cost !== null || atk !== null || def !== null) fail(`${type} must not have cost/atk/def`);
     return;
   }
@@ -294,7 +303,8 @@ export function normalizePrinting(raw: RawCardJson): NormalizedPrinting {
     traits: type === "leader" && raw.traits_ja == null ? [] : parseTraits(cardNo, raw.traits_ja),
     textSource: en.source,
     officialMismatch: en.officialMismatch,
-    alternateName: alias === null ? null : { en: printedName, cn: raw.name_cn, ja: nameJa },
+    // A pre-release printing's printed name is Japanese: its English one is the placeholder, like the card's (names.en).
+    alternateName: alias === null ? null : { en: raw.preview ? PREVIEW_TEXT : printedName, cn: raw.name_cn, ja: nameJa },
     jaKey: japaneseKey(raw),
     jaWordsKey: japaneseWordsKey(raw),
     back: doubleFaced ? normalizeBack(cardNo, raw) : null,

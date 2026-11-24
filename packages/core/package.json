@@ -65,6 +65,7 @@
     "./sets/pr": "./src/sets/pr.ts",
     "./sets/bp22": "./src/sets/bp22.ts",
     "./sets/diy01": "./src/sets/diy01.ts",
+    "./sets/cp05": "./src/sets/cp05.ts",
     "./testing": "./src/testing/index.ts"
   }
 }

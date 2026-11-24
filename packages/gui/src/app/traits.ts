@@ -139,6 +139,18 @@ export const TRAIT_NAMES: Readonly<Record<string, TraitNames>> = {
   "プリンス": { en: "Prince", cn: "王子" }, // translated
   "リッチモンド商工会": { en: "Richmond Corporation", cn: "里士满商会" }, // translated
   "ギルド管理協会": { en: "Guild Association", cn: "公会管理协会" }, // translated
+  // CP05 (Granblue Fantasy, pre-release): the Chinese from the official list's 中文类型, the English translated until the
+  // English data is out.
+  "グラブル": { en: "Granblue", cn: "碧蓝幻想" }, // translated
+  "十天衆": { en: "Eternals", cn: "十天众" }, // translated
+  "六竜": { en: "Six Dragons", cn: "六龙" }, // translated
+  "火属性": { en: "Fire", cn: "火属性" }, // translated
+  "水属性": { en: "Water", cn: "水属性" }, // translated
+  "土属性": { en: "Earth", cn: "土属性" }, // translated
+  "風属性": { en: "Wind", cn: "风属性" }, // translated
+  "光属性": { en: "Light", cn: "光属性" }, // translated
+  "闇属性": { en: "Dark", cn: "暗属性" }, // translated
+  "全属性": { en: "All Elements", cn: "全属性" }, // translated
 };
 
 /** A trait's name in a card language (the Japanese one when there is no translation). */

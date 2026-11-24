@@ -11,7 +11,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createEngine, type CardDefinition } from "../packages/core/src";
-import { PREVIEW_SETS, previewRawCards, type PreviewSetFile } from "../packages/core/src/data/preview";
+import { PREVIEW_SETS, previewRawCards, previewSetFile } from "../packages/core/src/data/preview";
 import type { RawCardJson } from "../packages/core/src/data/raw";
 import { ALL_CARDS, ALL_SCRIPTS } from "../packages/core/src/sets";
 import { withDataTexts } from "./lib/card-texts";
@@ -36,10 +36,10 @@ let previews: Map<string, RawCardJson> | null = null;
 function previewRaw(printing: string): RawCardJson | null {
   if (!previews) {
     previews = new Map();
-    for (const { file: fileName } of Object.values(PREVIEW_SETS)) {
+    for (const [set, { file: fileName }] of Object.entries(PREVIEW_SETS)) {
       const file = join(assetsDir, "..", fileName);
       if (!existsSync(file)) continue;
-      for (const r of previewRawCards(JSON.parse(readFileSync(file, "utf8")) as PreviewSetFile)) previews.set(r.card_no, r);
+      for (const r of previewRawCards(previewSetFile(set, JSON.parse(readFileSync(file, "utf8"))))) previews.set(r.card_no, r);
     }
   }
   return previews.get(printing) ?? null;

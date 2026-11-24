@@ -143,8 +143,8 @@ describe.skipIf(!hasDataTexts())("links to the cards a card's text names", () =>
       for (const lang of ["en", "ja", "cn"] as const) for (const t of linked(card.id, lang)?.all ?? []) reached[lang].add(t);
     }
     const missing = (lang: "en" | "ja" | "cn") => tokens.filter((t) => !reached[lang].has(t.id)).map((t) => t.id);
-    // English: two tokens only named in texts without English.
-    expect(missing("en")).toEqual(["DSD01a-T01", "DSD01b-T01"].filter((id) => tokens.some((t) => t.id === id)));
+    // English: two tokens only named in texts without English; a pre-release set's (data/preview.ts) have no English yet.
+    expect(missing("en").filter((id) => !catalog.def(id)!.preview)).toEqual(["DSD01a-T01", "DSD01b-T01"].filter((id) => tokens.some((t) => t.id === id)));
     // Pre-release cards (data/preview.ts) are left out of this check: their tokens' Japanese and Chinese names come from their
     // texts.
     expect(missing("ja").filter((id) => !catalog.def(id)!.preview)).toEqual([]);

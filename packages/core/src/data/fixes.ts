@@ -223,6 +223,23 @@ export const DATA_FIXES: Readonly<Record<string, DataFix>> = {
   "CP04-SP12b": { treated_as: "Nozomi" },
   "CP04-SP12c": { treated_as: "Nozomi" },
   "CP04-U12": { treated_as: "Nozomi" },
+  // CP05's SP / SSP / U printings of six cards carry another big name, with the card name in small type above it
+  // (D:\SVE\CP05\CP05-SP01.png: 狂恋の華鎧・ヴィーラ above 誓約の騎士・ヴィーラ＆カタリナ; SP02: 天司長の後継・サンダルフォン; U03:
+  // 天星剣王・シエテ; U05: 魔弾の射手・エッセル; U07: 大いなる調停者・ゾーイ; U11: グラン＆ジータ), and that card's texts, class,
+  // stats and traits — the same case as CP02's unit printings (decided by the project owner). Pre-release data
+  // (data/preview.ts): the card names are the Japanese ones until the English data is out.
+  ...Object.fromEntries(
+    (
+      [
+        ["狂恋の華鎧・ヴィーラ", ["SP01", "SSP01a", "SSP01b"]],
+        ["天司長の後継・サンダルフォン", ["SP02", "SSP02a", "SSP02b"]],
+        ["天星剣王・シエテ", ["U03"]],
+        ["魔弾の射手・エッセル", ["U05"]],
+        ["大いなる調停者・ゾーイ", ["U07"]],
+        ["グラン＆ジータ", ["U11"]],
+      ] as const
+    ).flatMap(([name, printings]) => printings.map((p) => [`CP05-${p}`, { treated_as: name }])),
+  ),
   // The leader 〔プリンセスフォーム〕ペコリーヌ is listed as Forestcraft; its printed class icon is Swordcraft's crown
   // (assets/CP04-PR02/CP04-PR02.webp; Forestcraft's is the leaf of CP04-PR01), as for CP04-PR09 of the same name.
   "CP04-PR02": { class: "Swordcraft" },

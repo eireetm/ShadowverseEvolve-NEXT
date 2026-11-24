@@ -1,29 +1,35 @@
 import type { CardClass, Universe } from "../model/card";
 import { CardDataError } from "./errors";
 import type { RawCardJson, RawRuling } from "./raw";
+import { UNIVERSE_OF_SET } from "./universes";
 
 /**
  * Pre-release sets ("先行" data): a set published in Japanese and Chinese before its English release comes as one file
  * of the Japanese official card list instead of the scraped `assets/<card>/<card>.json` files, e.g. BP22 from 2026-10-01
- * until its data was scraped (2026-10-18). Its cards are implemented from the Japanese text, checked against the Chinese
- * text (decided by the project owner); their English name and text are a placeholder (english-text.ts PREVIEW_TEXT)
- * until the English data is out, when the set leaves this list and is built from the scraped files like every other.
+ * until its data was scraped (2026-10-18), CP05 from 2026-11-24. Its cards are implemented from the Japanese text,
+ * checked against the Chinese text (decided by the project owner); their English name and text are a placeholder
+ * (english-text.ts PREVIEW_TEXT) until the English data is out, when the set leaves this list and is built from the
+ * scraped files like every other.
  *
  * Pure functions: the build tool (tools/build-card-data.ts) reads the files.
  */
 
-/** A pre-release set: its file, in the folder that holds the assets folder (D:\SVE\BP22.json), and its cards' Chinese names. */
+/** A pre-release set: its file, in the folder that holds the assets folder (D:\SVE\CP05\CP05.json), and its cards' Chinese names. */
 export interface PreviewSet {
   file: string;
   /**
-   * Chinese card names by Japanese name, which the official Japanese list doesn't give (BP22's came from the project owner's
+   * Chinese card names by Japanese name, for a list that doesn't give them (BP22's came from the project owner's
    * translation table). Names it lacks come from other cards' Chinese texts (chineseNamesFromTexts).
    */
   chineseNames?: Readonly<Record<string, string>>;
+  /** The pictures' file type, when they are in a folder named after the set beside the assets folder (D:\SVE\CP05\CP05-001.png). */
+  images?: "png" | "webp" | "jpg";
 }
 
-/** None now: BP22 is built from the scraped data since 2026-10-18. */
-export const PREVIEW_SETS: Readonly<Record<string, PreviewSet>> = {};
+export const PREVIEW_SETS: Readonly<Record<string, PreviewSet>> = {
+  // Granblue Fantasy: the official Japanese card list with the Chinese names, types and texts, and the pictures.
+  CP05: { file: "CP05/CP05.json", images: "png" },
+};
 
 /**
  * One card of a pre-release file. Only the fields the build needs: the release date, rarity, product name, flavor text
@@ -32,7 +38,11 @@ export const PREVIEW_SETS: Readonly<Record<string, PreviewSet>> = {};
 export interface PreviewCard {
   カード番号: string;
   カード名: string;
+  /** The Chinese card name, when the list gives it (CP05). */
+  中文卡名?: string;
   クラス: string;
+  /** The title (CR 2.12.2.1), when the list gives it (CP05): the card's universe. */
+  タイトル?: string;
   カード種類: string;
   タイプ: string;
   コスト: string;
@@ -46,6 +56,55 @@ export interface PreviewCard {
 export interface PreviewSetFile {
   収録コード: string;
   カード: readonly PreviewCard[];
+}
+
+/**
+ * A card of the official list in its other shape (CP05): a plain list, the text under 効果, the Chinese name, types
+ * and text beside the Japanese, a Q&A item's number and date in one `id` ("Q2868（2026-11-24）").
+ */
+export interface CardListCard {
+  カード番号: string;
+  カード名: string;
+  中文卡名?: string;
+  クラス: string;
+  タイトル?: string;
+  カード種類: string;
+  タイプ: string;
+  /** Only for the GUI's trait names (packages/gui/src/app/traits.ts): "·" separates them, which parseTraits refuses. */
+  中文类型?: string;
+  コスト: string;
+  攻撃力: string;
+  体力: string;
+  効果: string;
+  中文效果?: string;
+  "Q&A"?: readonly { id: string; Q: string; A: string }[];
+}
+
+/** A pre-release file in either shape as the one previewRawCards reads; `set` is the set a plain list is of. */
+export function previewSetFile(set: string, json: PreviewSetFile | readonly CardListCard[]): PreviewSetFile {
+  if (!Array.isArray(json)) return json as PreviewSetFile;
+  return {
+    収録コード: set,
+    カード: (json as readonly CardListCard[]).map((c) => ({
+      カード番号: c.カード番号,
+      カード名: c.カード名,
+      ...(c.中文卡名 !== undefined ? { 中文卡名: c.中文卡名 } : {}),
+      クラス: c.クラス,
+      ...(c.タイトル !== undefined ? { タイトル: c.タイトル } : {}),
+      カード種類: c.カード種類,
+      タイプ: c.タイプ,
+      コスト: c.コスト,
+      攻撃力: c.攻撃力,
+      体力: c.体力,
+      能力: c.効果,
+      effect_cn: c.中文效果?.trim() || null,
+      "Q&A": (c["Q&A"] ?? []).map((q) => {
+        const m = /^(Q\d+)（(\d{4}-\d{2}-\d{2})）$/.exec(q.id.trim());
+        if (!m) throw new CardDataError(`${c.カード番号}: Q&A id "${q.id}" is not "Q<number>（<date>）"`);
+        return { 番号: m[1]!, 日付: m[2]!, Q: q.Q, A: q.A };
+      }),
+    })),
+  };
 }
 
 /** What a card is, for finding it among the scraped cards by its Japanese name. */
@@ -86,7 +145,23 @@ const CARD_TYPES: Readonly<Record<string, readonly string[]>> = {
   "フォロワー・トークン": ["Follower", "Token"],
   "スペル・トークン": ["Spell", "Token"],
   "アミュレット・トークン": ["Amulet", "Token"],
+  // CR JP 14.6.1.1.1 — a treasure (上限解放素材) is printed "Treasure"; the list calls the kind トレジャー・トークン.
+  "トレジャー・トークン": ["Treasure", "Token"],
 };
+
+/** CR 2.12.2.1 — a list's title (タイトル) as the universe; a title not here is an error, not a guess. */
+const TITLE_UNIVERSES: Readonly<Record<string, Universe>> = {
+  グランブルーファンタジー: "granblueFantasy",
+};
+
+/** The universe of a card the list gives a title: it must agree with its set's (universes.ts). */
+function titleUniverse(cardNo: string, set: string, title: string): Universe {
+  const universe = TITLE_UNIVERSES[title];
+  if (!universe) throw new CardDataError(`${cardNo}: unknown title "${title}" (data/preview.ts TITLE_UNIVERSES)`);
+  const ofSet = UNIVERSE_OF_SET[set];
+  if (ofSet !== undefined && ofSet !== universe) throw new CardDataError(`${cardNo}: title "${title}" is not ${set}'s universe ${ofSet}`);
+  return universe;
+}
 
 /**
  * CR 2.12.2.1 — the universe is printed with the collector number, and the pre-release data has no field for it. Every
@@ -111,14 +186,14 @@ const quoted = (text: string): string[] => [...text.matchAll(/『([^』]+)』/g)
 
 /**
  * Chinese card names, from the Chinese texts: a text names other cards in 『』 in the same order as the Japanese text
- * (e.g. BP22-005 『ブリリアントフェアリー』 / 『璀璨妖精』). The token explanations after "―" (Japanese) / "*『"
+ * (e.g. BP22-005 『ブリリアントフェアリー』 / 『璀璨妖精』). The token explanations after "―" (Japanese) / "*『" or "―"
  * (Chinese) are left out, as texts whose numbers of names differ. A name translated two ways is not used.
  */
 export function chineseNamesFromTexts(cards: readonly PreviewCard[]): Map<string, string> {
   const found = new Map<string, Set<string>>();
   for (const c of cards) {
     const ja = quoted(c.能力.split("―")[0]!);
-    const cn = quoted((c.effect_cn ?? "").split("*『")[0]!);
+    const cn = quoted((c.effect_cn ?? "").split("*『")[0]!.split("―")[0]!);
     if (ja.length === 0 || ja.length !== cn.length) continue;
     ja.forEach((name, i) => found.set(name, (found.get(name) ?? new Set()).add(cn[i]!)));
   }
@@ -127,9 +202,9 @@ export function chineseNamesFromTexts(cards: readonly PreviewCard[]): Map<string
 
 /**
  * The cards of a pre-release file as scraped card files: the Japanese text for both `effect_ja` fields (the file writes
- * the icons as words, like `effect_ja_sve`), the Chinese text, the rulings with their numbers. `englishNameOf` names the
- * reprints of scraped cards, so that they join those cards (normalize.ts groupPrintings); every other card is new and is
- * named by its Japanese name.
+ * the icons as words, like `effect_ja_sve`), the Chinese name and text, the rulings with their numbers, the picture when
+ * the set has them. `englishNameOf` names the reprints of scraped cards, so that they join those cards
+ * (normalize.ts groupPrintings); every other card is new and is named by its Japanese name.
  */
 export function previewRawCards(
   file: PreviewSetFile,
@@ -137,6 +212,7 @@ export function previewRawCards(
   chineseNames: Readonly<Record<string, string>> = PREVIEW_SETS[file.収録コード]?.chineseNames ?? {},
 ): RawCardJson[] {
   const set = file.収録コード;
+  const images = PREVIEW_SETS[set]?.images;
   const fromTexts = chineseNamesFromTexts(file.カード);
   const chinese = (ja: string): string | null => chineseNames[ja] ?? fromTexts.get(ja) ?? null;
   return file.カード.map((c): RawCardJson => {
@@ -154,7 +230,10 @@ export function previewRawCards(
     };
     const english = englishNameOf(c.カード名, kind);
     const traits = c.タイプ.trim();
-    const universe = traits.split("・").map((t) => UNIVERSE_TRAITS[t]).find((u) => u !== undefined);
+    const title = c.タイトル?.trim();
+    const universe = title
+      ? titleUniverse(cardNo, set, title)
+      : traits.split("・").map((t) => UNIVERSE_TRAITS[t]).find((u) => u !== undefined);
     const text = c.能力.trim();
     const rulings: RawRuling[] = (c["Q&A"] ?? []).map((q) => ({ q: `${q.番号} ${q.Q}`, a: q.A }));
     return {
@@ -162,7 +241,7 @@ export function previewRawCards(
       // CR 5.16.1.1.1: the scraped data names an evolved card "<name> (Evolved)" (normalize.ts).
       name_en: english === null ? "" : kind.evolved ? `${english} (Evolved)` : english,
       name_ja: c.カード名,
-      name_cn: chinese(c.カード名),
+      name_cn: c.中文卡名?.trim() || chinese(c.カード名),
       set,
       rarity: "",
       class: cls,
@@ -181,7 +260,7 @@ export function previewRawCards(
       flavor_text_en: null,
       illustrator: null,
       rulings: rulings.length > 0 ? rulings : null,
-      image: "",
+      image: images ? `${cardNo}.${images}` : "",
       preview: true,
       ...(universe ? { universe } : {}),
     };

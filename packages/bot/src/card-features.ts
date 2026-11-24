@@ -283,7 +283,8 @@ export function refFrom(def: CardDefinition, script: CardScript, r: Pick<Analyze
 }
 
 function zonesOf(def: CardDefinition, script: CardScript, r: Pick<CardRef, "ability" | "key">): string[] {
-  const home = def.type === "crest" ? ["ex"] : def.type === "equipment" ? ["equipmentZone"] : ["field"];
+  // Crests' and treasures' abilities work in the EX area (CR 10.3.6, CR JP 14.6.1.1.3), equipment's in the equipment zone.
+  const home = def.type === "crest" || def.type === "treasure" ? ["ex"] : def.type === "equipment" ? ["equipmentZone"] : ["field"];
   if (r.ability >= 0) {
     const a = (script.abilities ?? [])[r.ability] as AbilityDef | undefined;
     return [...((a && "validIn" in a && a.validIn) || home)];
@@ -387,6 +388,14 @@ export const KNOWN_SCRIPT_KEYS = {
 const COLUMN_INDEX = new Map(CARD_FEATURE_COLUMNS.map((c, i) => [c, i]));
 
 /**
+ * What version 3 has no column for: a treasure's card type and the Granblue Fantasy universe (CP05, 2026-11-24). Encoders
+ * v1 and v2 lay out their vectors from the columns (one global column per `uni.*`, a card's static block as wide as the
+ * table), so a new column would shift what the trained models read: the next table version adds them, with an encoder
+ * that reads them.
+ */
+const NO_COLUMN_YET: ReadonlySet<string> = new Set(["type.treasure", "uni.granblueFantasy"]);
+
+/**
  * A card's row (CARD_FEATURE_COLUMNS order): its definition and its script's declared fields; `script` undefined: none.
  * `analysis`: what the tools read from the script's code (the version 2 columns; 0 without it).
  */
@@ -397,9 +406,9 @@ export function cardFeatureRow(def: CardDefinition, script: CardScript | undefin
     if (i === undefined) throw new Error(`no column ${column}`);
     row[i]! += Number(value);
   };
-  if (def.type !== "leader") add(`type.${def.type}`, 1);
+  if (def.type !== "leader" && !NO_COLUMN_YET.has(`type.${def.type}`)) add(`type.${def.type}`, 1);
   add(CLASS_COLUMNS[CARD_CLASSES.indexOf(def.class)]!, 1);
-  if (def.universe) add(`uni.${def.universe}`, 1);
+  if (def.universe && !NO_COLUMN_YET.has(`uni.${def.universe}`)) add(`uni.${def.universe}`, 1);
   if (def.trigger) add(`trig.${def.trigger}`, 1);
   add("evolved", def.evolved);
   add("advanced", def.advanced === true);

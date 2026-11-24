@@ -113,7 +113,8 @@ describe.skipIf(!hasDataTexts())("the abilities given to a card, in the card pan
   }, 60_000);
 
   it("every card whose text gives an ability in quotes gives it in a way the player view reports", () => {
-    const missing = ALL_CARDS.filter((def) => giftQuotes(def.text.cn ?? "", "cn").length > 0 && giftsGiven(def.id) === 0).map((def) => def.id);
+    // A card without a script isn't implemented yet (the card status lists it): nothing gives its abilities.
+    const missing = ALL_CARDS.filter((def) => ALL_SCRIPTS[def.id] && giftQuotes(def.text.cn ?? "", "cn").length > 0 && giftsGiven(def.id) === 0).map((def) => def.id);
     expect(missing).toEqual([]);
   }, 60_000);
 });

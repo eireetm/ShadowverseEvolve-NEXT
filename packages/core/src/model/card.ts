@@ -36,16 +36,18 @@ export type TriggerIcon = (typeof TRIGGER_ICONS)[number];
 /** The icon an advanced activated ability is printed with: {[adv]}, a serve ability's {[feed]}, a Ride ability's {[ride]}. */
 export type AdvancedIcon = "adv" | "feed" | "ride";
 
-export const UNIVERSES = ["umamusume", "cinderellaGirls", "vanguard", "princessConnect"] as const;
+export const UNIVERSES = ["umamusume", "cinderellaGirls", "vanguard", "princessConnect", "granblueFantasy"] as const;
 export type Universe = (typeof UNIVERSES)[number];
 
 /**
  * CR 2.3.2 primary card types. Crests (BP20) are tokens that exist only in the EX area (9.1.4.2), one
  * per name there (9.1.5), whose abilities work in the EX area (10.3.6); they can't be played. Equipment
  * (CP04, Princess Connect! Re: Dive) are tokens that exist only in the equipment zone, linked to the
- * follower that equips them, and whose abilities work only there (14.5.2.1).
+ * follower that equips them, and whose abilities work only there (14.5.2.1). Treasures (上限解放素材, printed
+ * "Treasure": CR JP 14.6.1.1.1; CP05, Granblue Fantasy) are tokens that exist only in the EX area and the uncap zone
+ * (CR JP 14.6.1.1.2), whose abilities work only in the EX area (CR JP 14.6.1.1.3).
  */
-export type CardType = "leader" | "follower" | "amulet" | "spell" | "crest" | "equipment";
+export type CardType = "leader" | "follower" | "amulet" | "spell" | "crest" | "equipment" | "treasure";
 
 export interface LocalizedText {
   /** English — authoritative for implementation (official EN text). */

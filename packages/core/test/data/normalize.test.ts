@@ -67,6 +67,16 @@ describe("normalizePrinting", () => {
     expect(() => parseCardType("x", ["Leader", "Evolved"])).toThrow(CardDataError);
   });
 
+  it("CR JP 14.6.1.1 — a treasure (CP05) is a token without cost or stats", () => {
+    expect(parseCardType("x", ["Treasure", "Token"])).toEqual({ type: "treasure", evolved: false, token: true, advanced: false });
+    expect(() => parseCardType("x", ["Treasure"])).toThrow(/token/);
+    expect(() => parseCardType("x", ["Treasure", "Token", "Evolved"])).toThrow(CardDataError);
+    const treasure = normalizePrinting(raw({ card_type: ["Treasure", "Token"], cost: null, atk: null, def: null }));
+    expect([treasure.def.type, treasure.def.token, treasure.def.cost]).toEqual(["treasure", true, null]);
+    // CP05-T15 ruling Q2933: it has no cost, not a cost of 0.
+    expect(() => normalizePrinting(raw({ card_type: ["Treasure", "Token"], cost: 0, atk: null, def: null }))).toThrow(CardDataError);
+  });
+
   it("rejects impossible stats instead of guessing", () => {
     expect(() => normalizePrinting(raw({ atk: null }))).toThrow(CardDataError);
     expect(() => normalizePrinting(raw({ card_type: ["Leader"] }))).toThrow(CardDataError);

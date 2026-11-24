@@ -58,6 +58,7 @@ import { SCS01_CARDS, SCS01_SCRIPTS } from "./scs01";
 import { PR_CARDS, PR_SCRIPTS } from "./pr";
 import { BP22_CARDS, BP22_SCRIPTS } from "./bp22";
 import { DIY01_CARDS, DIY01_SCRIPTS } from "./diy01";
+import { CP05_CARDS, CP05_SCRIPTS } from "./cp05";
 import type { SupportedSet } from "./supported";
 
 export { SUPPORTED_SETS, type SupportedSet } from "./supported";
@@ -126,6 +127,7 @@ export const SETS: Readonly<Record<SupportedSet, { cards: readonly CardDefinitio
   PR: { cards: PR_CARDS, scripts: PR_SCRIPTS },
   BP22: { cards: BP22_CARDS, scripts: BP22_SCRIPTS },
   DIY01: { cards: DIY01_CARDS, scripts: DIY01_SCRIPTS },
+  CP05: { cards: CP05_CARDS, scripts: CP05_SCRIPTS },
 };
 
 export const ALL_CARDS: readonly CardDefinition[] = Object.values(SETS).flatMap((s) => s.cards);

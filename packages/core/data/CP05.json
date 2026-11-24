@@ -1,0 +1,3683 @@
+{
+ "format": 2,
+ "set": "CP05",
+ "printings": 356,
+ "cards": [
+  {
+   "id": "CP05-001",
+   "printings": [
+    "CP05-001",
+    "CP05-GBF01",
+    "CP05-SL01",
+    "CP05-U01"
+   ],
+   "name": "魔眼の狩人・ソーン",
+   "names": {
+    "en": "unavailable",
+    "cn": "魔眼的猎手·苏恩",
+    "ja": "魔眼の狩人・ソーン"
+   },
+   "class": "Forestcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 5,
+   "attack": 3,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "十天衆",
+    "光属性"
+   ]
+  },
+  {
+   "id": "CP05-002",
+   "printings": [
+    "CP05-002",
+    "CP05-GBF02",
+    "CP05-SL02"
+   ],
+   "name": "調和の舞手・ユエル＆ソシエ",
+   "names": {
+    "en": "unavailable",
+    "cn": "调和的舞者·尤艾尔&苏丝雅",
+    "ja": "調和の舞手・ユエル＆ソシエ"
+   },
+   "class": "Forestcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 3,
+   "attack": 3,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "火属性",
+    "水属性"
+   ]
+  },
+  {
+   "id": "CP05-003",
+   "printings": [
+    "CP05-003",
+    "CP05-GBF03",
+    "CP05-SL03"
+   ],
+   "name": "風の理・イーウィヤ",
+   "names": {
+    "en": "unavailable",
+    "cn": "风之法则·艾云尼亚",
+    "ja": "風の理・イーウィヤ"
+   },
+   "class": "Forestcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 1,
+   "attack": 1,
+   "defense": 1,
+   "traits": [
+    "グラブル",
+    "六竜",
+    "風属性"
+   ]
+  },
+  {
+   "id": "CP05-004",
+   "printings": [
+    "CP05-004",
+    "CP05-GBF04",
+    "CP05-SL04",
+    "CP05-U02"
+   ],
+   "name": "風の理・イーウィヤ",
+   "names": {
+    "en": "unavailable",
+    "cn": "风之法则·艾云尼亚",
+    "ja": "風の理・イーウィヤ"
+   },
+   "class": "Forestcraft",
+   "type": "follower",
+   "evolved": true,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": 2,
+   "defense": 2,
+   "traits": [
+    "グラブル",
+    "六竜",
+    "風属性"
+   ]
+  },
+  {
+   "id": "CP05-005",
+   "printings": [
+    "CP05-005",
+    "CP05-GBF05",
+    "CP05-P01"
+   ],
+   "name": "絢爛の紡ぎ手・コルワ",
+   "names": {
+    "en": "unavailable",
+    "cn": "绚丽的纺织者·歌露瓦",
+    "ja": "絢爛の紡ぎ手・コルワ"
+   },
+   "class": "Forestcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 2,
+   "attack": 2,
+   "defense": 2,
+   "traits": [
+    "グラブル",
+    "風属性"
+   ]
+  },
+  {
+   "id": "CP05-006",
+   "printings": [
+    "CP05-006",
+    "CP05-GBF06",
+    "CP05-P02"
+   ],
+   "name": "絢爛の紡ぎ手・コルワ",
+   "names": {
+    "en": "unavailable",
+    "cn": "绚丽的纺织者·歌露瓦",
+    "ja": "絢爛の紡ぎ手・コルワ"
+   },
+   "class": "Forestcraft",
+   "type": "follower",
+   "evolved": true,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": 3,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "風属性"
+   ]
+  },
+  {
+   "id": "CP05-007",
+   "printings": [
+    "CP05-007",
+    "CP05-GBF07",
+    "CP05-P03"
+   ],
+   "name": "奮励の儁秀・シルヴァ",
+   "names": {
+    "en": "unavailable",
+    "cn": "奋勉的俊秀·席尔瓦",
+    "ja": "奮励の儁秀・シルヴァ"
+   },
+   "class": "Forestcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 7,
+   "attack": 5,
+   "defense": 5,
+   "traits": [
+    "グラブル",
+    "水属性"
+   ]
+  },
+  {
+   "id": "CP05-008",
+   "printings": [
+    "CP05-008",
+    "CP05-GBF08",
+    "CP05-P04"
+   ],
+   "name": "虹色の弓使い・クピタン",
+   "names": {
+    "en": "unavailable",
+    "cn": "幻彩弓手·丘比丹",
+    "ja": "虹色の弓使い・クピタン"
+   },
+   "class": "Forestcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 2,
+   "attack": 0,
+   "defense": 4,
+   "traits": [
+    "グラブル",
+    "水属性"
+   ]
+  },
+  {
+   "id": "CP05-009",
+   "printings": [
+    "CP05-009",
+    "CP05-GBF09",
+    "CP05-P05"
+   ],
+   "name": "清新なる銃設計士・ククル",
+   "names": {
+    "en": "unavailable",
+    "cn": "清新的枪械设计师·库库璐",
+    "ja": "清新なる銃設計士・ククル"
+   },
+   "class": "Forestcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 2,
+   "attack": 2,
+   "defense": 2,
+   "traits": [
+    "グラブル",
+    "水属性"
+   ]
+  },
+  {
+   "id": "CP05-010",
+   "printings": [
+    "CP05-010",
+    "CP05-GBF10",
+    "CP05-P06"
+   ],
+   "name": "清新なる銃設計士・ククル",
+   "names": {
+    "en": "unavailable",
+    "cn": "清新的枪械设计师·库库璐",
+    "ja": "清新なる銃設計士・ククル"
+   },
+   "class": "Forestcraft",
+   "type": "follower",
+   "evolved": true,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": 3,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "水属性"
+   ]
+  },
+  {
+   "id": "CP05-011",
+   "printings": [
+    "CP05-011",
+    "CP05-GBF11",
+    "CP05-P07"
+   ],
+   "name": "天禀の射手・メーテラ",
+   "names": {
+    "en": "unavailable",
+    "cn": "天赋的射手·梅提拉",
+    "ja": "天禀の射手・メーテラ"
+   },
+   "class": "Forestcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 4,
+   "attack": 3,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "風属性"
+   ]
+  },
+  {
+   "id": "CP05-012",
+   "printings": [
+    "CP05-012",
+    "CP05-GBF12",
+    "CP05-P08"
+   ],
+   "name": "美粧の乙女・クロエ",
+   "names": {
+    "en": "unavailable",
+    "cn": "美妆少女·克洛伊",
+    "ja": "美粧の乙女・クロエ"
+   },
+   "class": "Forestcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 1,
+   "attack": 1,
+   "defense": 1,
+   "traits": [
+    "グラブル",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-013",
+   "printings": [
+    "CP05-013",
+    "CP05-P09"
+   ],
+   "name": "緋焔の踊り子・アンスリア",
+   "names": {
+    "en": "unavailable",
+    "cn": "绯焰舞姬·安苏莉娅",
+    "ja": "緋焔の踊り子・アンスリア"
+   },
+   "class": "Forestcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 3,
+   "attack": 3,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "火属性"
+   ]
+  },
+  {
+   "id": "CP05-014",
+   "printings": [
+    "CP05-014",
+    "CP05-P10"
+   ],
+   "name": "緋焔の踊り子・アンスリア",
+   "names": {
+    "en": "unavailable",
+    "cn": "绯焰舞姬·安苏莉娅",
+    "ja": "緋焔の踊り子・アンスリア"
+   },
+   "class": "Forestcraft",
+   "type": "follower",
+   "evolved": true,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": 4,
+   "defense": 4,
+   "traits": [
+    "グラブル",
+    "火属性"
+   ]
+  },
+  {
+   "id": "CP05-015",
+   "printings": [
+    "CP05-015",
+    "CP05-P11"
+   ],
+   "name": "フォレストレンジャー・ウェルダー",
+   "names": {
+    "en": "unavailable",
+    "cn": "森林游侠·维尔达",
+    "ja": "フォレストレンジャー・ウェルダー"
+   },
+   "class": "Forestcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 1,
+   "attack": 2,
+   "defense": 1,
+   "traits": [
+    "グラブル",
+    "土属性"
+   ]
+  },
+  {
+   "id": "CP05-016",
+   "printings": [
+    "CP05-016",
+    "CP05-P12"
+   ],
+   "name": "愛憎の舞手・コウ＆ヨウ",
+   "names": {
+    "en": "unavailable",
+    "cn": "爱恨舞者·晧&曜",
+    "ja": "愛憎の舞手・コウ＆ヨウ"
+   },
+   "class": "Forestcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 7,
+   "attack": 7,
+   "defense": 6,
+   "traits": [
+    "グラブル",
+    "光属性",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-017",
+   "printings": [
+    "CP05-017",
+    "CP05-P13"
+   ],
+   "name": "カワイイ花マル・マナマル",
+   "names": {
+    "en": "unavailable",
+    "cn": "可爱如琬似花·玛娜玛尔",
+    "ja": "カワイイ花マル・マナマル"
+   },
+   "class": "Forestcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 2,
+   "attack": 1,
+   "defense": 1,
+   "traits": [
+    "グラブル",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-018",
+   "printings": [
+    "CP05-018",
+    "CP05-P14"
+   ],
+   "name": "箒星",
+   "names": {
+    "en": "unavailable",
+    "cn": "彗星",
+    "ja": "箒星"
+   },
+   "class": "Forestcraft",
+   "type": "spell",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 3,
+   "attack": null,
+   "defense": null,
+   "traits": [
+    "グラブル",
+    "風属性"
+   ]
+  },
+  {
+   "id": "CP05-019",
+   "printings": [
+    "CP05-019",
+    "CP05-GBF13",
+    "CP05-SL05",
+    "CP05-U03"
+   ],
+   "name": "天星剣王・シエテ",
+   "names": {
+    "en": "unavailable",
+    "cn": "天星剑王·席耶提",
+    "ja": "天星剣王・シエテ"
+   },
+   "class": "Swordcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 5,
+   "attack": 3,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "十天衆",
+    "風属性"
+   ],
+   "alternateNames": {
+    "CP05-U03": {
+     "en": "unavailable",
+     "cn": "十天众头目·席耶提",
+     "ja": "十天衆の頭目・シエテ"
+    }
+   }
+  },
+  {
+   "id": "CP05-020",
+   "printings": [
+    "CP05-020",
+    "CP05-GBF14",
+    "CP05-SL06"
+   ],
+   "name": "刀神・オクトー",
+   "names": {
+    "en": "unavailable",
+    "cn": "刀神·欧克托",
+    "ja": "刀神・オクトー"
+   },
+   "class": "Swordcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 8,
+   "attack": 5,
+   "defense": 5,
+   "traits": [
+    "グラブル",
+    "十天衆",
+    "土属性"
+   ]
+  },
+  {
+   "id": "CP05-021",
+   "printings": [
+    "CP05-021",
+    "CP05-GBF15",
+    "CP05-SL07"
+   ],
+   "name": "光の理・ル・オー",
+   "names": {
+    "en": "unavailable",
+    "cn": "光之法则·龙敖",
+    "ja": "光の理・ル・オー"
+   },
+   "class": "Swordcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 5,
+   "attack": 3,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "六竜",
+    "光属性"
+   ]
+  },
+  {
+   "id": "CP05-022",
+   "printings": [
+    "CP05-022",
+    "CP05-GBF16",
+    "CP05-SL08",
+    "CP05-U04"
+   ],
+   "name": "光の理・ル・オー",
+   "names": {
+    "en": "unavailable",
+    "cn": "光之法则·龙敖",
+    "ja": "光の理・ル・オー"
+   },
+   "class": "Swordcraft",
+   "type": "follower",
+   "evolved": true,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": 4,
+   "defense": 4,
+   "traits": [
+    "グラブル",
+    "六竜",
+    "光属性"
+   ]
+  },
+  {
+   "id": "CP05-023",
+   "printings": [
+    "CP05-023",
+    "CP05-GBF17",
+    "CP05-P15"
+   ],
+   "name": "揺らぎの斬姫・ナルメア",
+   "names": {
+    "en": "unavailable",
+    "cn": "幻形的斩姬·娜鲁梅亚",
+    "ja": "揺らぎの斬姫・ナルメア"
+   },
+   "class": "Swordcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 3,
+   "attack": 3,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "風属性",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-024",
+   "printings": [
+    "CP05-024",
+    "CP05-GBF18",
+    "CP05-P16"
+   ],
+   "name": "揺らぎの斬姫・ナルメア",
+   "names": {
+    "en": "unavailable",
+    "cn": "幻形的斩姬·娜鲁梅亚",
+    "ja": "揺らぎの斬姫・ナルメア"
+   },
+   "class": "Swordcraft",
+   "type": "follower",
+   "evolved": true,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": 4,
+   "defense": 4,
+   "traits": [
+    "グラブル",
+    "風属性",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-025",
+   "printings": [
+    "CP05-025",
+    "CP05-GBF19",
+    "CP05-P17"
+   ],
+   "name": "真紅の穿光・ゼタ",
+   "names": {
+    "en": "unavailable",
+    "cn": "鲜红的穿光·瑟塔",
+    "ja": "真紅の穿光・ゼタ"
+   },
+   "class": "Swordcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 5,
+   "attack": 4,
+   "defense": 4,
+   "traits": [
+    "グラブル",
+    "火属性"
+   ]
+  },
+  {
+   "id": "CP05-026",
+   "printings": [
+    "CP05-026",
+    "CP05-P18"
+   ],
+   "name": "ドラゴンナイツ",
+   "names": {
+    "en": "unavailable",
+    "cn": "龙骑士的集结",
+    "ja": "ドラゴンナイツ"
+   },
+   "class": "Swordcraft",
+   "type": "spell",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 5,
+   "attack": null,
+   "defense": null,
+   "traits": [
+    "グラブル",
+    "火属性",
+    "水属性",
+    "風属性",
+    "土属性"
+   ]
+  },
+  {
+   "id": "CP05-027",
+   "printings": [
+    "CP05-027",
+    "CP05-GBF20",
+    "CP05-P19"
+   ],
+   "name": "サムライドリーマー・ミリン",
+   "names": {
+    "en": "unavailable",
+    "cn": "武魂梦想家·味琳",
+    "ja": "サムライドリーマー・ミリン"
+   },
+   "class": "Swordcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 2,
+   "attack": 2,
+   "defense": 2,
+   "traits": [
+    "グラブル",
+    "風属性"
+   ]
+  },
+  {
+   "id": "CP05-028",
+   "printings": [
+    "CP05-028",
+    "CP05-GBF21",
+    "CP05-P20"
+   ],
+   "name": "サムライドリーマー・ミリン",
+   "names": {
+    "en": "unavailable",
+    "cn": "武魂梦想家·味琳",
+    "ja": "サムライドリーマー・ミリン"
+   },
+   "class": "Swordcraft",
+   "type": "follower",
+   "evolved": true,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": 3,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "風属性"
+   ]
+  },
+  {
+   "id": "CP05-029",
+   "printings": [
+    "CP05-029",
+    "CP05-GBF22",
+    "CP05-P21"
+   ],
+   "name": "不滅の群青・ベアトリクス",
+   "names": {
+    "en": "unavailable",
+    "cn": "不灭的群青·贝雅特丽丝",
+    "ja": "不滅の群青・ベアトリクス"
+   },
+   "class": "Swordcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 6,
+   "attack": 2,
+   "defense": 2,
+   "traits": [
+    "グラブル",
+    "土属性"
+   ]
+  },
+  {
+   "id": "CP05-030",
+   "printings": [
+    "CP05-030",
+    "CP05-GBF23",
+    "CP05-P22"
+   ],
+   "name": "氷心の覇王・アグロヴァル",
+   "names": {
+    "en": "unavailable",
+    "cn": "冰心霸王·艾格罗瓦尔",
+    "ja": "氷心の覇王・アグロヴァル"
+   },
+   "class": "Swordcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 6,
+   "attack": 5,
+   "defense": 5,
+   "traits": [
+    "グラブル",
+    "水属性"
+   ]
+  },
+  {
+   "id": "CP05-031",
+   "printings": [
+    "CP05-031",
+    "CP05-P23"
+   ],
+   "name": "花開く筋肉・フィオリト",
+   "names": {
+    "en": "unavailable",
+    "cn": "绽放的肌肉·菲奥莉托",
+    "ja": "花開く筋肉・フィオリト"
+   },
+   "class": "Swordcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 2,
+   "attack": 1,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "土属性"
+   ]
+  },
+  {
+   "id": "CP05-032",
+   "printings": [
+    "CP05-032",
+    "CP05-P24"
+   ],
+   "name": "花開く筋肉・フィオリト",
+   "names": {
+    "en": "unavailable",
+    "cn": "绽放的肌肉·菲奥莉托",
+    "ja": "花開く筋肉・フィオリト"
+   },
+   "class": "Swordcraft",
+   "type": "follower",
+   "evolved": true,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": 4,
+   "defense": 6,
+   "traits": [
+    "グラブル",
+    "土属性"
+   ]
+  },
+  {
+   "id": "CP05-033",
+   "printings": [
+    "CP05-033",
+    "CP05-P25"
+   ],
+   "name": "眠れる輝竜・アーサー",
+   "names": {
+    "en": "unavailable",
+    "cn": "沉睡的辉龙·亚瑟",
+    "ja": "眠れる輝竜・アーサー"
+   },
+   "class": "Swordcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 2,
+   "attack": 1,
+   "defense": 2,
+   "traits": [
+    "グラブル",
+    "風属性"
+   ]
+  },
+  {
+   "id": "CP05-034",
+   "printings": [
+    "CP05-034",
+    "CP05-P26"
+   ],
+   "name": "眠れる獅子・モルドレッド",
+   "names": {
+    "en": "unavailable",
+    "cn": "沉睡的狮子·莫德雷德",
+    "ja": "眠れる獅子・モルドレッド"
+   },
+   "class": "Swordcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 2,
+   "attack": 2,
+   "defense": 1,
+   "traits": [
+    "グラブル",
+    "風属性"
+   ]
+  },
+  {
+   "id": "CP05-035",
+   "printings": [
+    "CP05-035",
+    "CP05-P27"
+   ],
+   "name": "燃え滾る闘志・フェザー",
+   "names": {
+    "en": "unavailable",
+    "cn": "如火斗志·菲泽",
+    "ja": "燃え滾る闘志・フェザー"
+   },
+   "class": "Swordcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 3,
+   "attack": 4,
+   "defense": 4,
+   "traits": [
+    "グラブル",
+    "光属性"
+   ]
+  },
+  {
+   "id": "CP05-036",
+   "printings": [
+    "CP05-036",
+    "CP05-P28"
+   ],
+   "name": "信念の蹴撃・ランドル",
+   "names": {
+    "en": "unavailable",
+    "cn": "信念腿法·兰德尔",
+    "ja": "信念の蹴撃・ランドル"
+   },
+   "class": "Swordcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 4,
+   "attack": 2,
+   "defense": 1,
+   "traits": [
+    "グラブル",
+    "風属性"
+   ]
+  },
+  {
+   "id": "CP05-037",
+   "printings": [
+    "CP05-037",
+    "CP05-GBF24",
+    "CP05-SL09",
+    "CP05-U05"
+   ],
+   "name": "魔弾の射手・エッセル",
+   "names": {
+    "en": "unavailable",
+    "cn": "魔弹射手·艾席儿",
+    "ja": "魔弾の射手・エッセル"
+   },
+   "class": "Runecraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 3,
+   "attack": 2,
+   "defense": 4,
+   "traits": [
+    "グラブル",
+    "十天衆",
+    "火属性"
+   ],
+   "alternateNames": {
+    "CP05-U05": {
+     "en": "unavailable",
+     "cn": "闪弹的姐弟·艾席儿&卡托鲁",
+     "ja": "閃弾の姉弟・エッセル＆カトル"
+    }
+   }
+  },
+  {
+   "id": "CP05-038",
+   "printings": [
+    "CP05-038",
+    "CP05-GBF25",
+    "CP05-SL10"
+   ],
+   "name": "閃耀の双剣・カトル",
+   "names": {
+    "en": "unavailable",
+    "cn": "闪耀双剑·卡托鲁",
+    "ja": "閃耀の双剣・カトル"
+   },
+   "class": "Runecraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 3,
+   "attack": 4,
+   "defense": 2,
+   "traits": [
+    "グラブル",
+    "十天衆",
+    "水属性"
+   ]
+  },
+  {
+   "id": "CP05-039",
+   "printings": [
+    "CP05-039",
+    "CP05-GBF26",
+    "CP05-SL11"
+   ],
+   "name": "水の理・ワムデュス",
+   "names": {
+    "en": "unavailable",
+    "cn": "水之法则·瓦姆杜斯",
+    "ja": "水の理・ワムデュス"
+   },
+   "class": "Runecraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 3,
+   "attack": 1,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "六竜",
+    "水属性"
+   ]
+  },
+  {
+   "id": "CP05-040",
+   "printings": [
+    "CP05-040",
+    "CP05-GBF27",
+    "CP05-SL12",
+    "CP05-U06"
+   ],
+   "name": "水の理・ワムデュス",
+   "names": {
+    "en": "unavailable",
+    "cn": "水之法则·瓦姆杜斯",
+    "ja": "水の理・ワムデュス"
+   },
+   "class": "Runecraft",
+   "type": "follower",
+   "evolved": true,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": 2,
+   "defense": 4,
+   "traits": [
+    "グラブル",
+    "六竜",
+    "水属性"
+   ]
+  },
+  {
+   "id": "CP05-041",
+   "printings": [
+    "CP05-041",
+    "CP05-GBF28",
+    "CP05-P29"
+   ],
+   "name": "開闢の錬金術師・カリオストロ",
+   "names": {
+    "en": "unavailable",
+    "cn": "开辟的炼金术师·卡莉欧斯托萝",
+    "ja": "開闢の錬金術師・カリオストロ"
+   },
+   "class": "Runecraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 2,
+   "attack": 2,
+   "defense": 2,
+   "traits": [
+    "グラブル",
+    "土属性",
+    "光属性",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-042",
+   "printings": [
+    "CP05-042",
+    "CP05-GBF29",
+    "CP05-P30"
+   ],
+   "name": "開闢の錬金術師・カリオストロ",
+   "names": {
+    "en": "unavailable",
+    "cn": "开辟的炼金术师·卡莉欧斯托萝",
+    "ja": "開闢の錬金術師・カリオストロ"
+   },
+   "class": "Runecraft",
+   "type": "follower",
+   "evolved": true,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": 3,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "土属性",
+    "光属性",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-043",
+   "printings": [
+    "CP05-043",
+    "CP05-GBF30",
+    "CP05-P31"
+   ],
+   "name": "空慕う帰還者・カシウス",
+   "names": {
+    "en": "unavailable",
+    "cn": "向往天空的回归者·卡西乌斯",
+    "ja": "空慕う帰還者・カシウス"
+   },
+   "class": "Runecraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 4,
+   "attack": 3,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "水属性"
+   ]
+  },
+  {
+   "id": "CP05-044",
+   "printings": [
+    "CP05-044",
+    "CP05-P32"
+   ],
+   "name": "コロッサス・マグナ",
+   "names": {
+    "en": "unavailable",
+    "cn": "神异形·克罗萨斯",
+    "ja": "コロッサス・マグナ"
+   },
+   "class": "Runecraft",
+   "type": "amulet",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 1,
+   "attack": null,
+   "defense": null,
+   "traits": [
+    "グラブル",
+    "火属性"
+   ]
+  },
+  {
+   "id": "CP05-045",
+   "printings": [
+    "CP05-045",
+    "CP05-GBF31",
+    "CP05-P33"
+   ],
+   "name": "神託の妖童・アルルメイヤ",
+   "names": {
+    "en": "unavailable",
+    "cn": "神讬的妖童·阿鲁鲁麦雅",
+    "ja": "神託の妖童・アルルメイヤ"
+   },
+   "class": "Runecraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 3,
+   "attack": 3,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "土属性"
+   ]
+  },
+  {
+   "id": "CP05-046",
+   "printings": [
+    "CP05-046",
+    "CP05-GBF32",
+    "CP05-P34"
+   ],
+   "name": "神託の妖童・アルルメイヤ",
+   "names": {
+    "en": "unavailable",
+    "cn": "神讬的妖童·阿鲁鲁麦雅",
+    "ja": "神託の妖童・アルルメイヤ"
+   },
+   "class": "Runecraft",
+   "type": "follower",
+   "evolved": true,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": 4,
+   "defense": 4,
+   "traits": [
+    "グラブル",
+    "土属性"
+   ]
+  },
+  {
+   "id": "CP05-047",
+   "printings": [
+    "CP05-047",
+    "CP05-GBF33",
+    "CP05-P35"
+   ],
+   "name": "楽隠居の元国王・フォリア",
+   "names": {
+    "en": "unavailable",
+    "cn": "逍遥隐居的前国王·芙莉亚",
+    "ja": "楽隠居の元国王・フォリア"
+   },
+   "class": "Runecraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 4,
+   "attack": 3,
+   "defense": 5,
+   "traits": [
+    "グラブル",
+    "水属性"
+   ]
+  },
+  {
+   "id": "CP05-048",
+   "printings": [
+    "CP05-048",
+    "CP05-P36"
+   ],
+   "name": "アルケミック・フレア",
+   "names": {
+    "en": "unavailable",
+    "cn": "炼金炎爆",
+    "ja": "アルケミック・フレア"
+   },
+   "class": "Runecraft",
+   "type": "spell",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 2,
+   "attack": null,
+   "defense": null,
+   "traits": [
+    "グラブル",
+    "火属性"
+   ]
+  },
+  {
+   "id": "CP05-049",
+   "printings": [
+    "CP05-049",
+    "CP05-P37"
+   ],
+   "name": "妄想少女A・ルナール",
+   "names": {
+    "en": "unavailable",
+    "cn": "妄想少女A·璐娜露",
+    "ja": "妄想少女A・ルナール"
+   },
+   "class": "Runecraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 2,
+   "attack": 2,
+   "defense": 2,
+   "traits": [
+    "グラブル",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-050",
+   "printings": [
+    "CP05-050",
+    "CP05-P38"
+   ],
+   "name": "妄想少女A・ルナール",
+   "names": {
+    "en": "unavailable",
+    "cn": "妄想少女A·璐娜露",
+    "ja": "妄想少女A・ルナール"
+   },
+   "class": "Runecraft",
+   "type": "follower",
+   "evolved": true,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": 3,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-051",
+   "printings": [
+    "CP05-051",
+    "CP05-P39"
+   ],
+   "name": "炎獄の葬送者・エルモート",
+   "names": {
+    "en": "unavailable",
+    "cn": "炎狱的葬送者·艾尔蒙特",
+    "ja": "炎獄の葬送者・エルモート"
+   },
+   "class": "Runecraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 2,
+   "attack": 2,
+   "defense": 2,
+   "traits": [
+    "グラブル",
+    "火属性"
+   ]
+  },
+  {
+   "id": "CP05-052",
+   "printings": [
+    "CP05-052",
+    "CP05-P40"
+   ],
+   "name": "報恩の技師・アイザック",
+   "names": {
+    "en": "unavailable",
+    "cn": "报恩工匠·艾萨克",
+    "ja": "報恩の技師・アイザック"
+   },
+   "class": "Runecraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 1,
+   "attack": 1,
+   "defense": 1,
+   "traits": [
+    "グラブル",
+    "水属性"
+   ]
+  },
+  {
+   "id": "CP05-053",
+   "printings": [
+    "CP05-053",
+    "CP05-P41"
+   ],
+   "name": "アルス･グローリア",
+   "names": {
+    "en": "unavailable",
+    "cn": "荣光之术",
+    "ja": "アルス･グローリア"
+   },
+   "class": "Runecraft",
+   "type": "spell",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 1,
+   "attack": null,
+   "defense": null,
+   "traits": [
+    "グラブル",
+    "土属性",
+    "光属性",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-054",
+   "printings": [
+    "CP05-054",
+    "CP05-GBF34",
+    "CP05-SL13"
+   ],
+   "name": "怪力乱神・サラーサ",
+   "names": {
+    "en": "unavailable",
+    "cn": "怪力乱神·萨拉莎",
+    "ja": "怪力乱神・サラーサ"
+   },
+   "class": "Dragoncraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 4,
+   "attack": 3,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "十天衆",
+    "土属性"
+   ]
+  },
+  {
+   "id": "CP05-055",
+   "printings": [
+    "CP05-055",
+    "CP05-GBF35",
+    "CP05-SL14",
+    "CP05-U07"
+   ],
+   "name": "大いなる調停者・ゾーイ",
+   "names": {
+    "en": "unavailable",
+    "cn": "伟大的调停者·佐伊",
+    "ja": "大いなる調停者・ゾーイ"
+   },
+   "class": "Dragoncraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 5,
+   "attack": 5,
+   "defense": 5,
+   "traits": [
+    "グラブル",
+    "光属性"
+   ],
+   "alternateNames": {
+    "CP05-U07": {
+     "en": "unavailable",
+     "cn": "世界的伙伴·佐伊",
+     "ja": "世界の味方・ゾーイ"
+    }
+   }
+  },
+  {
+   "id": "CP05-056",
+   "printings": [
+    "CP05-056",
+    "CP05-GBF36",
+    "CP05-SL15"
+   ],
+   "name": "炎の理・ウィルナス",
+   "names": {
+    "en": "unavailable",
+    "cn": "炎之法则·威尔纳斯",
+    "ja": "炎の理・ウィルナス"
+   },
+   "class": "Dragoncraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 4,
+   "attack": 4,
+   "defense": 4,
+   "traits": [
+    "グラブル",
+    "六竜",
+    "火属性"
+   ]
+  },
+  {
+   "id": "CP05-057",
+   "printings": [
+    "CP05-057",
+    "CP05-GBF37",
+    "CP05-SL16",
+    "CP05-U08"
+   ],
+   "name": "炎の理・ウィルナス",
+   "names": {
+    "en": "unavailable",
+    "cn": "炎之法则·威尔纳斯",
+    "ja": "炎の理・ウィルナス"
+   },
+   "class": "Dragoncraft",
+   "type": "follower",
+   "evolved": true,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": 5,
+   "defense": 5,
+   "traits": [
+    "グラブル",
+    "六竜",
+    "火属性"
+   ]
+  },
+  {
+   "id": "CP05-058",
+   "printings": [
+    "CP05-058",
+    "CP05-GBF38",
+    "CP05-P42"
+   ],
+   "name": "どこにでもいるフツーの女の子・メグ",
+   "names": {
+    "en": "unavailable",
+    "cn": "平平无奇的女孩·梅格",
+    "ja": "どこにでもいるフツーの女の子・メグ"
+   },
+   "class": "Dragoncraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 2,
+   "attack": 1,
+   "defense": 1,
+   "traits": [
+    "グラブル",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-059",
+   "printings": [
+    "CP05-059",
+    "CP05-GBF39",
+    "CP05-P43"
+   ],
+   "name": "どこにでもいるフツーの女の子・メグ",
+   "names": {
+    "en": "unavailable",
+    "cn": "平平无奇的女孩·梅格",
+    "ja": "どこにでもいるフツーの女の子・メグ"
+   },
+   "class": "Dragoncraft",
+   "type": "follower",
+   "evolved": true,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": 2,
+   "defense": 2,
+   "traits": [
+    "グラブル",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-060",
+   "printings": [
+    "CP05-060",
+    "CP05-GBF40",
+    "CP05-P44"
+   ],
+   "name": "天穿の銃槍騎・ラスティナ",
+   "names": {
+    "en": "unavailable",
+    "cn": "天穿的铳枪骑士·拉丝提娜",
+    "ja": "天穿の銃槍騎・ラスティナ"
+   },
+   "class": "Dragoncraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 3,
+   "attack": 1,
+   "defense": 5,
+   "traits": [
+    "グラブル",
+    "土属性"
+   ]
+  },
+  {
+   "id": "CP05-061",
+   "printings": [
+    "CP05-061",
+    "CP05-P45"
+   ],
+   "name": "ティアマト・マグナ",
+   "names": {
+    "en": "unavailable",
+    "cn": "神异形·迪亚马特",
+    "ja": "ティアマト・マグナ"
+   },
+   "class": "Dragoncraft",
+   "type": "amulet",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 1,
+   "attack": null,
+   "defense": null,
+   "traits": [
+    "グラブル",
+    "風属性"
+   ]
+  },
+  {
+   "id": "CP05-062",
+   "printings": [
+    "CP05-062",
+    "CP05-GBF41",
+    "CP05-P46"
+   ],
+   "name": "純朴の鋼体・ムゲン",
+   "names": {
+    "en": "unavailable",
+    "cn": "淳朴的钢铁之躯·无限",
+    "ja": "純朴の鋼体・ムゲン"
+   },
+   "class": "Dragoncraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 5,
+   "attack": 5,
+   "defense": 5,
+   "traits": [
+    "グラブル",
+    "光属性"
+   ]
+  },
+  {
+   "id": "CP05-063",
+   "printings": [
+    "CP05-063",
+    "CP05-GBF42",
+    "CP05-P47"
+   ],
+   "name": "純朴の鋼体・ムゲン",
+   "names": {
+    "en": "unavailable",
+    "cn": "淳朴的钢铁之躯·无限",
+    "ja": "純朴の鋼体・ムゲン"
+   },
+   "class": "Dragoncraft",
+   "type": "follower",
+   "evolved": true,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": 6,
+   "defense": 6,
+   "traits": [
+    "グラブル",
+    "光属性"
+   ]
+  },
+  {
+   "id": "CP05-064",
+   "printings": [
+    "CP05-064",
+    "CP05-GBF43",
+    "CP05-P48"
+   ],
+   "name": "護国真龍・スカーサハ",
+   "names": {
+    "en": "unavailable",
+    "cn": "护国真龙·斯卡塔赫",
+    "ja": "護国真龍・スカーサハ"
+   },
+   "class": "Dragoncraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 4,
+   "attack": 3,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "風属性"
+   ]
+  },
+  {
+   "id": "CP05-065",
+   "printings": [
+    "CP05-065",
+    "CP05-GBF44",
+    "CP05-P49"
+   ],
+   "name": "メグの親友・まりっぺ",
+   "names": {
+    "en": "unavailable",
+    "cn": "梅格的挚友·玛丽亲",
+    "ja": "メグの親友・まりっぺ"
+   },
+   "class": "Dragoncraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 2,
+   "attack": 2,
+   "defense": 2,
+   "traits": [
+    "グラブル",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-066",
+   "printings": [
+    "CP05-066",
+    "CP05-P50"
+   ],
+   "name": "灼脚の麗姫・アリーザ",
+   "names": {
+    "en": "unavailable",
+    "cn": "炎足的丽姬·艾莉纱",
+    "ja": "灼脚の麗姫・アリーザ"
+   },
+   "class": "Dragoncraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 2,
+   "attack": 2,
+   "defense": 2,
+   "traits": [
+    "グラブル",
+    "火属性"
+   ]
+  },
+  {
+   "id": "CP05-067",
+   "printings": [
+    "CP05-067",
+    "CP05-P51"
+   ],
+   "name": "灼脚の麗姫・アリーザ",
+   "names": {
+    "en": "unavailable",
+    "cn": "炎足的丽姬·艾莉纱",
+    "ja": "灼脚の麗姫・アリーザ"
+   },
+   "class": "Dragoncraft",
+   "type": "follower",
+   "evolved": true,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": 3,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "火属性"
+   ]
+  },
+  {
+   "id": "CP05-068",
+   "printings": [
+    "CP05-068",
+    "CP05-P52"
+   ],
+   "name": "古今独歩の大拳豪・ガンダゴウザ",
+   "names": {
+    "en": "unavailable",
+    "cn": "独步古今的大拳豪·刚特克泽",
+    "ja": "古今独歩の大拳豪・ガンダゴウザ"
+   },
+   "class": "Dragoncraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 7,
+   "attack": 6,
+   "defense": 5,
+   "traits": [
+    "グラブル",
+    "火属性"
+   ]
+  },
+  {
+   "id": "CP05-069",
+   "printings": [
+    "CP05-069",
+    "CP05-P53"
+   ],
+   "name": "灰白の豹・アイル",
+   "names": {
+    "en": "unavailable",
+    "cn": "灰白之豹·艾路",
+    "ja": "灰白の豹・アイル"
+   },
+   "class": "Dragoncraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 2,
+   "attack": 3,
+   "defense": 2,
+   "traits": [
+    "グラブル",
+    "土属性"
+   ]
+  },
+  {
+   "id": "CP05-070",
+   "printings": [
+    "CP05-070",
+    "CP05-P54"
+   ],
+   "name": "オンリー･ワン･ウィッシュ",
+   "names": {
+    "en": "unavailable",
+    "cn": "唯一期愿",
+    "ja": "オンリー･ワン･ウィッシュ"
+   },
+   "class": "Dragoncraft",
+   "type": "spell",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 2,
+   "attack": null,
+   "defense": null,
+   "traits": [
+    "グラブル",
+    "光属性"
+   ]
+  },
+  {
+   "id": "CP05-071",
+   "printings": [
+    "CP05-071",
+    "CP05-P55"
+   ],
+   "name": "アルバコア",
+   "names": {
+    "en": "unavailable",
+    "cn": "巨大长鳍鲔鱼",
+    "ja": "アルバコア"
+   },
+   "class": "Dragoncraft",
+   "type": "amulet",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 4,
+   "attack": null,
+   "defense": null,
+   "traits": [
+    "グラブル",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-072",
+   "printings": [
+    "CP05-072",
+    "CP05-GBF45",
+    "CP05-SL17"
+   ],
+   "name": "神狼・シス",
+   "names": {
+    "en": "unavailable",
+    "cn": "神狼·希斯",
+    "ja": "神狼・シス"
+   },
+   "class": "Abysscraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 6,
+   "attack": 3,
+   "defense": 2,
+   "traits": [
+    "グラブル",
+    "十天衆",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-073",
+   "printings": [
+    "CP05-073",
+    "CP05-GBF46",
+    "CP05-SL18"
+   ],
+   "name": "繊細の魔奏者・ニオ",
+   "names": {
+    "en": "unavailable",
+    "cn": "细腻的奏魔者·妮欧",
+    "ja": "繊細の魔奏者・ニオ"
+   },
+   "class": "Abysscraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 1,
+   "attack": 1,
+   "defense": 1,
+   "traits": [
+    "グラブル",
+    "十天衆",
+    "風属性"
+   ]
+  },
+  {
+   "id": "CP05-074",
+   "printings": [
+    "CP05-074",
+    "CP05-GBF47",
+    "CP05-SL19"
+   ],
+   "name": "闇の理・フェディエル",
+   "names": {
+    "en": "unavailable",
+    "cn": "暗之法则·菲迪埃尔",
+    "ja": "闇の理・フェディエル"
+   },
+   "class": "Abysscraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 3,
+   "attack": 3,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "六竜",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-075",
+   "printings": [
+    "CP05-075",
+    "CP05-GBF48",
+    "CP05-SL20",
+    "CP05-U09"
+   ],
+   "name": "闇の理・フェディエル",
+   "names": {
+    "en": "unavailable",
+    "cn": "暗之法则·菲迪埃尔",
+    "ja": "闇の理・フェディエル"
+   },
+   "class": "Abysscraft",
+   "type": "follower",
+   "evolved": true,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": 4,
+   "defense": 4,
+   "traits": [
+    "グラブル",
+    "六竜",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-076",
+   "printings": [
+    "CP05-076",
+    "CP05-GBF49",
+    "CP05-P56"
+   ],
+   "name": "幽想の少女・フェリ",
+   "names": {
+    "en": "unavailable",
+    "cn": "幽想的少女·菲莉",
+    "ja": "幽想の少女・フェリ"
+   },
+   "class": "Abysscraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 1,
+   "attack": 1,
+   "defense": 1,
+   "traits": [
+    "グラブル",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-077",
+   "printings": [
+    "CP05-077",
+    "CP05-GBF50",
+    "CP05-P57"
+   ],
+   "name": "幽想の少女・フェリ",
+   "names": {
+    "en": "unavailable",
+    "cn": "幽想的少女·菲莉",
+    "ja": "幽想の少女・フェリ"
+   },
+   "class": "Abysscraft",
+   "type": "follower",
+   "evolved": true,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": 1,
+   "defense": 1,
+   "traits": [
+    "グラブル",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-078",
+   "printings": [
+    "CP05-078",
+    "CP05-GBF51",
+    "CP05-P58"
+   ],
+   "name": "生滅の技巧・ネハン",
+   "names": {
+    "en": "unavailable",
+    "cn": "生与死之技·涅槃",
+    "ja": "生滅の技巧・ネハン"
+   },
+   "class": "Abysscraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 5,
+   "attack": 2,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "光属性"
+   ]
+  },
+  {
+   "id": "CP05-079",
+   "printings": [
+    "CP05-079",
+    "CP05-P59"
+   ],
+   "name": "セレスト・マグナ",
+   "names": {
+    "en": "unavailable",
+    "cn": "神异形·赛勒斯特号",
+    "ja": "セレスト・マグナ"
+   },
+   "class": "Abysscraft",
+   "type": "amulet",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 1,
+   "attack": null,
+   "defense": null,
+   "traits": [
+    "グラブル",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-080",
+   "printings": [
+    "CP05-080",
+    "CP05-GBF52",
+    "CP05-P60"
+   ],
+   "name": "降魔の操者・ダヌア",
+   "names": {
+    "en": "unavailable",
+    "cn": "降魔的操纵者·达涅雅",
+    "ja": "降魔の操者・ダヌア"
+   },
+   "class": "Abysscraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 1,
+   "attack": 1,
+   "defense": 1,
+   "traits": [
+    "グラブル",
+    "光属性"
+   ]
+  },
+  {
+   "id": "CP05-081",
+   "printings": [
+    "CP05-081",
+    "CP05-GBF53",
+    "CP05-P61"
+   ],
+   "name": "降魔の操者・ダヌア",
+   "names": {
+    "en": "unavailable",
+    "cn": "降魔的操纵者·达涅雅",
+    "ja": "降魔の操者・ダヌア"
+   },
+   "class": "Abysscraft",
+   "type": "follower",
+   "evolved": true,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": 2,
+   "defense": 2,
+   "traits": [
+    "グラブル",
+    "光属性"
+   ]
+  },
+  {
+   "id": "CP05-082",
+   "printings": [
+    "CP05-082",
+    "CP05-GBF54",
+    "CP05-P62"
+   ],
+   "name": "冥闇の剛刃・バザラガ",
+   "names": {
+    "en": "unavailable",
+    "cn": "冥暗的钢刃·巴萨拉加",
+    "ja": "冥闇の剛刃・バザラガ"
+   },
+   "class": "Abysscraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 7,
+   "attack": 4,
+   "defense": 7,
+   "traits": [
+    "グラブル",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-083",
+   "printings": [
+    "CP05-083",
+    "CP05-P63"
+   ],
+   "name": "コラプション",
+   "names": {
+    "en": "unavailable",
+    "cn": "堕落",
+    "ja": "コラプション"
+   },
+   "class": "Abysscraft",
+   "type": "spell",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 5,
+   "attack": null,
+   "defense": null,
+   "traits": [
+    "グラブル",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-084",
+   "printings": [
+    "CP05-084",
+    "CP05-P64"
+   ],
+   "name": "心眼の双葬女・レディ・グレイ",
+   "names": {
+    "en": "unavailable",
+    "cn": "心眼的双葬女·灰淑女",
+    "ja": "心眼の双葬女・レディ・グレイ"
+   },
+   "class": "Abysscraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 2,
+   "attack": 0,
+   "defense": 2,
+   "traits": [
+    "グラブル",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-085",
+   "printings": [
+    "CP05-085",
+    "CP05-P65"
+   ],
+   "name": "心眼の双葬女・レディ・グレイ",
+   "names": {
+    "en": "unavailable",
+    "cn": "心眼的双葬女·灰淑女",
+    "ja": "心眼の双葬女・レディ・グレイ"
+   },
+   "class": "Abysscraft",
+   "type": "follower",
+   "evolved": true,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": 1,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-086",
+   "printings": [
+    "CP05-086",
+    "CP05-P66"
+   ],
+   "name": "自由を駆ける漢・スカル",
+   "names": {
+    "en": "unavailable",
+    "cn": "追逐自由的男子汉·斯卡尔",
+    "ja": "自由を駆ける漢・スカル"
+   },
+   "class": "Abysscraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 1,
+   "attack": 2,
+   "defense": 2,
+   "traits": [
+    "グラブル",
+    "土属性"
+   ]
+  },
+  {
+   "id": "CP05-087",
+   "printings": [
+    "CP05-087",
+    "CP05-P67"
+   ],
+   "name": "エーヴィヒ・カメラート",
+   "names": {
+    "en": "unavailable",
+    "cn": "永恒牵绊",
+    "ja": "エーヴィヒ・カメラート"
+   },
+   "class": "Abysscraft",
+   "type": "spell",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 1,
+   "attack": null,
+   "defense": null,
+   "traits": [
+    "グラブル",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-088",
+   "printings": [
+    "CP05-088",
+    "CP05-P68"
+   ],
+   "name": "ストーン・ブレイク",
+   "names": {
+    "en": "unavailable",
+    "cn": "身无长物唯有石",
+    "ja": "ストーン・ブレイク"
+   },
+   "class": "Abysscraft",
+   "type": "spell",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 1,
+   "attack": null,
+   "defense": null,
+   "traits": [
+    "グラブル",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-089",
+   "printings": [
+    "CP05-089",
+    "CP05-GBF55",
+    "CP05-SL21"
+   ],
+   "name": "開眼者・ウーノ",
+   "names": {
+    "en": "unavailable",
+    "cn": "开眼者·乌诺",
+    "ja": "開眼者・ウーノ"
+   },
+   "class": "Havencraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 1,
+   "attack": 1,
+   "defense": 1,
+   "traits": [
+    "グラブル",
+    "十天衆",
+    "水属性"
+   ]
+  },
+  {
+   "id": "CP05-090",
+   "printings": [
+    "CP05-090",
+    "CP05-GBF56",
+    "CP05-SL22"
+   ],
+   "name": "魔導の申し子・フュンフ",
+   "names": {
+    "en": "unavailable",
+    "cn": "魔导的神子·芬芙",
+    "ja": "魔導の申し子・フュンフ"
+   },
+   "class": "Havencraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 5,
+   "attack": 2,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "十天衆",
+    "光属性"
+   ]
+  },
+  {
+   "id": "CP05-091",
+   "printings": [
+    "CP05-091",
+    "CP05-GBF57",
+    "CP05-SL23"
+   ],
+   "name": "土の理・ガレヲン",
+   "names": {
+    "en": "unavailable",
+    "cn": "土之法则·伽莱翁",
+    "ja": "土の理・ガレヲン"
+   },
+   "class": "Havencraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 2,
+   "attack": 2,
+   "defense": 2,
+   "traits": [
+    "グラブル",
+    "六竜",
+    "土属性"
+   ]
+  },
+  {
+   "id": "CP05-092",
+   "printings": [
+    "CP05-092",
+    "CP05-GBF58",
+    "CP05-SL24",
+    "CP05-U10"
+   ],
+   "name": "土の理・ガレヲン",
+   "names": {
+    "en": "unavailable",
+    "cn": "土之法则·伽莱翁",
+    "ja": "土の理・ガレヲン"
+   },
+   "class": "Havencraft",
+   "type": "follower",
+   "evolved": true,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": 3,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "六竜",
+    "土属性"
+   ]
+  },
+  {
+   "id": "CP05-093",
+   "printings": [
+    "CP05-093",
+    "CP05-GBF59",
+    "CP05-P69"
+   ],
+   "name": "狂恋の華鎧・ヴィーラ",
+   "names": {
+    "en": "unavailable",
+    "cn": "狂恋的华铠·薇拉",
+    "ja": "狂恋の華鎧・ヴィーラ"
+   },
+   "class": "Havencraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 3,
+   "attack": 3,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "光属性"
+   ]
+  },
+  {
+   "id": "CP05-094",
+   "printings": [
+    "CP05-094",
+    "CP05-GBF60",
+    "CP05-P70",
+    "CP05-SP01",
+    "CP05-SSP01a",
+    "CP05-SSP01b"
+   ],
+   "name": "狂恋の華鎧・ヴィーラ",
+   "names": {
+    "en": "unavailable",
+    "cn": "狂恋的华铠·薇拉",
+    "ja": "狂恋の華鎧・ヴィーラ"
+   },
+   "class": "Havencraft",
+   "type": "follower",
+   "evolved": true,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": 4,
+   "defense": 4,
+   "traits": [
+    "グラブル",
+    "光属性"
+   ],
+   "alternateNames": {
+    "CP05-SP01": {
+     "en": "unavailable",
+     "cn": "誓约的骑士·薇拉&卡塔莉娜",
+     "ja": "誓約の騎士・ヴィーラ＆カタリナ"
+    },
+    "CP05-SSP01a": {
+     "en": "unavailable",
+     "cn": "誓约的骑士·薇拉&卡塔莉娜",
+     "ja": "誓約の騎士・ヴィーラ＆カタリナ"
+    },
+    "CP05-SSP01b": {
+     "en": "unavailable",
+     "cn": "誓约的骑士·薇拉&卡塔莉娜",
+     "ja": "誓約の騎士・ヴィーラ＆カタリナ"
+    }
+   }
+  },
+  {
+   "id": "CP05-095",
+   "printings": [
+    "CP05-095",
+    "CP05-GBF61",
+    "CP05-P71"
+   ],
+   "name": "七宝石の姫・レ・フィーエ",
+   "names": {
+    "en": "unavailable",
+    "cn": "七宝石公主·蕾菲尔",
+    "ja": "七宝石の姫・レ・フィーエ"
+   },
+   "class": "Havencraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 5,
+   "attack": 3,
+   "defense": 5,
+   "traits": [
+    "グラブル",
+    "光属性"
+   ]
+  },
+  {
+   "id": "CP05-096",
+   "printings": [
+    "CP05-096",
+    "CP05-P72"
+   ],
+   "name": "シュヴァリエ・マグナ",
+   "names": {
+    "en": "unavailable",
+    "cn": "神异形·舒瓦莉",
+    "ja": "シュヴァリエ・マグナ"
+   },
+   "class": "Havencraft",
+   "type": "amulet",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 3,
+   "attack": null,
+   "defense": null,
+   "traits": [
+    "グラブル",
+    "光属性"
+   ]
+  },
+  {
+   "id": "CP05-097",
+   "printings": [
+    "CP05-097",
+    "CP05-GBF62",
+    "CP05-P73"
+   ],
+   "name": "魔杖の外科医・ティコ",
+   "names": {
+    "en": "unavailable",
+    "cn": "魔杖傍身的外科医生·缇可",
+    "ja": "魔杖の外科医・ティコ"
+   },
+   "class": "Havencraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 1,
+   "attack": 1,
+   "defense": 1,
+   "traits": [
+    "グラブル",
+    "光属性"
+   ]
+  },
+  {
+   "id": "CP05-098",
+   "printings": [
+    "CP05-098",
+    "CP05-GBF63",
+    "CP05-P74"
+   ],
+   "name": "魔杖の外科医・ティコ",
+   "names": {
+    "en": "unavailable",
+    "cn": "魔杖傍身的外科医生·缇可",
+    "ja": "魔杖の外科医・ティコ"
+   },
+   "class": "Havencraft",
+   "type": "follower",
+   "evolved": true,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": 2,
+   "defense": 2,
+   "traits": [
+    "グラブル",
+    "光属性"
+   ]
+  },
+  {
+   "id": "CP05-099",
+   "printings": [
+    "CP05-099",
+    "CP05-GBF64",
+    "CP05-P75"
+   ],
+   "name": "星界の艇人・ノア",
+   "names": {
+    "en": "unavailable",
+    "cn": "星界的艇人·诺亚",
+    "ja": "星界の艇人・ノア"
+   },
+   "class": "Havencraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 5,
+   "attack": 1,
+   "defense": 1,
+   "traits": [
+    "グラブル",
+    "光属性"
+   ]
+  },
+  {
+   "id": "CP05-100",
+   "printings": [
+    "CP05-100",
+    "CP05-GBF65",
+    "CP05-P76"
+   ],
+   "name": "天象の風・ペトラ",
+   "names": {
+    "en": "unavailable",
+    "cn": "天象之风·佩德菈",
+    "ja": "天象の風・ペトラ"
+   },
+   "class": "Havencraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 1,
+   "attack": 1,
+   "defense": 2,
+   "traits": [
+    "グラブル",
+    "風属性"
+   ]
+  },
+  {
+   "id": "CP05-101",
+   "printings": [
+    "CP05-101",
+    "CP05-P77"
+   ],
+   "name": "星跡の巡礼者・ソフィア",
+   "names": {
+    "en": "unavailable",
+    "cn": "星迹的朝圣者·苏菲雅",
+    "ja": "星跡の巡礼者・ソフィア"
+   },
+   "class": "Havencraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 4,
+   "attack": 3,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "水属性"
+   ]
+  },
+  {
+   "id": "CP05-102",
+   "printings": [
+    "CP05-102",
+    "CP05-P78"
+   ],
+   "name": "星跡の巡礼者・ソフィア",
+   "names": {
+    "en": "unavailable",
+    "cn": "星迹的朝圣者·苏菲雅",
+    "ja": "星跡の巡礼者・ソフィア"
+   },
+   "class": "Havencraft",
+   "type": "follower",
+   "evolved": true,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": 4,
+   "defense": 4,
+   "traits": [
+    "グラブル",
+    "水属性"
+   ]
+  },
+  {
+   "id": "CP05-103",
+   "printings": [
+    "CP05-103",
+    "CP05-P79"
+   ],
+   "name": "英雄幻視・トルー",
+   "names": {
+    "en": "unavailable",
+    "cn": "英雄幻视·托路",
+    "ja": "英雄幻視・トルー"
+   },
+   "class": "Havencraft",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 2,
+   "attack": 1,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "水属性"
+   ]
+  },
+  {
+   "id": "CP05-104",
+   "printings": [
+    "CP05-104",
+    "CP05-P80"
+   ],
+   "name": "アフェクション・オース",
+   "names": {
+    "en": "unavailable",
+    "cn": "钟情誓言",
+    "ja": "アフェクション・オース"
+   },
+   "class": "Havencraft",
+   "type": "spell",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 1,
+   "attack": null,
+   "defense": null,
+   "traits": [
+    "グラブル",
+    "光属性"
+   ]
+  },
+  {
+   "id": "CP05-105",
+   "printings": [
+    "CP05-105",
+    "CP05-GBF66",
+    "CP05-SL25"
+   ],
+   "name": "天司長の後継・サンダルフォン",
+   "names": {
+    "en": "unavailable",
+    "cn": "天司长的继承者·圣德芬",
+    "ja": "天司長の後継・サンダルフォン"
+   },
+   "class": "Neutral",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 5,
+   "attack": 4,
+   "defense": 4,
+   "traits": [
+    "グラブル",
+    "光属性"
+   ]
+  },
+  {
+   "id": "CP05-106",
+   "printings": [
+    "CP05-106",
+    "CP05-GBF67",
+    "CP05-SL26",
+    "CP05-SP02",
+    "CP05-SSP02a",
+    "CP05-SSP02b"
+   ],
+   "name": "天司長の後継・サンダルフォン",
+   "names": {
+    "en": "unavailable",
+    "cn": "天司长的继承者·圣德芬",
+    "ja": "天司長の後継・サンダルフォン"
+   },
+   "class": "Neutral",
+   "type": "follower",
+   "evolved": true,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": 5,
+   "defense": 5,
+   "traits": [
+    "グラブル",
+    "光属性"
+   ],
+   "alternateNames": {
+    "CP05-SP02": {
+     "en": "unavailable",
+     "cn": "幻想的片刻·圣德芬&路西菲尔",
+     "ja": "幻想の一時・サンダルフォン＆ルシフェル"
+    },
+    "CP05-SSP02a": {
+     "en": "unavailable",
+     "cn": "幻想的片刻·圣德芬&路西菲尔",
+     "ja": "幻想の一時・サンダルフォン＆ルシフェル"
+    },
+    "CP05-SSP02b": {
+     "en": "unavailable",
+     "cn": "幻想的片刻·圣德芬&路西菲尔",
+     "ja": "幻想の一時・サンダルフォン＆ルシフェル"
+    }
+   }
+  },
+  {
+   "id": "CP05-107",
+   "printings": [
+    "CP05-107",
+    "CP05-GBF68",
+    "CP05-SL27",
+    "CP05-U11"
+   ],
+   "name": "グラン＆ジータ",
+   "names": {
+    "en": "unavailable",
+    "cn": "古兰&姬塔",
+    "ja": "グラン＆ジータ"
+   },
+   "class": "Neutral",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 2,
+   "attack": 2,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "全属性"
+   ],
+   "alternateNames": {
+    "CP05-U11": {
+     "en": "unavailable",
+     "cn": "十天众统御者·古兰&姬塔",
+     "ja": "十天衆を総べし者・グラン＆ジータ"
+    }
+   }
+  },
+  {
+   "id": "CP05-108",
+   "printings": [
+    "CP05-108",
+    "CP05-GBF69",
+    "CP05-P81"
+   ],
+   "name": "小さき赤き竜・ビィ",
+   "names": {
+    "en": "unavailable",
+    "cn": "娇小的赤红之龙·碧",
+    "ja": "小さき赤き竜・ビィ"
+   },
+   "class": "Neutral",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 1,
+   "attack": 1,
+   "defense": 1,
+   "traits": [
+    "グラブル",
+    "全属性"
+   ]
+  },
+  {
+   "id": "CP05-109",
+   "printings": [
+    "CP05-109",
+    "CP05-GBF70",
+    "CP05-P82"
+   ],
+   "name": "小さき赤き竜・ビィ",
+   "names": {
+    "en": "unavailable",
+    "cn": "娇小的赤红之龙·碧",
+    "ja": "小さき赤き竜・ビィ"
+   },
+   "class": "Neutral",
+   "type": "follower",
+   "evolved": true,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": 2,
+   "defense": 2,
+   "traits": [
+    "グラブル",
+    "全属性"
+   ]
+  },
+  {
+   "id": "CP05-110",
+   "printings": [
+    "CP05-110",
+    "CP05-GBF71",
+    "CP05-P83"
+   ],
+   "name": "蒼の少女・ルリア",
+   "names": {
+    "en": "unavailable",
+    "cn": "苍蓝少女·露莉亚",
+    "ja": "蒼の少女・ルリア"
+   },
+   "class": "Neutral",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 1,
+   "attack": 1,
+   "defense": 1,
+   "traits": [
+    "グラブル",
+    "全属性"
+   ]
+  },
+  {
+   "id": "CP05-111",
+   "printings": [
+    "CP05-111",
+    "CP05-GBF72",
+    "CP05-P84"
+   ],
+   "name": "蒼天の守護騎士・カタリナ",
+   "names": {
+    "en": "unavailable",
+    "cn": "苍天守护骑士·卡塔莉娜",
+    "ja": "蒼天の守護騎士・カタリナ"
+   },
+   "class": "Neutral",
+   "type": "follower",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 3,
+   "attack": 2,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "水属性"
+   ]
+  },
+  {
+   "id": "CP05-LD01",
+   "printings": [
+    "CP05-LD01"
+   ],
+   "name": "六竜の『翠』・イーウィヤ",
+   "names": {
+    "en": "unavailable",
+    "cn": "六龙之『翠』·艾云尼亚",
+    "ja": "六竜の『翠』・イーウィヤ"
+   },
+   "class": "Forestcraft",
+   "type": "leader",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": null,
+   "defense": null,
+   "traits": [],
+   "textless": true
+  },
+  {
+   "id": "CP05-LD02",
+   "printings": [
+    "CP05-LD02"
+   ],
+   "name": "六竜の『白』・ル・オー",
+   "names": {
+    "en": "unavailable",
+    "cn": "六龙之『白』·龙敖",
+    "ja": "六竜の『白』・ル・オー"
+   },
+   "class": "Swordcraft",
+   "type": "leader",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": null,
+   "defense": null,
+   "traits": [],
+   "textless": true
+  },
+  {
+   "id": "CP05-LD03",
+   "printings": [
+    "CP05-LD03"
+   ],
+   "name": "快活の団長・シャルロッテ",
+   "names": {
+    "en": "unavailable",
+    "cn": "快活的团长·夏绿蒂",
+    "ja": "快活の団長・シャルロッテ"
+   },
+   "class": "Swordcraft",
+   "type": "leader",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": null,
+   "defense": null,
+   "traits": [],
+   "textless": true
+  },
+  {
+   "id": "CP05-LD04",
+   "printings": [
+    "CP05-LD04"
+   ],
+   "name": "六竜の『碧』・ワムデュス",
+   "names": {
+    "en": "unavailable",
+    "cn": "六龙之『碧』·瓦姆杜斯",
+    "ja": "六竜の『碧』・ワムデュス"
+   },
+   "class": "Runecraft",
+   "type": "leader",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": null,
+   "defense": null,
+   "traits": [],
+   "textless": true
+  },
+  {
+   "id": "CP05-LD05",
+   "printings": [
+    "CP05-LD05"
+   ],
+   "name": "六竜の『朱』・ウィルナス",
+   "names": {
+    "en": "unavailable",
+    "cn": "六龙之『朱』·威尔纳斯",
+    "ja": "六竜の『朱』・ウィルナス"
+   },
+   "class": "Dragoncraft",
+   "type": "leader",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": null,
+   "defense": null,
+   "traits": [],
+   "textless": true
+  },
+  {
+   "id": "CP05-LD06",
+   "printings": [
+    "CP05-LD06"
+   ],
+   "name": "六竜の『黒』・フェディエル",
+   "names": {
+    "en": "unavailable",
+    "cn": "六龙之『黑』·菲迪埃尔",
+    "ja": "六竜の『黒』・フェディエル"
+   },
+   "class": "Abysscraft",
+   "type": "leader",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": null,
+   "defense": null,
+   "traits": [],
+   "textless": true
+  },
+  {
+   "id": "CP05-LD07",
+   "printings": [
+    "CP05-LD07"
+   ],
+   "name": "詭弁を弄する堕天司・ベリアル",
+   "names": {
+    "en": "unavailable",
+    "cn": "玩弄诡辩的堕天司·彼列",
+    "ja": "詭弁を弄する堕天司・ベリアル"
+   },
+   "class": "Abysscraft",
+   "type": "leader",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": null,
+   "defense": null,
+   "traits": [],
+   "textless": true
+  },
+  {
+   "id": "CP05-LD08",
+   "printings": [
+    "CP05-LD08"
+   ],
+   "name": "六竜の『金』・ガレヲン",
+   "names": {
+    "en": "unavailable",
+    "cn": "六龙之『金』·伽莱翁",
+    "ja": "六竜の『金』・ガレヲン"
+   },
+   "class": "Havencraft",
+   "type": "leader",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": null,
+   "defense": null,
+   "traits": [],
+   "textless": true
+  },
+  {
+   "id": "CP05-LD09",
+   "printings": [
+    "CP05-LD09"
+   ],
+   "name": "水上の巫女・サラ",
+   "names": {
+    "en": "unavailable",
+    "cn": "水上巫女·莎拉",
+    "ja": "水上の巫女・サラ"
+   },
+   "class": "Havencraft",
+   "type": "leader",
+   "evolved": false,
+   "token": false,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": null,
+   "defense": null,
+   "traits": [],
+   "textless": true
+  },
+  {
+   "id": "CP05-T01",
+   "printings": [
+    "CP05-T01",
+    "CP05-GBF73",
+    "CP05-P85"
+   ],
+   "name": "ガンパウダーミキサー・クムユ",
+   "names": {
+    "en": "unavailable",
+    "cn": "枪炮火药调合师·库姆悠",
+    "ja": "ガンパウダーミキサー・クムユ"
+   },
+   "class": "Forestcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": true,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 3,
+   "attack": 3,
+   "defense": 2,
+   "traits": [
+    "グラブル",
+    "土属性"
+   ]
+  },
+  {
+   "id": "CP05-T02",
+   "printings": [
+    "CP05-T02",
+    "CP05-P86"
+   ],
+   "name": "フィル",
+   "names": {
+    "en": "unavailable",
+    "cn": "丝线",
+    "ja": "フィル"
+   },
+   "class": "Forestcraft",
+   "type": "spell",
+   "evolved": false,
+   "token": true,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 0,
+   "attack": null,
+   "defense": null,
+   "traits": [
+    "グラブル",
+    "風属性"
+   ]
+  },
+  {
+   "id": "CP05-T03",
+   "printings": [
+    "CP05-T03",
+    "CP05-GBF74",
+    "CP05-P87"
+   ],
+   "name": "俊英の双剣士・ランスロット",
+   "names": {
+    "en": "unavailable",
+    "cn": "杰出的双剑士·兰斯洛特",
+    "ja": "俊英の双剣士・ランスロット"
+   },
+   "class": "Swordcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": true,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 3,
+   "attack": 3,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "水属性"
+   ]
+  },
+  {
+   "id": "CP05-T04",
+   "printings": [
+    "CP05-T04",
+    "CP05-GBF75",
+    "CP05-P88"
+   ],
+   "name": "不撓不屈の騎士・ヴェイン",
+   "names": {
+    "en": "unavailable",
+    "cn": "不屈不挠的骑士·范恩",
+    "ja": "不撓不屈の騎士・ヴェイン"
+   },
+   "class": "Swordcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": true,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 3,
+   "attack": 2,
+   "defense": 5,
+   "traits": [
+    "グラブル",
+    "風属性"
+   ]
+  },
+  {
+   "id": "CP05-T05",
+   "printings": [
+    "CP05-T05",
+    "CP05-GBF76",
+    "CP05-P89"
+   ],
+   "name": "竜殺しの騎士・ジークフリート",
+   "names": {
+    "en": "unavailable",
+    "cn": "屠龙的骑士·齐格菲",
+    "ja": "竜殺しの騎士・ジークフリート"
+   },
+   "class": "Swordcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": true,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 3,
+   "attack": 3,
+   "defense": 4,
+   "traits": [
+    "グラブル",
+    "土属性"
+   ]
+  },
+  {
+   "id": "CP05-T06",
+   "printings": [
+    "CP05-T06",
+    "CP05-GBF77",
+    "CP05-P90"
+   ],
+   "name": "炎帝・パーシヴァル",
+   "names": {
+    "en": "unavailable",
+    "cn": "炎帝·帕西瓦尔",
+    "ja": "炎帝・パーシヴァル"
+   },
+   "class": "Swordcraft",
+   "type": "follower",
+   "evolved": false,
+   "token": true,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 3,
+   "attack": 4,
+   "defense": 3,
+   "traits": [
+    "グラブル",
+    "火属性"
+   ]
+  },
+  {
+   "id": "CP05-T07",
+   "printings": [
+    "CP05-T07",
+    "CP05-GBF78",
+    "CP05-P91"
+   ],
+   "name": "ハクタク",
+   "names": {
+    "en": "unavailable",
+    "cn": "白泽",
+    "ja": "ハクタク"
+   },
+   "class": "Runecraft",
+   "type": "follower",
+   "evolved": false,
+   "token": true,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 4,
+   "attack": 4,
+   "defense": 6,
+   "traits": [
+    "グラブル",
+    "水属性"
+   ]
+  },
+  {
+   "id": "CP05-T08",
+   "printings": [
+    "CP05-T08",
+    "CP05-P92"
+   ],
+   "name": "アルス・マグナ",
+   "names": {
+    "en": "unavailable",
+    "cn": "伟大之术",
+    "ja": "アルス・マグナ"
+   },
+   "class": "Runecraft",
+   "type": "spell",
+   "evolved": false,
+   "token": true,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": 1,
+   "attack": null,
+   "defense": null,
+   "traits": [
+    "グラブル",
+    "土属性",
+    "光属性",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-T09",
+   "printings": [
+    "CP05-T09",
+    "CP05-P93"
+   ],
+   "name": "火晶のエレメント",
+   "names": {
+    "en": "unavailable",
+    "cn": "火晶之元素",
+    "ja": "火晶のエレメント"
+   },
+   "class": "Neutral",
+   "type": "treasure",
+   "evolved": false,
+   "token": true,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": null,
+   "defense": null,
+   "traits": [
+    "グラブル",
+    "火属性"
+   ]
+  },
+  {
+   "id": "CP05-T10",
+   "printings": [
+    "CP05-T10",
+    "CP05-P94"
+   ],
+   "name": "水晶のエレメント",
+   "names": {
+    "en": "unavailable",
+    "cn": "水晶之元素",
+    "ja": "水晶のエレメント"
+   },
+   "class": "Neutral",
+   "type": "treasure",
+   "evolved": false,
+   "token": true,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": null,
+   "defense": null,
+   "traits": [
+    "グラブル",
+    "水属性"
+   ]
+  },
+  {
+   "id": "CP05-T11",
+   "printings": [
+    "CP05-T11",
+    "CP05-P95"
+   ],
+   "name": "土晶のエレメント",
+   "names": {
+    "en": "unavailable",
+    "cn": "土晶之元素",
+    "ja": "土晶のエレメント"
+   },
+   "class": "Neutral",
+   "type": "treasure",
+   "evolved": false,
+   "token": true,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": null,
+   "defense": null,
+   "traits": [
+    "グラブル",
+    "土属性"
+   ]
+  },
+  {
+   "id": "CP05-T12",
+   "printings": [
+    "CP05-T12",
+    "CP05-P96"
+   ],
+   "name": "風晶のエレメント",
+   "names": {
+    "en": "unavailable",
+    "cn": "风晶之元素",
+    "ja": "風晶のエレメント"
+   },
+   "class": "Neutral",
+   "type": "treasure",
+   "evolved": false,
+   "token": true,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": null,
+   "defense": null,
+   "traits": [
+    "グラブル",
+    "風属性"
+   ]
+  },
+  {
+   "id": "CP05-T13",
+   "printings": [
+    "CP05-T13",
+    "CP05-P97"
+   ],
+   "name": "光晶のエレメント",
+   "names": {
+    "en": "unavailable",
+    "cn": "光晶之元素",
+    "ja": "光晶のエレメント"
+   },
+   "class": "Neutral",
+   "type": "treasure",
+   "evolved": false,
+   "token": true,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": null,
+   "defense": null,
+   "traits": [
+    "グラブル",
+    "光属性"
+   ]
+  },
+  {
+   "id": "CP05-T14",
+   "printings": [
+    "CP05-T14",
+    "CP05-P98"
+   ],
+   "name": "闇晶のエレメント",
+   "names": {
+    "en": "unavailable",
+    "cn": "暗晶之元素",
+    "ja": "闇晶のエレメント"
+   },
+   "class": "Neutral",
+   "type": "treasure",
+   "evolved": false,
+   "token": true,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": null,
+   "defense": null,
+   "traits": [
+    "グラブル",
+    "闇属性"
+   ]
+  },
+  {
+   "id": "CP05-T15",
+   "printings": [
+    "CP05-T15",
+    "CP05-P99"
+   ],
+   "name": "ヒヒイロカネ",
+   "names": {
+    "en": "unavailable",
+    "cn": "绯绯色金",
+    "ja": "ヒヒイロカネ"
+   },
+   "class": "Neutral",
+   "type": "treasure",
+   "evolved": false,
+   "token": true,
+   "universe": "granblueFantasy",
+   "preview": true,
+   "cost": null,
+   "attack": null,
+   "defense": null,
+   "traits": [
+    "グラブル"
+   ]
+  }
+ ]
+}

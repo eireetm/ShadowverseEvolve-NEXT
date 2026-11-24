@@ -29,4 +29,6 @@ export const UNIVERSE_OF_SET: Readonly<Record<string, Universe>> = {
   // CR 14.5 Princess Connect! Re: Dive
   CP04: "princessConnect",
   PCS01: "princessConnect",
+  // CR JP 14.6 Granblue Fantasy (グランブルーファンタジー; the English rules don't have it yet)
+  CP05: "granblueFantasy",
 };

@@ -79,6 +79,12 @@ describe("card pool (all supported sets)", () => {
     const of = ["BP06-036", "BP06-SP01", "BP06-043", "BP06-057", "BP06-SP02", "BP06-062", "BP08-U07"].map((p) => db.ofPrinting(p).id);
     expect(of).toEqual(["BP06-035", "BP06-035", "BP06-042", "BP06-056", "BP06-056", "BP06-061", "BP08-108"]);
     expect(db.ofPrinting("BP06-036").alternateNames?.["BP06-036"]?.ja).toBe("澄明なる頭脳・博衣こより");
+    // CP05's (pre-release, named in Japanese): the small-type names on SP01 / SSP01a / SSP01b, SP02 / SSP02a / SSP02b, U03,
+    // U05, U07, U11.
+    const cp05 = ["SP01", "SSP01a", "SSP01b", "SP02", "SSP02a", "SSP02b", "U03", "U05", "U07", "U11"].map((p) => db.ofPrinting(`CP05-${p}`).id);
+    expect(cp05).toEqual(["CP05-094", "CP05-094", "CP05-094", "CP05-106", "CP05-106", "CP05-106", "CP05-019", "CP05-037", "CP05-055", "CP05-107"]);
+    expect(db.named("誓約の騎士・ヴィーラ＆カタリナ")).toEqual([]);
+    expect(db.get("CP05-107").alternateNames?.["CP05-U11"]).toEqual({ en: "unavailable", cn: "十天众统御者·古兰&姬塔", ja: "十天衆を総べし者・グラン＆ジータ" });
   });
 
   it.skipIf(!hasDataTexts())("uses effect_en where the scraped official English text belongs to another card", () => {
