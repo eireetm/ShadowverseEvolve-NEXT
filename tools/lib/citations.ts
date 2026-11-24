@@ -4,15 +4,23 @@ import { join, relative } from "node:path";
 /**
  * Find Comprehensive Rules clause numbers cited in source files ("CR 8.4.3.1", "(10.6.2.3)",
  * "12.8.2 (iii)", ...). Numbers are recognised by shape; chapter must be 1–15 and later
- * components 1–2 digits, which excludes ordinary decimals such as 0.8.
+ * components 1–2 digits, which excludes ordinary decimals such as 0.8 (and "v1.29.0", whose
+ * number follows a letter: never write a rules version after a space).
+ *
+ * The code cites the English rules. A clause only the Japanese rules have so far (a universe
+ * whose rules come out in Japanese first) is cited with "JP" before each number:
+ * "CR JP 14.6.4.1". The two editions number some other clauses differently, so a JP number
+ * is only for a clause the English rules don't have.
  */
 export interface Citation {
   clause: string;
+  /** "ja" for a number written "JP <number>". */
+  lang: "en" | "ja";
   file: string;
   line: number;
 }
 
-const CLAUSE = /(?<![\w.])((?:1[0-5]|[1-9])(?:\.\d{1,2}){1,5})(?![\w]|\.\d)/g;
+const CLAUSE = /(?<![\w.])(JP )?((?:1[0-5]|[1-9])(?:\.\d{1,2}){1,5})(?![\w]|\.\d)/g;
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((f) => {
@@ -45,7 +53,9 @@ export function scanCitations(root: string, dirs: readonly (string | CitationDir
         .split("\n")
         .forEach((line, i) => {
           const text = dir.commentsOnly ? commentText(line) : line;
-          for (const m of text.matchAll(CLAUSE)) out.push({ clause: m[1]!, file: rel, line: i + 1 });
+          for (const m of text.matchAll(CLAUSE)) {
+            out.push({ clause: m[2]!, lang: m[1] ? "ja" : "en", file: rel, line: i + 1 });
+          }
         });
     }
   }
@@ -59,8 +69,17 @@ export interface ClauseList {
   clauses: string[];
 }
 
-export function loadClauses(root: string): ClauseList {
-  return JSON.parse(readFileSync(join(root, "tools", "data", "cr-clauses.json"), "utf8")) as ClauseList;
+/** The clause table of the English rules, or of the Japanese ones ("ja"). */
+export function loadClauses(root: string, lang: "en" | "ja" = "en"): ClauseList {
+  const file = lang === "ja" ? "cr-clauses-ja.json" : "cr-clauses.json";
+  return JSON.parse(readFileSync(join(root, "tools", "data", file), "utf8")) as ClauseList;
+}
+
+/** Why a citation is wrong, or null: an English number must be in the English rules, a JP one only in the Japanese. */
+export function citationProblem(c: Citation, en: ReadonlySet<string>, ja: ReadonlySet<string>): string | null {
+  if (c.lang === "en") return en.has(c.clause) ? null : "not in the English rules";
+  if (!ja.has(c.clause)) return "not in the Japanese rules";
+  return en.has(c.clause) ? "the English rules have this number: cite theirs, without JP" : null;
 }
 
 export function compareClauses(a: string, b: string): number {
