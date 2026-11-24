@@ -1,6 +1,7 @@
 import type { CardType } from "../model/card";
 import type { CardId, PlayerId } from "../model/ids";
 import type { PlayerZone } from "../model/state";
+import { traitMatches } from "../model/traits";
 import type { GameReader } from "../engine/query";
 import type { TargetSpec } from "./types";
 
@@ -99,7 +100,13 @@ export const isAmulet: Filter = (g, id) => ofType(g, id, "amulet");
 export const isSpell: Filter = (g, id) => ofType(g, id, "spell");
 /** CR 2.3.2 — a crest (BP20; tokens in the EX area, 9.1.4.2). */
 export const isCrest: Filter = (g, id) => ofType(g, id, "crest");
-export const hasTrait = (trait: string): Filter => (g, id) => g.info(id).traits.includes(trait);
+/** CR 2.4 — it has the trait (an attribute trait: or 全属性, CR JP 14.6.2.2). */
+export const hasTrait = (trait: string): Filter => (g, id) => traitMatches(g.info(id).traits, trait);
+/**
+ * The same as `hasTrait`, reading only the card's type and traits (GameReader.typeAndTraits): safe in passives that work out
+ * keywords (`selfKeywords`, `FieldPassives.keywordsFor`), where `info` would ask for them again (e.g. CP04-034, CP05-015).
+ */
+export const traitOf = (trait: string): Filter => (g, id) => traitMatches(g.typeAndTraits(id).traits, trait);
 export const isClass = (cls: string): Filter => (g, id) => g.info(id).class === cls;
 export const costAtMost = (n: number): Filter => (g, id) => (g.info(id).cost ?? Infinity) <= n;
 export const costAtLeast = (n: number): Filter => (g, id) => (g.info(id).cost ?? -Infinity) >= n;

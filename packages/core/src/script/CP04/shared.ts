@@ -42,11 +42,8 @@ export function anotherOnYourField(g: GameReader, self: CardId, f: (g: GameReade
   if (!c) return false;
   return g.cards(c.controller, "field").some((id) => id !== self && g.typeAndTraits(id).type === "follower" && f(g, id));
 }
-/** A trait check that only reads type and traits, for keyword passives. */
-export const traitOf =
-  (trait: string) =>
-  (g: GameReader, id: CardId): boolean =>
-    g.typeAndTraits(id).traits.includes(trait);
+/** A trait check that only reads type and traits, for keyword passives (script/targets.ts). */
+export { traitOf } from "../targets";
 
 /** "Deal N damage to each enemy leader" */
 export function* damageEnemyLeader(fx: EffectContext, n: number): Proc<void> {

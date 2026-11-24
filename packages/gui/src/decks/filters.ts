@@ -1,5 +1,5 @@
 // The deck builder's card pool: which cards the filters let through, and in which order (pure functions: tested in Node).
-import type { CardDefinition } from "@sve/core";
+import { ALL_ATTRIBUTES_TRAIT, ATTRIBUTE_TRAITS, type CardDefinition } from "@sve/core";
 import { traitNames } from "../app/traits";
 import { isDeckCard } from "./model";
 
@@ -142,6 +142,7 @@ const wordsOf = (text: string): string[] =>
 export function filterPool(cards: readonly PoolCard[], f: PoolFilters, nameOf: (card: PoolCard) => string = (c) => c.name): PoolCard[] {
   const words = wordsOf(f.text);
   const trait = f.trait.trim().toLowerCase();
+  const traitHit = (t: string) => traitNames(t).some((name) => name.toLowerCase().includes(trait));
   const out = cards.filter((card) => {
     if (!isDeckCard(card)) return false;
     if (f.class !== "any" && card.class !== f.class) return false;
@@ -152,7 +153,8 @@ export function filterPool(cards: readonly PoolCard[], f: PoolFilters, nameOf: (
     }
     if (f.set !== "any" && !card.printings.some((p) => setOf(p) === f.set)) return false;
     if (f.universe === "none" ? card.universe !== undefined : f.universe !== "any" && card.universe !== f.universe) return false;
-    if (trait !== "" && !card.traits.some((t) => traitNames(t).some((name) => name.toLowerCase().includes(trait)))) return false;
+    // A 全属性 card is found by an attribute trait too, as the rules count it (CR JP 14.6.2.2).
+    if (trait !== "" && !card.traits.some(traitHit) && !(card.traits.includes(ALL_ATTRIBUTES_TRAIT) && ATTRIBUTE_TRAITS.some(traitHit))) return false;
     if (f.ability !== "any" && !hasAbility(card, f.ability)) return false;
     return matchesText(card, words, [card.id, ...card.printings]);
   });

@@ -23,6 +23,7 @@ export type {
 } from "./model/state";
 export { LINK_ZONES, PLAYER_ZONES, type LinkZone, type UncapKind } from "./model/state";
 export { abilityZonesOfType } from "./engine/state/characteristics";
+export { ALL_ATTRIBUTES_TRAIT, ATTRIBUTE_TRAITS, traitMatches } from "./model/traits";
 export type {
   Decision,
   Answer,

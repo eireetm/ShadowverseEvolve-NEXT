@@ -7,6 +7,7 @@ import type { Proc } from "../engine/runtime/proc";
 import type { GameReader } from "../engine/query";
 import { playPointsCost, rideCost, serveCost } from "./costs";
 import { costAtMost, hasTrait, isCrest, yourFollower } from "./targets";
+import { traitMatches } from "../model/traits";
 import type {
   ActivatedAbility,
   AutomaticAbility,
@@ -355,10 +356,10 @@ export function whenYouPlayOrFuse(spec: TimingSpec, trait: string): AutomaticAbi
     "other",
     (e, me, game) => {
       if (me.lookBack) return false;
-      if (e.type === "cardPlayed") return e.player === me.controller && game.info(e.card).traits.includes(trait) ? [{ card: e.card }] : false;
+      if (e.type === "cardPlayed") return e.player === me.controller && traitMatches(game.info(e.card).traits, trait) ? [{ card: e.card }] : false;
       if (e.type === "cardsFused" && e.player === me.controller) {
         return e.fused
-          .filter((id, i) => (game.card(id) ? game.info(id).traits : game.db.get(e.fusedDefs[i]!).traits).includes(trait))
+          .filter((id, i) => traitMatches(game.card(id) ? game.info(id).traits : game.db.get(e.fusedDefs[i]!).traits, trait))
           .map((card) => ({ card }));
       }
       return false;

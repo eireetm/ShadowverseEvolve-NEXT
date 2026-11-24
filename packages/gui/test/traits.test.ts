@@ -27,4 +27,12 @@ describe("trait names", () => {
     expect(byTrait("beast")).toEqual(beasts);
     expect(byTrait("野兽")).toEqual(beasts);
   });
+
+  it("finds a 全属性 card by any attribute trait, as the rules count it (CR JP 14.6.2.2)", () => {
+    const byTrait = (trait: string) => filterPool(ALL_CARDS, { ...NO_FILTERS, trait }).map((c) => c.id);
+    const all = ALL_CARDS.filter((c) => c.traits.includes("全属性") && !c.token && c.type !== "leader").map((c) => c.id);
+    expect(all.length).toBeGreaterThan(0);
+    for (const attribute of ["火属性", "Water", "暗属性"]) expect(byTrait(attribute), attribute).toEqual(expect.arrayContaining(all));
+    expect(byTrait("十天衆").filter((id) => all.includes(id) && !ALL_CARDS.find((c) => c.id === id)!.traits.includes("十天衆"))).toEqual([]);
+  });
 });

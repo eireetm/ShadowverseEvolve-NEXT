@@ -19,6 +19,7 @@ import { carrotsToServe, canServe } from "./actions/race";
 import { canRide, drivePointsToRide } from "./actions/drive";
 import { isRacing, linkedCards, uncapMaterials, uncapStateOf } from "./state/links";
 import { canUncap } from "./actions/uncap";
+import { traitMatches } from "../model/traits";
 import { MAGICAL_ITEM } from "../data/universes";
 
 /**
@@ -346,7 +347,7 @@ export function makeReader(env: Env): GameReader {
     playedWith: (id) => state().cards[id]?.playedWith ?? null,
     drivePointsToRide: (p) => drivePointsToRide(env, p),
     canRide: (id) => canRide(env, id),
-    attacksThisTurnWith: (p, trait) => countsThisTurn(state(), p).attackerTraits.filter((traits) => traits.includes(trait)).length,
+    attacksThisTurnWith: (p, trait) => countsThisTurn(state(), p).attackerTraits.filter((traits) => traitMatches(traits, trait)).length,
     gainedDefenseThisTurn: (id) => {
       const c = state().cards[id];
       return c !== undefined && countsThisTurn(state(), c.controller).defenseGained.includes(id);

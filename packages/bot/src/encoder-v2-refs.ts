@@ -1,4 +1,4 @@
-import { CARD_CLASSES, opponentOf, type CardView, type DefId, type HiddenCardView, type PlayerId, type PlayerSideView, type PlayerView } from "./core";
+import { ALL_ATTRIBUTES_TRAIT, ATTRIBUTE_TRAITS, CARD_CLASSES, opponentOf, type CardView, type DefId, type HiddenCardView, type PlayerId, type PlayerSideView, type PlayerView } from "./core";
 import { CARD_FEATURE_COLUMNS, refPartial, type CardFeatureTable, type CardRef, type RefFilter, type RefTest } from "./card-features";
 import { infoDefOf, type KnownDeck } from "./encoder";
 
@@ -200,7 +200,9 @@ export function compileFilter(table: CardFeatureTable, filter: RefFilter): Pred 
         return (x) => x.type === f.v;
       case "trait": {
         const i = cache.traitIndex.get(f.v) ?? -1;
-        return (x) => i >= 0 && x.traits.includes(i);
+        // CR JP 14.6.2.2 — counting an attribute trait counts 全属性 cards too.
+        const all = ATTRIBUTE_TRAITS.includes(f.v) ? (cache.traitIndex.get(ALL_ATTRIBUTES_TRAIT) ?? -1) : -1;
+        return (x) => (i >= 0 && x.traits.includes(i)) || (all >= 0 && x.traits.includes(all));
       }
       case "class": {
         const i = (CARD_CLASSES as readonly string[]).indexOf(f.v);
