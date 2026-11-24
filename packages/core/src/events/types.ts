@@ -165,6 +165,11 @@ export type GameEvent =
   /** CR 14.5.2.2 — `follower` equipped the equipment token `token`, created in `player`'s equipment zone and linked to it. */
   | { type: "equipped"; player: PlayerId; token: CardId; follower: CardId }
   /**
+   * CR JP 14.6.4.1 / JP 14.6.4.2 — `follower` (on `player`'s field) uncapped (上限解放した) or, `final`, final-uncapped
+   * (最終上限解放した), with the treasure `material`, now in the uncap zone and linked to it. ヒヒイロカネ doing both: two events.
+   */
+  | { type: "uncapped"; player: PlayerId; follower: CardId; material: CardId; final: boolean }
+  /**
    * CR 5.14. `kind` follows CR 5.14.3 (attack / combat / ability damage); `combat` tells
    * whether it is combat damage (5.14.3.2: damage exchanged by an attacking follower and the
    * follower it attacks).

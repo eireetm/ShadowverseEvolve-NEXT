@@ -853,6 +853,7 @@ export const en = {
   "keyword.twinDrive": "Twin Drive",
   "keyword.drive": "Drive",
   "keyword.startingAmulet": "Starting Amulet",
+  "keyword.finalUncap": "Final Uncap",
 
   "log.empty": "Nothing yet.",
   "log.turn": "Turn {n} — {player}",
@@ -897,6 +898,7 @@ export const en = {
   "log.zone.driveZone": "drive zone",
   "log.zone.triggerZone": "trigger zone",
   "log.zone.equipmentZone": "equipment zone",
+  "log.zone.uncapZone": "uncap zone",
   "log.zone.leader": "leader area",
   "log.zone.resolution": "resolution",
   "log.zone.none": "(new)",

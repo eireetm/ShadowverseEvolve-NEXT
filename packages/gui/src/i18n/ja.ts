@@ -857,6 +857,7 @@ export const ja: Record<MessageKey, string> = {
   "keyword.twinDrive": "ツインドライブ",
   "keyword.drive": "ドライブ",
   "keyword.startingAmulet": "スタートアミュレット",
+  "keyword.finalUncap": "最終上限解放可能",
 
   "log.empty": "まだありません。",
   "log.turn": "{n}ターン目 — {player}",
@@ -901,6 +902,7 @@ export const ja: Record<MessageKey, string> = {
   "log.zone.driveZone": "ドライブゾーン",
   "log.zone.triggerZone": "トリガーゾーン",
   "log.zone.equipmentZone": "装備ゾーン",
+  "log.zone.uncapZone": "上限解放領域",
   "log.zone.leader": "リーダーエリア",
   "log.zone.resolution": "解決領域",
   "log.zone.none": "（新たに）",

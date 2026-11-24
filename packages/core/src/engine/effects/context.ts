@@ -26,6 +26,7 @@ import {
 } from "../actions/cards";
 import { addCounters, removeCounters } from "../actions/counters";
 import { race as raceCard, serve as serveCard } from "../actions/race";
+import { uncap as uncapCard } from "../actions/uncap";
 import { driveCheck, ride as rideCard } from "../actions/drive";
 import { recordStatsGained } from "../actions/stats";
 import { dealDamage, type DamageInstance } from "../actions/damage";
@@ -395,6 +396,17 @@ export interface EffectContext {
    * 1.3.2). Returns the token, or null.
    */
   equip(follower: CardId, tokenName: string): Proc<CardId | null>;
+  /**
+   * CR JP 14.6.4.1 — `follower` uncaps with the treasure `material` (by default this ability's card): when it isn't
+   * uncapped, the treasure goes into the uncap zone linked to it (+1 attack while linked). Returns the treasure there (it
+   * changed objects, CR 4.1.4: pass it to a following finalUncap), or null when nothing was done (CR 1.3.2).
+   */
+  uncap(follower: CardId, material?: CardId): Proc<CardId | null>;
+  /**
+   * CR JP 14.6.4.2 — `follower` final-uncaps with the treasure `material` (by default this ability's card): when it has
+   * Final Uncap and isn't final-uncapped (+1 attack and +1 defense while linked). Returns the treasure, or null.
+   */
+  finalUncap(follower: CardId, material?: CardId): Proc<CardId | null>;
   /**
    * CR 14.5.1.4 — execute one of `follower`'s Union Burst abilities without paying its cost (CP04-114): its controller chooses
    * one that can be played, which is played ignoring its trigger condition, with X = 0. Returns whether one was executed.
@@ -1012,6 +1024,12 @@ export function makeEffectContext(g: G, init: EffectInit): EffectContext {
       if (id === undefined) return null;
       g.emit({ type: "equipped", player: ctrl, token: id, follower }); // 14.5.2.2.2
       return id;
+    },
+    *uncap(follower, material = init.self) {
+      return uncapCard(g, material, follower, "uncap");
+    },
+    *finalUncap(follower, material = init.self) {
+      return uncapCard(g, material, follower, "final");
     },
     *executeUnionBurst(follower) {
       return yield* executeUnionBurst(g, ctrl, follower, selfIfPresent());

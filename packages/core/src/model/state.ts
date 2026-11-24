@@ -26,8 +26,16 @@ export const PLAYER_ZONES = [
   "driveZone", // CR 4.14 — Drive Point cards linked to cards that rode (Vanguard, 14.4.9)
   "triggerZone", // CR 4.15 — the card of a drive check until it is resolved (Vanguard, 14.4.5)
   "equipmentZone", // CR 4.16 — equipment tokens linked to their equipped followers (Princess Connect, 14.5.2)
+  "uncapZone", // CR JP 4.17 — treasures linked to the followers they uncapped (Granblue Fantasy, CR JP 14.6.4)
 ] as const;
 export type PlayerZone = (typeof PLAYER_ZONES)[number];
+
+/** The zones whose cards are linked to a card on the field (`CardInstance.linkedTo`): CR 14.2.1.1, 14.4.9.2, 14.5.2.2.2, CR JP 14.6.4.1. */
+export const LINK_ZONES = ["raceZone", "driveZone", "equipmentZone", "uncapZone"] as const;
+export type LinkZone = (typeof LINK_ZONES)[number];
+
+/** CR JP 14.6.4.1 / JP 14.6.4.2 — what a treasure in the uncap zone did to its follower: uncapped it, or final-uncapped it. */
+export type UncapKind = "uncap" | "final";
 
 /** All zones a card can be in. The resolution zone (CR 4.11) is shared by both players. */
 export type ZoneName = PlayerZone | "resolution";
@@ -111,11 +119,16 @@ export interface CardInstance {
    */
   rideUsed?: boolean;
   /**
-   * A card in the race zone, drive zone or equipment zone: the card on the field it is linked to (CR 14.2.1.1,
-   * 14.4.9.2, 14.5.2.2.2). The link is lost when that card leaves the field (14.2.1.3, 14.4.9.4, 14.5.2.4): its id
-   * then no longer exists, and rules handling (11.8, 11.10, 11.11) moves this card.
+   * A card in the race zone, drive zone, equipment zone or uncap zone: the card on the field it is linked to (CR 14.2.1.1,
+   * 14.4.9.2, 14.5.2.2.2, CR JP 14.6.4.1). The link is lost when that card leaves the field (14.2.1.3, 14.4.9.4, 14.5.2.4,
+   * CR 4.1.4): its id then no longer exists, and rules handling (11.8, 11.10, 11.11, CR JP 11.12) moves this card.
    */
   linkedTo?: CardId;
+  /**
+   * A treasure in the uncap zone: what it did to the follower it is linked to, which is uncapped or final-uncapped while
+   * it is linked (CR JP 14.6.4.1.1 / JP 14.6.4.2.1). Both for ヒヒイロカネ, which does both with one card (CP05-T15 ruling Q2868).
+   */
+  uncaps?: UncapKind[];
   /** CR 14.2.3.1 — the number of times this object has raced (it has Rush while linked to a race-zone card). */
   raced?: number;
   /** Timestamp of its first race: the Rush racing gives is lost by a later "loses all abilities" (CR 10.9.1.6). */
@@ -267,6 +280,12 @@ export interface TurnCounts {
    * executed at least 2 other times this turn".
    */
   unionBursts: number;
+  /**
+   * Uncaps and final uncaps of this player's followers this turn (CR JP 14.6.4.1 / JP 14.6.4.2 events), e.g. CP05-028 "if the
+   * followers on your field uncapped or final-uncapped at least 3 times in all this turn": ヒヒイロカネ doing both counts 2,
+   * and a follower that left the field afterwards still counts (rulings Q2873, Q2886).
+   */
+  uncaps: number;
 }
 
 /** A persistent effect (CR 10.2.1.2) applied to one card object. */

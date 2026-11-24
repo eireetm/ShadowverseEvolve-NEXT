@@ -47,6 +47,11 @@ export function testToken(id: string, cost: number, attack: number, defense: num
   return { ...base(id, o), type: "follower", cost, attack, defense, evolved: false, token: true };
 }
 
+/** A treasure (CR JP 14.6.1): a token without cost, attack or defense, in the EX area or the uncap zone (CR JP 14.6.1.1.2). */
+export function testTreasure(id: string, o: Common = {}): CardDefinition {
+  return { ...base(id, o), type: "treasure", cost: null, attack: null, defense: null, evolved: false, token: true };
+}
+
 /** A crest (CR 2.3.2): a token without cost, attack or defense that exists only in the EX area (9.1.4.2). */
 export function testCrest(id: string, o: Common = {}): CardDefinition {
   return { ...base(id, o), type: "crest", cost: null, attack: null, defense: null, evolved: false, token: true };

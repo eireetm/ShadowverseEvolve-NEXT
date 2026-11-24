@@ -9,7 +9,7 @@ import { EQUIP_PREFIX, equipmentOf } from "../abilities/equipment";
 import { makeReader } from "../query";
 import { getCard, type Env } from "./access";
 import { abilitiesLostAt, effectInForce } from "./effects";
-import { isRacing } from "./links";
+import { isRacing, uncapStateOf } from "./links";
 
 /** An ability together with where it is defined (definition id + index in its script). */
 export interface AbilityRef {
@@ -76,14 +76,21 @@ const IN_EX: readonly ZoneName[] = ["ex"];
 const IN_EQUIPMENT_ZONE: readonly ZoneName[] = ["equipmentZone"];
 
 /**
- * CR 10.3.5 / 10.3.6 / 14.5.2.1.2 — where the abilities of a card with this definition work unless its text says
- * otherwise: a crest's in the EX area, an equipment token's in the equipment zone, other cards' on the field.
+ * CR 10.3.5 / 10.3.6 / 14.5.2.1.2 / CR JP 14.6.1.1.3 — where the abilities of a card of this type work unless its text
+ * says otherwise: a crest's and a treasure's in the EX area, an equipment token's in the equipment zone, other cards' on
+ * the field.
+ */
+export function abilityZonesOfType(type: CardType): readonly ZoneName[] {
+  return type === "crest" || type === "treasure" ? IN_EX : type === "equipment" ? IN_EQUIPMENT_ZONE : ON_FIELD;
+}
+
+/**
+ * The zones where the abilities of a card with this definition work unless its text says otherwise (abilityZonesOfType).
  * (Abilities given by effects, "grant:" definitions, and by equipment, "equip:", work on the field.)
  */
 export function defaultAbilityZones(env: Env, def: DefId): readonly ZoneName[] {
   if (!env.db.has(def)) return ON_FIELD;
-  const type = env.db.get(def).type;
-  return type === "crest" ? IN_EX : type === "equipment" ? IN_EQUIPMENT_ZONE : ON_FIELD;
+  return abilityZonesOfType(env.db.get(def).type);
 }
 
 /**
@@ -107,15 +114,18 @@ export function inAbilityZone(env: Env, id: CardId): boolean {
 }
 
 /**
- * CR 10.3.5 / 10.3.6 / 14.5.2.1.2 — the cards of a player whose passive abilities (`CardScript.field`) work: the
- * cards on their field, the crests in their EX area and the equipment tokens in their equipment zone. (The EX-area
- * passives of other cards are `CardScript.exPassives`, BP13-003.) Without crests and equipment this is the field
- * list itself.
+ * CR 10.3.5 / 10.3.6 / 14.5.2.1.2 / CR JP 14.6.1.1.3 — the cards of a player whose passive abilities (`CardScript.field`)
+ * work: the cards on their field, the crests and treasures in their EX area and the equipment tokens in their equipment
+ * zone. (The EX-area passives of other cards are `CardScript.exPassives`, BP13-003.) Without crests, treasures and
+ * equipment this is the field list itself.
  */
 export function passiveSources(env: Env, player: PlayerId): readonly CardId[] {
   const zones = env.state.players[player].zones;
   let crests: CardId[] | null = null;
-  for (const id of zones.ex) if (env.db.get(getCard(env.state, id).def).type === "crest") (crests ??= []).push(id);
+  for (const id of zones.ex) {
+    const type = env.db.get(getCard(env.state, id).def).type;
+    if (type === "crest" || type === "treasure") (crests ??= []).push(id);
+  }
   if (zones.equipmentZone.length > 0) return [...zones.field, ...(crests ?? []), ...zones.equipmentZone];
   return crests === null ? zones.field : [...zones.field, ...crests];
 }
@@ -255,6 +265,7 @@ export function characteristics(env: Env, id: CardId): Characteristics {
   }
   // CR 14.2.3.1 — a card that raced has Rush while it is linked to a race-zone card.
   if (c.raceSeq !== undefined && !lost(c.raceSeq) && isRacing(env, id)) addKeyword("rush");
+  [attack, defense] = withUncaps(env, id, c.zone, attack, defense);
   if (type !== "follower" && baseDef.type !== "leader") {
     // CR 5.25.2.1 — a card that is not a follower has no attack or defense to reference.
     attack = null;
@@ -379,9 +390,24 @@ export function currentStats(env: Env, id: CardId): { attack: number | null; def
       if (defense !== null) defense += e.change.defense;
     }
   }
+  [attack, defense] = withUncaps(env, id, c.zone, attack, defense);
   if (type !== "follower" && baseDef.type !== "leader") return { attack: null, defense: null };
   if (baseDef.type === "leader") return { attack, defense: env.state.players[c.controller].leaderDefense };
   return { attack, defense: defense === null ? null : defense - c.damage };
+}
+
+/**
+ * CR JP 14.6.4.1.1 / JP 14.6.4.2.1 — while a treasure is linked to it, an uncapped card has +1 attack, a final-uncapped one +1
+ * attack and +1 defense (both: +2/+1, the treasures' reminder text). A rule, not an ability: kept when it loses its abilities
+ * (CP05-T15 ruling Q2930). Added after the effects, like a number set in between: an "attack becomes X" afterwards ends at X
+ * (its change is worked out from the current value), one before it at X + 1. Not the original stats (CR 5.24).
+ */
+function withUncaps(env: Env, id: CardId, zone: ZoneName, attack: number | null, defense: number | null): [number | null, number | null] {
+  if (zone !== "field") return [attack, defense];
+  const { uncapped, final } = uncapStateOf(env, id);
+  if (!uncapped && !final) return [attack, defense];
+  const plus = (uncapped ? 1 : 0) + (final ? 1 : 0);
+  return [attack === null ? null : attack + plus, defense === null || !final ? defense : defense + 1];
 }
 
 export function hasKeyword(env: Env, id: CardId, keyword: Keyword): boolean {

@@ -32,6 +32,7 @@ const ZONE_ORDER: readonly ZoneName[] = [
   "driveZone",
   "triggerZone",
   "equipmentZone",
+  "uncapZone",
   "evolveDeck",
   "banished",
   "deck",

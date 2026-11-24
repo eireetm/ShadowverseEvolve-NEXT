@@ -55,7 +55,7 @@ export function manualOpError(g: G, op: ManualOp): string | null {
       const c = card(op.card);
       if (!c || !MOVABLE_FROM.has(c.zone)) return "a card in a hand, a field, an EX area, a cemetery or a banished zone";
       const type = characteristics(g, op.card).type;
-      if (type === "leader" || type === "crest") return "leaders and crests stay where they are";
+      if (type === "leader" || type === "crest" || type === "treasure") return "leaders, crests and treasures stay where they are";
       if (op.to === "field" && type !== "follower" && type !== "amulet") return "only followers and amulets go onto the field";
       if (op.to === c.zone) return "the card is there already";
       return ["hand", "field", "ex", "cemetery", "banished", "deckTop", "deckBottom"].includes(op.to) ? null : "no such place";

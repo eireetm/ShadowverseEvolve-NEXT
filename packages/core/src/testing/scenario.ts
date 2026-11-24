@@ -1,5 +1,6 @@
 import type { PrintingId, Universe } from "../model/card";
 import type { PlayerId } from "../model/ids";
+import type { UncapKind } from "../model/state";
 import { createInitialState } from "../engine/deck";
 import type { Engine, GameConfigInput } from "../engine/engine";
 import { resolveConfig } from "../engine/engine";
@@ -39,6 +40,11 @@ export interface FieldCardSpec {
   rode?: boolean;
   /** Equipment tokens it has equipped (e.g. "CP04-T02"): put into the equipment zone, linked to it (CR 14.5.2.2). */
   equipped?: PrintingId[];
+  /**
+   * Treasures that uncapped or final-uncapped it (CR JP 14.6.4): put into the uncap zone, linked to it, e.g.
+   * `[{ card: "CP05-T13", uncaps: ["uncap"] }]`.
+   */
+  uncappedWith?: { card: PrintingId; uncaps: UncapKind[] }[];
 }
 
 export interface ScenarioSide {
@@ -148,6 +154,11 @@ export function scenario(engine: Engine, spec: ScenarioSpec, options: SessionOpt
         }
       }
       for (const token of f.equipped ?? []) state.cards[placeInitialCard(state, engine.db, token, p, "equipmentZone")]!.linkedTo = id;
+      for (const u of f.uncappedWith ?? []) {
+        const m = state.cards[placeInitialCard(state, engine.db, u.card, p, "uncapZone")]!;
+        m.linkedTo = id;
+        m.uncaps = [...u.uncaps];
+      }
       c.enteredFieldTurn = f.enteredThisTurn ? turn : turn - 1;
       c.damage = f.damage ?? 0;
       const stack: Record<string, number> = engine.scripts[c.def]?.keywords?.includes("stack") ? { stack: 1 } : {};

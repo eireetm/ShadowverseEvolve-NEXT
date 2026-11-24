@@ -4,7 +4,7 @@ import type { CardType, DefId, Universe } from "../model/card";
 import type { CardId, PlayerId } from "../model/ids";
 import { opponentOf } from "../model/ids";
 import type { Keyword } from "../model/keyword";
-import type { CardInstance, GameState, PlayerZone, ReturnedCard, ZoneName } from "../model/state";
+import type { CardInstance, GameState, LinkZone, PlayerZone, ReturnedCard, UncapKind, ZoneName } from "../model/state";
 import type { CardScript } from "../script/types";
 import type { Env } from "./state/access";
 import { ATTACKS_KEY, leaderOf, usesThisTurn } from "./state/access";
@@ -17,7 +17,8 @@ import { countsThisTurn } from "./state/turn-counts";
 import { effectInForce } from "./state/effects";
 import { carrotsToServe, canServe } from "./actions/race";
 import { canRide, drivePointsToRide } from "./actions/drive";
-import { isRacing, linkedCards } from "./state/links";
+import { isRacing, linkedCards, uncapMaterials, uncapStateOf } from "./state/links";
+import { canUncap } from "./actions/uncap";
 import { MAGICAL_ITEM } from "../data/universes";
 
 /**
@@ -128,7 +129,15 @@ export interface GameReader {
   /** Can this card be served `times` times as a cost (CR 14.2.1.2.1)? */
   canServe(id: CardId, times: number): boolean;
   /** The race-zone / drive-zone / equipment cards linked to this card (CR 14.2.1.1, 14.4.9.2, 14.5.2.2). */
-  linkedCards(id: CardId, zone: "raceZone" | "driveZone" | "equipmentZone"): CardId[];
+  linkedCards(id: CardId, zone: LinkZone): CardId[];
+  /** CR JP 14.6.4.1.1 — is it uncapped (a treasure that uncapped it is linked to it)? */
+  isUncapped(id: CardId): boolean;
+  /** CR JP 14.6.4.2.1 — is it final-uncapped? */
+  isFinalUncapped(id: CardId): boolean;
+  /** CR JP 14.6.4 — the treasures linked to it in the uncap zones. */
+  uncapMaterials(id: CardId): CardId[];
+  /** CR JP 14.6.4.1 / JP 14.6.4.2 — would uncapping (final uncapping) it be performed now? */
+  canUncap(id: CardId, kind: UncapKind): boolean;
   /** CR 14.3.1 — the cards named Magical Item in the player's EX area (what Lesson (X) banishes, 14.3.2.1). */
   magicalItemsInEx(player: PlayerId): CardId[];
   /** Cards named Magical Item banished from the player's EX area this turn (CP02-007). */
@@ -223,6 +232,11 @@ export interface GameReader {
   attacksThisTurn(id: CardId): number;
   /** Union Burst abilities this player executed this turn (CR 14.5.1.3; CP04-089 "at least 2 other times" counts this one too). */
   unionBurstsThisTurn(player: PlayerId): number;
+  /**
+   * Uncaps and final uncaps of this player's followers this turn (CR JP 14.6.4.1 / JP 14.6.4.2; ヒヒイロカネ doing both counts
+   * 2 — rulings Q2873, Q2886).
+   */
+  uncapsThisTurn(player: PlayerId): number;
   /** CR 14.5.2.2.2 — the follower on the field an equipment token is linked to ("the equipped follower"), or null. */
   equippedFollower(token: CardId): CardId | null;
   /** CR 14.5.2.3 — the equipment tokens a card on the field has equipped. */
@@ -322,6 +336,10 @@ export function makeReader(env: Env): GameReader {
     carrotsToServe: (p) => carrotsToServe(env, p),
     canServe: (id, times) => canServe(env, id, times),
     linkedCards: (id, zone) => linkedCards(env, id, zone),
+    isUncapped: (id) => env.state.cards[id]?.zone === "field" && uncapStateOf(env, id).uncapped,
+    isFinalUncapped: (id) => env.state.cards[id]?.zone === "field" && uncapStateOf(env, id).final,
+    uncapMaterials: (id) => uncapMaterials(env, id),
+    canUncap: (id, kind) => canUncap(env, id, kind),
     magicalItemsInEx: (p) => ps(p).zones.ex.filter((id) => env.db.get(state().cards[id]!.def).name === MAGICAL_ITEM),
     magicalItemsBanishedThisTurn: (p) => countsThisTurn(state(), p).magicalItemsBanished,
     givenDrive: (id) => state().cards[id]?.givenDrive === true,
@@ -380,6 +398,7 @@ export function makeReader(env: Env): GameReader {
       return c === undefined ? 0 : usesThisTurn(state(), c, ATTACKS_KEY);
     },
     unionBurstsThisTurn: (p) => countsThisTurn(state(), p).unionBursts,
+    uncapsThisTurn: (p) => countsThisTurn(state(), p).uncaps,
     equippedFollower: (token) => equippedFollower(env, token),
     equipmentOf: (id) => equipmentOf(env, id),
     equipmentGiftActive: (token) => {

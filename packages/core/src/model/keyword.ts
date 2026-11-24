@@ -17,7 +17,8 @@ export type Keyword =
   | "singleDrive" // CR 14.4.6.2 "Strike - Perform a drive check."
   | "twinDrive" // CR 14.4.6.3 "Strike - Perform 2 drive checks."
   | "drive" // CR 14.4.7 — no effect on its own (14.4.7.2)
-  | "startingAmulet"; // CR 14.4.4 — a deck-construction passive (all Starting Amulet cards share a name)
+  | "startingAmulet" // CR 14.4.4 — a deck-construction passive (all Starting Amulet cards share a name)
+  | "finalUncap"; // CR JP 14.6.3 — Final Uncap: no effect of its own (CR JP 14.6.3.2); its follower may be final-uncapped (CR JP 14.6.4.2)
 
 /**
  * Keywords the engine implements. Scripts may only use these (checked when an engine is
@@ -40,4 +41,5 @@ export const IMPLEMENTED_KEYWORDS: readonly Keyword[] = [
   "twinDrive",
   "drive",
   "startingAmulet",
+  "finalUncap",
 ];

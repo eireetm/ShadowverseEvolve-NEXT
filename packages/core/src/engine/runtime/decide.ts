@@ -90,6 +90,7 @@ const PUBLIC_ZONE = new Set([
   "driveZone",
   "triggerZone",
   "equipmentZone",
+  "uncapZone",
 ]);
 
 /**

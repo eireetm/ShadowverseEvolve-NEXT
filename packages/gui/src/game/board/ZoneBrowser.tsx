@@ -24,6 +24,7 @@ const ZONE_KEYS: Record<SideZone | "leader", MessageKey> = {
   driveZone: "log.zone.driveZone",
   triggerZone: "log.zone.triggerZone",
   equipmentZone: "log.zone.equipmentZone",
+  uncapZone: "log.zone.uncapZone",
 };
 
 /**

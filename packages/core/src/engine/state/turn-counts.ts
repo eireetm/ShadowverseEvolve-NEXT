@@ -26,6 +26,7 @@ export function emptyTurnCounts(turn: number): TurnCounts {
     magicalItemsBanished: 0,
     attackerTraits: [],
     unionBursts: 0,
+    uncaps: 0,
   };
 }
 

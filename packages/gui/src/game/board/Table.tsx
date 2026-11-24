@@ -184,7 +184,8 @@ function Mat({ update, side, opponent, marks, slots, phone }: { update: GameUpda
   const secondPrinting = update.secondLeaders[side.id];
   const second = secondPrinting ? catalog?.printing(secondPrinting) : undefined;
   const browseLeaders = () => openZone({ player: side.id, zone: "leader" });
-  const linked = [...side.raceZone, ...side.driveZone, ...side.equipmentZone];
+  // The cards linked to a follower (CR 14.2.1.1, 14.4.9.2, 14.5.2.2, CR JP 14.6.4.1): shown under it.
+  const linked = [...side.raceZone, ...side.driveZone, ...side.equipmentZone, ...side.uncapZone];
   const decision = update.decision?.decision;
   const lit = (cards: readonly (CardView | HiddenCardView)[]) => cards.some((c) => !c.hidden && actionsFor(decision, c.id).length > 0);
   const at = (zone: PileZone, content: ReactNode) => (

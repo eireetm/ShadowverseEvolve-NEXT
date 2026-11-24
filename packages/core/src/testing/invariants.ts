@@ -1,7 +1,7 @@
 import type { CardDatabase } from "../data/database";
 import type { Decision } from "../model/decision";
 import type { PlayerId } from "../model/ids";
-import { PLAYER_ZONES, type GameState } from "../model/state";
+import { LINK_ZONES, PLAYER_ZONES, type GameState } from "../model/state";
 import { cloneJson, jsonEqual } from "../util/json";
 import { tokenMayExist } from "../engine/state/zones";
 
@@ -56,19 +56,30 @@ export function checkInvariants(state: GameState, db: CardDatabase, decision: De
         for (const id of state.players[q].zones.field) linked.add(state.cards[id]?.evolvedWith);
       }
       for (const id of ps.zones.evolveZone) if (!linked.has(id)) errors.push(`unlinked evolve card ${id} at a main phase decision`);
-      // CR 11.8.1 / 11.10.1 / 11.11.1 — every Carrot / Drive Point card and equipment token is linked to a card on the
-      // field; the Trigger zone is empty between drive checks (CR 4.15.1).
-      for (const zone of ["raceZone", "driveZone", "equipmentZone"] as const) {
+      // CR 11.8.1 / 11.10.1 / 11.11.1 / CR JP 11.12.1 — every Carrot / Drive Point card, equipment token and treasure in the
+      // uncap zone is linked to a card on the field; the Trigger zone is empty between drive checks (CR 4.15.1).
+      for (const zone of LINK_ZONES) {
         for (const id of ps.zones[zone]) {
           const to = state.cards[id]!.linkedTo;
           if (to === undefined || state.cards[to]?.zone !== "field") errors.push(`unlinked ${zone} card ${id} at a main phase decision`);
         }
       }
       if (ps.zones.triggerZone.length > 0) errors.push(`P${p} Trigger zone not empty at a main phase decision`);
-      // CR 11.11.2 — an equipment token is controlled by the controller of the card it is linked to.
-      for (const id of ps.zones.equipmentZone) {
+      // CR 11.11.2 / CR JP 11.12.2 — an equipment token or a treasure in the uncap zone is controlled by the controller of the
+      // card it is linked to.
+      for (const id of [...ps.zones.equipmentZone, ...ps.zones.uncapZone]) {
         const to = state.cards[id]!.linkedTo;
-        if (to !== undefined && state.cards[to] !== undefined && state.cards[to]!.controller !== p) errors.push(`equipment ${id} not with its follower's controller`);
+        if (to !== undefined && state.cards[to] !== undefined && state.cards[to]!.controller !== p) errors.push(`${id} in the ${state.cards[id]!.zone} not with its follower's controller`);
+      }
+      // CR JP 14.6.4.1 / JP 14.6.4.2 — the uncap zone holds treasures that uncapped or final-uncapped, at most one of each kind a
+      // follower (neither is done again while it is in that state).
+      const kinds = new Map<string, string[]>();
+      for (const id of ps.zones.uncapZone) {
+        const c = state.cards[id]!;
+        if (db.get(c.def).type !== "treasure" || !c.uncaps || c.uncaps.length === 0) errors.push(`${id} in the uncap zone is not a treasure that uncapped`);
+        const done = [...(kinds.get(c.linkedTo ?? "") ?? []), ...(c.uncaps ?? [])];
+        if (new Set(done).size !== done.length) errors.push(`${c.linkedTo} uncapped twice the same way`);
+        kinds.set(c.linkedTo ?? "", done);
       }
     }
   }

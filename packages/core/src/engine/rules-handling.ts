@@ -26,10 +26,13 @@ export interface RulesPlan {
   toEvolveDeck: Set<CardId>;
   /** Players whose play points are lowered to their maximum (CR 11.9.1). */
   capPlayPoints: Set<PlayerId>;
-  /** Tokens eliminated (CR 9.1.3, 11.11.1). */
+  /** Tokens eliminated (CR 9.1.3, 11.11.1, CR JP 11.12.1). */
   eliminate: Set<CardId>;
-  /** Equipment tokens whose controller becomes the controller of the card they are linked to (CR 11.11.2). */
-  equipmentController: Map<CardId, PlayerId>;
+  /**
+   * Equipment tokens and treasures in the uncap zone whose controller becomes the controller of the card they are linked to
+   * (CR 11.11.2, CR JP 11.12.2).
+   */
+  linkedController: Map<CardId, PlayerId>;
 }
 
 export interface RulesProcess {
@@ -39,7 +42,7 @@ export interface RulesProcess {
 
 const BOTH: readonly PlayerId[] = [0, 1];
 
-/** Is this race-zone / drive-zone / equipment card linked to a card on the field (CR 14.2.1.3, 14.4.9.4, 14.5.2.4)? */
+/** Is this race-zone / drive-zone / equipment / uncap-zone card linked to a card on the field (CR 14.2.1.3, 14.4.9.4, 14.5.2.4)? */
 function linkedToField(g: G, id: CardId): boolean {
   const to = g.state.cards[id]!.linkedTo;
   return to !== undefined && g.state.cards[to]?.zone === "field";
@@ -156,7 +159,25 @@ export const RULES_PROCESSES: readonly RulesProcess[] = [
           }
           // 11.11.2 — the equipped card's controller also becomes the token's (e.g. after a change of control, 5.22).
           const holder = g.state.cards[g.state.cards[id]!.linkedTo!]!.controller;
-          if (holder !== p) plan.equipmentController.set(id, holder);
+          if (holder !== p) plan.linkedController.set(id, holder);
+        }
+      }
+    },
+  },
+  {
+    // CR JP 11.12 (the English rules don't have it yet) — treasures in the uncap zone, as 11.11 for equipment.
+    clause: "JP 11.12",
+    *collect(g, plan) {
+      for (const p of BOTH) {
+        for (const id of g.state.players[p].zones.uncapZone) {
+          // CR JP 11.12.1 — not linked to any card on the field (its follower left the field, a new card: CR 4.1.4).
+          if (!linkedToField(g, id)) {
+            plan.eliminate.add(id);
+            continue;
+          }
+          // CR JP 11.12.2 — the controller of the card it is linked to also becomes the treasure's.
+          const holder = g.state.cards[g.state.cards[id]!.linkedTo!]!.controller;
+          if (holder !== p) plan.linkedController.set(id, holder);
         }
       }
     },
@@ -192,7 +213,7 @@ function isEmpty(plan: RulesPlan): boolean {
     plan.toEvolveDeck.size === 0 &&
     plan.capPlayPoints.size === 0 &&
     plan.eliminate.size === 0 &&
-    plan.equipmentController.size === 0
+    plan.linkedController.size === 0
   );
 }
 
@@ -205,7 +226,7 @@ function* rulesHandlingStep(g: G): Proc<boolean> {
     toEvolveDeck: new Set(),
     capPlayPoints: new Set(),
     eliminate: new Set(),
-    equipmentController: new Map(),
+    linkedController: new Map(),
   };
   for (const rule of RULES_PROCESSES) yield* rule.collect(g, plan);
   // 11.3.2 counts fights "after the previous instance of rules handling".
@@ -223,8 +244,9 @@ function* rulesHandlingStep(g: G): Proc<boolean> {
     if (!plan.destroy.has(card)) specs.push({ card, to: "cemetery", reason: "rules" });
   }
   for (const card of plan.toEvolveDeck) specs.push({ card, to: "evolveDeck", faceUp: true, reason: "rules" });
-  for (const [card, player] of plan.equipmentController) {
-    specs.push({ card, to: "equipmentZone", player, keepState: true, linkTo: g.state.cards[card]!.linkedTo!, reason: "rules" });
+  for (const [card, player] of plan.linkedController) {
+    const c = g.state.cards[card]!;
+    specs.push({ card, to: c.zone as "equipmentZone" | "uncapZone", player, keepState: true, linkTo: c.linkedTo!, reason: "rules" });
   }
   if (specs.length > 0) moveCards(g, specs, "rules");
   if (plan.eliminate.size > 0) eliminateTokens(g, [...plan.eliminate]);

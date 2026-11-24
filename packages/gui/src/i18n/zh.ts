@@ -857,6 +857,7 @@ export const zh: Record<MessageKey, string> = {
   "keyword.twinDrive": "双重驱动",
   "keyword.drive": "驱动",
   "keyword.startingAmulet": "起始护符",
+  "keyword.finalUncap": "最终上限解放可能",
 
   "log.empty": "还没有记录。",
   "log.turn": "第 {n} 回合 — {player}",
@@ -901,6 +902,7 @@ export const zh: Record<MessageKey, string> = {
   "log.zone.driveZone": "驱动区",
   "log.zone.triggerZone": "触发区",
   "log.zone.equipmentZone": "装备区",
+  "log.zone.uncapZone": "上限解放区域",
   "log.zone.leader": "主战者区域",
   "log.zone.resolution": "计算领域",
   "log.zone.none": "（新出现）",

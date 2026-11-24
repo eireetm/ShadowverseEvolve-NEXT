@@ -175,6 +175,7 @@ function emptyPlayer(id: PlayerId, leaderDefense: number): PlayerState {
       driveZone: [],
       triggerZone: [],
       equipmentZone: [],
+      uncapZone: [],
     },
     evolveAbilityTurn: null,
     drewFromEmptyDeck: false,

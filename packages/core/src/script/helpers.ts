@@ -6,7 +6,7 @@ import type { EffectContext } from "../engine/effects/context";
 import type { Proc } from "../engine/runtime/proc";
 import type { GameReader } from "../engine/query";
 import { playPointsCost, rideCost, serveCost } from "./costs";
-import { costAtMost, isCrest } from "./targets";
+import { costAtMost, hasTrait, isCrest, yourFollower } from "./targets";
 import type {
   ActivatedAbility,
   AutomaticAbility,
@@ -1013,6 +1013,44 @@ export function whenYourFollowerRaces(spec: TimingSpec, opts: { another?: boolea
         ? Array.from({ length: e.times }, () => ({ card: e.card }))
         : false,
     spec,
+  );
+}
+
+/**
+ * CR JP 14.6.4.1 — "When this card uncaps" (これが上限解放したとき): a treasure uncapped it. ヒヒイロカネ doing both triggers
+ * this and "when this card final-uncaps", in the order its controller chooses (CP05-T15 rulings Q2867, Q2868).
+ */
+export const whenThisIsUncapped = (spec: TimingSpec) =>
+  automatic("other", (e, me) => !me.lookBack && e.type === "uncapped" && !e.final && e.follower === me.card, spec);
+
+/** CR JP 14.6.4.2 — "When this card final-uncaps" (これが最終上限解放したとき). */
+export const whenThisIsFinalUncapped = (spec: TimingSpec) =>
+  automatic("other", (e, me) => !me.lookBack && e.type === "uncapped" && e.final && e.follower === me.card, spec);
+
+/**
+ * A treasure's ability (CP05-T09 … T15, CR JP 14.6.1): "{[act]} {[cost00]}: Select a <trait> follower on your field. It
+ * uncaps." — an element's (`instead`) goes on "If it has Final Uncap and was uncapped, it final-uncaps instead" (CR 10.2.1.3.1:
+ * then it doesn't uncap); ヒヒイロカネ's (`also`) "If it has Final Uncap, it also final-uncaps": the treasure does both (ruling
+ * Q2868), and a follower already uncapped only final-uncaps (its second sentence has no "if it did", CR 1.3.2).
+ * Without such a follower it can't be played (CR 10.6.2.3.3); one where nothing would happen can (both are only done "if").
+ */
+export function uncapAbility(trait: string, mode: "instead" | "also"): ActivatedAbility {
+  return activated(
+    { playPoints: 0 },
+    {
+      targets: [yourFollower({ filter: hasTrait(trait) })],
+      *resolve(fx) {
+        const follower = fx.targets[0]?.[0];
+        if (follower === undefined) return;
+        if (mode === "instead") {
+          if (fx.game.hasKeyword(follower, "finalUncap") && fx.game.isUncapped(follower)) yield* fx.finalUncap(follower);
+          else yield* fx.uncap(follower);
+          return;
+        }
+        const material = (yield* fx.uncap(follower)) ?? fx.self;
+        if (fx.game.hasKeyword(follower, "finalUncap")) yield* fx.finalUncap(follower, material);
+      },
+    },
   );
 }
 

@@ -2,7 +2,7 @@ import type { DefId, PrintingId, CardType, Universe } from "../model/card";
 import type { Decision } from "../model/decision";
 import type { CardId, PlayerId } from "../model/ids";
 import type { Keyword } from "../model/keyword";
-import type { AttackState, GameResult, Phase, PlayerZone } from "../model/state";
+import type { AttackState, GameResult, Phase, PlayerZone, UncapKind } from "../model/state";
 import type { Env } from "../engine/state/access";
 import { abilitiesLostAt, characteristics, isBoxed } from "../engine/state/characteristics";
 import { giftsOf, type Gift } from "./gifts";
@@ -38,8 +38,10 @@ export interface CardView {
   abilitiesLost: boolean;
   /** CR 15.1 */
   counters: Readonly<Record<string, number>>;
-  /** A race-zone, drive-zone or equipment-zone card: the card on the field it is linked to (CR 14.2.1.1, 14.4.9.2, 14.5.2.2). */
+  /** A race-zone, drive-zone, equipment-zone or uncap-zone card: the card on the field it is linked to (CR 14.2.1.1, 14.4.9.2, 14.5.2.2, CR JP 14.6.4). */
   linkedTo: CardId | null;
+  /** A treasure in the uncap zone: what it did to that card, uncapped or final-uncapped it (both, ヒヒイロカネ; CR JP 14.6.4). */
+  uncaps?: readonly UncapKind[];
 }
 
 /** A card the viewer may not look at (only that it exists). */
@@ -74,11 +76,12 @@ export interface PlayerSideView {
   banished: (CardView | HiddenCardView)[];
   evolveDeck: (CardView | HiddenCardView)[];
   evolveZone: CardView[];
-  /** CR 4.13–4.16 — the collaboration zones (public). */
+  /** CR 4.13–4.16, CR JP 4.17 — the collaboration zones (public). */
   raceZone: CardView[];
   driveZone: CardView[];
   triggerZone: CardView[];
   equipmentZone: CardView[];
+  uncapZone: CardView[];
   /** CR 6.1.1.5 — the universe the deck is based on, or null for a class-based deck (public). */
   universe: Universe | null;
 }
@@ -126,6 +129,7 @@ function cardView(env: Env, id: CardId): CardView {
     abilitiesLost: abilitiesLostAt(env.state, id) !== null,
     counters: { ...c.counters },
     linkedTo: c.linkedTo ?? null,
+    ...(c.uncaps !== undefined ? { uncaps: [...c.uncaps] } : {}),
   };
 }
 
@@ -163,6 +167,7 @@ function sideView(env: Env, viewer: PlayerId, p: PlayerId): PlayerSideView {
     driveZone: all("driveZone"),
     triggerZone: all("triggerZone"),
     equipmentZone: all("equipmentZone"),
+    uncapZone: all("uncapZone"),
     universe: ps.universe,
   };
 }

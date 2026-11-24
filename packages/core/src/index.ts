@@ -21,7 +21,8 @@ export type {
   PendingAbility,
   AttackState,
 } from "./model/state";
-export { PLAYER_ZONES } from "./model/state";
+export { LINK_ZONES, PLAYER_ZONES, type LinkZone, type UncapKind } from "./model/state";
+export { abilityZonesOfType } from "./engine/state/characteristics";
 export type {
   Decision,
   Answer,

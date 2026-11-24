@@ -2,7 +2,7 @@ import type { CardDatabase } from "../../data/database";
 import { MAGICAL_ITEM } from "../../data/universes";
 import type { CardType, DefId, PrintingId } from "../../model/card";
 import { opponentOf, type CardId, type PlayerId } from "../../model/ids";
-import type { CardInstance, GameState, PlayerZone, ZoneName } from "../../model/state";
+import { LINK_ZONES, type CardInstance, type GameState, type PlayerZone, type UncapKind, type ZoneName } from "../../model/state";
 import type { CardMove, MoveCause, MoveReason } from "../../events/types";
 import { EngineError } from "../errors";
 import type { G } from "../runtime/context";
@@ -57,8 +57,10 @@ export interface MoveSpec {
   keepState?: boolean;
   /** The card whose ability moves it (CardMove.cause). */
   cause?: MoveCause;
-  /** Link the moved card to this card on the field (a race-zone, drive-zone or equipment card, CR 14). */
+  /** Link the moved card to this card on the field (a race-zone, drive-zone, equipment or uncap-zone card, CR 14). */
   linkTo?: CardId;
+  /** A treasure moved into the uncap zone: what it does to the card it is linked to (CR JP 14.6.4.1 / JP 14.6.4.2). */
+  uncaps?: readonly UncapKind[];
 }
 
 /** CR 4.2.3.3 — default faceup state per zone. */
@@ -76,17 +78,20 @@ const DEFAULT_FACE_UP: Readonly<Record<ZoneName, boolean>> = {
   driveZone: true, // CR 4.14.2 public
   triggerZone: true, // CR 4.15.2 public
   equipmentZone: true, // CR 4.16.2 public
+  uncapZone: true, // CR JP 4.17.2 public
   resolution: true, // CR 4.11.2 public
 };
 
 /**
  * CR 9.1.4 — may a token of this type exist in this zone? Followers and amulets: EX area, field,
  * resolution zone (9.1.4.1); crests: only the EX area (9.1.4.2); spells: EX area, resolution zone
- * (9.1.4.3); equipment: only the equipment zone (14.5.2.1.1).
+ * (9.1.4.3); equipment: only the equipment zone (14.5.2.1.1); treasures: the EX area and the uncap zone
+ * (CR JP 14.6.1.1.2).
  */
 export function tokenMayExist(type: CardType, zone: ZoneName): boolean {
   if (type === "crest") return zone === "ex";
   if (type === "equipment") return zone === "equipmentZone";
+  if (type === "treasure") return zone === "ex" || zone === "uncapZone";
   if (type === "spell") return zone === "ex" || zone === "resolution";
   return zone === "ex" || zone === "field" || zone === "resolution";
 }
@@ -349,16 +354,19 @@ export function moveCards(g: G, allSpecs: readonly MoveSpec[], reason: MoveReaso
       card.counters = { ...card.counters, ...old.counters };
     }
     if (spec.linkTo !== undefined) card.linkedTo = spec.linkTo;
+    if (spec.uncaps !== undefined) card.uncaps = [...spec.uncaps];
     // CR 4.1.4 — a card that moved zones is a new card: one that rode, went to the hand and came back may ride again
     // (CR 14.4.9.2 "this card this game" — the official answer on CP03-009, 2026-10). Only a change of control keeps it.
     if (spec.keepState) {
       if (old.rideUsed) card.rideUsed = true;
       // CR 14.2.1.3 / 14.4.9.4 / 14.5.2.4 — links are lost only when it leaves the field, not on a change of control.
       for (const p of [0, 1] as const) {
-        for (const z of ["raceZone", "driveZone", "equipmentZone"] as const) {
+        for (const z of LINK_ZONES) {
           for (const x of state.players[p].zones[z]) if (state.cards[x]!.linkedTo === old.id) state.cards[x]!.linkedTo = card.id;
         }
       }
+      // A treasure moved to its follower's controller's uncap zone (CR JP 11.12.2) keeps what it did.
+      if (old.uncaps !== undefined) card.uncaps = [...old.uncaps];
       card.raced = old.raced;
       card.raceSeq = old.raceSeq;
       if (old.givenDrive) card.givenDrive = true;
