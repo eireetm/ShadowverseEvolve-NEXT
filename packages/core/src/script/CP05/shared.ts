@@ -46,8 +46,8 @@ export const ELEMENT_OF: Readonly<Record<string, string>> = {
 };
 
 /**
- * "自分のエボルヴデッキの表向きの土属性・エボルヴフォロワー" (CP05-015, 020, 031 …): the faceup earth (or 全属性, CR JP
- * 14.6.2.2) evolved followers in the player's evolve deck area (CR 4.6.3: faceup cards there are public).
+ * "自分のエボルヴデッキの表向きの土属性・エボルヴフォロワー" (CP05-015, 020, 031 …): the faceup earth (or 全属性,
+ * CR JP 14.6.2.2) evolved followers in the player's evolve deck area (CR 4.6.3: faceup cards there are public).
  */
 export function faceUpEarthEvolved(g: GameReader, player: PlayerId): number {
   return g.faceUpEvolveDeck(player).filter((id) => isEvolvedFollower(g, id) && hasTrait("土属性")(g, id)).length;
