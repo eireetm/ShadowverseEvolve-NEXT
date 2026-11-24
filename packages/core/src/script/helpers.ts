@@ -1018,6 +1018,20 @@ export function whenYourFollowerRaces(spec: TimingSpec, opts: { another?: boolea
 }
 
 /**
+ * "When this card is revealed from your hand" (これを自分の手札から公開したとき, CP05-037): an ability reveals it in the hand
+ * (any ability, the opponent's too, in either player's turn — CP05 rulings Q2893, Q2894); each reveal triggers it once. Valid
+ * in the hand (CR 10.3.5); it resolves even if the card has left the hand since. Being played is not being revealed by an
+ * ability, and a card revealed from a deck was not in the hand.
+ */
+export const whenRevealedFromYourHand = (spec: TimingSpec) =>
+  automatic(
+    "other",
+    (e, me, game) => !me.lookBack && e.type === "cardsRevealed" && e.cards.some((c) => c.id === me.card) && game.card(me.card)?.zone === "hand",
+    spec,
+    { validIn: ["hand"] },
+  );
+
+/**
  * CR JP 14.6.4.1 — "When this card uncaps" (これが上限解放したとき): a treasure uncapped it. ヒヒイロカネ doing both triggers
  * this and "when this card final-uncaps", in the order its controller chooses (CP05-T15 rulings Q2867, Q2868).
  */

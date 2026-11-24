@@ -7,7 +7,7 @@ import type { CardMove, MoveCause, MoveReason } from "../../events/types";
 import { EngineError } from "../errors";
 import type { G } from "../runtime/context";
 import { getCard, nextSeq, type Env } from "./access";
-import { activeScript, characteristics, grantedAbilitiesOf, passiveSources } from "./characteristics";
+import { activeScript, characteristics, grantedAbilitiesOf, namesOf, passiveSources, typeAndTraits } from "./characteristics";
 import { effectInForce } from "./effects";
 import { forgetZone, seenBy } from "./knowledge";
 import { thisTurn } from "./turn-counts";
@@ -312,6 +312,10 @@ export function moveCards(g: G, allSpecs: readonly MoveSpec[], reason: MoveReaso
   });
   const visibleAfter: boolean[][] = [];
   const fieldInfos = olds.map((c) => (c.zone === "field" ? characteristics(g, c.id) : null));
+  // A card discarded, as it was in the hand (TurnCounts.discardedCards, CR 10.7.4.1).
+  const discardedInfos = olds.map((c, i) =>
+    (specs[i]!.reason ?? reason) === "discard" ? { names: namesOf(g, c.id), ...typeAndTraits(g, c.id) } : null,
+  );
   const fieldTypes = fieldInfos.map((info) => info?.type ?? null);
   const befores = olds.map((c) => {
     const onField = c.zone === "field" ? characteristics(g, c.id) : null;
@@ -420,7 +424,12 @@ export function moveCards(g: G, allSpecs: readonly MoveSpec[], reason: MoveReaso
     if (printed.token && !tokenMayExist(printed.type, spec.to)) eliminated.push(card.id); // CR 9.1.4.4
     // "This turn" counts for card conditions (turn-counts.ts).
     const why = spec.reason ?? reason;
-    if (why === "discard") thisTurn(state, old.controller).discarded += 1; // CR 5.12
+    if (why === "discard") {
+      const counts = thisTurn(state, old.controller);
+      counts.discarded += 1; // CR 5.12
+      const info = discardedInfos[i]!;
+      counts.discardedCards.push({ names: [...info.names], type: info.type, traits: [...info.traits] }); // CP05-017
+    }
     if (old.zone === "field" && spec.to === "hand") {
       const counts = thisTurn(state, old.controller);
       counts.returnedToHand += 1;

@@ -281,6 +281,13 @@ export interface TurnCounts {
    */
   unionBursts: number;
   /**
+   * The cards this player discarded this turn (CR 5.12), as they were in the hand (look-back, CR 10.7.4.1), e.g. CP05-017 "if
+   * you discarded a dark card from your hand this turn" (a discard to the hand limit counts too, CR 7.4.7).
+   */
+  discardedCards: ReturnedCard[];
+  /** Quick activated abilities this player played this turn (CR 12.3.3), e.g. CP05-002 "if you played another one this turn". */
+  quickActivations: number;
+  /**
    * Uncaps and final uncaps of this player's followers this turn (CR JP 14.6.4.1 / JP 14.6.4.2 events), e.g. CP05-028 "if the
    * followers on your field uncapped or final-uncapped at least 3 times in all this turn": ヒヒイロカネ doing both counts 2,
    * and a follower that left the field afterwards still counts (rulings Q2873, Q2886).
@@ -454,7 +461,9 @@ export type GrantedAbilityId =
   | "strikeDrawDiscard"
   | "mainPhaseDamageYourLeader2"
   | "activateDiscard2Bury"
-  | "combatDamageRefreshOnce";
+  | "combatDamageRefreshOnce"
+  | "banishAtEnd"
+  | "lastWordsSummonSelf";
 
 /** Extra information a trigger attaches to its pending ability (e.g. the card that entered). */
 export interface TriggerData {
@@ -529,6 +538,11 @@ export interface NextPlayModifier {
    * this turn, not only the next one; playing one doesn't use it up (rulings).
    */
   allThisTurn?: true;
+  /**
+   * "The next quick activated ability you play this turn costs N less" (CP05-047): the next quick activated ability's play
+   * points (CR 12.3.3), not a card's; `key` is unused. Played for 0 already, it still uses this up (BP03-038's ruling).
+   */
+  of?: "quickAbility";
 }
 
 /**

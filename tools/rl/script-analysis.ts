@@ -1210,6 +1210,7 @@ class Analyzer {
           case "not":
             return { k: "filterFn", f: { t: "not", arg: filterArgs()[0] ?? ANY } };
           case "hasTrait":
+          case "traitOf": // the same check, reading only type and traits (for keyword passives)
             return { k: "filterFn", f: str !== null ? { t: "trait", v: str } : { t: "other", why: "trait ?" } };
           case "isClass":
             return { k: "filterFn", f: str !== null ? { t: "class", v: str } : { t: "other", why: "class ?" } };

@@ -1,6 +1,6 @@
 import type { CardId, PlayerId } from "../model/ids";
 import type { NextPlayModifier } from "../model/state";
-import type { PlayOption } from "../script/types";
+import type { ActivatedAbility, PlayOption } from "../script/types";
 import { EngineError } from "./errors";
 import type { G } from "./runtime/context";
 import { selectCards } from "./runtime/decide";
@@ -63,11 +63,36 @@ export function nextPlayModifiersFor(g: Env, card: CardId, player: PlayerId): Ne
   if (g.state.nextPlay.length === 0) return [];
   const reader = makeReader(g);
   return g.state.nextPlay.filter((m) => {
-    if (m.player !== player) return false;
+    if (m.player !== player || m.of !== undefined) return false;
     const matches = g.scripts[m.sourceDef]?.nextPlay?.[m.key];
     if (!matches) throw new EngineError(`${m.sourceDef} has no nextPlay "${m.key}"`);
     return matches(reader, card, player);
   });
+}
+
+/** The "next quick activated ability you play" modifiers of `player` (CP05-047) that apply to `ability`. */
+export function nextAbilityModifiersFor(g: Env, player: PlayerId, ability: ActivatedAbility): NextPlayModifier[] {
+  if (g.state.nextPlay.length === 0 || !ability.quick) return [];
+  return g.state.nextPlay.filter((m) => m.player === player && m.of === "quickAbility");
+}
+
+/**
+ * CR 10.4.4 / 10.6.2.5 — the play points playing activated ability `ability` of `card` takes now: its play points, changed by
+ * passives of cards on either field (CP05-040 "when you play a quick activated ability, it costs 1 less", asked of every card
+ * whose passives work, so they check `player`) and by "the next quick activated ability you play costs 1 less" (CP05-047),
+ * never below 0 (CR 1.3.2.2.1).
+ */
+export function activationPlayPoints(g: Env, player: PlayerId, card: CardId, ability: ActivatedAbility): number {
+  let points = ability.cost.playPoints ?? 0;
+  let reader: ReturnType<typeof makeReader> | null = null;
+  for (const p of [0, 1] as const) {
+    for (const f of passiveSources(g, p)) {
+      const of = activeScript(g, f)?.field?.activationCostOf;
+      if (of) points += of((reader ??= makeReader(g)), f, card, ability, player);
+    }
+  }
+  for (const m of nextAbilityModifiersFor(g, player, ability)) points += m.costDelta;
+  return Math.max(0, points);
 }
 
 /**

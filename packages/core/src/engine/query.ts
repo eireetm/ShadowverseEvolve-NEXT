@@ -131,6 +131,14 @@ export interface GameReader {
   canServe(id: CardId, times: number): boolean;
   /** The race-zone / drive-zone / equipment cards linked to this card (CR 14.2.1.1, 14.4.9.2, 14.5.2.2). */
   linkedCards(id: CardId, zone: LinkZone): CardId[];
+  /**
+   * "A follower with a quick activated ability" (CP05-008, 039, 102): a quick activated ability (CR 12.3.3) it has now on the
+   * field, printed on it elsewhere, wherever that ability works (one valid only in the hand counts — CR 10.3.5). Quick alone
+   * (CR 12.3.2) is not one.
+   */
+  hasQuickActivatedAbility(id: CardId): boolean;
+  /** The keyword abilities printed on a definition, without those it has only under a condition (CR 12.3.6). */
+  printedKeywords(def: DefId): readonly Keyword[];
   /** CR JP 14.6.4.1.1 — is it uncapped (a treasure that uncapped it is linked to it)? */
   isUncapped(id: CardId): boolean;
   /** CR JP 14.6.4.2.1 — is it final-uncapped? */
@@ -233,6 +241,10 @@ export interface GameReader {
   attacksThisTurn(id: CardId): number;
   /** Union Burst abilities this player executed this turn (CR 14.5.1.3; CP04-089 "at least 2 other times" counts this one too). */
   unionBurstsThisTurn(player: PlayerId): number;
+  /** The cards this player discarded this turn, as they were in the hand (CP05-017 "if you discarded a dark card"). */
+  discardedCardsThisTurn(player: PlayerId): readonly ReturnedCard[];
+  /** Quick activated abilities this player played this turn (CP05-002). */
+  quickActivationsThisTurn(player: PlayerId): number;
   /**
    * Uncaps and final uncaps of this player's followers this turn (CR JP 14.6.4.1 / JP 14.6.4.2; ヒヒイロカネ doing both counts
    * 2 — rulings Q2873, Q2886).
@@ -337,6 +349,13 @@ export function makeReader(env: Env): GameReader {
     carrotsToServe: (p) => carrotsToServe(env, p),
     canServe: (id, times) => canServe(env, id, times),
     linkedCards: (id, zone) => linkedCards(env, id, zone),
+    hasQuickActivatedAbility: (id) => {
+      const c = env.state.cards[id];
+      if (!c) return false;
+      const quick = (a: { kind: string; quick?: boolean; evolve?: boolean }) => a.kind === "activated" && a.quick === true && a.evolve !== true;
+      return c.zone === "field" ? characteristics(env, id).abilities.some((r) => quick(r.ability)) : (env.scripts[c.def]?.abilities ?? []).some(quick);
+    },
+    printedKeywords: (def) => env.scripts[def]?.keywords ?? [],
     isUncapped: (id) => env.state.cards[id]?.zone === "field" && uncapStateOf(env, id).uncapped,
     isFinalUncapped: (id) => env.state.cards[id]?.zone === "field" && uncapStateOf(env, id).final,
     uncapMaterials: (id) => uncapMaterials(env, id),
@@ -400,6 +419,8 @@ export function makeReader(env: Env): GameReader {
     },
     unionBurstsThisTurn: (p) => countsThisTurn(state(), p).unionBursts,
     uncapsThisTurn: (p) => countsThisTurn(state(), p).uncaps,
+    discardedCardsThisTurn: (p) => countsThisTurn(state(), p).discardedCards,
+    quickActivationsThisTurn: (p) => countsThisTurn(state(), p).quickActivations,
     equippedFollower: (token) => equippedFollower(env, token),
     equipmentOf: (id) => equipmentOf(env, id),
     equipmentGiftActive: (token) => {

@@ -333,6 +333,8 @@ export interface EffectContext {
    * for every matching card played this turn; each use adds N (rulings).
    */
   cardsCostLessThisTurn(key: string, amount: number): Proc<void>;
+  /** "This turn, the next quick activated ability you play costs `amount` less" (CP05-047, CR 12.3.3). */
+  nextQuickAbilityCostsLess(amount: number): Proc<void>;
   /**
    * CR 13.3.3.2 — pay Earth Rite as a cost the script pays itself (BP22-039 "When playing this, Earth Rite (9): this costs
    * 1"): remove `count` Stack counters from one amulet with Stack on your field (you pick which).
@@ -919,6 +921,19 @@ export function makeEffectContext(g: G, init: EffectInit): EffectContext {
         key,
         costDelta: -amount,
         createdTurn: g.state.turn,
+      });
+    },
+    *nextQuickAbilityCostsLess(amount) {
+      const seq = nextSeq(g.state);
+      g.state.nextPlay.push({
+        id: `n${seq}`,
+        seq,
+        player: ctrl,
+        sourceDef: init.sourceDef,
+        key: "",
+        costDelta: -amount,
+        createdTurn: g.state.turn,
+        of: "quickAbility",
       });
     },
     *cardsCostLessThisTurn(key, amount) {

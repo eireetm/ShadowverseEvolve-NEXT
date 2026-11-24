@@ -175,6 +175,11 @@ export interface FieldPassives {
    */
   playCostOf?(game: GameReader, self: CardId, card: CardId, player: PlayerId): number;
   /**
+   * Change to the play points of activated ability `ability` of `card` that `player` plays (negative = cheaper), e.g. CP05-040
+   * "when you play a quick activated ability, it costs 1 less". Asked of the cards on both fields, so check `player`.
+   */
+  activationCostOf?(game: GameReader, self: CardId, card: CardId, ability: ActivatedAbility, player: PlayerId): number;
+  /**
    * Keywords this card gives to `card`, e.g. "your Dragon tokens have Rush". Must only use
    * `game.card()` / `game.db` (not `game.info()`), because it is part of computing info.
    */

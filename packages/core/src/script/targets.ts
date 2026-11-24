@@ -115,6 +115,8 @@ export const named = (name: string): Filter => (g, id) => g.info(id).names.inclu
 /** "With [text] in its name" (CR 2.1.2, BP03-056). Matches every name the card currently has. */
 export const nameIncludes = (part: string): Filter => (g, id) => g.info(id).names.some((n) => n.includes(part));
 export const isToken: Filter = (g, id) => g.info(id).baseDef.token;
+/** "A follower with a quick activated ability" (CP05-008, 039, 102; GameReader.hasQuickActivatedAbility). */
+export const isQuickActivatedFollower: Filter = (g, id) => g.typeAndTraits(id).type === "follower" && g.hasQuickActivatedAbility(id);
 /** "A follower with {[lastwords]}" (BP15-082): it has a Last Words ability (CR 12.5). */
 export const hasLastWords: Filter = (g, id) => g.info(id).abilities.some((a) => a.ability.kind === "automatic" && a.ability.timing === "lastWords");
 /** Has the special type "evolved" (CR 2.3.3.1): an evolved follower on the field. */

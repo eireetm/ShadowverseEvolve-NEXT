@@ -4,7 +4,8 @@ import type { AbilityDef, ActivatedAbility, AutomaticAbility, EarthRiteSpec, Mod
 import { buryCards, setEngaged } from "../actions/cards";
 import { canPayLeaderDefense, changeLeaderDefense } from "../actions/leader";
 import { canPayPlayPoints, payPlayPoints, spendPoints } from "../actions/points";
-import { earthRiteSources, payEarthRite } from "../costs";
+import { activationPlayPoints, earthRiteSources, nextAbilityModifiersFor, payEarthRite } from "../costs";
+import { thisTurn } from "../state/turn-counts";
 import { makeEffectContext, type EffectInit } from "../effects/context";
 import { EngineError } from "../errors";
 import { chooseModes, chooseModeTargets, resolveModes } from "./modes";
@@ -138,8 +139,8 @@ function activatedAbility(g: G, card: CardId, index: number): { ability: Activat
  * CR 12.16.3 — the play points and evolution points an activated ability costs: an advanced
  * activated ability may use 1 evolution point in lieu of 1 play point. Null when that is not possible.
  */
-function activationPoints(g: G, player: PlayerId, ability: ActivatedAbility, useEvolutionPoint: boolean): { playPoints: number; evolutionPoints: number } | null {
-  const playPoints = ability.cost.playPoints ?? 0;
+function activationPoints(g: G, player: PlayerId, card: CardId, ability: ActivatedAbility, useEvolutionPoint: boolean): { playPoints: number; evolutionPoints: number } | null {
+  const playPoints = activationPlayPoints(g, player, card, ability);
   if (!useEvolutionPoint) return { playPoints, evolutionPoints: 0 };
   if (!ability.advanced || playPoints < 1 || g.state.players[player].evolutionPoints < 1) return null;
   return { playPoints: playPoints - 1, evolutionPoints: 1 };
@@ -177,7 +178,7 @@ export function canPlayActivated(
   if (ability.advanced && evolveAbilityUsedThisTurn(g, player)) return false;
   // CR 10.6.2.1.2 — cannot be specified if the cost cannot be paid or targets are missing.
   const cost = ability.cost;
-  const points = activationPoints(g, player, ability, useEvolutionPoint);
+  const points = activationPoints(g, player, card, ability, useEvolutionPoint);
   if (!points || !canPayPlayPoints(g, player, points.playPoints)) return false;
   if (cost.engageSelf && c.engaged) return false; // CR 10.4.6 needs a reserved card
   if (cost.leaderDefense && !canPayLeaderDefense(g, player, cost.leaderDefense)) return false;
@@ -268,10 +269,14 @@ export function* playActivatedAbility(g: G, player: PlayerId, card: CardId, inde
   let self = card;
   const cost = ability.cost;
   if (!free) {
-    const points = activationPoints(g, player, ability, useEvolutionPoint);
+    const points = activationPoints(g, player, card, ability, useEvolutionPoint);
     if (!points) throw new EngineError("evolution point cannot be used for this ability");
+    // "The next quick activated ability you play costs 1 less" (CP05-047) is used up by this one, even played for 0.
+    const usedUp = nextAbilityModifiersFor(g, player, ability);
+    if (usedUp.length > 0) g.state.nextPlay = g.state.nextPlay.filter((m) => !usedUp.includes(m));
     payPlayPoints(g, player, points.playPoints);
     spendPoints(g, player, points.evolutionPoints, 0);
+    if (ability.quick) thisTurn(g.state, player).quickActivations += 1; // CP05-002
     if (cost.engageSelf) setEngaged(g, [card], true);
   }
   // Paid when free too: the effect may depend on it (BP03-001's X counters removed, BP07-093's discarded card).

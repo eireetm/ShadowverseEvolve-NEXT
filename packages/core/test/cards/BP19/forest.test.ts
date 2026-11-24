@@ -26,6 +26,11 @@ describe("BP19 Forestcraft", () => {
   it("003 Wimael, Redolent Enforcer — Fanfare: 4 damage; Last Words: summon this (its Fanfare again)", () => {
     const t = d({ me: { field: ["BP19-003"], hand: ["QUICK-SAC"] }, opp: { field: ["V5"] } }).play("QUICK-SAC").flush();
     expect([t.field(), t.stats("opp:V5")]).toEqual([["BP19-003"], [5, 1]]);
+    // Under the opponent's control (taken, CR 5.22) it comes back onto its owner's field (CR 4.1.6).
+    const taken = d({ me: { hand: ["KILL"] }, opp: { field: ["BP19-003"] } });
+    taken.game.state.cards[taken.id("opp:BP19-003")]!.owner = 0;
+    taken.play("KILL").flush();
+    expect([taken.field(), taken.field("opp")]).toEqual([["BP19-003"], []]);
   });
 
   it("004 Zwei, Symphonic Heart — Fanfare, banish 2 Puppets from the EX area: a Victoria; act, engage, with 3 Puppetry cards: up to 2 Puppets +1/+1", () => {

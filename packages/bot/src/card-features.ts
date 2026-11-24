@@ -373,7 +373,7 @@ export const KNOWN_SCRIPT_KEYS = {
     "nextPlay",
     "equipment",
   ],
-  field: ["playCostOf", "keywordsFor", "grantsFor", "cantLose", "forbidsDraw", "unlimitedEvolve", ...FP_DAMAGE, ...FP_ATTACK, ...FP_OTHER],
+  field: ["playCostOf", "activationCostOf", "keywordsFor", "grantsFor", "cantLose", "forbidsDraw", "unlimitedEvolve", ...FP_DAMAGE, ...FP_ATTACK, ...FP_OTHER],
   exPassives: ["keywordsFor"],
   ability: ["kind", "timing", "validIn", "evolve", "evolveNameIncludes", "evolveInto", "quick", "advanced", "unionBurst", "cost", "oncePerTurn", "timesPerTurn", "condition", "triggerIf", "earthRite", "modes", "modeCount", "targets"],
   cost: ["playPoints", "engageSelf", "custom", "leaderDefense", "burySelf"],

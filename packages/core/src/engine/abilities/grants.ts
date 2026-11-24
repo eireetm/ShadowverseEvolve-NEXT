@@ -85,6 +85,30 @@ export const GRANT_ABILITIES: Record<GrantedAbilityId, AbilityDef> = {
       if (fx.game.card(fx.self)?.zone === "field") yield* fx.bury([fx.self]);
     },
   },
+  // CP05-050 "At the start of your end phase, banish this." It belongs to the follower put onto the field and remains if
+  // Runaar leaves the field (CP05-050 ruling Q2904); with that follower's own end-phase ability, in any order (Q2903).
+  banishAtEnd: {
+    kind: "automatic",
+    timing: "other",
+    trigger: (e, me) => !me.lookBack && e.type === "phaseStarted" && e.phase === "end" && e.player === me.controller,
+    *resolve(fx) {
+      if (fx.game.card(fx.self)?.zone === "field") yield* fx.banish([fx.self]);
+    },
+  },
+  // CP05-082 (when it uncaps): "{[lastwords]} Summon this." The card in the cemetery (CR 4.1.4.1) goes onto its owner's field
+  // ("onto the field" names no player: CR 4.1.6, as BP04-047's official English says), a new card without this ability.
+  lastWordsSummonSelf: {
+    kind: "automatic",
+    timing: "lastWords",
+    trigger: (e, me) =>
+      me.lookBack &&
+      e.type === "cardsMoved" &&
+      e.moves.some((m) => m.card === me.card && m.from?.zone === "field" && m.to.zone === "cemetery"),
+    *resolve(fx) {
+      const c = fx.game.card(fx.self);
+      if (c?.zone === "cemetery") yield* fx.putOntoField([fx.self], c.owner);
+    },
+  },
   // BP08-106 "At the start of your end phase, return this card to its owner's hand." The ability
   // belongs to the summoned follower and remains if Sahaquiel leaves (CR 10.9.1.2).
   returnToHandAtEnd: {
