@@ -6,7 +6,7 @@
 // 全属性) are in the Japanese rules v1.29.0 only: they are cited "CR JP <number>".
 import type { CardId, PlayerId } from "../../model/ids";
 import type { GameReader } from "../../engine/query";
-import { hasTrait, isEvolvedFollower, isFollower, isQuickActivatedFollower } from "../targets";
+import { hasTrait, isFollower, isQuickActivatedFollower, traitOf } from "../targets";
 
 // Treasures (CR JP 14.6.1) and the other tokens.
 export const FIRE_ELEMENT = "火晶のエレメント"; // CP05-T09
@@ -46,11 +46,21 @@ export const ELEMENT_OF: Readonly<Record<string, string>> = {
 };
 
 /**
+ * An earth (or 全属性, CR JP 14.6.2.2) evolved follower card (エボルヴフォロワー: not an evolved amulet nor an advanced card),
+ * read from its definition and typeAndTraits, not `info`: so it is safe where a card's keywords are being worked out
+ * (selfKeywords of CP05-015, 086), where asking `info` would compute them again.
+ */
+export function earthEvolvedFollower(g: GameReader, id: CardId): boolean {
+  const card = g.card(id);
+  return card !== undefined && g.db.get(card.def).evolved && g.typeAndTraits(id).type === "follower" && traitOf("土属性")(g, id);
+}
+
+/**
  * "自分のエボルヴデッキの表向きの土属性・エボルヴフォロワー" (CP05-015, 020, 031 …): the faceup earth (or 全属性,
  * CR JP 14.6.2.2) evolved followers in the player's evolve deck area (CR 4.6.3: faceup cards there are public).
  */
 export function faceUpEarthEvolved(g: GameReader, player: PlayerId): number {
-  return g.faceUpEvolveDeck(player).filter((id) => isEvolvedFollower(g, id) && hasTrait("土属性")(g, id)).length;
+  return g.faceUpEvolveDeck(player).filter((id) => earthEvolvedFollower(g, id)).length;
 }
 
 /** "自分の墓場のQ起動能力を持つフォロワー" (CP05-008, 009, 030, 043, 047): printed quick activated abilities (CR 12.3.3). */
