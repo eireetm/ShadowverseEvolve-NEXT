@@ -10,17 +10,20 @@ import { ALL_CARDS } from "../../core/src/sets";
 // zone of a player's side, every card type of the pool and every event type, a row says for each component that reads
 // positions where it reads the value (a file of the component and the function; by the value's name, or through a path that
 // takes every value alike) or why it ignores it. The test fails on a value of Core's without a row, a row without a cell for
-// each component, a row for a value Core no longer has, a read put in another component's file or in a file whose code
-// lacks the function or the name it is said to read by, a name of the value in the code of a component said to ignore it
-// (or to read it generically) without a note of what that name is there (the cell may have gone stale), and a source file
-// of the bot that is in no component and not said to read no position. The encoders' layouts are frozen (trained models
-// read them): what they ignore waits for the next encoder version.
+// each component, a row for a value Core no longer has, a read put in another component's file or in a file that doesn't
+// declare the function, a read by a name the function's code lacks (with the file's constant tables it names), a name of the
+// value in the code of a component said to ignore it (or to read it generically) without a note of what that name is there
+// (the cell may have gone stale), and a source file of the bot that is in no component and not said to read no position. The
+// encoders' layouts are frozen (trained models read them): what they ignore waits for the next encoder version.
 
 // ---- Cells ----
 
 /** What a component does with a value: reads it (where and how), or ignores it (why). */
 type Cell =
-  /** By the value's name: `token` (the value itself unless given) is in the file's code. */
+  /**
+   * By the value's name: `token` (the value itself unless given) is in the code of `fn` (functions, or a constant: e.g.
+   * DEFAULT_WEIGHTS), or of a constant table of the file (UPPER_CASE, e.g. KW_NOW) that it names, directly or through others.
+   */
   | { readonly reads: "by name"; readonly file: string; readonly fn: string; readonly how: string; readonly token?: string }
   /** Through a path that takes every value alike (every field of a card, every zone of the view...). */
   | { readonly reads: "generic"; readonly file: string; readonly fn: string; readonly how: string }
@@ -79,7 +82,7 @@ const NOT_ATTACKING = "only followers attack or stand in an attack's way (CR 8.4
 const FROZEN_UNCAP = ignores("frozen layout: no column (the uncap bonus shows in atk.now and def.now); a column waits for the next encoder version");
 const NOT_EVENTS = ignores("reads positions, not events: what an event did shows in the next view");
 
-const EV_WEIGHT = byName("evaluate.ts", "fieldCardValue", "a keyword weight of DEFAULT_WEIGHTS");
+const EV_WEIGHT = byName("evaluate.ts", "fieldCardValue, DEFAULT_WEIGHTS", "a keyword weight of DEFAULT_WEIGHTS");
 const EV_LINKED = ignores("not valued: the card it is linked to is valued on the field");
 const PP1_REST = ignores("only its play point and hand terms are its own: the rest is evaluate's");
 const DG_ZONE = ignores("the visible threat is the field's followers against the leader's defense: anything else that may add to it is left to the offset");
@@ -384,7 +387,7 @@ const CARD_TYPES: Census<CardType> = {
   treasure: {
     ...TYPE_ALIKE,
     ...{ lethal: LT_ENGINE, cond: COND_TOKEN, gates: GATES_TYPE },
-    evaluate: byName("evaluate.ts", "sideValue", "w.treasure: an uncap waiting in the EX area (CR JP 14.6.4)"),
+    evaluate: byName("evaluate.ts", "sideValue", "w.treasure: an uncap waiting in the EX area (CR JP 14.6.4)", "w.treasure"),
     danger: ignores(`${NOT_ATTACKING}; ${WAITING_UNCAP}`),
     policy: byName("policy.ts", "staticValue", "0.5, evaluate's treasure weight: a free uncap waiting (CR JP 14.6.4)"),
     encoder: ignores("no type column (the table has none yet; frozen layout): an EX treasure's row has no type"),
@@ -566,7 +569,94 @@ function codeOf(file: string): string | null {
   }
   return code.get(file) ?? null;
 }
-const hasWord = (text: string, word: string): boolean => new RegExp(`(?<![\\w$])${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\w$])`).test(text);
+const escapeRe = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const hasWord = (text: string, word: string): boolean => new RegExp(`(?<![\\w$])${escapeRe(word)}(?![\\w$])`).test(text);
+
+/** The words a declaration's line may start with before its kind and name. */
+const MODIFIERS = "(?:(?:export|default|declare|abstract|async|public|private|protected|static|readonly|override|get|set)\\s+)*";
+
+/**
+ * The code of the declarations named `name` in a file's code: its functions, classes and constants, or else its methods (a
+ * line opening `name(` that isn't a statement), each from its first line to the line that closes it at its own indentation (the
+ * code is formatted).
+ */
+function declarationsOf(text: string, name: string): string[] {
+  const n = escapeRe(name);
+  const heads = [
+    new RegExp(`^(\\s*)${MODIFIERS}(?:function\\s*\\*?\\s*${n}\\s*[<(]|class\\s+${n}(?![\\w$])|(?:const|let|var)\\s+${n}\\s*[:=])`),
+    new RegExp(`^(\\s*)${MODIFIERS}\\*?\\s*${n}\\s*[<(][^;]*$`),
+  ];
+  const lines = text.split("\n");
+  for (const head of heads) {
+    const found: string[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      const indent = head.exec(lines[i]!)?.[1]?.length;
+      if (indent === undefined) continue;
+      let end = i;
+      for (let j = i + 1; j < lines.length; j++) {
+        const line = lines[j]!;
+        if (line.trim() === "") continue;
+        const at = line.length - line.trimStart().length;
+        if (at > indent) end = j;
+        else if (at === indent && /^\s*[})\]]/.test(line)) {
+          end = j;
+          if (!/[{([]\s*$/.test(line)) break; // `): T {` goes on into the body
+        } else break;
+      }
+      found.push(lines.slice(i, end + 1).join("\n"));
+    }
+    if (found.length > 0) return found;
+  }
+  return [];
+}
+
+/**
+ * The code a cell's functions read their names in: theirs, and that of the file's constant tables (UPPER_CASE, top level)
+ * they name, directly or through each other (KW_NOW, SIDE_STATS...). Not their parameters' types, nor the functions they call.
+ */
+function readsOf(text: string, fns: readonly string[]): string {
+  const parts = fns.flatMap((fn) => declarationsOf(text, fn));
+  const tables = [...new Set([...text.matchAll(/^(?:export\s+)?const\s+([A-Z][A-Z0-9_]*)(?![\w$])/gm)].map((m) => m[1]!))];
+  const named = new Set<string>(fns);
+  for (let grew = true; grew; ) {
+    grew = false;
+    const now = parts.join("\n");
+    for (const table of tables.filter((t) => !named.has(t) && hasWord(now, t))) {
+      named.add(table);
+      parts.push(...declarationsOf(text, table));
+      grew = true;
+    }
+  }
+  return parts.join("\n");
+}
+
+/**
+ * The cells whose read isn't where the code is (the test below): another component's file, a function the file doesn't
+ * declare, a name the functions' code (readsOf) lacks.
+ */
+function misplacedReads(): string[] {
+  const wrong: string[] = [];
+  for (const c of CENSUS) {
+    for (const [value, row] of Object.entries(c.rows)) {
+      if (!row) continue;
+      for (const k of COMPONENTS) {
+        const cell = row[k] as Cell | undefined;
+        if (!cell || !("reads" in cell)) continue;
+        const at = `${c.kind} ${value}, ${k}`;
+        const text = codeOf(cell.file);
+        const fns = cell.fn.split(/[\s,]+/).filter((s) => s !== "");
+        if (!FILES[k].includes(cell.file)) wrong.push(`${at}: ${cell.file} isn't a file of ${k}`);
+        else if (text === null) wrong.push(`${at}: no file ${cell.file}`);
+        else {
+          for (const fn of fns) if (declarationsOf(text, fn).length === 0) wrong.push(`${at}: ${cell.file} declares no ${fn}`);
+          const token = cell.reads === "by name" ? (cell.token ?? value) : null;
+          if (token !== null && !hasWord(readsOf(text, fns), token)) wrong.push(`${at}: ${cell.fn} in ${cell.file} never names ${token} (generic, or ignores?)`);
+        }
+      }
+    }
+  }
+  return wrong;
+}
 
 function sourceFiles(dir: string, base = ""): string[] {
   return readdirSync(dir).flatMap((f) => {
@@ -609,27 +699,8 @@ describe("the census of Core's mechanics (what each component that reads positio
     expect(wrong).toEqual([]);
   });
 
-  it("puts a read only where the code is: a file of the component, its functions, and the name it reads by", () => {
-    const wrong: string[] = [];
-    for (const c of CENSUS) {
-      for (const [value, row] of Object.entries(c.rows)) {
-        if (!row) continue;
-        for (const k of COMPONENTS) {
-          const cell = row[k] as Cell | undefined;
-          if (!cell || !("reads" in cell)) continue;
-          const at = `${c.kind} ${value}, ${k}`;
-          const text = codeOf(cell.file);
-          if (!FILES[k].includes(cell.file)) wrong.push(`${at}: ${cell.file} isn't a file of ${k}`);
-          else if (text === null) wrong.push(`${at}: no file ${cell.file}`);
-          else {
-            for (const fn of cell.fn.split(/[\s,]+/).filter((s) => s !== "")) if (!hasWord(text, fn)) wrong.push(`${at}: no ${fn} in ${cell.file}`);
-            const token = cell.reads === "by name" ? (cell.token ?? value) : null;
-            if (token !== null && !hasWord(text, token)) wrong.push(`${at}: ${cell.file} never names ${token} (generic, or ignores?)`);
-          }
-        }
-      }
-    }
-    expect(wrong).toEqual([]);
+  it("puts a read only where the code is: a file of the component, functions it declares, and the name it reads by in their code", () => {
+    expect(misplacedReads()).toEqual([]);
   });
 
   it("says what a value's name is in the code of a component said to ignore it or to read it generically", () => {

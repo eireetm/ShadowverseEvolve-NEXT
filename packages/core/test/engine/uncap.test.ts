@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createEngine, script, type CardDefinition, type CardScript } from "../../src";
-import { enemyFollower, yourFollower } from "../../src/script/targets";
+import { enemyFollower, inYourZone, yourFollower } from "../../src/script/targets";
 import { drive, testEvolved, testFollower, testSpell, testTreasure, type DriveSpec } from "../../src/testing";
 import { TEST_CARDS, TEST_SCRIPTS } from "../helpers";
 
@@ -23,6 +23,7 @@ const CARDS: CardDefinition[] = [
   testSpell("SILENCE", 0), // a follower on your field loses all abilities
   testSpell("SET5", 0), // a follower on your field: its attack becomes 5
   testSpell("COUNT", 0), // X damage to each enemy leader, X = your uncaps this turn
+  testSpell("EX-TO-HAND", 0), // select a card in your EX area and put it into your hand
 ];
 const SCRIPTS: Record<string, CardScript> = {
   "FIRE-F": defineCard({ keywords: ["finalUncap"], abilities: [evolveAbility(0)] }),
@@ -44,6 +45,7 @@ const SCRIPTS: Record<string, CardScript> = {
   COUNT: defineCard({
     abilities: [spell({ *resolve(fx) { yield* fx.dealDamage(fx.game.leader(fx.game.opponent(fx.controller)), fx.game.uncapsThisTurn(fx.controller)); } })],
   }),
+  "EX-TO-HAND": defineCard({ abilities: [spell({ targets: [inYourZone("ex")], *resolve(fx) { yield* fx.returnToHand(fx.targets[0]!); } })] }),
 };
 const E = createEngine({ cards: [...TEST_CARDS, ...CARDS], scripts: { ...TEST_SCRIPTS, ...SCRIPTS } });
 const d = (spec: DriveSpec) => drive(E, spec);
@@ -122,8 +124,20 @@ describe("uncapping (CR JP 14.6.4)", () => {
     expect([t.ex(), t.stats("FIRE-F")]).toEqual([["T-FIRE"], [3, 2]]);
   });
 
-  it("CR JP 14.6.1.1.2 / JP 14.6.1.1.3 — a treasure can't be played, and goes nowhere but the EX area and the uncap zone", () => {
+  it("CR JP 14.6.1.1.3 — a treasure can't be played (it has no cost, CR 8.2.1), and its ability works only in the EX area, not in the uncap zone", () => {
     expect(d({ me: { field: ["FIRE"], ex: ["T-FIRE"], playPoints: 9 } }).canPlay("T-FIRE@ex")).toBe(false);
+    // Only in FIRE's uncap zone, with a fire follower it could uncap (FIRE-F): no action of the main phase uses it, nor can a
+    // manual activation (outside the rules, but only of an ability valid where its card is).
+    const t = d({ me: { field: [{ card: "FIRE", uncappedWith: [{ card: "T-FIRE", uncaps: ["uncap"] }] }, "FIRE-F"] }, config: { manualActions: true } });
+    const treasure = t.id("T-FIRE@uncapZone");
+    expect(t.canActivate("T-FIRE")).toBe(false);
+    expect(t.decision?.type === "mainPhase" ? t.decision.actions.filter((a) => Object.values(a).includes(treasure)) : null).toEqual([]);
+    expect(t.game.manualOpError({ kind: "activate", card: treasure, ability: 0 })).toMatch(/no such activated ability/);
+  });
+
+  it("CR JP 14.6.1.1.2 — a treasure exists only in the EX area and the uncap zone: moved anywhere else, it is eliminated (CR 9.1.4.4)", () => {
+    const t = d({ me: { hand: ["EX-TO-HAND"], ex: ["T-FIRE", "V1"] } }).play("EX-TO-HAND").pick("T-FIRE");
+    expect([t.ex(), t.hand(), t.ids("T-FIRE")]).toEqual([["V1"], [], []]);
   });
 
   it("the bonus comes after the effects: an 'attack becomes 5' afterwards ends at 5, one before it at 6", () => {
