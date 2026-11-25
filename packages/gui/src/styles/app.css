@@ -30,9 +30,10 @@
   --sve-selected: #4cc38a;
   --sve-evolved: #b48cff;
   --sve-superevolved: #ffd166;
-  /* An uncapped / final-uncapped follower's glow (Granblue Fantasy; its treasures show under it). */
-  --sve-uncapped: #7fd4ff;
-  --sve-final-uncapped: #ffe08a;
+  /* An uncapped / final-uncapped follower's ring inside its edge (Granblue Fantasy; its treasures show under it): lime and
+     pink, hues that no decision ring or evolved outline uses. */
+  --sve-uncapped: #aaff22;
+  --sve-final-uncapped: #ff2fb8;
   --sve-target: #ff5a5a;
   /* The numbers on a card: attack blue, defense red, the cost circle in the card's class color (like the class icons). */
   --sve-attack: #2f7bd6;
@@ -723,12 +724,25 @@ option {
   outline: 2px solid var(--sve-superevolved);
 }
 
-.sve-card-uncapped .sve-card-face {
-  box-shadow: 0 0 6px 2px var(--sve-uncapped);
+/*
+ * An uncapped / final-uncapped follower (CR JP 14.6.4.1.1, JP 14.6.4.2.1): a ring just inside its edge, the overlay's
+ * lowest layer (over the picture, under the numbers). The decision rings (box-shadow) and the evolved outline lie outside
+ * the face, so all of them show with it; on the overlay, not the face, it keeps its color on a Boxed card (gray filter).
+ * ">" keeps it off the cards shown under the follower (.sve-attached: its treasures). With both classes on (today's cards
+ * final-uncap only a follower they uncapped first) the final ring wins; a final uncap alone (CR JP 14.6.4.2 doesn't require
+ * an uncap first) gets the final ring too.
+ */
+.sve-card-uncapped > .sve-card-frame > .sve-card-overlay::before,
+.sve-card-final-uncapped > .sve-card-frame > .sve-card-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--sve-card-radius);
+  box-shadow: inset 0 0 0 2px var(--sve-uncapped), inset 0 0 8px 1px var(--sve-uncapped);
 }
 
-.sve-card-final-uncapped .sve-card-face {
-  box-shadow: 0 0 8px 3px var(--sve-final-uncapped);
+.sve-card-final-uncapped > .sve-card-frame > .sve-card-overlay::before {
+  box-shadow: inset 0 0 0 3px var(--sve-final-uncapped), inset 0 0 10px 2px var(--sve-final-uncapped);
 }
 
 .sve-card-boxed .sve-card-face {
@@ -2886,11 +2900,15 @@ option {
   font-weight: 700;
 }
 
-/* The deck: the area the pool's cards are dropped on; each section a see-through card area under a title bar. */
+/* The deck: the area the pool's cards are dropped on; each section a see-through card area under a title bar. Its cards
+   are sized to its width (DeckBuilder.tsx), so its scrollbar's room is kept even when nothing scrolls: else, in a
+   window about the deck's height, the scrollbar narrows the cards, the narrower cards fit, the scrollbar goes, the
+   cards widen and overflow again, every frame. Scrollbars that take no room (phones, tablets) keep none. */
 .sve-builder-deck {
   flex: 1;
   min-height: 0;
   overflow: auto;
+  scrollbar-gutter: stable;
   padding: 10px 12px 16px;
 }
 
@@ -2994,6 +3012,8 @@ option {
   flex: 1;
   min-height: 0;
   overflow: auto;
+  /* Its cards are sized to its width too: its scrollbar's room is kept, as the deck's. */
+  scrollbar-gutter: stable;
   display: grid;
   gap: 6px;
   align-content: start;
@@ -4242,9 +4262,11 @@ button.sve-online-thanks-sponsor:hover {
   border-bottom: 1px solid var(--sve-border);
 }
 
-/* The deck tab scrolls as a whole: its buttons, then the deck. */
+/* The deck tab scrolls as a whole: its buttons, then the deck. The deck's cards are sized to its width, so the
+   scrollbar's room is kept, as on a wide screen (.sve-builder-deck). */
 .sve-builder-compact .sve-builder-center {
   overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 .sve-builder-compact .sve-builder-deck {
@@ -4257,10 +4279,12 @@ button.sve-online-thanks-sponsor:hover {
   gap: 6px;
 }
 
-/* The pool tab scrolls as a whole too: the filters scroll away above the cards, which then have the whole height. */
+/* The pool tab scrolls as a whole too: the filters scroll away above the cards, which then have the whole height. Its
+   scrollbar's room is kept, as the deck tab's. */
 .sve-builder-compact .sve-builder-pool {
   border-left: none;
   overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 .sve-builder-compact .sve-builder-pool-grid {

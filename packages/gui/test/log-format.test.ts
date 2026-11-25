@@ -58,11 +58,11 @@ describe("the log: cards put into a deck", () => {
 });
 
 describe("the log: the cards a line names", () => {
-  const nameOf = (def: string, lang: "cn" | "en" = "cn") => cardName(catalog.def(def), lang);
-  const describeIn = (uiLang: "zh" | "en", event: GameEvent, cards: LogEntry["cards"], showAll = false) =>
+  const nameOf = (def: string, lang: "cn" | "en" | "ja" = "cn") => cardName(catalog.def(def), lang);
+  const describeIn = (uiLang: "zh" | "en" | "ja", event: GameEvent, cards: LogEntry["cards"], showAll = false) =>
     describeEntry(
       { seq: 1, turn: 1, event, cards },
-      { t: (key, params) => translate(uiLang, key, params), catalog, lang: uiLang === "zh" ? "cn" : "en", uiLang, update: { controllers: ["human", "human"] } as unknown as GameUpdate },
+      { t: (key, params) => translate(uiLang, key, params), catalog, lang: uiLang === "zh" ? "cn" : uiLang, uiLang, update: { controllers: ["human", "human"] } as unknown as GameUpdate },
       showAll,
     )!;
   /** What each link of a line covers, and its card. */
@@ -97,6 +97,18 @@ describe("the log: the cards a line names", () => {
     expect(describeIn("zh", { type: "turnStarted", turn: 2, player: 0 }, {}).links).toEqual([]);
     // Shown with "show all", the raw event of a kind without words.
     expect(describeIn("zh", { type: "phaseStarted", phase: "main", player: 0 } as GameEvent, { a: { def: "BP01-001", printing: null } }, true).links).toEqual([]);
+  });
+
+  it("an uncap names the follower: it uncaps or, final, final-uncaps (CR JP 14.6.4.1 / JP 14.6.4.2), in each language", () => {
+    // The treasure's move into the uncap zone is a line of its own: this one names only the follower.
+    const cards = { f: { def: "CP05-110", printing: "CP05-110" }, m: { def: "CP05-T15", printing: "CP05-T15" } };
+    const uncap = (uiLang: "zh" | "en" | "ja", final: boolean) => describeIn(uiLang, { type: "uncapped", player: 0, follower: "f", material: "m", final }, cards);
+    const follower = { id: "f", def: "CP05-110", printing: "CP05-110" };
+    expect([uncap("zh", false).text, uncap("zh", true).text]).toEqual([`${nameOf("CP05-110")} 上限解放。`, `${nameOf("CP05-110")} 最终上限解放。`]);
+    expect([uncap("ja", false).text, uncap("ja", true).text]).toEqual([`${nameOf("CP05-110", "ja")}が上限解放。`, `${nameOf("CP05-110", "ja")}が最終上限解放。`]);
+    expect([uncap("en", false).text, uncap("en", true).text]).toEqual([`${nameOf("CP05-110", "en")} uncaps.`, `${nameOf("CP05-110", "en")} final-uncaps.`]);
+    expect(linksOf(uncap("zh", true))).toEqual([[nameOf("CP05-110"), follower]]);
+    expect(linksOf(uncap("ja", false))).toEqual([[nameOf("CP05-110", "ja"), follower]]);
   });
 
   it("a card a manual operation names by its definition; a definition this program doesn't have is only a name", () => {

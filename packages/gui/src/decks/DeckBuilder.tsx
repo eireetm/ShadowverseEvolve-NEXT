@@ -40,6 +40,8 @@ const DECK_DATA = "application/x-sve-deck";
 const POOL_PAGE = 72;
 const DECK_COLUMNS = 10;
 const GAP = 6;
+/** The deck grid's own frame, inside the deck's width too: .sve-deck-grid's padding (6px) and border (1px) a side. */
+const DECK_GRID_FRAME = 2 * (6 + 1);
 
 const CLASSES = ["Neutral", "Forestcraft", "Swordcraft", "Runecraft", "Dragoncraft", "Abysscraft", "Havencraft"] as const;
 const TYPES: readonly TypeFilter[] = ["follower", "spell", "amulet", "evolve"];
@@ -94,7 +96,7 @@ export function DeckBuilder({ onBack, onTextEditor, initialFile }: Props) {
   const sentinel = useRef<HTMLDivElement>(null);
   const deckWidth = useElementWidth(deckRef);
   const poolWidth = useElementWidth(poolRef, 400);
-  const deckCard = Math.max(40, Math.floor((deckWidth - (DECK_COLUMNS - 1) * GAP) / DECK_COLUMNS));
+  const deckCard = Math.max(40, Math.floor((deckWidth - DECK_GRID_FRAME - (DECK_COLUMNS - 1) * GAP) / DECK_COLUMNS));
   // A phone shows a few more, smaller cards a row (its pool tab scrolls as a whole, the filters too).
   const poolMin = compact ? 92 : 104;
   const poolColumns = Math.max(2, Math.floor((poolWidth + GAP) / (poolMin + GAP)));
@@ -439,7 +441,10 @@ export function DeckBuilder({ onBack, onTextEditor, initialFile }: Props) {
               if (has(e, POOL_DATA)) setDropping(true);
             }
           }}
-          onDragLeave={() => setDropping(false)}
+          // Only when the pointer leaves the deck, not when it moves onto one of its tiles (their dragleave bubbles up here).
+          onDragLeave={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropping(false);
+          }}
           onDrop={dropOnDeck}
           data-testid="builder-deck"
         >
