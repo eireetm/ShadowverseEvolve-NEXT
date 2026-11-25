@@ -172,12 +172,16 @@ export function CardPanel({ focus, exact = false, art = true, onLink }: { focus:
       {text ? (
         <CardText text={text} lang={cardLang} links={onLink ? { find: cardLinks(def, text, cardLang, catalog), open: onLink } : undefined} />
       ) : (
-        <p className="sve-hint">{t("card.noText")}</p>
+        // A card with no text says so; any other card's text isn't installed (the public builds and the apps carry none).
+        <p className="sve-hint">{t(def.status === "vanilla" ? "card.noText" : "card.textNotInstalled")}</p>
       )}
       {view ? <Gifts view={view} lang={cardLang} /> : null}
       <div className="sve-details-meta">
         {printing ?? def.id}
-        {printing && physical && printing !== physical.id ? ` · ${t("card.altPrinting", { card: physical.id })}` : ""} · {t(`card.status.${def.status}` as const)}
+        {printing && physical && printing !== physical.id ? ` · ${t("card.altPrinting", { card: physical.id })}` : ""}
+        {/* Only a card whose effect isn't implemented says so: "implemented" told players nothing, and the text area above
+            already tells a card without text from one whose text isn't installed. */}
+        {def.status === "missing" ? ` · ${t("card.status.missing")}` : ""}
       </div>
       {printings.length > 1 ? (
         <div className="sve-details-printings" data-testid="details-printings">
