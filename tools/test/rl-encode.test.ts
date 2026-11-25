@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { evaluate } from "../../packages/bot/src";
+import { evaluate, type EvalWeights } from "../../packages/bot/src";
 import { createEngine, randomAnswer, seedRng, type PlayerId } from "../../packages/core/src";
 import { ALL_CARDS, ALL_SCRIPTS } from "../../packages/core/src/sets";
+import { scenario } from "../../packages/core/src/testing/scenario";
 import { DEFAULT_WEIGHTS } from "../../packages/bot/src";
-import { dotTerms, evalTerms, termWeights, W1_TERMS } from "../rl/eval-terms";
+import { dotTerms, evalTerms, storedTerms, termWeights, W1_TERMS, weightsOfTerms, withDefaultWeights } from "../rl/eval-terms";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -101,6 +102,57 @@ describe("the W1 terms", () => {
     }
     expect(n).toBeGreaterThan(6);
   }, 60_000);
+
+  // CP05: treasures (火晶のエレメント, CP05-T09) in the EX areas, worth their own weight, not an EX card's (CR JP 14.6.4); one
+  // used already, in the uncap zone under the opponent's follower, counts for neither.
+  const treasures = () =>
+    scenario(engine, {
+      players: [
+        { field: ["CP05-066"], ex: ["CP05-T09", "CP05-T09", "CP05-051"], hand: ["CP05-013"], deck: Array.from({ length: 10 }, () => "CP05-066") },
+        { field: [{ card: "CP05-051", uncappedWith: [{ card: "CP05-T09", uncaps: ["uncap"] }] }], ex: ["CP05-T09"], deck: Array.from({ length: 10 }, () => "CP05-051") },
+      ],
+    });
+
+  it("count a treasure in the EX area as a treasure, so that they still give the hand-written evaluation exactly", () => {
+    const game = treasures();
+    const k = (term: string) => W1_TERMS.indexOf(term as (typeof W1_TERMS)[number]);
+    for (const viewer of [0, 1] as const) {
+      const view = game.view(viewer);
+      const t = evalTerms(view, viewer);
+      const [mine, theirs] = viewer === 0 ? [t.me, t.opp] : [t.opp, t.me];
+      expect([mine[k("treasure")], mine[k("ex")], theirs[k("treasure")], theirs[k("ex")]]).toEqual([2, 1, 1, 0]);
+      expect(Math.abs(dotTerms(termWeights(DEFAULT_WEIGHTS), t.me, t.opp) - evaluate(view, viewer))).toBeLessThan(1e-9);
+    }
+  });
+
+  it("are read from a samples file by name: all of them, or the first layout's 24 (written before treasure)", () => {
+    const columns = (terms: readonly string[]) => [...terms.map((t) => `w1.me.${t}`), ...terms.map((t) => `w1.opp.${t}`)];
+    expect(W1_TERMS[W1_TERMS.length - 1]).toBe("treasure");
+    expect(storedTerms(columns(W1_TERMS))).toEqual([...W1_TERMS]);
+    expect(storedTerms(columns(W1_TERMS.slice(0, 24)))).toEqual(W1_TERMS.slice(0, 24));
+    expect(() => storedTerms(columns(W1_TERMS.slice(0, 23)))).toThrow();
+    expect(() => storedTerms(columns([...W1_TERMS.slice(0, 23), "treasure"]))).toThrow();
+    expect(() => storedTerms([...columns(W1_TERMS), "w1.me.other"])).toThrow();
+  });
+
+  it("turn back into weights over the defaults (rl:w1), and a weights file without treasure is merged with them", () => {
+    const byTerm = Object.fromEntries(W1_TERMS.map((t, k) => [t, termWeights(DEFAULT_WEIGHTS)[k]!]));
+    expect(weightsOfTerms(byTerm)).toEqual(DEFAULT_WEIGHTS);
+    // A file of the first layout (no treasure term): treasure keeps its default; the defaults themselves are never changed.
+    const firstLayout = Object.fromEntries(W1_TERMS.slice(0, 24).map((t) => [t, byTerm[t]!]));
+    const fitted = weightsOfTerms({ ...firstLayout, ex: 0.7, "kw.ward": 3 });
+    expect([fitted.ex, fitted.treasure, fitted.keywords.ward, fitted.keywords.bane]).toEqual([0.7, DEFAULT_WEIGHTS.treasure, 3, DEFAULT_WEIGHTS.keywords.bane]);
+    expect([DEFAULT_WEIGHTS.ex, DEFAULT_WEIGHTS.keywords.ward]).toEqual([1, 1]);
+    expect(() => weightsOfTerms({ other: 1 })).toThrow();
+    // An rl:w1 file written before treasure existed: NaN where a treasure is in an EX area, unless merged.
+    const view = treasures().view(0);
+    const old: Partial<EvalWeights> = { ...DEFAULT_WEIGHTS, keywords: { ward: 2 } };
+    delete old.treasure;
+    expect(evaluate(view, 0, old as EvalWeights)).toBeNaN();
+    const merged = withDefaultWeights(old);
+    expect([merged.treasure, merged.keywords.ward, merged.keywords.bane]).toEqual([DEFAULT_WEIGHTS.treasure, 2, DEFAULT_WEIGHTS.keywords.bane]);
+    expect(evaluate(view, 0, merged)).toBe(evaluate(view, 0, { ...DEFAULT_WEIGHTS, keywords: { ...DEFAULT_WEIGHTS.keywords, ward: 2 } }));
+  });
 });
 
 describe(".npy files", () => {

@@ -30,6 +30,7 @@ import { seedRng, randomInt, type Engine, type GameSession, type PlayerId } from
 import { TRAIT_NAMES } from "../../packages/gui/src/app/traits";
 import { zh } from "../../packages/gui/src/i18n/zh";
 import type { Calibration, V2Checks, declaredRanges } from "./enc-v2-writer";
+import { compareW1ByName, w1Columns } from "./eval-terms";
 import { readNpy, writeNpy } from "./npy";
 
 /** A shard's encoder v2 result (rl-encode.ts's ShardV2Result, as much as this reads). */
@@ -257,19 +258,36 @@ export function finishV2(input: FinishV2Input): { lines: [boolean, string][]; me
   let c10: [boolean, string];
   const compare: Record<string, unknown> = {};
   if (existsSync(v1meta)) {
-    const m = JSON.parse(readFileSync(v1meta, "utf8")) as { shards: { shard: number; rows: number; files: Record<string, string> }[] };
+    const m = JSON.parse(readFileSync(v1meta, "utf8")) as { shards: { shard: number; rows: number; files: Record<string, string> }[]; columns?: { w1?: string[] } };
+    // The w1 layout grows when a term is appended (24 terms a side until "treasure", 2026-11-24): an older encoding's w1 is
+    // compared by column name then (eval-terms compareW1ByName), not byte for byte; y and side always byte for byte.
+    const nowW1 = w1Columns();
+    const v1W1 = m.columns?.w1 ?? nowW1;
+    const sameW1 = v1W1.length === nowW1.length && v1W1.every((c, i) => c === nowW1[i]);
     let compared = 0;
     let differ10 = 0;
+    let byName = 0;
+    let addedNonZero = 0;
+    let missingW1: string[] = [];
     for (const r of results) {
       const o = m.shards.find((x) => x.shard === r.shard);
       if (!o || o.rows !== r.rows) continue;
       for (const k of ["y", "side", "w1"]) {
         compared += 1;
-        if (o.files[shardName(k, r.shard)] !== r.files[shardName(k, r.shard)]) differ10 += 1;
+        if (k === "w1" && !sameW1) {
+          byName += 1;
+          const older = readNpy(readFileSync(join(input.runDir, "enc-v1", shardName("w1", r.shard)))).data;
+          const newer = readNpy(readFileSync(join(out, shardName("w1", r.shard)))).data;
+          const c = compareW1ByName({ columns: v1W1, data: older }, { columns: nowW1, data: newer }, r.rows);
+          if (c.differ > 0 || c.missing.length > 0) differ10 += 1;
+          addedNonZero += c.addedNonZero;
+          missingW1 = c.missing;
+        } else if (o.files[shardName(k, r.shard)] !== r.files[shardName(k, r.shard)]) differ10 += 1;
       }
     }
-    compare["enc-v1"] = { files: ["y", "side", "w1"], compared, differ: differ10 };
-    c10 = [differ10 === 0, `C10 和编码器 v1 对照：${compared} 个 y / side / w1 文件，和 enc-v1 逐字节相同（不同的 ${differ10} 个；行数不同的分片不比${compared === 0 ? "，这次一个都没比" : ""}）。`];
+    compare["enc-v1"] = { files: ["y", "side", "w1"], compared, differ: differ10, w1ByName: byName, w1AddedNonZero: addedNonZero, w1Missing: missingW1 };
+    const w1Note = sameW1 ? "" : `；w1 的列从 ${v1W1.length} 个变成 ${nowW1.length} 个，按列名比共有的列（${byName} 个文件；enc-v1 有、这次没有的列 ${missingW1.length} 个，这次新加的列里不是 0 的值 ${addedNonZero} 个，只报告）`;
+    c10 = [differ10 === 0, `C10 和编码器 v1 对照：${compared} 个 y / side / w1 文件，和 enc-v1 相同（不同的 ${differ10} 个；行数不同的分片不比${compared === 0 ? "，这次一个都没比" : ""}${w1Note}）。`];
   } else c10 = [true, "C10 和编码器 v1 对照：没有 enc-v1，没比（只报告）。"];
   lines.push(c10);
 

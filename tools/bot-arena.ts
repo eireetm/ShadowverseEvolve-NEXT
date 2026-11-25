@@ -70,6 +70,7 @@ import {
   type PlannerBotOptions,
 } from "../packages/bot/src";
 import { engineFingerprint } from "../packages/gui/fingerprint";
+import { withDefaultWeights } from "./rl/eval-terms";
 import { DECK_SETS, ROOT, allSampleDecks, deckSet, orderedMatchups, sampleDeck, seriesGame, type NamedDeck } from "./rl/series";
 import { SVE_SERVER_AIS, createSveServerBot, type SveServerAI } from "./sve-server-ais";
 
@@ -114,11 +115,14 @@ function specProblem(spec: string): string | null {
   if (variant && !VARIANT_LEVELS.includes(level!)) return `${variant} works with ${VARIANT_LEVELS.join(", ")} (the default weights) only`;
   return null;
 }
-/** The weights of a file written by npm run rl:w1 (format sve-eval-weights). */
+/**
+ * The weights of a file written by npm run rl:w1 (format sve-eval-weights), over the defaults: weightsEvaluator takes them
+ * as they are, and a file written before a weight existed (treasure) would make the evaluation NaN (withDefaultWeights).
+ */
 function leafWeights(file: string): EvalWeights {
-  const data = JSON.parse(readFileSync(file, "utf8")) as { format?: string; weights?: EvalWeights };
+  const data = JSON.parse(readFileSync(file, "utf8")) as { format?: string; weights?: Partial<EvalWeights> };
   if (data.format !== "sve-eval-weights" || !data.weights) throw new Error(`${file} isn't an sve-eval-weights file`);
-  return data.weights;
+  return withDefaultWeights(data.weights);
 }
 /** The evaluations of a variant: the hand-written one passed in (the same play), or turned round (the bot plays to lose). */
 function variantEvaluation(variant: string | undefined): BotEvaluation {

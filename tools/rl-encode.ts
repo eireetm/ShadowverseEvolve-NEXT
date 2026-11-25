@@ -76,7 +76,7 @@ import { analyzeScripts } from "./rl/script-analysis";
 import { gameLines } from "./rl/records";
 import { bucketOf, labelOf, replaySamples, splitOf } from "./rl/sampling";
 import { DECK_SETS, ROOT, sampleDeck } from "./rl/series";
-import { W1_TERMS, dotTerms, evalTerms, termWeights } from "./rl/eval-terms";
+import { W1_TERMS, dotTerms, evalTerms, termWeights, w1Columns } from "./rl/eval-terms";
 import { botFingerprint, rulesOfRecorded } from "./train/code";
 import type { JobFile, JobGame } from "./train/job";
 
@@ -128,7 +128,7 @@ export const SIDE_COLUMNS = [
   "poolMismatch",
 ] as const;
 const COL = Object.fromEntries(SIDE_COLUMNS.map((c, i) => [c, i])) as Record<(typeof SIDE_COLUMNS)[number], number>;
-const W1_COLUMNS = [...W1_TERMS.map((t) => `w1.me.${t}`), ...W1_TERMS.map((t) => `w1.opp.${t}`)];
+const W1_COLUMNS = w1Columns();
 /** The players' bots, as the encoder's one-hot has them (v1: the bots of the stage 1 data; v2: its table, the same two first). */
 const PLAYER_TYPES: readonly string[] = v2 ? PLAYER_TYPES_V2 : PLAYER_TYPES_V1;
 const DECKS = [...DECK_SETS.train, ...DECK_SETS.holdout];
@@ -1133,7 +1133,7 @@ if (option("--worker") !== null) {
       notes: {
         game: "the game's line in games.jsonl.gz (games.csv's game column; dropped games have no line in games.csv)",
         firstRow: "games.csv: the game's first row in all shards read in shard order",
-        w1: "signed so that a side's hand-written value is the sum of weight times term (leaderDanger and deckDanger are minus the shortfall); the evaluation is w1.me minus w1.opp; 24 terms a side",
+        w1: `signed so that a side's hand-written value is the sum of weight times term (leaderDanger and deckDanger are minus the shortfall); the evaluation is w1.me minus w1.opp; ${W1_TERMS.length} terms a side (files written before 2026-11-24 have the first 24: no treasure term, a treasure in the EX area counted as an EX card)`,
       },
     },
     playerTypes: PLAYER_TYPES,

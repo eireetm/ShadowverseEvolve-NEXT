@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
@@ -7,7 +8,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createEngine } from "../../packages/core/src";
 import { ALL_CARDS, ALL_SCRIPTS } from "../../packages/core/src/sets";
 import { rulesFingerprint } from "../../packages/gui/fingerprint";
-import { readNpy } from "../rl/npy";
+import { W1_TERMS, w1Columns } from "../rl/eval-terms";
+import { readNpy, writeNpy } from "../rl/npy";
 import { ROOT, sampleDeck } from "../rl/series";
 import { botFingerprint } from "../train/code";
 import { playJobGame, type Job } from "../train/job";
@@ -49,6 +51,31 @@ beforeAll(() => {
   tool(dir, "--workers", "1", "--leak-every", "4", "--out", join(dir, "enc-v1"));
   tool(dir, "--encoder", "2", "--workers", "1", "--leak-every", "4", "--out", join(dir, "a"));
   tool(dir, "--encoder", "2", "--workers", "2", "--leak-every", "4", "--out", join(dir, "b"), "--compare-with", join(dir, "a"));
+  // The same games beside an enc-v1 written before the treasure term (24 W1 terms a side): its w1 files and meta cut to that
+  // layout, so C10 compares w1 by column name.
+  const old = join(dir, "old");
+  mkdirSync(join(old, "enc-v1"), { recursive: true });
+  copyFileSync(join(dir, "games.jsonl.gz"), join(old, "games.jsonl.gz"));
+  const meta = JSON.parse(readFileSync(join(dir, "enc-v1", "meta.json"), "utf8")) as { columns: { w1: string[] }; shards: { files: Record<string, string> }[] };
+  const now = meta.columns.w1;
+  const before = w1Columns(W1_TERMS.slice(0, W1_TERMS.indexOf("treasure")));
+  for (const f of readdirSync(join(dir, "enc-v1"))) {
+    if (!/^w1-\d+\.npy$/.test(f)) {
+      if (f !== "meta.json") copyFileSync(join(dir, "enc-v1", f), join(old, "enc-v1", f));
+      continue;
+    }
+    const w1 = readNpy(readFileSync(join(dir, "enc-v1", f)));
+    const rows = w1.shape[0]!;
+    const cut = new Int16Array(rows * before.length);
+    before.forEach((c, j) => {
+      const i = now.indexOf(c);
+      for (let r = 0; r < rows; r++) cut[r * before.length + j] = w1.data[r * now.length + i]!;
+    });
+    writeNpy(join(old, "enc-v1", f), cut, [rows, before.length]);
+    for (const shard of meta.shards) if (f in shard.files) shard.files[f] = createHash("sha256").update(readFileSync(join(old, "enc-v1", f))).digest("hex");
+  }
+  writeFileSync(join(old, "enc-v1", "meta.json"), JSON.stringify({ ...meta, columns: { ...meta.columns, w1: before } }, null, 1));
+  tool(old, "--encoder", "2", "--workers", "1", "--leak-every", "4", "--out", join(old, "c"));
 }, 900_000);
 
 afterAll(() => {
@@ -67,6 +94,13 @@ describe("rl:encode --encoder 2", () => {
     expect(line(join(dir, "a"), "C10")).toMatch(/^通过/);
     expect(line(join(dir, "a"), "C10")).not.toMatch(/：0 个/);
     expect(line(join(dir, "b"), "C22")).toMatch(/^通过/);
+  });
+
+  it("compares w1 by column name with an encoding written before the treasure term", () => {
+    const c10 = line(join(dir, "old", "c"), "C10");
+    expect(c10).toMatch(/^通过/);
+    expect(c10).toMatch(/w1 的列从 48 个变成 50 个，按列名比/);
+    expect(c10).toMatch(/这次新加的列里不是 0 的值 0 个/);
   });
 
   it("writes int32 offsets numpy reads, consistent with the rows", () => {

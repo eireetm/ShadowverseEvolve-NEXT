@@ -9,6 +9,8 @@
  * covariates alone; three features (leader defense, board stats and hand size differences); the hand-written evaluation
  * calibrated (one coefficient). Written: the weights as EvalWeights scaled so that a point of leader defense is worth 1 (the
  * bots' `win` and the other limits keep their meaning) with s = logits per point; every model's coefficients and metrics.
+ * The terms are those the samples name (meta.json's columns.w1): samples written before a term existed don't fit it, and
+ * its weight stays the default (listed as unfitted in w1-weights.json and the report: treasure, for those before 2026-11-24).
  *
  * usage: npm run rl:w1 -- <samples dir> [--out <dir>] [--lambda L]
  */
@@ -17,7 +19,7 @@ import { cpus } from "node:os";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { DEFAULT_WEIGHTS, type EvalWeights } from "../packages/bot/src";
-import { W1_TERMS } from "./rl/eval-terms";
+import { W1_TERMS, storedTerms, weightsOfTerms } from "./rl/eval-terms";
 import { readNpy } from "./rl/npy";
 import { ROOT } from "./rl/series";
 
@@ -46,8 +48,10 @@ const meta = JSON.parse(readFileSync(join(dir, "meta.json"), "utf8")) as Meta;
 const SIDE = Object.fromEntries(meta.columns.side.map((c, i) => [c, i])) as Record<string, number>;
 const nSide = meta.columns.side.length;
 const nW1 = meta.columns.w1.length;
-const T = W1_TERMS.length;
-if (nW1 !== 2 * T) throw new Error(`w1 has ${nW1} columns, the terms are ${T} per side`);
+// The samples' own terms (W1_TERMS or its first ones, storedTerms); the terms after them aren't fitted.
+const TERMS = storedTerms(meta.columns.w1);
+const T = TERMS.length;
+const UNFITTED = W1_TERMS.slice(T);
 
 // ---- the samples ----
 const N = meta.shards.reduce((n, s) => n + s.rows, 0);
@@ -68,7 +72,7 @@ for (const s of meta.shards) {
 const col = (i: number, c: string) => side[i * nSide + SIDE[c]!]!;
 const term = (i: number, who: 0 | 1, t: number) => w1[i * nW1 + who * T + t]!;
 const diff = (i: number, t: number) => term(i, 0, t) - term(i, 1, t);
-const TI = Object.fromEntries(W1_TERMS.map((t, k) => [t, k])) as Record<string, number>;
+const TI = Object.fromEntries(TERMS.map((t, k) => [t, k])) as Record<string, number>;
 
 // ---- models: sparse rows (index, value); the covariates first ----
 const D = meta.decks.length;
@@ -109,12 +113,12 @@ const MODELS: Model[] = [
     },
   },
   { key: "hand", label: "协变量 + 手写估值（校准一个系数）", names: ["handEval/10"], features: (i, push) => push(0, col(i, "handEval") / 10) },
-  { key: "w1", label: "W1：协变量 + 手写估值的 24 项（双方同一组权重）", names: [...W1_TERMS], features: (i, push) => W1_TERMS.forEach((_, t) => push(t, diff(i, t))) },
+  { key: "w1", label: `W1：协变量 + 手写估值的 ${T} 项（双方同一组权重）`, names: [...TERMS], features: (i, push) => TERMS.forEach((_, t) => push(t, diff(i, t))) },
   {
     key: "w1sep",
-    label: "诊断：协变量 + 双方各自的 24 项（48 个权重）",
-    names: [...W1_TERMS.map((t) => `me.${t}`), ...W1_TERMS.map((t) => `opp.${t}`)],
-    features: (i, push) => W1_TERMS.forEach((_, t) => (push(t, term(i, 0, t)), push(T + t, term(i, 1, t)))),
+    label: `诊断：协变量 + 双方各自的 ${T} 项（${2 * T} 个权重）`,
+    names: [...TERMS.map((t) => `me.${t}`), ...TERMS.map((t) => `opp.${t}`)],
+    features: (i, push) => TERMS.forEach((_, t) => (push(t, term(i, 0, t)), push(T + t, term(i, 1, t)))),
   },
 ];
 
@@ -295,30 +299,12 @@ for (const m of MODELS) {
   console.log(`${m.key}: ${f.iterations} iterations, ${((Date.now() - t0) / 1000).toFixed(1)} s, valid.mm log loss ${table[m.key]!["valid.mm"]!.logLoss.toFixed(5)}`);
 }
 
-// W1 as EvalWeights: β per term, scaled so that a point of leader defense is 1.
+// W1 as EvalWeights: β per term, scaled so that a point of leader defense is 1; a term the samples don't have keeps its
+// default (weightsOfTerms), and the files list it as unfitted.
 const w1Beta = fits.w1!.beta.slice(C);
 const s = w1Beta[TI.leader!]!;
-const termWeight = Object.fromEntries(W1_TERMS.map((t, k) => [t, w1Beta[k]! / s]));
-const weights: EvalWeights = {
-  ...DEFAULT_WEIGHTS,
-  leader: 1,
-  leaderDanger: termWeight.leaderDanger!,
-  attack: termWeight.attack!,
-  defense: termWeight.defense!,
-  keywords: Object.fromEntries(W1_TERMS.filter((t) => t.startsWith("kw.")).map((t) => [t.slice(3), termWeight[t]!])),
-  evolved: termWeight.evolved!,
-  amulet: termWeight.amulet!,
-  counter: termWeight.counter!,
-  hand: termWeight.hand!,
-  ex: termWeight.ex!,
-  crest: termWeight.crest!,
-  equipment: termWeight.equipment!,
-  evolutionPoint: termWeight.evolutionPoint!,
-  superEvolutionPoint: termWeight.superEvolutionPoint!,
-  maxPlayPoint: termWeight.maxPlayPoint!,
-  playPoint: termWeight.playPoint!,
-  deckDanger: termWeight.deckDanger!,
-};
+const termWeight = Object.fromEntries(TERMS.map((t, k) => [t, w1Beta[k]! / s]));
+const weights: EvalWeights = { ...weightsOfTerms(termWeight), leader: 1 };
 
 const git = (...a: string[]) => {
   try {
@@ -343,11 +329,11 @@ const provenance = {
 };
 writeFileSync(
   join(out, "w1-weights.json"),
-  JSON.stringify({ format: "sve-eval-weights", version: 1, logitPerLeaderPoint: s, weights, provenance }, null, 1),
+  JSON.stringify({ format: "sve-eval-weights", version: 1, logitPerLeaderPoint: s, weights, unfitted: UNFITTED, provenance }, null, 1),
 );
 writeFileSync(
   join(out, "w1-fit.json"),
-  JSON.stringify({ provenance, covariates: COVARIATES, models: MODELS.map((m) => ({ key: m.key, label: m.label, names: m.names, ...fits[m.key], metrics: table[m.key] })) }, null, 1),
+  JSON.stringify({ provenance, covariates: COVARIATES, unfitted: UNFITTED, models: MODELS.map((m) => ({ key: m.key, label: m.label, names: m.names, ...fits[m.key], metrics: table[m.key] })) }, null, 1),
 );
 
 // The report (Chinese, like the other rl tools).
@@ -367,11 +353,12 @@ for (const sl of SLICES) {
 lines.push("");
 lines.push(`W1 的权重（每点体力 = 1；s = 每点体力 ${fmt(s, 5)} logit）和默认权重：`);
 const defaults = Object.fromEntries(W1_TERMS.map((t) => [t, t.startsWith("kw.") ? (DEFAULT_WEIGHTS.keywords[t.slice(3) as keyof EvalWeights["keywords"]] ?? 0) : (DEFAULT_WEIGHTS[t as keyof EvalWeights] as number)]));
-for (const t of W1_TERMS) lines.push(`    ${t.padEnd(20)} W1 ${fmt(termWeight[t]!, 3).padStart(8)}   默认 ${fmt(defaults[t]!, 2).padStart(6)}`);
+for (const t of TERMS) lines.push(`    ${t.padEnd(20)} W1 ${fmt(termWeight[t]!, 3).padStart(8)}   默认 ${fmt(defaults[t]!, 2).padStart(6)}`);
+for (const t of UNFITTED) lines.push(`    ${t.padEnd(20)} 没有拟合（样本里没有这一项，写的是默认 ${fmt(defaults[t]!, 2)}）`);
 lines.push("");
 lines.push("双方分开拟合的诊断（每点 logit；行动方 / 非行动方的差别要靠协变量）：");
 const sep = fits.w1sep!.beta.slice(C);
-for (const [k, t] of W1_TERMS.entries()) lines.push(`    ${t.padEnd(20)} 我方 ${fmt(sep[k]!, 4).padStart(8)}   对方 ${fmt(sep[T + k]!, 4).padStart(8)}`);
+for (const [k, t] of TERMS.entries()) lines.push(`    ${t.padEnd(20)} 我方 ${fmt(sep[k]!, 4).padStart(8)}   对方 ${fmt(sep[T + k]!, 4).padStart(8)}`);
 lines.push("");
 lines.push(`协变量（W1 模型，logit）：先手 ${fmt(fits.w1!.beta[1]!, 3)}，行动方 ${fmt(fits.w1!.beta[2]!, 3)}，我方是 Easy ${fmt(fits.w1!.beta[3]!, 3)}，对方是 Easy ${fmt(fits.w1!.beta[4]!, 3)}`);
 writeFileSync(join(out, "report.txt"), lines.join("\n") + "\n");
