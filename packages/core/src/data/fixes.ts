@@ -79,6 +79,11 @@ const BP08_003_BACK: Partial<RawCardBack> = {
     "【进化时】将4个『悬丝傀儡』召唤。",
 };
 
+/** BP21-103's Chinese text as the owner corrected it (2026-11-24): both its printings carry the same wrong text. */
+const BP21_103_CN =
+  "每个回合1次，当这张卡的《生命值》获得+时，抽取1张卡。\n" +
+  "《起动》将这张卡《横置》：使自己的主战者《生命值》+1。这个能力在自己的场上有其他的学院类型·从者的话才可使用。";
+
 /**
  * Corrections of the scraped card data, applied by the build tool before normalization.
  *
@@ -329,6 +334,17 @@ export const DATA_FIXES: Readonly<Record<string, DataFix>> = {
   "BP09-P27": { back: BP09_090_BACK },
   // 天后 (a token, no other printing) has no Chinese text; its Japanese text is 【オーラ】, which the Chinese texts write 【灵气】.
   "BP06-T01": { effect_cn: "【灵气】" },
+  // Chinese texts the scraped data has wrong (errata the players reported; the rules data and the scripts were right). BP21-103
+  // (both printings): 「これの体力を+したとき」 is this card's defense, not the leader's. BP10-026: 「自分の墓場の他のヒーロー・カード」
+  // counts the other Heroic cards.
+  "BP21-103": { effect_cn: BP21_103_CN },
+  "BP21-P56": { effect_cn: BP21_103_CN },
+  "BP10-026": {
+    effect_cn:
+      "《起动》《消费1》将墓场中的这张卡消失：给予敌方的全体主战者各3点伤害。这个能力在「自己的墓场中的其他的英雄类型·卡片」为5张及以上的话才可使用。\n" +
+      "----------\n" +
+      "选择敌方场上的1个从者。给予其2点伤害。",
+  },
   // BP22's reprints scraped with Japanese data only: the Japanese name in the English name field and no Japanese name. Their
   // names, class, stats, traits and texts are those of the reprinted cards (the official Japanese card list names them so).
   ...Object.fromEntries(
