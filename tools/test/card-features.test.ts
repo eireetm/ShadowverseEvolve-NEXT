@@ -360,6 +360,7 @@ describe("card table v3: where a reference works, and what its comparison means"
       // Reader methods the analysis doesn't read (face-up / face-down evolve deck, cards that left the field or were played this turn).
       "BP08-053": "face-down evolve deck", "BP11-021": "face-up evolve deck", "BP13-110": "face-up evolve deck", "BP15-004": "face-up evolve deck",
       "BP16-011": "cards that left the field this turn", "BP17-116": "face-down evolve deck", "BP17-T07": "cards played this turn", "CP03-029": "face-up evolve deck",
+      "CP05-071": "cards discarded this turn",
       // Two zones spread into one list; a count with arithmetic.
       "BP11-089": "two zones spread into one list", "BP12-074": "two zones spread into one list", "BP19-074": "a count with arithmetic",
     };

@@ -66,7 +66,7 @@ export function positionKey(view: PlayerView): string {
 }
 
 /** The zones a side of a view lists card by card (the deck is a count, CR 4.1.2.1). */
-const LISTED_ZONES = ["hand", "field", "ex", "cemetery", "banished", "evolveDeck", "evolveZone", "raceZone", "driveZone", "triggerZone", "equipmentZone"] as const;
+const LISTED_ZONES = ["hand", "field", "ex", "cemetery", "banished", "evolveDeck", "evolveZone", "raceZone", "driveZone", "triggerZone", "equipmentZone", "uncapZone"] as const;
 
 /**
  * What a card is as `view`'s player sees it, by id (undefined: not listed in the view): where it is (the side and the zone)

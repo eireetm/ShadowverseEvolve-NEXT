@@ -39,6 +39,8 @@ export function staticValue(type: CardType, attack: number | null, defense: numb
   }
   if (type === "amulet") return 1.5 + 0.3 * c;
   if (type === "crest") return 2; // an effect that lasts in the EX area (CR 10.3.6), like evaluate.ts
+  // A treasure has no cost but is a free uncap waiting in the EX area (CR JP 14.6.4): evaluate.ts's weight, not nothing.
+  if (type === "treasure") return 0.5;
   return 0.5 * c;
 }
 
@@ -54,7 +56,7 @@ export function lookupFromView(view: PlayerView, decision: Decision | null, db: 
   };
   for (const side of view.players) {
     if (side.leader) fromView(side.leader, "leader");
-    for (const zone of ["hand", "field", "ex", "cemetery", "banished", "evolveDeck", "evolveZone", "raceZone", "driveZone", "triggerZone", "equipmentZone"] as const) {
+    for (const zone of ["hand", "field", "ex", "cemetery", "banished", "evolveDeck", "evolveZone", "raceZone", "driveZone", "triggerZone", "equipmentZone", "uncapZone"] as const) {
       for (const c of side[zone]) fromView(c, zone);
     }
   }

@@ -31,6 +31,12 @@ export interface EvalWeights {
   ex: number;
   /** A crest in the EX area: not a card to play but an effect that lasts (CR 10.3.6, BP20). */
   crest: number;
+  /**
+   * A treasure in the EX area (CP05): an uncap waiting to be used (CR JP 14.6.4). Less than the +1 attack an uncap gives
+   * (and the +1/+1 of a final uncap), so that a bot uses one when it has a target; more than nothing, so that it isn't the
+   * first card it gives up.
+   */
+  treasure: number;
   /** An equipment token: an effect its follower has while it stays on the field (CR 14.5.2, CP04). */
   equipment: number;
   evolutionPoint: number;
@@ -83,6 +89,7 @@ export const DEFAULT_WEIGHTS: EvalWeights = {
   handCap: 7,
   ex: 1,
   crest: 2,
+  treasure: 0.5,
   equipment: 1.5,
   evolutionPoint: 1.5,
   superEvolutionPoint: 2,
@@ -137,7 +144,10 @@ function sideValue(s: PlayerSideView, other: PlayerSideView, w: EvalWeights): nu
   // A facedown card (a Starting Amulet before the redraws, CR 14.4.3) counts as an amulet.
   for (const card of s.field) v += card.hidden ? w.amulet : fieldCardValue(card, w);
   v += Math.min(s.hand.length, w.handCap) * w.hand;
-  for (const card of s.ex) v += card.type === "crest" ? w.crest + Object.values(card.counters).reduce((a, b) => a + b, 0) * w.counter : w.ex;
+  for (const card of s.ex) {
+    if (card.type === "crest") v += w.crest + Object.values(card.counters).reduce((a, b) => a + b, 0) * w.counter;
+    else v += card.type === "treasure" ? w.treasure : w.ex;
+  }
   v += s.equipmentZone.length * w.equipment;
   v += s.evolutionPoints * w.evolutionPoint + s.superEvolutionPoints * w.superEvolutionPoint;
   v += Math.min(s.maxPlayPoints, 10) * w.maxPlayPoint + s.playPoints * w.playPoint;
