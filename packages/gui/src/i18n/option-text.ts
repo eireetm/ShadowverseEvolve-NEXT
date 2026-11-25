@@ -695,4 +695,13 @@ export const OPTION_TEXT: Readonly<Record<string, OptionText>> = {
   // BP22-090
   "Put the top 2 cards of your deck into your cemetery": { card: "BP22-090", cn: "将自己的牌堆顶2张卡置于墓场", ja: "自分のデッキの上2枚を墓場に置く" },
   "Recover 2 play points": { card: "BP22-090", cn: "将自己的PP回复2点", ja: "自分のPPを2回復する" },
+  // CP05 (pre-release, data/preview.ts: no English text yet).
+  // CP05-001
+  "Engage 2 Granblue followers with an original cost of 5 on your field: costs 5 less": { card: "CP05-001", cn: "将场上的原始消费为5的2个碧蓝幻想类型·从者《横置》：将消费-5", ja: "場の元のコスト5のグラブル・フォロワー2体をアクト：コストを-5する" },
+  // CP05-029 (without it the shorter "Summon a {0}" pattern would match first)
+  "Summon a {0} from your deck": { card: "CP05-029", cn: "从自己的牌堆之中搜寻1张『{0}』卡，并召唤到场上", ja: "自分のデッキから『{0}』1枚を探し、場に出す" },
+  // CP05-083
+  "Discard a Dark card": { card: "CP05-083", cn: "将手牌中的1张暗属性类型·卡片舍弃", ja: "手札の闇属性・カード1枚を捨てる" },
+  // CP05-088
+  "Discard a Dark card: 3 damage to an enemy follower and 1 to its leader": { card: "CP05-088", cn: "将手牌中的1张暗属性类型·卡片舍弃：选择敌方场上的1个从者。给予其3点伤害。给予其主战者1点伤害", ja: "手札の闇属性・カード1枚を捨てる：相手の場のフォロワー1体を選ぶ。それに3ダメージ。それのリーダーに1ダメージ" },
 };

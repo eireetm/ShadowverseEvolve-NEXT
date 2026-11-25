@@ -30,6 +30,9 @@
   --sve-selected: #4cc38a;
   --sve-evolved: #b48cff;
   --sve-superevolved: #ffd166;
+  /* An uncapped / final-uncapped follower's glow (Granblue Fantasy; its treasures show under it). */
+  --sve-uncapped: #7fd4ff;
+  --sve-final-uncapped: #ffe08a;
   --sve-target: #ff5a5a;
   /* The numbers on a card: attack blue, defense red, the cost circle in the card's class color (like the class icons). */
   --sve-attack: #2f7bd6;
@@ -718,6 +721,14 @@ option {
 
 .sve-card-superevolved .sve-card-face {
   outline: 2px solid var(--sve-superevolved);
+}
+
+.sve-card-uncapped .sve-card-face {
+  box-shadow: 0 0 6px 2px var(--sve-uncapped);
+}
+
+.sve-card-final-uncapped .sve-card-face {
+  box-shadow: 0 0 8px 3px var(--sve-final-uncapped);
 }
 
 .sve-card-boxed .sve-card-face {

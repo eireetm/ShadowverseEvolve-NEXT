@@ -162,6 +162,8 @@ export function CardPanel({ focus, exact = false, art = true, onLink }: { focus:
           <div className="sve-details-flags">
             {view.engaged ? <span>{t("card.engaged")}</span> : null}
             {view.evolvedWith ? <span>{view.superEvolved ? t("card.superEvolved") : t("card.evolved")}</span> : null}
+            {view.uncapped ? <span>{t("card.uncapped")}</span> : null}
+            {view.finalUncapped ? <span>{t("card.finalUncapped")}</span> : null}
             {view.boxed ? <span>{t("card.boxed")}</span> : null}
             {view.damage > 0 ? <span>{t("card.damage", { n: view.damage })}</span> : null}
           </div>

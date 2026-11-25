@@ -70,6 +70,9 @@ export function CardTile({ card, info, cardId, side, size = "normal", mark = nul
   const focus: FocusCard = { ...(view ? { id: view.id, view } : {}), def: shown.def, printing: shown.printing, back: shown.back };
   if (view?.engaged) classes.push("sve-card-engaged");
   if (view?.evolvedWith) classes.push(view.superEvolved ? "sve-card-superevolved" : "sve-card-evolved");
+  // CR JP 14.6.4 — uncapped / final-uncapped (a theme can mark them; the treasures show under the card).
+  if (view?.uncapped) classes.push("sve-card-uncapped");
+  if (view?.finalUncapped) classes.push("sve-card-final-uncapped");
   if (view?.boxed) classes.push("sve-card-boxed");
   if (mark) classes.push(`sve-card-${mark}`);
   if (highlighted) classes.push("sve-card-highlight");

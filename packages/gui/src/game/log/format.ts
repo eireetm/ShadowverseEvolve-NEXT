@@ -125,6 +125,9 @@ function markedLine(entry: LogEntry, ctx: LogContext, showAll: boolean, cards: L
       return line(t("log.leaderDefense", { player: player(event.player), delta: event.delta > 0 ? `+${event.delta}` : String(event.delta), defense: event.defense }));
     case "evolved":
       return line(t(event.superEvolved ? "log.superEvolved" : "log.evolved", { card: name(event.card) }));
+    case "uncapped":
+      // CR JP 14.6.4.1 / JP 14.6.4.2 — the treasure's move into the uncap zone is its own line before this.
+      return line(t(event.final ? "log.finalUncapped" : "log.uncapped", { card: name(event.follower) }));
     case "cardsRevealed":
       return line(t("log.revealed", { player: player(event.player), cards: event.cards.map((c) => name(c.id)).join(", ") }));
     case "cardsLookedAt":

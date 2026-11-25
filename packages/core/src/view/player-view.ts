@@ -6,6 +6,7 @@ import type { AttackState, GameResult, Phase, PlayerZone, UncapKind } from "../m
 import type { Env } from "../engine/state/access";
 import { abilitiesLostAt, characteristics, isBoxed } from "../engine/state/characteristics";
 import { giftsOf, type Gift } from "./gifts";
+import { uncapStateOf } from "../engine/state/links";
 import { cardVisibleTo } from "./visibility";
 
 /** A card whose information the viewer may see. */
@@ -42,6 +43,10 @@ export interface CardView {
   linkedTo: CardId | null;
   /** A treasure in the uncap zone: what it did to that card, uncapped or final-uncapped it (both, ヒヒイロカネ; CR JP 14.6.4). */
   uncaps?: readonly UncapKind[];
+  /** A card on the field that is uncapped (CR JP 14.6.4.1.1); absent otherwise. */
+  uncapped?: true;
+  /** A card on the field that is final-uncapped (CR JP 14.6.4.2.1); absent otherwise. */
+  finalUncapped?: true;
 }
 
 /** A card the viewer may not look at (only that it exists). */
@@ -105,6 +110,7 @@ export interface PlayerView {
 function cardView(env: Env, id: CardId): CardView {
   const c = env.state.cards[id]!;
   const ch = characteristics(env, id);
+  const uncap = c.zone === "field" ? uncapStateOf(env, id) : null;
   return {
     id,
     hidden: false,
@@ -130,6 +136,8 @@ function cardView(env: Env, id: CardId): CardView {
     counters: { ...c.counters },
     linkedTo: c.linkedTo ?? null,
     ...(c.uncaps !== undefined ? { uncaps: [...c.uncaps] } : {}),
+    ...(uncap?.uncapped ? { uncapped: true as const } : {}),
+    ...(uncap?.final ? { finalUncapped: true as const } : {}),
   };
 }
 
